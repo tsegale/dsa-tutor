@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Env
+.env
+.env.local
+*.local
+
+# Build output
+dist/
+build/
+.turbo/
+
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc
+apps/ai/.venv/
+
+# Prisma
+apps/api/prisma/migrations/dev.db
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+*.log
+pnpm-debug.log*
+
+# OS
+.DS_Store
