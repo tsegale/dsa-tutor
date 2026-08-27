@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { AlgorithmMode } from '@dsa-tutor/types'
+import Showcase from '@/pages/Showcase'
 
 const queryClient = new QueryClient()
 
@@ -58,7 +60,12 @@ function DsaTutorShell() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <DsaTutorShell />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<DsaTutorShell />} />
+          <Route path="/showcase" element={<Showcase />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }
