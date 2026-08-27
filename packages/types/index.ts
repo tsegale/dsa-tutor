@@ -6,12 +6,12 @@
 // Modeled as const objects + union types (rather than `enum`) so this
 // package stays compatible with `erasableSyntaxOnly` / isolatedModules
 // consumers (e.g. Vite's TS type-stripping) while still giving
-// `Mode.DEMO`-style ergonomics.
-export const Mode = {
+// `AlgorithmMode.DEMO`-style ergonomics.
+export const AlgorithmMode = {
   DEMO: 'DEMO',
   PRACTICE: 'PRACTICE',
 } as const
-export type Mode = (typeof Mode)[keyof typeof Mode]
+export type AlgorithmMode = (typeof AlgorithmMode)[keyof typeof AlgorithmMode]
 
 export const ScaffoldingLevel = {
   HIGH: 'HIGH',
@@ -21,42 +21,117 @@ export const ScaffoldingLevel = {
 } as const
 export type ScaffoldingLevel = (typeof ScaffoldingLevel)[keyof typeof ScaffoldingLevel]
 
+export const PredictionType = {
+  CANVAS_CLICK: 'CANVAS_CLICK',
+  VALUE_INPUT: 'VALUE_INPUT',
+  TILE_GRID: 'TILE_GRID',
+} as const
+export type PredictionType = (typeof PredictionType)[keyof typeof PredictionType]
+
+export const MisconceptionCategory = {
+  OFF_BY_ONE: 'OFF_BY_ONE',
+  ORDER_OF_OPERATIONS: 'ORDER_OF_OPERATIONS',
+  STRUCTURAL_PROPERTY_VIOLATION: 'STRUCTURAL_PROPERTY_VIOLATION',
+  POINTER_CONFUSION: 'POINTER_CONFUSION',
+  BASE_CASE_OMISSION: 'BASE_CASE_OMISSION',
+  COMPLEXITY_MISATTRIBUTION: 'COMPLEXITY_MISATTRIBUTION',
+} as const
+export type MisconceptionCategory =
+  (typeof MisconceptionCategory)[keyof typeof MisconceptionCategory]
+
+export const AlgorithmTrack = {
+  FOUNDATIONS: 'FOUNDATIONS',
+  SORTING: 'SORTING',
+  TREES: 'TREES',
+  GRAPHS: 'GRAPHS',
+} as const
+export type AlgorithmTrack = (typeof AlgorithmTrack)[keyof typeof AlgorithmTrack]
+
+export const Difficulty = {
+  BEGINNER: 'BEGINNER',
+  INTERMEDIATE: 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED',
+} as const
+export type Difficulty = (typeof Difficulty)[keyof typeof Difficulty]
+
+export const UserRole = {
+  STUDENT: 'STUDENT',
+  EDUCATOR: 'EDUCATOR',
+} as const
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
 /**
- * The current state of an algorithm visualization/session.
+ * The full state of the data structure/algorithm at one step, as
+ * produced by the snapshot engine.
  */
-export interface AlgorithmState {
-  algorithmName: string
+export interface AlgorithmSnapshot {
   stepIndex: number
-  snapshotArray: any[]
-  mode: Mode
-  scaffoldingLevel: ScaffoldingLevel
-  sessionXP: number
-  focusModeActive: boolean
+  description: string
+  pseudocodeLine: number
+  isPredictionRequired: boolean
+  predictionType: PredictionType
+  dataStructureState: unknown
+  activeIndices: number[]
+  highlightIndices: number[]
+  comparedIndices: number[]
+  swappedIndices: number[]
+  isFinalStep: boolean
 }
 
 /**
- * Sent from the frontend/backend to the AI service to request a
- * Socratic prediction/feedback response for the student's current step.
+ * The current state of an algorithm visualization/session (the
+ * Zustand store shape).
+ */
+export interface AlgorithmState {
+  algorithmName: string
+  snapshotArray: AlgorithmSnapshot[]
+  stepIndex: number
+  mode: AlgorithmMode
+  scaffoldingLevel: ScaffoldingLevel
+  sessionXP: number
+  focusModeActive: boolean
+  isPlaying: boolean
+  playbackSpeed: number
+}
+
+/**
+ * Sent from the frontend to the backend when a learner submits a
+ * prediction for the current step.
  */
 export interface PredictionRequest {
   algorithmName: string
   stepIndex: number
-  currentState: any
+  currentState: unknown
   studentAnswer: string | null
   errorHistory: string[]
-  scaffoldingLevel: string
+  scaffoldingLevel: ScaffoldingLevel
+  sessionId: string
 }
 
 /**
- * The AI service's response: whether the student's prediction was
- * correct, any detected misconception, the consequence of their
- * answer, and a Socratic hint to nudge them forward.
+ * The backend's response after processing a prediction: whether it
+ * was correct, any detected misconception, the consequence of the
+ * student's answer, and a Socratic hint to nudge them forward.
  */
 export interface PredictionResponse {
   correct: boolean
-  misconceptionCategory: string | null
+  misconceptionCategory: MisconceptionCategory | null
   consequenceExplanation: string
   socraticHint: string
+  xpAwarded: number
+}
+
+export interface HintRequest {
+  algorithmName: string
+  stepIndex: number
+  currentPredictionPrompt: string
+  errorHistory: string[]
+  scaffoldingLevel: ScaffoldingLevel
+}
+
+export interface HintResponse {
+  hint: string
+  scaffoldingLevel: ScaffoldingLevel
 }
 
 /**
@@ -67,10 +142,55 @@ export interface SessionSummary {
   sessionId: string
   userId: string
   algorithmName: string
-  mode: string
+  mode: AlgorithmMode
   totalSteps: number
   correctPredictions: number
+  incorrectPredictions: number
   hintsRequested: number
+  misconceptionBreakdown: Record<MisconceptionCategory, number>
   startTime: string
-  endTime: string
+  endTime: string | null
+  xpEarned: number
+}
+
+export interface UserProfile {
+  id: string
+  email: string
+  name: string
+  role: UserRole
+  xpTotal: number
+  streakCount: number
+  lastActiveDate: string | null
+}
+
+export interface AlgorithmTopicDTO {
+  id: string
+  name: string
+  displayName: string
+  track: AlgorithmTrack
+  difficulty: Difficulty
+  description: string
+  estimatedMinutes: number
+  isLocked: boolean
+  masteryPercent: number
+}
+
+/**
+ * The standard API response wrapper: exactly one of `data`/`error`
+ * is non-null.
+ */
+export interface ApiResponse<T> {
+  data: T | null
+  error: { code: string; message: string } | null
+}
+
+/** What gets written to the database per prediction. */
+export interface InteractionLog {
+  sessionId: string
+  stepIndex: number
+  predictionSubmitted: string
+  predictionCorrect: boolean
+  misconceptionCategory: MisconceptionCategory | null
+  hintsRequested: number
+  timeSpentSeconds: number
 }

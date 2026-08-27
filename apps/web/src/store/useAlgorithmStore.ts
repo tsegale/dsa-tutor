@@ -1,15 +1,15 @@
 import { create } from 'zustand'
-import { Mode, ScaffoldingLevel } from '@dsa-tutor/types'
+import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
 
 interface AlgorithmStore {
   algorithmName: string
   stepIndex: number
-  mode: Mode
+  mode: AlgorithmMode
   scaffoldingLevel: ScaffoldingLevel
   sessionXP: number
   focusModeActive: boolean
   setStepIndex: (stepIndex: number) => void
-  setMode: (mode: Mode) => void
+  setMode: (mode: AlgorithmMode) => void
   addXP: (amount: number) => void
   toggleFocusMode: () => void
 }
@@ -17,7 +17,7 @@ interface AlgorithmStore {
 export const useAlgorithmStore = create<AlgorithmStore>((set) => ({
   algorithmName: 'bubble-sort',
   stepIndex: 0,
-  mode: Mode.DEMO,
+  mode: AlgorithmMode.DEMO,
   scaffoldingLevel: ScaffoldingLevel.HIGH,
   sessionXP: 0,
   focusModeActive: false,

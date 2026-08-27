@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
-import { Mode } from '@dsa-tutor/types'
+import { AlgorithmMode } from '@dsa-tutor/types'
 
 const queryClient = new QueryClient()
 
@@ -27,7 +27,7 @@ function DsaTutorShell() {
         </p>
 
         <div className="mt-6 flex items-center gap-3">
-          {[Mode.DEMO, Mode.PRACTICE].map((m) => (
+          {[AlgorithmMode.DEMO, AlgorithmMode.PRACTICE].map((m) => (
             <button
               key={m}
               type="button"

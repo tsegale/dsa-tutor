@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import type { SessionSummary } from '@dsa-tutor/types'
+import { MisconceptionCategory, type SessionSummary } from '@dsa-tutor/types'
 
 const app = express()
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001
@@ -23,9 +23,19 @@ app.get('/sessions/example', (_req, res) => {
     mode: 'DEMO',
     totalSteps: 0,
     correctPredictions: 0,
+    incorrectPredictions: 0,
     hintsRequested: 0,
+    misconceptionBreakdown: {
+      [MisconceptionCategory.OFF_BY_ONE]: 0,
+      [MisconceptionCategory.ORDER_OF_OPERATIONS]: 0,
+      [MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION]: 0,
+      [MisconceptionCategory.POINTER_CONFUSION]: 0,
+      [MisconceptionCategory.BASE_CASE_OMISSION]: 0,
+      [MisconceptionCategory.COMPLEXITY_MISATTRIBUTION]: 0,
+    },
     startTime: new Date().toISOString(),
     endTime: new Date().toISOString(),
+    xpEarned: 0,
   }
   res.json(example)
 })
