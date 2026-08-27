@@ -22,8 +22,6 @@
       "Bash(docker-compose logs:*)"
     ],
     "deny": [
-      "Bash(git push:*)",
-      "Bash(git push --force:*)",
       "Bash(git rebase:*)",
       "Bash(rm -rf:*)",
       "Bash(npx prisma db push --force-reset:*)",
