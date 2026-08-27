@@ -6,6 +6,8 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import Showcase from '@/pages/Showcase'
+import CanvasTest from '@/pages/CanvasTest'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const queryClient = new QueryClient()
 
@@ -60,12 +62,15 @@ function DsaTutorShell() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<DsaTutorShell />} />
-          <Route path="/showcase" element={<Showcase />} />
-        </Routes>
-      </BrowserRouter>
+      <TooltipProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<DsaTutorShell />} />
+            <Route path="/showcase" element={<Showcase />} />
+            <Route path="/canvas-test" element={<CanvasTest />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   )
 }
