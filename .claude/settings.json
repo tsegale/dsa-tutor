@@ -33,8 +33,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "echo '=== DSA Tutor Session Start ===' && git log --oneline -5 2>/dev/null && echo '' && echo 'Branch:' && git branch --show-current 2>/dev/null && echo '' && grep -A3 'Current focus' CLAUDE.md 2>/dev/null || true"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== DSA Tutor Session Start ===' && git log --oneline -5 2>/dev/null && echo '' && echo 'Branch:' && git branch --show-current 2>/dev/null && echo '' && grep -A3 'Current focus' CLAUDE.md 2>/dev/null || true"
+          }
+        ]
       }
     ]
   }
