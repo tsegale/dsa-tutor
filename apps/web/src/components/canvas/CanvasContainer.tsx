@@ -18,19 +18,29 @@ export default function CanvasContainer({ onPredictionSubmit }: CanvasContainerP
     const el = containerRef.current
     if (!el) return
 
+    const measure = () => {
+      const rect = el.getBoundingClientRect()
+      setSize({ width: rect.width, height: rect.height })
+    }
+
     // Measure synchronously on mount rather than waiting on the observer's
     // first callback, since ResizeObserver's initial-fire timing is not
     // consistent across every rendering environment.
-    const rect = el.getBoundingClientRect()
-    setSize({ width: rect.width, height: rect.height })
+    measure()
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      setSize({ width: entry.contentRect.width, height: entry.contentRect.height })
-    })
+    const observer = new ResizeObserver(measure)
     observer.observe(el)
-    return () => observer.disconnect()
+
+    // Belt-and-suspenders fallback: a plain window resize is a much more
+    // universally reliable signal than ResizeObserver callbacks, and it's
+    // exactly the case the "canvas resizes with the browser window"
+    // requirement cares about.
+    window.addEventListener('resize', measure)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
   }, [])
 
   const handleElementClick = (index: number) => {
@@ -40,7 +50,7 @@ export default function CanvasContainer({ onPredictionSubmit }: CanvasContainerP
   return (
     <div
       ref={containerRef}
-      className="aspect-video w-full rounded-md border border-border bg-white shadow-sm"
+      className="h-full w-full rounded-md border border-border bg-white shadow-sm"
     >
       <ArrayCanvas width={size.width} height={size.height} onElementClick={handleElementClick} />
     </div>
