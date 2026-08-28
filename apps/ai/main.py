@@ -1,54 +1,33 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
+from models.response_models import HealthResponse
+from routers import hints, predictions
+
 app = FastAPI(title="DSA Tutor AI Service")
+
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-class PredictionRequest(BaseModel):
-    algorithmName: str
-    stepIndex: int
-    currentState: dict | list | None = None
-    studentAnswer: str | None = None
-    errorHistory: list[str] = []
-    scaffoldingLevel: str
+app.include_router(predictions.router, prefix="/api/v1/predictions", tags=["predictions"])
+app.include_router(hints.router, prefix="/api/v1/hints", tags=["hints"])
 
 
-class PredictionResponse(BaseModel):
-    correct: bool
-    misconceptionCategory: str | None = None
-    consequenceExplanation: str
-    socraticHint: str
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "service": "dsa-tutor-ai"}
-
-
-@app.post("/predict", response_model=PredictionResponse)
-def predict(request: PredictionRequest):
-    # Placeholder logic — the primary algorithm is Bubble Sort; all
-    # scaffolding/misconception logic should be built and validated
-    # against it first before extending to other algorithms.
-    return PredictionResponse(
-        correct=False,
-        misconceptionCategory=None,
-        consequenceExplanation="Not yet implemented.",
-        socraticHint="What happens when you compare these two adjacent elements?",
-    )
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok", service="dsa-tutor-ai")
 
 
 if __name__ == "__main__":

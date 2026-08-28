@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlgorithmMode, PredictionType } from '@dsa-tutor/types'
-import type { PredictionRequest } from '@dsa-tutor/types'
+import type { HintRequest, PredictionRequest } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
-import { submitPrediction } from '@/api/predictions'
+import { submitPrediction, requestHint } from '@/api/predictions'
 import { cn } from '@/lib/utils'
 import XPToast from '@/components/ui/XPToast'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -20,9 +20,6 @@ export const CANVAS_ELEMENT_SELECTED_EVENT = 'dsa-tutor:canvas-element-selected'
 export const CLEAR_CANVAS_SELECTION_EVENT = 'dsa-tutor:clear-canvas-selection'
 export const REQUEST_HINT_EVENT = 'request-hint'
 export const ESCAPE_EVENT = 'dsa-tutor:escape'
-
-const SOCRATIC_HINT =
-  'Look at the two highlighted values. Which one is larger? Which position should the larger value occupy at the end of sorting?'
 
 const SWAP_OPTIONS: TileOption[] = [
   { id: 'swap', label: 'Swap them', description: 'The left value is greater, swap' },
@@ -129,10 +126,19 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
   }, [hint, hintLoading])
 
   async function handleRequestHint() {
-    if (hint !== null || hintLoading) return
+    if (hint !== null || hintLoading || !snapshot) return
     setHintLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    setHint(SOCRATIC_HINT)
+
+    const request: HintRequest = {
+      algorithmName,
+      stepIndex: snapshot.stepIndex,
+      currentPredictionPrompt: snapshot.description,
+      errorHistory: [],
+      scaffoldingLevel,
+    }
+
+    const response = await requestHint(request)
+    setHint(response.hint)
     setHintLoading(false)
   }
 
