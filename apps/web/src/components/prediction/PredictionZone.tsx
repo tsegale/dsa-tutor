@@ -150,7 +150,10 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
     const request: PredictionRequest = {
       algorithmName,
       stepIndex: snapshot.stepIndex,
-      currentState: snapshot.dataStructureState,
+      currentState: {
+        dataStructureState: snapshot.dataStructureState,
+        activeIndices: snapshot.activeIndices,
+      },
       studentAnswer: currentAnswer,
       errorHistory: [],
       scaffoldingLevel,
