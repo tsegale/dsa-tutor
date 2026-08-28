@@ -65,8 +65,10 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
           break
         case 'Escape':
           // Radix's Dialog already closes on Escape natively; this only
-          // needs to handle exiting focus mode.
+          // needs to handle exiting focus mode. The hint bubble listens
+          // for this same event to dismiss itself.
           if (store.focusModeActive) store.toggleFocusMode()
+          window.dispatchEvent(new CustomEvent('dsa-tutor:escape'))
           break
         case 'KeyH':
           window.dispatchEvent(new CustomEvent('request-hint'))

@@ -7,15 +7,22 @@ import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
 import FocusModeOverlay from '@/components/layout/FocusModeOverlay'
 import KeyboardShortcutsModal from '@/components/layout/KeyboardShortcutsModal'
+import PredictionZone, {
+  CANVAS_ELEMENT_SELECTED_EVENT,
+  CLEAR_CANVAS_SELECTION_EVENT,
+} from '@/components/prediction/PredictionZone'
+import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnalysisToast'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export default function AlgorithmPage() {
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
+  const stepIndex = useAlgorithmStore((state) => state.stepIndex)
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [activeTab, setActiveTab] = useState(1)
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
+  const [canvasSelectedIndex, setCanvasSelectedIndex] = useState<number | null>(null)
 
   useEffect(() => {
     function handleOpen() {
@@ -25,15 +32,44 @@ export default function AlgorithmPage() {
     return () => window.removeEventListener(OPEN_SHORTCUTS_MODAL_EVENT, handleOpen)
   }, [])
 
+  useEffect(() => {
+    function handleSwitchTab() {
+      setActiveTab(2)
+    }
+    window.addEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
+    return () => window.removeEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
+  }, [])
+
+  // Clear the canvas selection ring whenever the algorithm advances to a
+  // new step, so a stale ring doesn't linger on the next prediction.
+  useEffect(() => {
+    setCanvasSelectedIndex(null)
+  }, [stepIndex])
+
+  // Also clear it when PredictionZone resets after an incorrect answer
+  // (same step, but the learner should pick fresh).
+  useEffect(() => {
+    function handleClear() {
+      setCanvasSelectedIndex(null)
+    }
+    window.addEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
+    return () => window.removeEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
+  }, [])
+
   useKeyboardShortcuts({
     onTabChange: setActiveTab,
     onShortcutsModalOpen: () => setShortcutsModalOpen(true),
   })
 
+  function handleElementClick(index: number) {
+    setCanvasSelectedIndex(index)
+    window.dispatchEvent(new CustomEvent(CANVAS_ELEMENT_SELECTED_EVENT, { detail: index }))
+  }
+
   function handlePredictionSubmit(answer: string) {
-    // Temporary: Phase 9 wires this to the AI microservice for real
-    // Socratic feedback instead of just logging the raw answer.
-    console.log('Prediction submitted:', answer)
+    // PredictionZone owns the actual submission flow (API call, XP,
+    // stepForward); this is just a notification hook for the page level.
+    void answer
   }
 
   return (
@@ -65,8 +101,10 @@ export default function AlgorithmPage() {
           transition={{ duration: 0.25, ease: 'easeInOut' }}
           className="flex h-full w-full items-center justify-center p-4"
         >
-          <CanvasContainer onPredictionSubmit={handlePredictionSubmit} />
+          <CanvasContainer onElementClick={handleElementClick} selectedIndex={canvasSelectedIndex} />
         </motion.div>
+
+        <PredictionZone onSubmit={handlePredictionSubmit} />
       </div>
 
       <motion.div

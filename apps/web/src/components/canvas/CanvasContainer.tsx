@@ -3,10 +3,11 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import ArrayCanvas from './ArrayCanvas'
 
 interface CanvasContainerProps {
-  onPredictionSubmit?: (answer: string) => void
+  onElementClick?: (index: number) => void
+  selectedIndex?: number | null
 }
 
-export default function CanvasContainer({ onPredictionSubmit }: CanvasContainerProps) {
+export default function CanvasContainer({ onElementClick, selectedIndex = null }: CanvasContainerProps) {
   // Only Bubble Sort exists today (Phase 15 gates additional algorithms).
   // Future TreeCanvas/GraphCanvas types will branch on algorithmName here.
   useAlgorithmStore((state) => state.algorithmName)
@@ -43,16 +44,17 @@ export default function CanvasContainer({ onPredictionSubmit }: CanvasContainerP
     }
   }, [])
 
-  const handleElementClick = (index: number) => {
-    onPredictionSubmit?.(String(index))
-  }
-
   return (
     <div
       ref={containerRef}
       className="h-full w-full rounded-md border border-border bg-white shadow-sm"
     >
-      <ArrayCanvas width={size.width} height={size.height} onElementClick={handleElementClick} />
+      <ArrayCanvas
+        width={size.width}
+        height={size.height}
+        onElementClick={onElementClick}
+        selectedIndex={selectedIndex}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ interface ArrayCanvasProps {
   width?: number
   height?: number
   onElementClick?: (index: number) => void
+  selectedIndex?: number | null
 }
 
 const PADDING = 32
@@ -20,7 +21,12 @@ const BAR_COLOR = {
   primary: '#4F46E5',
 } as const
 
-export default function ArrayCanvas({ width = 600, height = 300, onElementClick }: ArrayCanvasProps) {
+export default function ArrayCanvas({
+  width = 600,
+  height = 300,
+  onElementClick,
+  selectedIndex = null,
+}: ArrayCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const mode = useAlgorithmStore((state) => state.mode)
 
@@ -141,6 +147,18 @@ export default function ArrayCanvas({ width = 600, height = 300, onElementClick 
                 stroke="#4F46E5"
                 strokeWidth={2}
                 className="opacity-0 transition-opacity group-hover:opacity-100"
+              />
+            )}
+            {selectedIndex === bar.index && (
+              <rect
+                x={bar.x}
+                y={bar.y}
+                width={bar.width}
+                height={bar.height}
+                rx={4}
+                fill="none"
+                stroke={BAR_COLOR.secondary}
+                strokeWidth={2}
               />
             )}
             <text
