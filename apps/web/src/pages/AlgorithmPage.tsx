@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import type { AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { apiFetch } from '@/api/client'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
 import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
 import LeftPanel from '@/components/layout/LeftPanel'
@@ -14,9 +16,14 @@ import PredictionZone, {
 import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnalysisToast'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
+// Bubble Sort is the only algorithm until Phase 15, so the session's
+// topic is always this one seeded row - no topic picker exists yet.
+const CURRENT_ALGORITHM_TOPIC_NAME = 'bubble-sort'
+
 export default function AlgorithmPage() {
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  const setSessionId = useAlgorithmStore((state) => state.setSessionId)
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
@@ -54,6 +61,45 @@ export default function AlgorithmPage() {
     }
     window.addEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
     return () => window.removeEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
+  }, [])
+
+  // Create a database-backed session on mount and close it out on
+  // unmount. Best-effort: a failure here shouldn't block the local
+  // Zustand-driven practice flow, only the persisted history of it.
+  useEffect(() => {
+    let cancelled = false
+
+    async function createDbSession() {
+      try {
+        const topics = await apiFetch<AlgorithmTopicDTO[]>('/api/v1/topics')
+        const topic = topics.find((t) => t.name === CURRENT_ALGORITHM_TOPIC_NAME)
+        if (!topic || cancelled) return
+
+        const { mode, scaffoldingLevel } = useAlgorithmStore.getState()
+        const session = await apiFetch<{ id: string }>('/api/v1/sessions', {
+          method: 'POST',
+          body: JSON.stringify({ algorithmTopicId: topic.id, mode, scaffoldingLevel }),
+        })
+        if (!cancelled) setSessionId(session.id)
+      } catch {
+        // No backend session this run; interaction logging will simply
+        // no-op since sessionId stays null.
+      }
+    }
+
+    void createDbSession()
+
+    return () => {
+      cancelled = true
+      const activeSessionId = useAlgorithmStore.getState().sessionId
+      if (activeSessionId) {
+        apiFetch(`/api/v1/sessions/${activeSessionId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ endTime: new Date().toISOString(), completed: true }),
+        }).catch(() => {})
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useKeyboardShortcuts({

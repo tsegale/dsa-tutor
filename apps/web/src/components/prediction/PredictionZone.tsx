@@ -4,6 +4,7 @@ import { AlgorithmMode, PredictionType } from '@dsa-tutor/types'
 import type { HintRequest, PredictionRequest } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { submitPrediction, requestHint } from '@/api/predictions'
+import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import XPToast from '@/components/ui/XPToast'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -83,6 +84,8 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
   const [shakeToken, setShakeToken] = useState(0)
   const [xpAmount, setXpAmount] = useState(0)
   const [xpVisible, setXpVisible] = useState(false)
+  const [hintsRequestedCount, setHintsRequestedCount] = useState(0)
+  const [stepStartTime, setStepStartTime] = useState(() => Date.now())
 
   const isVisible = mode === AlgorithmMode.PRACTICE && snapshot !== null && snapshot.isPredictionRequired
   const stepIndex = snapshot?.stepIndex ?? null
@@ -93,6 +96,8 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
     setMistakeAnalysis(null)
     setHint(null)
     setHintLoading(false)
+    setHintsRequestedCount(0)
+    setStepStartTime(Date.now())
   }, [stepIndex])
 
   useEffect(() => {
@@ -128,6 +133,7 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
   async function handleRequestHint() {
     if (hint !== null || hintLoading || !snapshot) return
     setHintLoading(true)
+    setHintsRequestedCount((count) => count + 1)
 
     const request: HintRequest = {
       algorithmName,
@@ -162,6 +168,25 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
 
     const response = await submitPrediction(request)
     setIsSubmitting(false)
+
+    const timeSpentSeconds = Math.round((Date.now() - stepStartTime) / 1000)
+    if (sessionId) {
+      apiFetch('/api/v1/interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId,
+          stepIndex: snapshot.stepIndex,
+          predictionSubmitted: currentAnswer,
+          predictionCorrect: response.correct,
+          misconceptionCategory: response.correct ? null : response.misconceptionCategory,
+          hintsRequested: hintsRequestedCount,
+          timeSpentSeconds,
+        }),
+      }).catch(() => {
+        // Interaction logging is best-effort; it must never block the
+        // learner's practice flow if the backend is unreachable.
+      })
+    }
 
     if (response.correct) {
       setSubmissionState('correct')

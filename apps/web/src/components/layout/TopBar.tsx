@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Difficulty } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { logout } from '@/api/auth'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import DifficultyTag from '@/components/ui/DifficultyTag'
@@ -64,7 +66,18 @@ function RefreshIcon() {
   )
 }
 
+function LogoutIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export default function TopBar() {
+  const navigate = useNavigate()
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
@@ -163,6 +176,23 @@ export default function TopBar() {
         >
           ?
         </button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => {
+                logout()
+                navigate('/auth')
+              }}
+              aria-label="Log out"
+              className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+            >
+              <LogoutIcon />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Log out</TooltipContent>
+        </Tooltip>
       </div>
     </header>
   )

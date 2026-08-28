@@ -1,0 +1,60 @@
+import { prisma } from '../lib/prisma'
+import type { CreateSessionDto, UpdateSessionDto, SessionDto } from '../dtos/session.dto'
+
+function toSessionDto(session: any): SessionDto {
+  return {
+    id: session.id,
+    userId: session.userId,
+    algorithmTopicId: session.algorithmTopicId,
+    mode: session.mode,
+    scaffoldingLevel: session.scaffoldingLevel,
+    startTime: session.startTime.toISOString(),
+    endTime: session.endTime?.toISOString() ?? null,
+    completed: session.completed,
+    topic: {
+      name: session.algorithmTopic.name,
+      displayName: session.algorithmTopic.displayName,
+      track: session.algorithmTopic.track,
+      difficulty: session.algorithmTopic.difficulty,
+    },
+  }
+}
+
+export async function createSession(userId: string, dto: CreateSessionDto): Promise<SessionDto> {
+  const session = await prisma.session.create({
+    data: {
+      userId,
+      algorithmTopicId: dto.algorithmTopicId,
+      mode: dto.mode,
+      scaffoldingLevel: dto.scaffoldingLevel,
+      startTime: new Date(),
+    },
+    include: { algorithmTopic: true },
+  })
+  return toSessionDto(session)
+}
+
+export async function updateSession(
+  sessionId: string,
+  userId: string,
+  dto: UpdateSessionDto,
+): Promise<SessionDto> {
+  const session = await prisma.session.update({
+    where: { id: sessionId, userId },
+    data: {
+      ...(dto.endTime && { endTime: new Date(dto.endTime) }),
+      ...(dto.completed !== undefined && { completed: dto.completed }),
+      ...(dto.scaffoldingLevel && { scaffoldingLevel: dto.scaffoldingLevel }),
+    },
+    include: { algorithmTopic: true },
+  })
+  return toSessionDto(session)
+}
+
+export async function getSession(sessionId: string, userId: string): Promise<SessionDto> {
+  const session = await prisma.session.findUniqueOrThrow({
+    where: { id: sessionId, userId },
+    include: { algorithmTopic: true },
+  })
+  return toSessionDto(session)
+}
