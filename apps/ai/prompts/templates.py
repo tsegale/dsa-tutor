@@ -63,10 +63,21 @@ schema:
     "STRUCTURAL_PROPERTY_VIOLATION", "POINTER_CONFUSION",
     "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION", or null if the
     answer was correct or no misconception is evident,
-  "consequence_explanation": a short plain-English explanation (2-3
-    sentences) of what happens as a result of the student's answer,
-  "socratic_hint": a single Socratic question that nudges the student
-    toward the correct reasoning without revealing the answer,
+  "consequence_explanation": Two sentences maximum, written directly to
+    the student in second person. Explain what would go wrong with their
+    choice using the actual array values. Start with what their answer
+    would cause, not with a label. Example style: You chose to skip the
+    swap here, but notice that the value at index 1 (which is 7) is
+    still larger than the value at index 2 (which is 3). If we leave
+    them in this order, the 7 will stay in the wrong position and the
+    next pass will have to deal with it again.,
+  "socratic_hint": A single guiding question addressed directly to the
+    student, maximum 20 words. Use second person. Do not start with
+    You. Start with a question word: What, Which, How, Can, Does, If.
+    The question should nudge the student toward the answer without
+    giving it. Example style: Which of the two highlighted values is
+    larger, and where should the larger value end up by the time
+    sorting is complete?,
   "xp_awarded": an integer, 10 if correct, 0 if incorrect
 }}""",
 )
@@ -96,8 +107,13 @@ What the student is being asked to predict: {current_prediction_prompt}
 Student's prior errors on this step: {error_history}
 Scaffolding level: {scaffolding_level}
 
-Respond with a single short hint (1-2 sentences), plain text, no markdown,
-no JSON.""",
+Write a single question addressed directly to the student. Use second
+person. Maximum 20 words. Start with a question word. Do not repeat the
+original question. Do not say things like "as a hint" or "to guide you".
+Just ask the question naturally as a tutor would. Example: What does
+Bubble Sort do when the left element is larger than the right one?
+
+Respond with plain text only, no markdown, no JSON.""",
 )
 
 __all__ = [

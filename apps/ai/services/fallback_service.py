@@ -2,22 +2,17 @@ from models.request_models import ScaffoldingLevel
 from models.response_models import HintResponse, PredictionResponse
 
 FALLBACK_HINTS: dict[ScaffoldingLevel, str] = {
-    ScaffoldingLevel.HIGH: (
-        "Compare the two highlighted values directly: is the left one "
-        "greater than the right one? If so, they need to swap."
-    ),
-    ScaffoldingLevel.MEDIUM: (
-        "Look at the two highlighted values. Which one is larger, and "
-        "where should the larger value end up?"
-    ),
-    ScaffoldingLevel.LOW: "What does Bubble Sort do when two adjacent elements are out of order?",
-    ScaffoldingLevel.NONE: "Look closely at the highlighted elements.",
+    ScaffoldingLevel.HIGH: "Which of the two highlighted values is larger — the one on the left or the one on the right?",
+    ScaffoldingLevel.MEDIUM: "What does Bubble Sort require you to do when the left element is greater than the right?",
+    ScaffoldingLevel.LOW: "What invariant does this comparison step need to maintain?",
+    ScaffoldingLevel.NONE: "What is the correctness condition for a swap at this position?",
 }
 
 FALLBACK_EXPLANATION = (
-    "The AI tutor is temporarily unavailable, so here is a general check: "
-    "in Bubble Sort, adjacent elements are swapped whenever the left one "
-    "is greater than the right one."
+    "Your choice would leave these two elements in the wrong order. "
+    "On the next pass, Bubble Sort will have to revisit this same pair "
+    "and the larger value will still need to move rightward — "
+    "costing an extra comparison that could have been avoided here."
 )
 
 
