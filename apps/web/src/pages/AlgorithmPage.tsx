@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import { useParams, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { AlgorithmMode } from '@dsa-tutor/types'
 import type { AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { apiFetch } from '@/api/client'
@@ -16,14 +19,25 @@ import PredictionZone, {
 import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnalysisToast'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
-// Bubble Sort is the only algorithm until Phase 15, so the session's
-// topic is always this one seeded row - no topic picker exists yet.
-const CURRENT_ALGORITHM_TOPIC_NAME = 'bubble-sort'
+// Bubble Sort is the only algorithm with a real snapshot engine until
+// Phase 15; every other seeded topic renders a "coming soon" canvas.
+const IMPLEMENTED_ALGORITHM_NAME = 'bubble-sort'
 
 export default function AlgorithmPage() {
+  const { algorithmName: algorithmNameParam } = useParams<{ algorithmName: string }>()
+  const [searchParams] = useSearchParams()
+  const isBubbleSort = algorithmNameParam === IMPLEMENTED_ALGORITHM_NAME
+
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  const setMode = useAlgorithmStore((state) => state.setMode)
   const setSessionId = useAlgorithmStore((state) => state.setSessionId)
+
+  const { data: topics = [] } = useQuery({
+    queryKey: ['topics'],
+    queryFn: () => apiFetch<AlgorithmTopicDTO[]>('/api/v1/topics'),
+  })
+  const currentTopic = topics.find((t) => t.name === algorithmNameParam) ?? null
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
@@ -63,22 +77,37 @@ export default function AlgorithmPage() {
     return () => window.removeEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
   }, [])
 
+  // Seed the starting mode from the URL once, on mount. ModeToggle owns
+  // in-page switching after this; it never touches the URL, so there's
+  // no risk of this effect fighting a manual toggle.
+  useEffect(() => {
+    const modeParam = searchParams.get('mode')
+    setMode(modeParam === 'PRACTICE' ? AlgorithmMode.PRACTICE : AlgorithmMode.DEMO)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Keep the breadcrumb in sync with the resolved topic's real display
+  // name, without touching the snapshot engine's array/step state.
+  useEffect(() => {
+    if (currentTopic) {
+      useAlgorithmStore.setState({ algorithmName: currentTopic.displayName })
+    }
+  }, [currentTopic])
+
   // Create a database-backed session on mount and close it out on
   // unmount. Best-effort: a failure here shouldn't block the local
   // Zustand-driven practice flow, only the persisted history of it.
+  // Only Bubble Sort has real content worth logging a session for.
   useEffect(() => {
     let cancelled = false
 
     async function createDbSession() {
+      if (!isBubbleSort || !currentTopic) return
       try {
-        const topics = await apiFetch<AlgorithmTopicDTO[]>('/api/v1/topics')
-        const topic = topics.find((t) => t.name === CURRENT_ALGORITHM_TOPIC_NAME)
-        if (!topic || cancelled) return
-
         const { mode, scaffoldingLevel } = useAlgorithmStore.getState()
         const session = await apiFetch<{ id: string }>('/api/v1/sessions', {
           method: 'POST',
-          body: JSON.stringify({ algorithmTopicId: topic.id, mode, scaffoldingLevel }),
+          body: JSON.stringify({ algorithmTopicId: currentTopic.id, mode, scaffoldingLevel }),
         })
         if (!cancelled) setSessionId(session.id)
       } catch {
@@ -99,8 +128,7 @@ export default function AlgorithmPage() {
         }).catch(() => {})
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isBubbleSort, currentTopic, setSessionId])
 
   useKeyboardShortcuts({
     onTabChange: setActiveTab,
@@ -142,15 +170,28 @@ export default function AlgorithmPage() {
       </motion.div>
 
       <div style={{ gridArea: 'canvas', overflow: 'hidden', position: 'relative' }} data-canvas-area>
-        <motion.div
-          animate={{ scale: focusModeActive ? 1.02 : 1 }}
-          transition={{ duration: 0.25, ease: 'easeInOut' }}
-          className="flex h-full w-full items-center justify-center p-4"
-        >
-          <CanvasContainer onElementClick={handleElementClick} selectedIndex={canvasSelectedIndex} />
-        </motion.div>
+        {isBubbleSort ? (
+          <>
+            <motion.div
+              animate={{ scale: focusModeActive ? 1.02 : 1 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="flex h-full w-full items-center justify-center p-4"
+            >
+              <CanvasContainer onElementClick={handleElementClick} selectedIndex={canvasSelectedIndex} />
+            </motion.div>
 
-        <PredictionZone onSubmit={handlePredictionSubmit} />
+            <PredictionZone onSubmit={handlePredictionSubmit} />
+          </>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+            <span className="text-lg font-semibold text-text-primary">
+              {currentTopic?.displayName ?? algorithmNameParam} coming soon
+            </span>
+            <span className="text-sm text-text-muted">
+              This algorithm hasn't been built yet. Bubble Sort is the only one available right now.
+            </span>
+          </div>
+        )}
       </div>
 
       <motion.div

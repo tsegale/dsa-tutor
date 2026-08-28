@@ -1,12 +1,14 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { createSession, updateSession, getSession } from '../services/session.service'
+import { updateStreak } from '../services/auth.service'
 
 const router = Router()
 router.use(authenticate)
 
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
+    await updateStreak(req.userId!)
     const session = await createSession(req.userId!, req.body)
     res.status(201).json({ data: session, error: null })
   } catch {

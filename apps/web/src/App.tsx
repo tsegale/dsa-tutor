@@ -1,50 +1,51 @@
-import type { ReactElement } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from '@/context/AuthContext'
+import { getToken } from '@/api/auth'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import AuthPage from '@/pages/AuthPage'
+import Dashboard from '@/pages/Dashboard'
+import AlgorithmPage from '@/pages/AlgorithmPage'
 import Showcase from '@/pages/Showcase'
 import CanvasTest from '@/pages/CanvasTest'
-import AlgorithmPage from '@/pages/AlgorithmPage'
-import AuthPage from '@/pages/AuthPage'
-import { TooltipProvider } from '@/components/ui/tooltip'
 
 const queryClient = new QueryClient()
 
-function RequireAuth({ children }: { children: ReactElement }) {
-  const token = localStorage.getItem('dsa-tutor-token')
-  if (!token) return <Navigate to="/auth" replace />
-  return children
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  return getToken() ? <>{children}</> : <Navigate to="/auth" replace />
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <AlgorithmPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/algorithm/:algorithmName"
-              element={
-                <RequireAuth>
-                  <AlgorithmPage />
-                </RequireAuth>
-              }
-            />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/showcase" element={<Showcase />} />
-            <Route path="/canvas-test" element={<CanvasTest />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<AuthPage />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/algorithm/:algorithmName"
+                element={
+                  <ProtectedRoute>
+                    <AlgorithmPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/showcase" element={<Showcase />} />
+              <Route path="/canvas-test" element={<CanvasTest />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
-
-export default App

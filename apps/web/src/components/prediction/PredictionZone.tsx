@@ -191,6 +191,15 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
     if (response.correct) {
       setSubmissionState('correct')
       addXP(response.xpAwarded)
+      if (response.xpAwarded > 0) {
+        apiFetch('/api/v1/auth/xp', {
+          method: 'POST',
+          body: JSON.stringify({ amount: response.xpAwarded }),
+        }).catch(() => {
+          // XP persistence is best-effort; the local session XP already
+          // reflects the award regardless of whether this call lands.
+        })
+      }
       setXpAmount(response.xpAwarded)
       setXpVisible(true)
       await new Promise((resolve) => setTimeout(resolve, 400))

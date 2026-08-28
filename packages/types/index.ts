@@ -175,6 +175,9 @@ export interface AlgorithmTopicDTO {
   masteryPercent: number
 }
 
+/** Alias kept for call sites that refer to this shape as `TopicDto`. */
+export type TopicDto = AlgorithmTopicDTO
+
 /**
  * The standard API response wrapper: exactly one of `data`/`error`
  * is non-null.

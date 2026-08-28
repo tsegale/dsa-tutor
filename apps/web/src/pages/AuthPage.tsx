@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { login, register } from '@/api/auth'
+import { useAuth } from '@/context/AuthContext'
 
 const inputClassName =
   'w-full rounded-md border-2 border-border px-3 py-2 text-sm outline-none transition-colors focus:border-text-muted'
 
 function LoginForm() {
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -20,6 +22,7 @@ function LoginForm() {
     setIsSubmitting(true)
     try {
       await login(email, password)
+      await refreshUser()
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
@@ -66,6 +69,7 @@ function LoginForm() {
 
 function RegisterForm() {
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -78,6 +82,7 @@ function RegisterForm() {
     setIsSubmitting(true)
     try {
       await register(email, password, name)
+      await refreshUser()
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')

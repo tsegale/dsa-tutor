@@ -151,3 +151,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* tailwind-scrollbar-hide is a v3-style JS plugin and this project's
+   Tailwind v4 CSS-first pipeline does not load tailwind.config.ts
+   plugins, so it would be a no-op here - this @utility is the v4-native
+   equivalent, loaded the same way tw-animate-css is above. */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

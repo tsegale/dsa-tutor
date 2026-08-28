@@ -34,6 +34,26 @@ export async function register(dto: RegisterDto): Promise<AuthResponseDto> {
   }
 }
 
+export async function updateStreak(userId: string): Promise<void> {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
+  const today = new Date().toDateString()
+  const lastActive = user.lastActiveDate?.toDateString()
+
+  if (lastActive === today) return // already counted today
+
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isConsecutive = lastActive === yesterday.toDateString()
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      streakCount: isConsecutive ? { increment: 1 } : 1,
+      lastActiveDate: new Date(),
+    },
+  })
+}
+
 export async function login(dto: LoginDto): Promise<AuthResponseDto> {
   const user = await prisma.user.findUnique({ where: { email: dto.email } })
   if (!user) throw new Error('INVALID_CREDENTIALS')
