@@ -5,10 +5,12 @@ import { apiFetch } from '../api/client'
 import type { TopicDto } from '@dsa-tutor/types'
 import { useAuth } from '../context/AuthContext'
 import { AlgorithmTrack } from '@dsa-tutor/types'
+import { useOnboarding } from '../hooks/useOnboarding'
 import DashboardNav from '../components/layout/DashboardNav'
 import CurriculumSidebar from '../components/dashboard/CurriculumSidebar'
 import TrackSection from '../components/dashboard/TrackSection'
 import StatsBanner from '../components/dashboard/StatsBanner'
+import WelcomeModal from '../components/onboarding/WelcomeModal'
 
 function DashboardSkeleton() {
   return (
@@ -30,6 +32,7 @@ function DashboardSkeleton() {
 export default function Dashboard() {
   const { user, refreshUser } = useAuth()
   const navigate = useNavigate()
+  const { showWelcomeModal, closeWelcomeModal, startTour, completeOnboarding } = useOnboarding()
 
   // Re-fetch the profile every time the dashboard is landed on, so XP
   // and streak earned during a practice session (on a different page)
@@ -73,6 +76,17 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+
+      {showWelcomeModal && (
+        <WelcomeModal
+          userName={user?.name ?? 'there'}
+          onStartTour={() => {
+            closeWelcomeModal()
+            startTour()
+          }}
+          onSkip={completeOnboarding}
+        />
+      )}
     </div>
   )
 }

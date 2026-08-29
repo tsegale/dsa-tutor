@@ -45,7 +45,7 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
       : 0
 
   return (
-    <div className="flex gap-4 border-b border-border bg-surface px-6 py-4">
+    <div id="dashboard-stats-banner" className="flex gap-4 border-b border-border bg-surface px-6 py-4">
       <StatCard>
         <BoltIcon />
         <div>

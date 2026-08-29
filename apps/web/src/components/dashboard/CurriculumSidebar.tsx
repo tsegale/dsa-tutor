@@ -74,6 +74,7 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
 
   return (
     <aside
+      id="curriculum-sidebar"
       className={cn(
         'shrink-0 border-r border-border bg-white transition-[width] duration-150',
         collapsed ? 'w-12' : 'w-[260px]',

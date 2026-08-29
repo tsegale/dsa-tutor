@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useOnboardingStore } from './useOnboarding'
 
 const THEME_STORAGE_KEY = 'dsa-tutor-theme'
 
@@ -14,6 +15,10 @@ const TYPING_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseKeyboardShortcutsConfig) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // The onboarding walkthrough owns ArrowRight/Enter/Escape while
+      // it's active; let its own listener handle them instead.
+      if (useOnboardingStore.getState().showOnboarding) return
+
       const target = event.target as HTMLElement | null
       if (target && TYPING_TAGS.has(target.tagName)) return
 

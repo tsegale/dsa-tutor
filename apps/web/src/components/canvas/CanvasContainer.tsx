@@ -46,6 +46,7 @@ export default function CanvasContainer({ onElementClick, selectedIndex = null }
 
   return (
     <div
+      id="algorithm-canvas"
       ref={containerRef}
       className="h-full w-full rounded-md border border-border bg-white shadow-sm"
     >

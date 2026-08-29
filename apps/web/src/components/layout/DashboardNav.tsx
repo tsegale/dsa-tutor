@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { useOnboarding } from '@/hooks/useOnboarding'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
@@ -43,6 +44,7 @@ function BoltIcon() {
 export default function DashboardNav() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { resetOnboarding } = useOnboarding()
 
   function handleSignOut() {
     logout()
@@ -68,6 +70,14 @@ export default function DashboardNav() {
       </div>
 
       <div className="flex items-center gap-5">
+        <button
+          type="button"
+          onClick={resetOnboarding}
+          className="text-xs text-primary hover:underline"
+        >
+          Take the tour
+        </button>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1.5">

@@ -12,7 +12,7 @@ export default function ModeToggle() {
   const setMode = useAlgorithmStore((state) => state.setMode)
 
   return (
-    <div className="relative inline-flex rounded-md bg-surface p-1">
+    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface p-1">
       {OPTIONS.map((option) => {
         const isActive = mode === option.value
         return (

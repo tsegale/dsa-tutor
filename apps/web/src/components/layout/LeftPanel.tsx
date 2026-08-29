@@ -126,6 +126,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
 
   return (
     <motion.div
+      id="left-panel"
       animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       className="flex h-full flex-col overflow-hidden border-r border-border bg-white"
