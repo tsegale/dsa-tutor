@@ -78,7 +78,7 @@ export default function ArrayCanvas({
           y={height / 2}
           textAnchor="middle"
           dominantBaseline="middle"
-          className="fill-text-muted text-sm"
+          className="fill-text-muted text-sm dark:fill-dark-text-secondary"
         >
           Load an algorithm to begin
         </text>
@@ -173,7 +173,7 @@ export default function ArrayCanvas({
               x={bar.x + bar.width / 2}
               y={height - PADDING + 16}
               textAnchor="middle"
-              className="fill-text-primary text-xs font-medium"
+              className="fill-text-primary text-xs font-medium dark:fill-dark-text-primary"
             >
               {bar.value}
             </text>
@@ -181,7 +181,7 @@ export default function ArrayCanvas({
               x={bar.x + bar.width / 2}
               y={bar.y - 8}
               textAnchor="middle"
-              className="fill-text-muted text-[10px]"
+              className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
             >
               {bar.index}
             </text>

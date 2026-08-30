@@ -28,7 +28,7 @@ function EyeIcon({ active }: { active: boolean }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
-      className={active ? 'text-primary' : 'text-text-muted'}
+      className={active ? 'text-primary' : 'text-text-muted dark:text-dark-text-secondary'}
     >
       <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
       <circle cx="12" cy="12" r="3" />
@@ -39,13 +39,13 @@ function EyeIcon({ active }: { active: boolean }) {
 function ThemeIcon({ isDark }: { isDark: boolean }) {
   if (isDark) {
     return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-text-muted">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-text-muted dark:text-dark-text-secondary">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
       </svg>
     )
   }
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" className="text-text-muted">
+    <svg width="18" height="18" viewBox="0 0 24 24" className="text-text-muted dark:text-dark-text-secondary">
       <circle cx="12" cy="12" r="4" fill="currentColor" />
       <path
         d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
@@ -110,13 +110,13 @@ export default function TopBar() {
   }
 
   return (
-    <header className="relative flex h-14 w-full items-center justify-between border-b border-border bg-white px-4">
+    <header className="relative flex h-14 w-full items-center justify-between border-b border-border bg-white px-4 dark:bg-dark-surface">
       <div className="flex items-center gap-3">
         <nav className="flex items-center gap-1 text-[13px]">
-          <span className="text-text-muted">Dashboard</span>
-          <span className="text-text-muted">/</span>
-          <span className="text-text-muted">{TRACK_NAME}</span>
-          <span className="text-text-muted">/</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">Dashboard</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">/</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">{TRACK_NAME}</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">/</span>
           <span className="font-bold text-primary">{algorithmName}</span>
         </nav>
         <DifficultyTag difficulty={DIFFICULTY} />
@@ -131,7 +131,7 @@ export default function TopBar() {
           <div className="w-32">
             <ProgressBar />
           </div>
-          <span className="text-xs text-text-secondary">
+          <span className="text-xs text-text-secondary dark:text-dark-text-secondary">
             Step {Math.min(stepIndex + 1, snapshotArray.length)} of {snapshotArray.length}
           </span>
         </div>
@@ -142,7 +142,7 @@ export default function TopBar() {
               type="button"
               onClick={toggleFocusMode}
               aria-label="Toggle focus mode"
-              className="flex size-8 items-center justify-center rounded-md hover:bg-surface"
+              className="flex size-8 items-center justify-center rounded-md hover:bg-surface dark:hover:bg-dark-border"
             >
               <EyeIcon active={focusModeActive} />
             </button>
@@ -175,7 +175,7 @@ export default function TopBar() {
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SHORTCUTS_MODAL_EVENT))}
           aria-label="Keyboard shortcuts"
-          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
         >
           ?
         </button>
@@ -189,7 +189,7 @@ export default function TopBar() {
                 navigate('/auth')
               }}
               aria-label="Log out"
-              className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+              className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
             >
               <LogoutIcon />
             </button>

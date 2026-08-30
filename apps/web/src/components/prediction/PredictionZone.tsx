@@ -238,7 +238,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
             className={cn(
-              'absolute bottom-0 left-0 z-20 h-[35%] w-full rounded-t-lg border-t bg-white shadow-lg',
+              'absolute bottom-0 left-0 z-20 h-[35%] w-full rounded-t-lg border-t bg-white shadow-lg dark:bg-dark-surface',
               'transition-colors duration-300',
               submissionState === 'correct' ? 'border-success' : 'border-border',
             )}

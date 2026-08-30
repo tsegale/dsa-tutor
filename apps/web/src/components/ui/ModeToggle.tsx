@@ -12,7 +12,7 @@ export default function ModeToggle() {
   const setMode = useAlgorithmStore((state) => state.setMode)
 
   return (
-    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface p-1">
+    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface p-1 dark:bg-dark-border">
       {OPTIONS.map((option) => {
         const isActive = mode === option.value
         return (
@@ -21,7 +21,9 @@ export default function ModeToggle() {
             type="button"
             onClick={() => setMode(option.value)}
             className={`relative z-10 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-              isActive ? 'text-white' : 'text-text-muted hover:text-text-primary'
+              isActive
+                ? 'text-white'
+                : 'text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary'
             }`}
           >
             {isActive && (

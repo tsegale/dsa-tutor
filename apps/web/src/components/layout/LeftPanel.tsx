@@ -129,7 +129,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
       id="left-panel"
       animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="flex h-full flex-col overflow-hidden border-r border-border bg-white"
+      className="flex h-full flex-col overflow-hidden border-r border-border bg-white dark:bg-dark-surface"
     >
       {collapsed ? (
         <div className="flex h-full flex-col items-center gap-2 py-3">
@@ -153,7 +153,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                 type="button"
                 onClick={stepBackward}
                 aria-label="Step Backward"
-                className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-surface"
+                className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-surface dark:hover:bg-dark-border"
               >
                 <SkipBackIcon />
               </button>
@@ -167,7 +167,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                 type="button"
                 onClick={stepForward}
                 aria-label="Step Forward"
-                className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-surface"
+                className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-surface dark:hover:bg-dark-border"
               >
                 <SkipForwardIcon />
               </button>
@@ -181,7 +181,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                 type="button"
                 onClick={resetAlgorithm}
                 aria-label="Reset"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <RefreshIcon />
               </button>
@@ -193,7 +193,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
             type="button"
             onClick={onToggle}
             aria-label="Expand panel"
-            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
           >
             <ChevronIcon pointRight />
           </button>
@@ -201,7 +201,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
       ) : (
         <div className="flex h-full flex-col gap-6 overflow-y-auto p-4">
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-dark-text-secondary">
               Playback Controls
             </h3>
             <div>
@@ -209,7 +209,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
                 {isPlaying ? 'Pause' : 'Play'}
               </Button>
-              <p className="mt-1 text-center text-[11px] text-text-muted">Space</p>
+              <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">Space</p>
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
@@ -217,14 +217,14 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                   <SkipBackIcon />
                   Back
                 </Button>
-                <p className="mt-1 text-center text-[11px] text-text-muted">←</p>
+                <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">←</p>
               </div>
               <div className="flex-1">
                 <Button variant="outline" onClick={stepForward} className="w-full gap-1.5">
                   <SkipForwardIcon />
                   Next
                 </Button>
-                <p className="mt-1 text-center text-[11px] text-text-muted">→</p>
+                <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">→</p>
               </div>
             </div>
             <div>
@@ -232,14 +232,14 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                 <RefreshIcon />
                 Reset
               </Button>
-              <p className="mt-1 text-center text-[11px] text-text-muted">R</p>
+              <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">R</p>
             </div>
           </section>
 
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Speed</h3>
-              <span className="font-mono text-xs text-text-primary">{playbackSpeed.toFixed(1)}x</span>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-dark-text-secondary">Speed</h3>
+              <span className="font-mono text-xs text-text-primary dark:text-dark-text-primary">{playbackSpeed.toFixed(1)}x</span>
             </div>
             <Slider
               min={0.5}
@@ -251,7 +251,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-dark-text-secondary">
               Array Input
             </h3>
             <input
@@ -262,7 +262,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
                 if (event.key === 'Enter') applyArrayInput()
               }}
               placeholder="5,3,1,4,2"
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:border-primary"
+              className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
             />
             {inputError && <p className="text-xs text-error">{inputError}</p>}
             <Button variant="outline" size="sm" onClick={applyArrayInput}>
@@ -277,7 +277,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
             type="button"
             onClick={onToggle}
             aria-label="Collapse panel"
-            className="mt-auto flex items-center justify-center gap-1 self-start text-text-muted hover:text-text-primary"
+            className="mt-auto flex items-center justify-center gap-1 self-start text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
           >
             <ChevronIcon pointRight={false} />
           </button>

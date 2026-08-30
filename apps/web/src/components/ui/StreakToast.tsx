@@ -42,15 +42,17 @@ export default function StreakToast({ streakCount, visible, onDismiss }: StreakT
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -40, opacity: 0 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="pointer-events-auto flex items-center gap-2 rounded-md border border-border bg-white px-4 py-2.5 shadow-lg"
+            className="pointer-events-auto flex items-center gap-2 rounded-md border border-border bg-white px-4 py-2.5 shadow-lg dark:bg-dark-surface"
           >
             <FlameIcon />
-            <span className="text-sm font-medium text-text-primary">{streakCount} day streak!</span>
+            <span className="text-sm font-medium text-text-primary dark:text-dark-text-primary">
+              {streakCount} day streak!
+            </span>
             <button
               type="button"
               onClick={onDismiss}
               aria-label="Dismiss streak notification"
-              className="ml-1 text-text-muted hover:text-text-primary"
+              className="ml-1 text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
             >
               <XIcon />
             </button>

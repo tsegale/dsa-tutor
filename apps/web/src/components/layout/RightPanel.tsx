@@ -66,7 +66,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
     <motion.div
       animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="flex h-full flex-col overflow-hidden border-l border-border bg-white"
+      className="flex h-full flex-col overflow-hidden border-l border-border bg-white dark:bg-dark-surface"
     >
       {collapsed ? (
         <div className="flex h-full flex-col items-center gap-2 py-3">
@@ -76,7 +76,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
                 type="button"
                 onClick={() => expandToTab(1)}
                 aria-label="Explanation"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <ExplanationIcon />
               </button>
@@ -90,7 +90,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
                 type="button"
                 onClick={() => expandToTab(2)}
                 aria-label="Pseudocode"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <PseudocodeIcon />
               </button>
@@ -104,7 +104,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
                 type="button"
                 onClick={() => expandToTab(3)}
                 aria-label="Complexity"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <ComplexityIcon />
               </button>
@@ -147,7 +147,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
             type="button"
             onClick={onToggle}
             aria-label="Collapse panel"
-            className="mt-2 flex items-center justify-center self-end text-text-muted hover:text-text-primary"
+            className="mt-2 flex items-center justify-center self-end text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
           >
             <ChevronIcon pointRight />
           </button>

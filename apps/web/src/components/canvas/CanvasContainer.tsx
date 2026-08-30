@@ -48,7 +48,7 @@ export default function CanvasContainer({ onElementClick, selectedIndex = null }
     <div
       id="algorithm-canvas"
       ref={containerRef}
-      className="h-full w-full rounded-md border border-border bg-white shadow-sm"
+      className="h-full w-full rounded-md border border-border bg-white shadow-sm dark:bg-dark-surface"
     >
       <ArrayCanvas
         width={size.width}

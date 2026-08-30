@@ -17,7 +17,7 @@ function ComingSoonLabel({ label }: { label: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="cursor-not-allowed text-text-muted">{label}</span>
+        <span className="cursor-not-allowed text-text-muted dark:text-dark-text-secondary">{label}</span>
       </TooltipTrigger>
       <TooltipContent>Coming soon</TooltipContent>
     </Tooltip>
@@ -29,14 +29,14 @@ export default function PseudocodePanel() {
   const activeLine = snapshot?.pseudocodeLine
 
   return (
-    <div className="flex h-full flex-col rounded-md border border-border bg-white">
+    <div className="flex h-full flex-col rounded-md border border-border bg-white dark:bg-dark-surface">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-sm font-semibold text-text-primary">Pseudocode</span>
+        <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Pseudocode</span>
         <div className="flex items-center gap-3 text-xs">
           <span className="font-medium text-primary">Pseudocode</span>
-          <span className="text-text-muted">|</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">|</span>
           <ComingSoonLabel label="Python" />
-          <span className="text-text-muted">|</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">|</span>
           <ComingSoonLabel label="Java" />
         </div>
       </div>
@@ -59,7 +59,9 @@ export default function PseudocodePanel() {
               <span
                 className={cn(
                   'relative whitespace-pre',
-                  isActive ? 'font-bold text-text-primary' : 'text-text-muted',
+                  isActive
+                    ? 'font-bold text-text-primary dark:text-dark-text-primary'
+                    : 'text-text-muted dark:text-dark-text-secondary',
                 )}
               >
                 {line}

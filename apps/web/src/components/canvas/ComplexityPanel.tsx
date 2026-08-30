@@ -9,12 +9,14 @@ const ROWS = [
 
 export default function ComplexityPanel() {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-md border border-border bg-white p-4">
+    <div className="flex h-full flex-col gap-3 rounded-md border border-border bg-white p-4 dark:bg-dark-surface">
       {ROWS.map((row) => (
         <div key={row.label} className="flex items-center justify-between">
-          <span className="text-sm text-text-secondary">
+          <span className="text-sm text-text-secondary dark:text-dark-text-secondary">
             {row.label}
-            {row.note && <span className="ml-1 text-xs text-text-muted">({row.note})</span>}
+            {row.note && (
+              <span className="ml-1 text-xs text-text-muted dark:text-dark-text-secondary">({row.note})</span>
+            )}
           </span>
           <span className={cn('rounded-md px-2 py-1 font-mono text-sm font-semibold', row.colorClass)}>
             {row.value}

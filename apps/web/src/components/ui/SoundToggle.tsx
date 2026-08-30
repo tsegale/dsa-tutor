@@ -17,7 +17,7 @@ export default function SoundToggle() {
       <TooltipTrigger asChild>
         <button
           onClick={toggle}
-          className="rounded-md p-2 transition-colors hover:bg-surface"
+          className="rounded-md p-2 transition-colors hover:bg-surface dark:hover:bg-dark-border"
           aria-label={enabled ? 'Mute sounds' : 'Enable sounds'}
         >
           {enabled ? (
@@ -46,7 +46,7 @@ export default function SoundToggle() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-text-muted"
+              className="text-text-muted dark:text-dark-text-secondary"
             >
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
               <line x1="23" y1="9" x2="17" y2="15" />

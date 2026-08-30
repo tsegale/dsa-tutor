@@ -11,10 +11,10 @@ export default function ExplanationPanel() {
   const [simplified, setSimplified] = useState(false)
 
   return (
-    <div className="flex h-full flex-col rounded-md border border-border bg-white">
+    <div className="flex h-full flex-col rounded-md border border-border bg-white dark:bg-dark-surface">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-sm font-semibold text-text-primary">Explanation</span>
-        <label className="flex items-center gap-2 text-xs text-text-secondary">
+        <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Explanation</span>
+        <label className="flex items-center gap-2 text-xs text-text-secondary dark:text-dark-text-secondary">
           Simplified Mode
           <Switch checked={simplified} onCheckedChange={setSimplified} />
         </label>
@@ -26,12 +26,14 @@ export default function ExplanationPanel() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.15, ease: 'easeIn' }}
-            className="font-sans text-[15px] text-text-primary"
+            className="font-sans text-[15px] text-text-primary dark:text-dark-text-primary"
           >
             {snapshot?.description ?? 'Load an algorithm to begin.'}
           </motion.p>
         </AnimatePresence>
-        {simplified && <p className="mt-3 text-sm text-text-muted">{SIMPLIFIED_EXPLANATION}</p>}
+        {simplified && (
+          <p className="mt-3 text-sm text-text-muted dark:text-dark-text-secondary">{SIMPLIFIED_EXPLANATION}</p>
+        )}
       </div>
     </div>
   )

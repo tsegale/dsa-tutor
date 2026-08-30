@@ -24,7 +24,7 @@ export default function ValueInput({
 
   return (
     <div className="flex h-full flex-col justify-center gap-2">
-      <p className="font-sans text-[15px] font-medium text-text-primary">{prompt}</p>
+      <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">{prompt}</p>
       <input
         ref={inputRef}
         type="text"
@@ -47,10 +47,10 @@ export default function ValueInput({
           }
         }}
         className={cn(
-          'w-full rounded-md border-2 px-3 py-2 text-center font-mono text-lg outline-none transition-colors duration-300',
+          'w-full rounded-md border-2 px-3 py-2 text-center font-mono text-lg text-text-primary outline-none transition-colors duration-300 dark:text-dark-text-primary',
           submissionState === 'correct' && 'border-success',
           submissionState === 'incorrect' && 'border-error',
-          submissionState === 'idle' && 'border-border focus:border-text-muted',
+          submissionState === 'idle' && 'border-border focus:border-text-muted dark:focus:border-dark-text-secondary',
         )}
       />
     </div>
