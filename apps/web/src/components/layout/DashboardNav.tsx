@@ -78,6 +78,16 @@ export default function DashboardNav() {
           Take the tour
         </button>
 
+        {user?.role === 'EDUCATOR' && (
+          <button
+            type="button"
+            onClick={() => navigate('/educator')}
+            className="rounded-md border border-primary px-3 py-1 text-xs font-medium text-primary hover:bg-primary-light"
+          >
+            Educator Dashboard
+          </button>
+        )}
+
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1.5">

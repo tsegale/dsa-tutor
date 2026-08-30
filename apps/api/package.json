@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist node_modules",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "create-educator": "tsx scripts/create-educator.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

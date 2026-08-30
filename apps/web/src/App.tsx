@@ -9,6 +9,7 @@ import OnboardingController from '@/components/onboarding/OnboardingController'
 import AuthPage from '@/pages/AuthPage'
 import Dashboard from '@/pages/Dashboard'
 import AlgorithmPage from '@/pages/AlgorithmPage'
+import EducatorDashboard from '@/pages/EducatorDashboard'
 import Showcase from '@/pages/Showcase'
 import CanvasTest from '@/pages/CanvasTest'
 
@@ -53,6 +54,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <AlgorithmPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/educator"
+                element={
+                  <ProtectedRoute>
+                    <EducatorDashboard />
                   </ProtectedRoute>
                 }
               />
