@@ -6,6 +6,8 @@ import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmSt
 import { submitPrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
+import { useSoundEffects } from '@/hooks/useSoundEffects'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import XPToast from '@/components/ui/XPToast'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import CanvasClickInput from './CanvasClickInput'
@@ -15,6 +17,8 @@ import MistakeAnalysisToast from './MistakeAnalysisToast'
 
 interface PredictionZoneProps {
   onSubmit: (answer: string) => void
+  onHintRequested?: () => void
+  onPredictionResult?: (correct: boolean) => void
 }
 
 export const CANVAS_ELEMENT_SELECTED_EVENT = 'dsa-tutor:canvas-element-selected'
@@ -66,7 +70,7 @@ function Spinner() {
   )
 }
 
-export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
+export default function PredictionZone({ onSubmit, onHintRequested, onPredictionResult }: PredictionZoneProps) {
   const mode = useAlgorithmStore((state) => state.mode)
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
@@ -74,6 +78,8 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
   const sessionId = useAlgorithmStore((state) => state.sessionId)
   const stepForward = useAlgorithmStore((state) => state.stepForward)
   const addXP = useAlgorithmStore((state) => state.addXP)
+  const { play } = useSoundEffects()
+  const prefersReducedMotion = useReducedMotion()
 
   const [currentAnswer, setCurrentAnswer] = useState<string | null>(null)
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
@@ -134,6 +140,7 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
     if (hint !== null || hintLoading || !snapshot) return
     setHintLoading(true)
     setHintsRequestedCount((count) => count + 1)
+    onHintRequested?.()
 
     const request: HintRequest = {
       algorithmName,
@@ -188,7 +195,10 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
       })
     }
 
+    onPredictionResult?.(response.correct)
+
     if (response.correct) {
+      play('correct')
       setSubmissionState('correct')
       addXP(response.xpAwarded)
       if (response.xpAwarded > 0) {
@@ -202,9 +212,11 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
       }
       setXpAmount(response.xpAwarded)
       setXpVisible(true)
+      play('xp')
       await new Promise((resolve) => setTimeout(resolve, 400))
       stepForward()
     } else {
+      play('incorrect')
       setSubmissionState('incorrect')
       setMistakeAnalysis(response.consequenceExplanation)
       setShakeToken((token) => token + 1)
@@ -224,12 +236,14 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
             className={cn(
               'absolute bottom-0 left-0 z-20 h-[35%] w-full rounded-t-lg border-t bg-white shadow-lg',
               'transition-colors duration-300',
               submissionState === 'correct' ? 'border-success' : 'border-border',
             )}
+            role="region"
+            aria-label="Predict the next step"
           >
             <MistakeAnalysisToast
               message={mistakeAnalysis}
@@ -254,9 +268,11 @@ export default function PredictionZone({ onSubmit }: PredictionZoneProps) {
               <motion.div
                 key={shakeToken}
                 animate={
-                  submissionState === 'incorrect' ? { x: [0, -4, 4, -4, 4, -4, 4, 0] } : { x: 0 }
+                  submissionState === 'incorrect' && !prefersReducedMotion
+                    ? { x: [0, -4, 4, -4, 4, -4, 4, 0] }
+                    : { x: 0 }
                 }
-                transition={{ duration: 0.2 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
                 className="min-w-0 flex-1"
               >
                 {snapshot.predictionType === PredictionType.CANVAS_CLICK && (

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { createSession, updateSession, getSession } from '../services/session.service'
+import { createSession, updateSession, getSession, getLatestSession } from '../services/session.service'
 import { updateStreak } from '../services/auth.service'
 
 const router = Router()
@@ -13,6 +13,20 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     res.status(201).json({ data: session, error: null })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to create session' } })
+  }
+})
+
+router.get('/', async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.query.latest !== 'true') {
+      res.json({ data: null, error: null })
+      return
+    }
+    const completed = req.query.completed === undefined ? undefined : req.query.completed === 'true'
+    const session = await getLatestSession(req.userId!, completed)
+    res.json({ data: session, error: null })
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch sessions' } })
   }
 })
 

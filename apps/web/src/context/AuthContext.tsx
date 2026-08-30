@@ -8,7 +8,7 @@ interface AuthContextType {
   user: UserProfile | null
   isLoading: boolean
   logout: () => void
-  refreshUser: () => Promise<void>
+  refreshUser: () => Promise<UserProfile | null>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -17,17 +17,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  async function loadUser() {
+  async function loadUser(): Promise<UserProfile | null> {
     const token = getToken()
     if (!token) {
       setIsLoading(false)
-      return
+      return null
     }
     try {
       const profile = await apiFetch<UserProfile>('/api/v1/auth/me')
       setUser(profile)
+      return profile
     } catch {
       apiLogout()
+      return null
     } finally {
       setIsLoading(false)
     }

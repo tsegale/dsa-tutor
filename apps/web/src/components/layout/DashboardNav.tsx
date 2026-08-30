@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { getProgressToNextLevel } from '@/utils/xpLevels'
 
 function LogoIcon() {
   return (
@@ -45,6 +46,7 @@ export default function DashboardNav() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { resetOnboarding } = useOnboarding()
+  const xpProgress = getProgressToNextLevel(user?.xpTotal ?? 0)
 
   function handleSignOut() {
     logout()
@@ -98,10 +100,33 @@ export default function DashboardNav() {
           <TooltipContent>Day streak — practice daily to keep it alive</TooltipContent>
         </Tooltip>
 
-        <div className="flex items-center gap-1.5">
-          <BoltIcon />
-          <span className="text-sm font-bold text-text-primary">{user?.xpTotal ?? 0}</span>
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2">
+              <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: xpProgress.level.colour }} />
+              <span className="text-sm font-semibold text-text-primary">{xpProgress.level.title}</span>
+              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-surface">
+                <div
+                  className="h-full rounded-full transition-[width] duration-300"
+                  style={{ width: `${xpProgress.percent}%`, backgroundColor: xpProgress.level.colour }}
+                />
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="flex items-center gap-1.5">
+              <BoltIcon />
+              <span>
+                {user?.xpTotal ?? 0} XP · {xpProgress.level.title}
+              </span>
+            </div>
+            <div className="text-muted-foreground">
+              {xpProgress.nextLevel
+                ? `${xpProgress.xpForNextLevel! - (user?.xpTotal ?? 0)} XP to ${xpProgress.nextLevel.title}`
+                : 'Max level reached'}
+            </div>
+          </TooltipContent>
+        </Tooltip>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -75,6 +75,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
               <button
                 type="button"
                 onClick={() => expandToTab(1)}
+                aria-label="Explanation"
                 className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
               >
                 <ExplanationIcon />
@@ -88,6 +89,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
               <button
                 type="button"
                 onClick={() => expandToTab(2)}
+                aria-label="Pseudocode"
                 className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
               >
                 <PseudocodeIcon />
@@ -101,6 +103,7 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
               <button
                 type="button"
                 onClick={() => expandToTab(3)}
+                aria-label="Complexity"
                 className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
               >
                 <ComplexityIcon />

@@ -138,6 +138,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
               <button
                 type="button"
                 onClick={handlePlayPause}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
                 className="flex size-9 items-center justify-center rounded-md bg-primary text-white hover:bg-primary-hover"
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
@@ -151,6 +152,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
               <button
                 type="button"
                 onClick={stepBackward}
+                aria-label="Step Backward"
                 className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-surface"
               >
                 <SkipBackIcon />
@@ -164,6 +166,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
               <button
                 type="button"
                 onClick={stepForward}
+                aria-label="Step Forward"
                 className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-surface"
               >
                 <SkipForwardIcon />
@@ -177,6 +180,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
               <button
                 type="button"
                 onClick={resetAlgorithm}
+                aria-label="Reset"
                 className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
               >
                 <RefreshIcon />

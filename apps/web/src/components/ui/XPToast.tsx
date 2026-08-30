@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 interface XPToastProps {
   amount: number
@@ -23,6 +24,7 @@ const exitTransition = { duration: EXIT_DURATION_MS / 1000, ease: 'easeInOut' as
 export default function XPToast({ amount, visible, onComplete }: XPToastProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const wasShown = useRef(false)
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     if (!visible) return
@@ -49,7 +51,13 @@ export default function XPToast({ amount, visible, onComplete }: XPToastProps) {
           key={phase}
           initial={phase === 'visible' ? targets.idle : targets.visible}
           animate={targets[phase]}
-          transition={phase === 'visible' ? enterTransition : exitTransition}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : phase === 'visible'
+                ? enterTransition
+                : exitTransition
+          }
           className="flex items-center gap-2 rounded-md bg-secondary-light px-4 py-2 text-secondary shadow-md"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

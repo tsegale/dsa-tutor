@@ -58,3 +58,15 @@ export async function getSession(sessionId: string, userId: string): Promise<Ses
   })
   return toSessionDto(session)
 }
+
+export async function getLatestSession(
+  userId: string,
+  completed?: boolean,
+): Promise<SessionDto | null> {
+  const session = await prisma.session.findFirst({
+    where: { userId, ...(completed !== undefined && { completed }) },
+    orderBy: { startTime: 'desc' },
+    include: { algorithmTopic: true },
+  })
+  return session ? toSessionDto(session) : null
+}

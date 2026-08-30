@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import DifficultyTag from '@/components/ui/DifficultyTag'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
+import SoundToggle from '@/components/ui/SoundToggle'
 
 const THEME_STORAGE_KEY = 'dsa-tutor-theme'
 export const OPEN_SHORTCUTS_MODAL_EVENT = 'dsa-tutor:open-shortcuts-modal'
@@ -148,6 +149,8 @@ export default function TopBar() {
           </TooltipTrigger>
           <TooltipContent>Focus Mode (F)</TooltipContent>
         </Tooltip>
+
+        <SoundToggle />
 
         <button
           type="button"

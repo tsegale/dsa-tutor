@@ -3,6 +3,7 @@ import * as d3 from 'd3'
 import { motion } from 'framer-motion'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 
 interface ArrayCanvasProps {
@@ -29,6 +30,9 @@ export default function ArrayCanvas({
 }: ArrayCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const mode = useAlgorithmStore((state) => state.mode)
+  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
+  const prefersReducedMotion = useReducedMotion()
 
   const bars = useMemo(() => {
     const values = (snapshot?.dataStructureState as number[] | undefined) ?? []
@@ -68,7 +72,7 @@ export default function ArrayCanvas({
 
   if (!snapshot || bars.length === 0) {
     return (
-      <svg width={width} height={height}>
+      <svg width={width} height={height} role="img" aria-label="No algorithm loaded">
         <text
           x={width / 2}
           y={height / 2}
@@ -82,8 +86,10 @@ export default function ArrayCanvas({
     )
   }
 
+  const canvasLabel = `${algorithmName}, step ${snapshot.stepIndex + 1} of ${totalSteps}: ${snapshot.description}`
+
   return (
-    <svg width={width} height={height}>
+    <svg width={width} height={height} role="img" aria-label={canvasLabel}>
       <style>{`
         @keyframes pulse-ring {
           0%, 100% { transform: scale(1); }
@@ -116,16 +122,18 @@ export default function ArrayCanvas({
           <motion.g
             key={bar.index}
             layout
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: 'easeInOut' }}
             style={{ opacity: isSpecial ? 1 : 0.4 }}
             className={cn(
               'bar-group group',
-              isActive && 'animate-pulse-ring',
+              isActive && !prefersReducedMotion && 'animate-pulse-ring',
               isInteractive && 'cursor-pointer',
             )}
             onClick={() => {
               if (isInteractive) onElementClick?.(bar.index)
             }}
+            role={isInteractive ? 'button' : undefined}
+            aria-label={`Index ${bar.index}, value ${bar.value}${isInteractive ? ', selectable' : ''}`}
           >
             <rect
               x={bar.x}

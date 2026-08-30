@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import type { AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
 import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
@@ -17,7 +18,14 @@ import PredictionZone, {
   CLEAR_CANVAS_SELECTION_EVENT,
 } from '@/components/prediction/PredictionZone'
 import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnalysisToast'
+import BadgeAwardModal from '@/components/ui/BadgeAwardModal'
+import StreakToast from '@/components/ui/StreakToast'
+import { checkAndAwardBadges } from '@/services/badgeService'
+import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useSoundEffects } from '@/hooks/useSoundEffects'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { cn } from '@/lib/utils'
 
 // Bubble Sort is the only algorithm with a real snapshot engine until
 // Phase 15; every other seeded topic renders a "coming soon" canvas.
@@ -32,6 +40,11 @@ export default function AlgorithmPage() {
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const setMode = useAlgorithmStore((state) => state.setMode)
   const setSessionId = useAlgorithmStore((state) => state.setSessionId)
+  const mode = useAlgorithmStore((state) => state.mode)
+  const isPlaying = useAlgorithmStore((state) => state.isPlaying)
+  const { user, refreshUser } = useAuth()
+  const { play } = useSoundEffects()
+  const prefersReducedMotion = useReducedMotion()
 
   const { data: topics = [] } = useQuery({
     queryKey: ['topics'],
@@ -44,6 +57,52 @@ export default function AlgorithmPage() {
   const [activeTab, setActiveTab] = useState(1)
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
   const [canvasSelectedIndex, setCanvasSelectedIndex] = useState<number | null>(null)
+  const [pendingBadge, setPendingBadge] = useState<string | null>(null)
+  const [streakToastVisible, setStreakToastVisible] = useState(false)
+  const [streakCountForToast, setStreakCountForToast] = useState(0)
+
+  // Cumulative, session-scoped counters feeding badge condition checks.
+  // Refs (not state) because nothing here needs to trigger a re-render.
+  const predictionStatsRef = useRef({ correct: 0, total: 0, hints: 0 })
+
+  function buildBadgeStats(): BadgeCheckStats {
+    const { correct, total, hints } = predictionStatsRef.current
+    return {
+      // No badge currently keys off lifetime session count; the API
+      // has no endpoint to fetch it yet, so this is a harmless stub.
+      totalSessions: 0,
+      correctPredictions: correct,
+      totalPredictions: total,
+      hintsRequested: hints,
+      streakCount: user?.streakCount ?? 0,
+      masteredTopics: topics.filter((t) => t.masteryPercent >= 80).length,
+      // Phase 16 will add algorithms beyond Bubble Sort; these stay
+      // false until a track can actually be completed.
+      completedSortingTrack: false,
+      completedGraphsTrack: false,
+    }
+  }
+
+  function runBadgeCheck() {
+    void checkAndAwardBadges(buildBadgeStats(), (badgeId) => setPendingBadge(badgeId))
+  }
+
+  function handleHintRequested() {
+    predictionStatsRef.current.hints += 1
+  }
+
+  function handlePredictionResult(correct: boolean) {
+    predictionStatsRef.current.total += 1
+    if (correct) {
+      predictionStatsRef.current.correct += 1
+      runBadgeCheck()
+    }
+  }
+
+  function handleBadgeModalClose() {
+    setPendingBadge(null)
+    runBadgeCheck()
+  }
 
   useEffect(() => {
     function handleOpen() {
@@ -103,6 +162,7 @@ export default function AlgorithmPage() {
 
     async function createDbSession() {
       if (!isBubbleSort || !currentTopic) return
+      const streakBefore = user?.streakCount ?? 0
       try {
         const { mode, scaffoldingLevel } = useAlgorithmStore.getState()
         const session = await apiFetch<{ id: string }>('/api/v1/sessions', {
@@ -110,6 +170,15 @@ export default function AlgorithmPage() {
           body: JSON.stringify({ algorithmTopicId: currentTopic.id, mode, scaffoldingLevel }),
         })
         if (!cancelled) setSessionId(session.id)
+
+        // The session POST bumps the streak server-side; refetch the
+        // profile to see whether it actually went up before celebrating.
+        const refreshed = await refreshUser()
+        if (!cancelled && refreshed && refreshed.streakCount > streakBefore) {
+          setStreakCountForToast(refreshed.streakCount)
+          setStreakToastVisible(true)
+          play('levelup')
+        }
       } catch {
         // No backend session this run; interaction logging will simply
         // no-op since sessionId stays null.
@@ -128,6 +197,7 @@ export default function AlgorithmPage() {
         }).catch(() => {})
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBubbleSort, currentTopic, setSessionId])
 
   useKeyboardShortcuts({
@@ -177,10 +247,27 @@ export default function AlgorithmPage() {
               transition={{ duration: 0.25, ease: 'easeInOut' }}
               className="flex h-full w-full items-center justify-center p-4"
             >
-              <CanvasContainer onElementClick={handleElementClick} selectedIndex={canvasSelectedIndex} />
+              <div
+                className={cn(
+                  'h-full w-full rounded-[12px]',
+                  isPlaying && mode === AlgorithmMode.DEMO && !prefersReducedMotion && 'canvas-pulse-border',
+                )}
+              >
+                <CanvasContainer onElementClick={handleElementClick} selectedIndex={canvasSelectedIndex} />
+              </div>
             </motion.div>
 
-            <PredictionZone onSubmit={handlePredictionSubmit} />
+            <PredictionZone
+              onSubmit={handlePredictionSubmit}
+              onHintRequested={handleHintRequested}
+              onPredictionResult={handlePredictionResult}
+            />
+
+            {focusModeActive && (
+              <div className="absolute right-4 bottom-4 z-20 rounded-full bg-active px-3 py-1.5 text-xs font-medium text-white shadow-md">
+                Focus Mode
+              </div>
+            )}
           </>
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
@@ -209,6 +296,12 @@ export default function AlgorithmPage() {
 
       <FocusModeOverlay />
       <KeyboardShortcutsModal open={shortcutsModalOpen} onClose={() => setShortcutsModalOpen(false)} />
+      <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
+      <StreakToast
+        streakCount={streakCountForToast}
+        visible={streakToastVisible}
+        onDismiss={() => setStreakToastVisible(false)}
+      />
     </div>
   )
 }

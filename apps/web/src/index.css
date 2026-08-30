@@ -163,3 +163,18 @@
     display: none;
   }
 }
+
+@keyframes canvas-pulse-border {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+  }
+}
+
+@utility canvas-pulse-border {
+  border-radius: 12px;
+  animation: canvas-pulse-border 1.6s ease-in-out infinite;
+}
