@@ -14,8 +14,6 @@ import RightPanel from '@/components/layout/RightPanel'
 import FocusModeOverlay from '@/components/layout/FocusModeOverlay'
 import KeyboardShortcutsModal from '@/components/layout/KeyboardShortcutsModal'
 import PredictionZone, {
-  CANVAS_ELEMENT_SELECTED_EVENT,
-  CLEAR_CANVAS_SELECTION_EVENT,
   SHOW_EXPLANATION_LINK_EVENT,
   type PredictionOutcomeDetail,
 } from '@/components/prediction/PredictionZone'
@@ -101,7 +99,6 @@ export default function AlgorithmPage() {
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [activeTab, setActiveTab] = useState(1)
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
-  const [canvasSelectedIndex, setCanvasSelectedIndex] = useState<number | null>(null)
   const [pendingBadge, setPendingBadge] = useState<string | null>(null)
   const [streakToastVisible, setStreakToastVisible] = useState(false)
   const [streakCountForToast, setStreakCountForToast] = useState(0)
@@ -252,22 +249,6 @@ export default function AlgorithmPage() {
     setActiveTab(1)
   }
 
-  // Clear the canvas selection ring whenever the algorithm advances to a
-  // new step, so a stale ring doesn't linger on the next prediction.
-  useEffect(() => {
-    setCanvasSelectedIndex(null)
-  }, [stepIndex])
-
-  // Also clear it when PredictionZone resets after an incorrect answer
-  // (same step, but the learner should pick fresh).
-  useEffect(() => {
-    function handleClear() {
-      setCanvasSelectedIndex(null)
-    }
-    window.addEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
-    return () => window.removeEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
-  }, [])
-
   // Seed the starting mode from the URL once, on mount. ModeToggle owns
   // in-page switching after this; it never touches the URL, so there's
   // no risk of this effect fighting a manual toggle.
@@ -337,11 +318,6 @@ export default function AlgorithmPage() {
     onShortcutsModalOpen: () => setShortcutsModalOpen(true),
   })
 
-  function handleElementClick(index: number) {
-    setCanvasSelectedIndex(index)
-    window.dispatchEvent(new CustomEvent(CANVAS_ELEMENT_SELECTED_EVENT, { detail: index }))
-  }
-
   function handlePredictionSubmit(answer: string) {
     // PredictionZone owns the actual submission flow (API call, XP,
     // stepForward); this is just a notification hook for the page level.
@@ -386,8 +362,6 @@ export default function AlgorithmPage() {
                 )}
               >
                 <CanvasContainer
-                  onElementClick={handleElementClick}
-                  selectedIndex={canvasSelectedIndex}
                   mistakePath={mistakePath}
                   onMistakePathComplete={() => setMistakePath(null)}
                 />

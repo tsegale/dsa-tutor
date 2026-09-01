@@ -1,4 +1,4 @@
-import type { AlgorithmSnapshot, PredictionType } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { CriticalJunctionType, JunctionDifficulty } from '@dsa-tutor/types'
 
 // Matches the pseudocode panel's line numbers, so a snapshot's
@@ -25,7 +25,6 @@ interface SnapshotParams {
   description: string
   pseudocodeLine: number
   isPredictionRequired: boolean
-  predictionType: PredictionType
   dataStructureState: number[]
   activeIndices?: number[]
   highlightIndices?: number[]
@@ -42,7 +41,10 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     description: params.description,
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
-    predictionType: params.predictionType,
+    // Bubble Sort's entire prediction interaction is tile selection: two
+    // bars pulse on the canvas, the learner reads the values, then picks
+    // a tile below. There is no click-to-select-a-bar input path.
+    predictionType: 'TILE_GRID',
     dataStructureState: [...params.dataStructureState],
     activeIndices: [...(params.activeIndices ?? [])],
     highlightIndices: [...(params.highlightIndices ?? [])],
@@ -74,7 +76,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
         'Starting Bubble Sort. The algorithm will compare adjacent elements and swap them if they are in the wrong order.',
       pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_START,
       isPredictionRequired: false,
-      predictionType: 'CANVAS_CLICK',
       dataStructureState: working,
     }),
   )
@@ -86,7 +87,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
         description: `Starting pass ${pass + 1}: scanning the unsorted portion of the array for adjacent pairs that are out of order.`,
         pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_START,
         isPredictionRequired: false,
-        predictionType: 'CANVAS_CLICK',
         dataStructureState: working,
         highlightIndices: finalized,
       }),
@@ -102,7 +102,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
           description: `Advancing to index ${i} to compare it with its neighbor at index ${i + 1}.`,
           pseudocodeLine: PSEUDOCODE_LINE.INNER_LOOP_START,
           isPredictionRequired: false,
-          predictionType: 'CANVAS_CLICK',
           dataStructureState: working,
           highlightIndices: finalized,
         }),
@@ -128,7 +127,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
             : `Comparing index ${i} (value ${left}) and index ${i + 1} (value ${right}). Since ${left} <= ${right}, no swap is needed.`,
           pseudocodeLine: PSEUDOCODE_LINE.COMPARISON,
           isPredictionRequired: isSwapJunction,
-          predictionType: 'CANVAS_CLICK',
           dataStructureState: working,
           activeIndices: [i, i + 1],
           comparedIndices: [i, i + 1],
@@ -149,7 +147,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
             description: `Swapped index ${i} and index ${i + 1}. The array is now [${working.join(', ')}].`,
             pseudocodeLine: PSEUDOCODE_LINE.SWAP,
             isPredictionRequired: false,
-            predictionType: 'TILE_GRID',
             dataStructureState: working,
             swappedIndices: [i, i + 1],
             highlightIndices: finalized,
@@ -163,7 +160,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
           description: `Finished checking index ${i} and index ${i + 1}.`,
           pseudocodeLine: PSEUDOCODE_LINE.INNER_LOOP_END,
           isPredictionRequired: false,
-          predictionType: 'CANVAS_CLICK',
           dataStructureState: working,
           highlightIndices: finalized,
         }),
@@ -180,7 +176,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
           : `Pass ${pass + 1} complete with no swaps. The array is already fully sorted.`,
         pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
         isPredictionRequired: false,
-        predictionType: 'CANVAS_CLICK',
         dataStructureState: working,
         highlightIndices: finalized,
       }),
@@ -193,7 +188,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
           description: `Pass ${pass + 1} is complete. What is now guaranteed about the array?`,
           pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
           isPredictionRequired: true,
-          predictionType: 'TILE_GRID',
           dataStructureState: working,
           highlightIndices: finalized,
           criticalJunctionType: CriticalJunctionType.PASS_COMPLETE,
@@ -207,7 +201,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
           description: 'No swaps occurred during this pass. Why did the algorithm stop early?',
           pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
           isPredictionRequired: true,
-          predictionType: 'TILE_GRID',
           dataStructureState: working,
           highlightIndices: finalized,
           criticalJunctionType: CriticalJunctionType.EARLY_TERMINATION,
@@ -227,7 +220,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
       description: 'The array is fully sorted. What invariant proves that sorting is complete?',
       pseudocodeLine: PSEUDOCODE_LINE.DONE,
       isPredictionRequired: true,
-      predictionType: 'TILE_GRID',
       dataStructureState: working,
       highlightIndices: Array.from({ length: n }, (_, idx) => idx),
       criticalJunctionType: CriticalJunctionType.ALGORITHM_COMPLETE,
@@ -241,7 +233,6 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
       description: `Bubble Sort complete. The array is fully sorted: [${working.join(', ')}].`,
       pseudocodeLine: PSEUDOCODE_LINE.DONE,
       isPredictionRequired: false,
-      predictionType: 'CANVAS_CLICK',
       dataStructureState: working,
       highlightIndices: Array.from({ length: n }, (_, idx) => idx),
       isFinalStep: true,

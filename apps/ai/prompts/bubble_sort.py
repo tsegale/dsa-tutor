@@ -48,15 +48,6 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     ),
 }
 
-# Mirrors CRITICAL_JUNCTION_TILE_OPTIONS in packages/types/index.ts: the
-# fixed, data-independent correct option id for each CONCEPTUAL junction
-# type. Keep in sync.
-CONCEPTUAL_JUNCTION_CORRECT_OPTION_IDS: dict[str, str] = {
-    "PASS_COMPLETE": "largest-in-place",
-    "EARLY_TERMINATION": "no-swaps-needed",
-    "ALGORITHM_COMPLETE": "no-adjacent-out-of-order",
-}
-
 BUBBLE_SORT_PSEUDOCODE = """1  procedure bubbleSort(A: list)
 2      n = length(A)
 3      repeat

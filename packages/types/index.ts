@@ -57,42 +57,6 @@ export const JunctionDifficulty = {
 } as const
 export type JunctionDifficulty = (typeof JunctionDifficulty)[keyof typeof JunctionDifficulty]
 
-/** One TILE_GRID option for a Critical Junction, with its correctness baked in. */
-export interface TileOptionSpec {
-  id: string
-  label: string
-  correct: boolean
-}
-
-/**
- * Static TILE_GRID option sets for the three CONCEPTUAL junction types.
- * Correctness here is a fixed property of the algorithm's invariants, not
- * the current array values, so it can be declared once and shared by the
- * frontend (rendering + priming) and mirrored by the AI service (grading).
- * SWAP_DECISION has no entry: its correct option depends on the current
- * array values and is derived dynamically instead.
- */
-export const CRITICAL_JUNCTION_TILE_OPTIONS: Partial<Record<CriticalJunctionType, TileOptionSpec[]>> = {
-  [CriticalJunctionType.PASS_COMPLETE]: [
-    { id: 'largest-in-place', label: 'The largest unsorted element is now in its correct position', correct: true },
-    { id: 'fully-sorted', label: 'The entire array is sorted', correct: false },
-    { id: 'no-change', label: 'Nothing has changed', correct: false },
-    { id: 'smallest-to-front', label: 'The smallest element moved to the front', correct: false },
-  ],
-  [CriticalJunctionType.EARLY_TERMINATION]: [
-    { id: 'no-swaps-needed', label: 'No swaps were needed. The array is already sorted from this point', correct: true },
-    { id: 'found-error', label: 'The algorithm found an error', correct: false },
-    { id: 'loop-ran-out', label: 'The loop counter ran out', correct: false },
-    { id: 'swap-skipped', label: 'A swap was skipped', correct: false },
-  ],
-  [CriticalJunctionType.ALGORITHM_COMPLETE]: [
-    { id: 'no-adjacent-out-of-order', label: 'No adjacent pair is out of order', correct: true },
-    { id: 'every-element-visited', label: 'Every element was visited at least once', correct: false },
-    { id: 'sum-preserved', label: 'The sum of all elements is preserved', correct: false },
-    { id: 'first-last-in-order', label: 'The first and last elements are in order', correct: false },
-  ],
-}
-
 export const AlgorithmTrack = {
   FOUNDATIONS: 'FOUNDATIONS',
   SORTING: 'SORTING',

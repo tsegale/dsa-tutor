@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlgorithmMode, CriticalJunctionType, JunctionDifficulty, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
-import type { HintRequest, MisconceptionCategory, PredictionRequest } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot, HintRequest, MisconceptionCategory, PredictionRequest } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { submitPrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { firstSentence, getCorrectTileOptionId, getCriticalJunctionTileOptions } from '@/utils/predictionJunction'
+import { firstSentence } from '@/utils/predictionJunction'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
-import CanvasClickInput from './CanvasClickInput'
 import ValueInput from './ValueInput'
-import TileGrid from './TileGrid'
+import TileGrid, { type TileOption } from './TileGrid'
 import MistakeAnalysisToast from './MistakeAnalysisToast'
 
 export interface PredictionOutcomeDetail {
@@ -34,7 +33,6 @@ interface PredictionZoneProps {
   onPredictionResult?: (detail: PredictionOutcomeDetail) => void
 }
 
-export const CANVAS_ELEMENT_SELECTED_EVENT = 'dsa-tutor:canvas-element-selected'
 export const CLEAR_CANVAS_SELECTION_EVENT = 'dsa-tutor:clear-canvas-selection'
 export const REQUEST_HINT_EVENT = 'request-hint'
 export const ESCAPE_EVENT = 'dsa-tutor:escape'
@@ -42,13 +40,90 @@ export const SHOW_EXPLANATION_LINK_EVENT = 'dsa-tutor:show-explanation-link'
 export const HANDS_ON_ANSWER_EVENT = 'dsa-tutor:hands-on-answer'
 
 const PROACTIVE_HINT_DELAY_MS = 8000
-const TILE_PRIME_DELAY_MS = 15000
 const AUTO_RESET_DELAY_MS = 1200
 const NONE_ADVANCE_DELAY_MS = 1500
 const MAX_ATTEMPTS_BEFORE_ADVANCE = 2
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Fisher-Yates shuffle so the correct tile isn't always in the same position. Tile ids never change, only display order. */
+function shuffleArray<T>(arr: T[]): T[] {
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+/**
+ * The entire Bubble Sort prediction interaction: SWAP_DECISION always
+ * offers two neutral action tiles (neither reveals correctness); the
+ * three conceptual junctions offer one correct claim plus three
+ * research-grounded distractor misconceptions. Correctness lives in the
+ * tile id only - shuffling changes display order, never which id is
+ * correct, and the backend checks id, not position.
+ */
+function getTilesForSnapshot(snapshot: AlgorithmSnapshot): TileOption[] {
+  switch (snapshot.criticalJunctionType) {
+    case CriticalJunctionType.SWAP_DECISION:
+      return shuffleArray([
+        { id: 'swap', label: 'Swap them' },
+        { id: 'no-swap', label: 'Leave them' },
+      ])
+
+    case CriticalJunctionType.PASS_COMPLETE:
+      return shuffleArray([
+        { id: 'correct', label: 'The largest remaining unsorted element is now in its correct position' },
+        { id: 'wrong-1', label: 'The entire array is now sorted' },
+        { id: 'wrong-2', label: 'The smallest element moved to the front' },
+        { id: 'wrong-3', label: 'Every element was compared exactly once' },
+      ])
+
+    case CriticalJunctionType.EARLY_TERMINATION:
+      return shuffleArray([
+        { id: 'correct', label: 'No swaps were needed - the array was already in order' },
+        { id: 'wrong-1', label: 'The algorithm completed the maximum number of passes' },
+        { id: 'wrong-2', label: 'Equal elements caused the loop to stop' },
+        { id: 'wrong-3', label: 'The first element reached its correct position' },
+      ])
+
+    case CriticalJunctionType.ALGORITHM_COMPLETE:
+      return shuffleArray([
+        { id: 'correct', label: 'No adjacent pair is out of order anywhere in the array' },
+        { id: 'wrong-1', label: 'Every element was visited the same number of times' },
+        { id: 'wrong-2', label: 'The first and last elements are in their correct positions' },
+        { id: 'wrong-3', label: 'The total number of swaps equals the array length' },
+      ])
+
+    default:
+      return []
+  }
+}
+
+/** The question shown above the tiles, read before the learner chooses. */
+function getPromptForSnapshot(snapshot: AlgorithmSnapshot): string {
+  const arr = snapshot.dataStructureState as number[]
+  const [i, j] = snapshot.activeIndices
+
+  switch (snapshot.criticalJunctionType) {
+    case CriticalJunctionType.SWAP_DECISION:
+      return `The algorithm is comparing index ${i} (value ${arr[i]}) and index ${j} (value ${arr[j]}). What should happen next?`
+
+    case CriticalJunctionType.PASS_COMPLETE:
+      return 'This pass is now complete. What can we guarantee about the array?'
+
+    case CriticalJunctionType.EARLY_TERMINATION:
+      return 'The algorithm stopped before completing all passes. Why?'
+
+    case CriticalJunctionType.ALGORITHM_COMPLETE:
+      return 'Bubble Sort has finished. What proves the array is fully sorted?'
+
+    default:
+      return 'What happens next?'
+  }
 }
 
 function CheckIcon() {
@@ -102,6 +177,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const prefersReducedMotion = useReducedMotion()
 
   const [currentAnswer, setCurrentAnswer] = useState<string | null>(null)
+  const [currentTiles, setCurrentTiles] = useState<TileOption[]>([])
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
   const [mistakeAnalysis, setMistakeAnalysis] = useState<string | null>(null)
   const [mistakeHint, setMistakeHint] = useState<string | null>(null)
@@ -114,7 +190,6 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const [xpVisible, setXpVisible] = useState(false)
   const [hintsRequestedCount, setHintsRequestedCount] = useState(0)
   const [stepStartTime, setStepStartTime] = useState(() => Date.now())
-  const [primedOptionId, setPrimedOptionId] = useState<string | null>(null)
 
   const attemptCountRef = useRef(0)
   const proactiveHintFiredRef = useRef(false)
@@ -127,7 +202,13 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     mode === AlgorithmMode.HANDS_ON && snapshot?.criticalJunctionType === CriticalJunctionType.SWAP_DECISION
   const stepIndex = snapshot?.stepIndex ?? null
 
+  // Tiles (and their shuffled order) are generated once per prediction
+  // step and held fixed - regenerating on every render would reshuffle
+  // out from under the learner mid-decision.
   useEffect(() => {
+    if (snapshot?.isPredictionRequired) {
+      setCurrentTiles(getTilesForSnapshot(snapshot))
+    }
     setCurrentAnswer(null)
     setSubmissionState('idle')
     setMistakeAnalysis(null)
@@ -137,19 +218,10 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     setHintLoading(false)
     setHintsRequestedCount(0)
     setStepStartTime(Date.now())
-    setPrimedOptionId(null)
     attemptCountRef.current = 0
     proactiveHintFiredRef.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex])
-
-  useEffect(() => {
-    function handleCanvasSelect(event: Event) {
-      const index = (event as CustomEvent<number>).detail
-      setCurrentAnswer(String(index))
-    }
-    window.addEventListener(CANVAS_ELEMENT_SELECTED_EVENT, handleCanvasSelect)
-    return () => window.removeEventListener(CANVAS_ELEMENT_SELECTED_EVENT, handleCanvasSelect)
-  }, [])
 
   // Hands-On mode: the drag gesture itself is the submission, so this
   // fires handleSubmit directly rather than just staging currentAnswer.
@@ -205,19 +277,6 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, scaffoldingLevel, submissionState, hint, hintLoading, stepIndex])
 
-  // HIGH scaffolding only: after a longer stretch of inactivity on a
-  // TILE_GRID prompt, lightly prime (not reveal) the correct option.
-  useEffect(() => {
-    if (!isVisible || scaffoldingLevel !== ScaffoldingLevel.HIGH || !snapshot) return
-    if (snapshot.predictionType !== PredictionType.TILE_GRID) return
-    if (currentAnswer !== null || submissionState !== 'idle') return
-
-    const timer = setTimeout(() => {
-      setPrimedOptionId(getCorrectTileOptionId(snapshot.criticalJunctionType))
-    }, TILE_PRIME_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [isVisible, scaffoldingLevel, snapshot, currentAnswer, submissionState])
-
   async function handleRequestHint(proactive: boolean) {
     if (hint !== null || hintLoading || !snapshot) return
     setHintLoading(true)
@@ -265,6 +324,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
       currentState: {
         dataStructureState: snapshot.dataStructureState,
         activeIndices: snapshot.activeIndices,
+        criticalJunctionType: snapshot.criticalJunctionType,
       },
       studentAnswer: answer,
       errorHistory: [],
@@ -427,31 +487,26 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
               <motion.div
                 key={shakeToken}
                 animate={
-                  submissionState === 'incorrect' && !prefersReducedMotion
+                  submissionState === 'incorrect' &&
+                  !prefersReducedMotion &&
+                  snapshot.predictionType !== PredictionType.TILE_GRID
                     ? { x: [0, -4, 4, -4, 4, -4, 4, 0] }
                     : { x: 0 }
                 }
                 transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
                 className="min-w-0 flex-1"
               >
-                {snapshot.predictionType === PredictionType.CANVAS_CLICK && isHandsOnSwapDecision && (
+                {isHandsOnSwapDecision && (
                   <div className="flex h-full flex-col justify-center gap-1">
                     <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
-                      {snapshot.description}
+                      {getPromptForSnapshot(snapshot)}
                     </p>
                     <p className="text-xs text-text-muted dark:text-dark-text-secondary">
                       ↑ Drag the bars in the canvas above to answer
                     </p>
                   </div>
                 )}
-                {snapshot.predictionType === PredictionType.CANVAS_CLICK && !isHandsOnSwapDecision && (
-                  <CanvasClickInput
-                    prompt={snapshot.description}
-                    onSelect={(index) => setCurrentAnswer(String(index))}
-                    selectedIndex={currentAnswer !== null ? Number(currentAnswer) : null}
-                  />
-                )}
-                {snapshot.predictionType === PredictionType.VALUE_INPUT && (
+                {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
                   <ValueInput
                     prompt={snapshot.description}
                     onValueChange={setCurrentAnswer}
@@ -460,17 +515,14 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                     onSubmit={() => void handleSubmit()}
                   />
                 )}
-                {snapshot.predictionType === PredictionType.TILE_GRID && (
+                {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.TILE_GRID && (
                   <TileGrid
-                    prompt={snapshot.description}
-                    options={(getCriticalJunctionTileOptions(snapshot.criticalJunctionType) ?? []).map((option) => ({
-                      id: option.id,
-                      label: option.label,
-                    }))}
+                    prompt={getPromptForSnapshot(snapshot)}
+                    options={currentTiles}
                     onSelect={setCurrentAnswer}
                     selectedId={currentAnswer}
                     submissionState={submissionState}
-                    primedOptionId={primedOptionId}
+                    snapshot={snapshot}
                   />
                 )}
               </motion.div>

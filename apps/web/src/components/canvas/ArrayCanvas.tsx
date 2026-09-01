@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
-import { AlgorithmMode, CriticalJunctionType, PredictionType } from '@dsa-tutor/types'
+import { AlgorithmMode, CriticalJunctionType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -11,8 +11,6 @@ import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/component
 interface ArrayCanvasProps {
   width?: number
   height?: number
-  onElementClick?: (index: number) => void
-  selectedIndex?: number | null
   /** When set, the canvas plays a "what your answer would cause" trace instead of the real state. */
   mistakePath?: AlgorithmSnapshot[] | null
   onMistakePathComplete?: () => void
@@ -38,8 +36,6 @@ const HANDS_ON_TOOLTIP_DURATION_MS = 5000
 export default function ArrayCanvas({
   width = 600,
   height = 300,
-  onElementClick,
-  selectedIndex = null,
   mistakePath = null,
   onMistakePathComplete,
 }: ArrayCanvasProps) {
@@ -197,13 +193,6 @@ export default function ArrayCanvas({
     })
   }, [snapshot, width, height])
 
-  const isInteractive =
-    !isMistakeMode &&
-    Boolean(onElementClick) &&
-    snapshot?.isPredictionRequired === true &&
-    snapshot?.predictionType === PredictionType.CANVAS_CLICK &&
-    mode === AlgorithmMode.PRACTICE
-
   // Distance in px between the two draggable bars' slots: one bar
   // position's worth of travel is exactly what the drag constraints and
   // the swap threshold (its midpoint) need.
@@ -343,14 +332,9 @@ export default function ArrayCanvas({
             className={cn(
               'bar-group group',
               isActive && !prefersReducedMotion && 'animate-pulse-ring',
-              isInteractive && 'cursor-pointer',
               isDraggableBar && 'cursor-grab active:cursor-grabbing',
             )}
-            onClick={() => {
-              if (isInteractive) onElementClick?.(bar.index)
-            }}
-            role={isInteractive ? 'button' : undefined}
-            aria-label={`Index ${bar.index}, value ${bar.value}${isInteractive ? ', selectable' : ''}${isDraggableBar ? ', draggable' : ''}`}
+            aria-label={`Index ${bar.index}, value ${bar.value}${isDraggableBar ? ', draggable' : ''}`}
             {...(isDraggableBar
               ? {
                   drag: 'x' as const,
@@ -374,31 +358,6 @@ export default function ArrayCanvas({
               className="bar-group"
               style={{ fill }}
             />
-            {isInteractive && (
-              <rect
-                x={displayX}
-                y={bar.y}
-                width={bar.width}
-                height={bar.height}
-                rx={4}
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth={2}
-                className="opacity-0 transition-opacity group-hover:opacity-100"
-              />
-            )}
-            {selectedIndex === bar.index && (
-              <rect
-                x={displayX}
-                y={bar.y}
-                width={bar.width}
-                height={bar.height}
-                rx={4}
-                fill="none"
-                stroke={BAR_COLOR.secondary}
-                strokeWidth={2}
-              />
-            )}
             {isMistakeAffected && (
               <rect
                 x={displayX}

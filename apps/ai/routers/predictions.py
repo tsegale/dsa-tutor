@@ -2,14 +2,9 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from models.request_models import CriticalJunctionType, PredictionRequest
+from models.request_models import PredictionRequest
 from models.response_models import PredictionResponse
-from prompts.bubble_sort import (
-    BUBBLE_SORT_CONTEXT,
-    BUBBLE_SORT_PSEUDOCODE,
-    CONCEPTUAL_JUNCTION_CORRECT_OPTION_IDS,
-    CRITICAL_JUNCTION_GUIDANCE,
-)
+from prompts.bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 from prompts.templates import FEEDBACK_TEMPLATE
 from services.claude_service import call_claude_for_feedback
 from services.fallback_service import get_fallback_prediction_response
@@ -20,59 +15,64 @@ router = APIRouter()
 
 def evaluate_bubble_sort_answer(request: PredictionRequest) -> bool:
     state = request.current_state
-    if not isinstance(state, dict) or request.student_answer is None:
+    if not state or not isinstance(state, dict):
         return False
 
-    active_indices = state.get("activeIndices") or []
-    data = state.get("dataStructureState")
+    junction_type = state.get("criticalJunctionType")
 
-    if len(active_indices) != 2 or not isinstance(data, list):
+    # SWAP_DECISION: compare left and right values
+    if junction_type == "SWAP_DECISION":
+        active = state.get("activeIndices") or []
+        arr = state.get("dataStructureState") or []
+        if len(active) != 2 or not arr or max(active) >= len(arr):
+            return False
+        should_swap = arr[active[0]] > arr[active[1]]
+        if request.student_answer == "swap":
+            return should_swap
+        if request.student_answer == "no-swap":
+            return not should_swap
         return False
 
-    left_index, right_index = active_indices[0], active_indices[1]
-    if left_index >= len(data) or right_index >= len(data):
-        return False
+    # Conceptual junctions: correct tile id is always 'correct'
+    if junction_type in ("PASS_COMPLETE", "EARLY_TERMINATION", "ALGORITHM_COMPLETE"):
+        return request.student_answer == "correct"
 
-    left_value, right_value = data[left_index], data[right_index]
-    should_swap = left_value > right_value
-
-    answer = request.student_answer.strip().lower()
-
-    if answer in ("swap", "swap them", "no-swap", "no swap needed"):
-        said_swap = answer in ("swap", "swap them")
-        return said_swap == should_swap
-
-    try:
-        answered_index = int(answer)
-    except ValueError:
-        return False
-
-    larger_index = left_index if left_value > right_value else right_index
-    return answered_index == larger_index
+    return False
 
 
-def evaluate_conceptual_junction_answer(request: PredictionRequest) -> bool:
-    """PASS_COMPLETE / EARLY_TERMINATION / ALGORITHM_COMPLETE correctness
-    is a fixed property of the algorithm's invariants, not the current
-    array values, so it's just an option-id comparison."""
-    if request.junction_type is None or request.student_answer is None:
-        return False
-    correct_id = CONCEPTUAL_JUNCTION_CORRECT_OPTION_IDS.get(request.junction_type.value)
-    return correct_id is not None and request.student_answer.strip() == correct_id
+def build_comparison_context(junction_type: str, state: dict, student_answer: str | None) -> str:
+    """SWAP_DECISION only: names the exact values on screen so Claude's
+    feedback is grounded in what the student actually saw, not generic."""
+    if junction_type != "SWAP_DECISION":
+        return ""
 
+    active = state.get("activeIndices") or []
+    arr = state.get("dataStructureState") or []
+    if len(active) != 2 or not arr:
+        return ""
 
-def evaluate_answer(request: PredictionRequest) -> bool:
-    if request.junction_type is not None and request.junction_type != CriticalJunctionType.SWAP_DECISION:
-        return evaluate_conceptual_junction_answer(request)
-    return evaluate_bubble_sort_answer(request)
+    left_val = arr[active[0]]
+    right_val = arr[active[1]]
+    should_swap = left_val > right_val
+    return (
+        f"The algorithm compared index {active[0]} (value {left_val}) "
+        f"with index {active[1]} (value {right_val}). "
+        f'The correct action was {"swap" if should_swap else "no swap"} '
+        f'because {left_val} {">" if should_swap else "<="} {right_val}. '
+        f"The student chose: {student_answer}."
+    )
 
 
 @router.post("/", response_model=PredictionResponse)
 async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
-    correct = evaluate_answer(request)
+    correct = evaluate_bubble_sort_answer(request)
 
-    junction_type = request.junction_type.value if request.junction_type else CriticalJunctionType.SWAP_DECISION.value
+    state = request.current_state if isinstance(request.current_state, dict) else {}
+    junction_type = state.get("criticalJunctionType") or (
+        request.junction_type.value if request.junction_type else "SWAP_DECISION"
+    )
     junction_difficulty = request.junction_difficulty.value if request.junction_difficulty else "PROCEDURAL"
+    comparison_context = build_comparison_context(junction_type, state, request.student_answer)
 
     prompt = FEEDBACK_TEMPLATE.format(
         algorithm_context=BUBBLE_SORT_CONTEXT,
@@ -86,6 +86,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
         junction_type=junction_type,
         junction_difficulty=junction_difficulty,
         junction_guidance=CRITICAL_JUNCTION_GUIDANCE.get(junction_type, ""),
+        comparison_context=comparison_context,
     )
 
     try:
