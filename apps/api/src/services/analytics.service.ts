@@ -49,6 +49,11 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     )
     .sort((a, b) => b.errorCount - a.errorCount)
 
+  const scaffoldingDistribution: Record<string, number> = {}
+  interactions.forEach((i) => {
+    scaffoldingDistribution[i.scaffoldingLevelAtTime] = (scaffoldingDistribution[i.scaffoldingLevelAtTime] ?? 0) + 1
+  })
+
   const studentProgress = students.map((student) => {
     const allInteractions = student.sessions.flatMap((s) => s.interactions)
     const correct = allInteractions.filter((i) => i.predictionCorrect).length
@@ -66,6 +71,9 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       .filter((s) => s.challengeExplanation)
       .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())[0]
 
+    const chronological = [...allInteractions].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    const totalTimeSpent = allInteractions.reduce((sum, i) => sum + i.timeSpentSeconds, 0)
+
     return {
       userId: student.id,
       name: student.name,
@@ -73,6 +81,13 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       averageCorrectRate: rate,
       topMisconception,
       challengeExplanation: latestChallengeSession?.challengeExplanation ?? null,
+      totalPredictions: allInteractions.length,
+      correctPredictions: correct,
+      hintsRequested: allInteractions.reduce((sum, i) => sum + i.hintsRequested, 0),
+      misconceptionBreakdown: miscCounts,
+      scaffoldingProgression: chronological.map((i) => i.scaffoldingLevelAtTime),
+      feynmanScores: chronological.filter((i) => i.interactionType === 'FEYNMAN').map((i) => i.masteryScoreAtTime),
+      averageTimePerStep: allInteractions.length > 0 ? totalTimeSpent / allInteractions.length : 0,
     }
   })
 
@@ -82,6 +97,7 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     averageCorrectRate,
     misconceptionBreakdown,
     stepDifficultyHeatmap,
+    scaffoldingDistribution,
     studentProgress,
   }
 }

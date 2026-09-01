@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 
 interface StudentProgressTableProps {
   students: EducatorAnalyticsDto['studentProgress']
+  onSelectStudent?: (student: EducatorAnalyticsDto['studentProgress'][0]) => void
 }
 
 type SortColumn = 'student' | 'sessions' | 'accuracy' | 'misconception'
@@ -66,7 +67,7 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'misconception', label: 'Top misconception' },
 ]
 
-export default function StudentProgressTable({ students }: StudentProgressTableProps) {
+export default function StudentProgressTable({ students, onSelectStudent }: StudentProgressTableProps) {
   const [showNames, setShowNames] = useState(false)
   const [sortColumn, setSortColumn] = useState<SortColumn>('accuracy')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -169,7 +170,14 @@ export default function StudentProgressTable({ students }: StudentProgressTableP
             </thead>
             <tbody>
               {sorted.map((student) => (
-                <tr key={student.userId} className="border-b border-border last:border-0">
+                <tr
+                  key={student.userId}
+                  onClick={() => onSelectStudent?.(student)}
+                  className={cn(
+                    'border-b border-border last:border-0',
+                    onSelectStudent && 'cursor-pointer hover:bg-surface',
+                  )}
+                >
                   <td className="px-4 py-3 text-text-primary">
                     {showNames ? student.name : anonymizedLabels.get(student.userId)}
                   </td>

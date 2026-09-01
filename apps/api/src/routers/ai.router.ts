@@ -1,6 +1,14 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { proxyPrediction, proxyHint, proxyFeynman, proxyChallenge, proxyCodeEval } from '../services/ai.service'
+import {
+  proxyPrediction,
+  proxyHint,
+  proxyFeynman,
+  proxyChallenge,
+  proxyCodeEval,
+  proxyStudentSummary,
+  proxyClassSummary,
+} from '../services/ai.service'
 
 const router = Router()
 router.use(authenticate)
@@ -47,6 +55,24 @@ router.post('/code-eval', async (req: AuthRequest, res: Response) => {
     res.json({ data: result, error: null })
   } catch {
     res.status(502).json({ data: null, error: { code: 'AI_ERROR', message: 'Code evaluation unavailable' } })
+  }
+})
+
+router.post('/summaries/student', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await proxyStudentSummary(req.body)
+    res.json({ data: result, error: null })
+  } catch {
+    res.status(502).json({ data: null, error: { code: 'AI_ERROR', message: 'Summary unavailable' } })
+  }
+})
+
+router.post('/summaries/class', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await proxyClassSummary(req.body)
+    res.json({ data: result, error: null })
+  } catch {
+    res.status(502).json({ data: null, error: { code: 'AI_ERROR', message: 'Class summary unavailable' } })
   }
 })
 

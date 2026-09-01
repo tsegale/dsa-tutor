@@ -222,6 +222,44 @@ export interface CodeEvalResponse {
   executeVisually: boolean
 }
 
+export interface StudentSummaryRequest {
+  studentId: string
+  studentName: string
+  algorithmName: string
+  totalSessions: number
+  totalPredictions: number
+  correctPredictions: number
+  hintsRequested: number
+  misconceptionBreakdown: Record<string, number>
+  scaffoldingProgression: string[]
+  feynmanScores: number[]
+  averageTimePerStep: number
+}
+
+export interface StudentSummaryResponse {
+  narrativeSummary: string
+  strengthAreas: string[]
+  concernAreas: string[]
+  recommendedAction: string
+  scaffoldingTrend: 'improving' | 'stable' | 'declining' | 'insufficient_data'
+}
+
+export interface ClassSummaryRequest {
+  algorithmName: string
+  totalStudents: number
+  averageCorrectRate: number
+  topMisconceptions: Array<{ category: string; count: number }>
+  stepDifficultyHeatmap: Array<{ stepIndex: number; errorCount: number }>
+  scaffoldingDistribution: Record<string, number>
+}
+
+export interface ClassSummaryResponse {
+  narrativeSummary: string
+  keyFindings: string[]
+  recommendedInterventions: string[]
+  curriculumAdjustment: string | null
+}
+
 /**
  * A summary of a completed (or in-progress) tutoring session,
  * persisted by the API and surfaced in student progress views.
@@ -303,6 +341,7 @@ export interface EducatorAnalyticsDto {
     errorCount: number
     algorithmName: string
   }>
+  scaffoldingDistribution: Record<string, number>
   studentProgress: Array<{
     userId: string
     name: string
@@ -310,5 +349,12 @@ export interface EducatorAnalyticsDto {
     averageCorrectRate: number
     topMisconception: string | null
     challengeExplanation: string | null
+    totalPredictions: number
+    correctPredictions: number
+    hintsRequested: number
+    misconceptionBreakdown: Record<string, number>
+    scaffoldingProgression: string[]
+    feynmanScores: number[]
+    averageTimePerStep: number
   }>
 }

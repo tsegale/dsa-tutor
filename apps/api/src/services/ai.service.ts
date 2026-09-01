@@ -9,6 +9,10 @@ import type {
   ChallengeResponse,
   CodeEvalRequest,
   CodeEvalResponse,
+  StudentSummaryRequest,
+  StudentSummaryResponse,
+  ClassSummaryRequest,
+  ClassSummaryResponse,
 } from '@dsa-tutor/types'
 
 const AI_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
@@ -124,6 +128,61 @@ export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalR
     bugType: data.bug_type ?? null,
     correctiveHint: data.corrective_hint,
     executeVisually: data.execute_visually,
+  }
+}
+
+// Like the other AI service response models, Student/ClassSummaryResponse
+// are plain Pydantic BaseModels (no camelCase alias generator), so their
+// JSON comes back snake_case and needs explicit field mapping here.
+export async function proxyStudentSummary(request: StudentSummaryRequest): Promise<StudentSummaryResponse> {
+  const response = await fetch(`${AI_URL}/api/v1/summaries/student`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      student_id: request.studentId,
+      student_name: request.studentName,
+      algorithm_name: request.algorithmName,
+      total_sessions: request.totalSessions,
+      total_predictions: request.totalPredictions,
+      correct_predictions: request.correctPredictions,
+      hints_requested: request.hintsRequested,
+      misconception_breakdown: request.misconceptionBreakdown,
+      scaffolding_progression: request.scaffoldingProgression,
+      feynman_scores: request.feynmanScores,
+      average_time_per_step: request.averageTimePerStep,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI student summary error: ${response.status}`)
+  const data = (await response.json()) as any
+  return {
+    narrativeSummary: data.narrative_summary,
+    strengthAreas: data.strength_areas ?? [],
+    concernAreas: data.concern_areas ?? [],
+    recommendedAction: data.recommended_action,
+    scaffoldingTrend: data.scaffolding_trend,
+  }
+}
+
+export async function proxyClassSummary(request: ClassSummaryRequest): Promise<ClassSummaryResponse> {
+  const response = await fetch(`${AI_URL}/api/v1/summaries/class`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      total_students: request.totalStudents,
+      average_correct_rate: request.averageCorrectRate,
+      top_misconceptions: request.topMisconceptions,
+      step_difficulty_heatmap: request.stepDifficultyHeatmap,
+      scaffolding_distribution: request.scaffoldingDistribution,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI class summary error: ${response.status}`)
+  const data = (await response.json()) as any
+  return {
+    narrativeSummary: data.narrative_summary,
+    keyFindings: data.key_findings ?? [],
+    recommendedInterventions: data.recommended_interventions ?? [],
+    curriculumAdjustment: data.curriculum_adjustment ?? null,
   }
 }
 

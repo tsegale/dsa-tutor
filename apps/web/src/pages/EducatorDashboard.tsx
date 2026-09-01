@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
+import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import { getAnalytics } from '../api/analytics'
 import { useAuth } from '../context/AuthContext'
 import AnalyticsNav from '../components/analytics/AnalyticsNav'
@@ -7,9 +9,13 @@ import SummaryStats from '../components/analytics/SummaryStats'
 import MisconceptionTable from '../components/analytics/MisconceptionTable'
 import StepHeatmap from '../components/analytics/StepHeatmap'
 import StudentProgressTable from '../components/analytics/StudentProgressTable'
+import ClassSummaryCard from '../components/analytics/ClassSummaryCard'
+import StudentSummaryDrawer from '../components/analytics/StudentSummaryDrawer'
 
 export default function EducatorDashboard() {
   const { user } = useAuth()
+  const [selectedStudent, setSelectedStudent] = useState<EducatorAnalyticsDto['studentProgress'][0] | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   if (user && user.role !== 'EDUCATOR') {
     return <Navigate to="/" replace />
@@ -26,6 +32,11 @@ export default function EducatorDashboard() {
     queryFn: getAnalytics,
     refetchInterval: 30000,
   })
+
+  function handleSelectStudent(student: EducatorAnalyticsDto['studentProgress'][0]) {
+    setSelectedStudent(student)
+    setDrawerOpen(true)
+  }
 
   if (isLoading) return <EducatorDashboardSkeleton />
 
@@ -49,6 +60,7 @@ export default function EducatorDashboard() {
       <main className="mx-auto max-w-7xl space-y-12 px-8 py-8">
         {analytics && (
           <>
+            <ClassSummaryCard analytics={analytics} />
             <SummaryStats analytics={analytics} />
             <section>
               <h2 className="mb-6 text-xl font-bold text-primary">Misconception Analysis</h2>
@@ -59,11 +71,12 @@ export default function EducatorDashboard() {
             </section>
             <section>
               <h2 className="mb-6 text-xl font-bold text-primary">Student Progress</h2>
-              <StudentProgressTable students={analytics.studentProgress} />
+              <StudentProgressTable students={analytics.studentProgress} onSelectStudent={handleSelectStudent} />
             </section>
           </>
         )}
       </main>
+      <StudentSummaryDrawer student={selectedStudent} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   )
 }

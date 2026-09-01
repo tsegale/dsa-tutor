@@ -8,6 +8,7 @@ export interface EducatorAnalyticsDto {
     errorCount: number
     algorithmName: string
   }>
+  scaffoldingDistribution: Record<string, number>
   studentProgress: Array<{
     userId: string
     name: string
@@ -15,5 +16,12 @@ export interface EducatorAnalyticsDto {
     averageCorrectRate: number
     topMisconception: string | null
     challengeExplanation: string | null
+    totalPredictions: number
+    correctPredictions: number
+    hintsRequested: number
+    misconceptionBreakdown: Record<string, number>
+    scaffoldingProgression: string[]
+    feynmanScores: number[]
+    averageTimePerStep: number
   }>
 }
