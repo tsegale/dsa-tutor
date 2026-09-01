@@ -1,13 +1,21 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import ArrayCanvas from './ArrayCanvas'
 
 interface CanvasContainerProps {
   onElementClick?: (index: number) => void
   selectedIndex?: number | null
+  mistakePath?: AlgorithmSnapshot[] | null
+  onMistakePathComplete?: () => void
 }
 
-export default function CanvasContainer({ onElementClick, selectedIndex = null }: CanvasContainerProps) {
+export default function CanvasContainer({
+  onElementClick,
+  selectedIndex = null,
+  mistakePath = null,
+  onMistakePathComplete,
+}: CanvasContainerProps) {
   // Only Bubble Sort exists today (Phase 15 gates additional algorithms).
   // Future TreeCanvas/GraphCanvas types will branch on algorithmName here.
   useAlgorithmStore((state) => state.algorithmName)
@@ -55,6 +63,8 @@ export default function CanvasContainer({ onElementClick, selectedIndex = null }
         height={size.height}
         onElementClick={onElementClick}
         selectedIndex={selectedIndex}
+        mistakePath={mistakePath}
+        onMistakePathComplete={onMistakePathComplete}
       />
     </div>
   )

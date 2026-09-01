@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
-import type { AlgorithmTopicDTO } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
@@ -29,6 +29,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { calculateMastery, type MasteryMetrics } from '@/utils/masteryScore'
+import { computeMistakePath } from '@/engine/mistakePath'
 import { cn } from '@/lib/utils'
 
 const SCAFFOLDING_LEVEL_ORDER: ScaffoldingLevel[] = [
@@ -107,6 +108,7 @@ export default function AlgorithmPage() {
   const [masteryMetrics, setMasteryMetrics] = useState<MasteryMetrics>(INITIAL_MASTERY_METRICS)
   const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
   const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
+  const [mistakePath, setMistakePath] = useState<AlgorithmSnapshot[] | null>(null)
 
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
@@ -143,6 +145,10 @@ export default function AlgorithmPage() {
     if (detail.correct) {
       predictionStatsRef.current.correct += 1
       runBadgeCheck()
+    } else {
+      const snapshotAtSubmission = useAlgorithmStore.getState().snapshotArray[detail.stepIndex]
+      const path = snapshotAtSubmission ? computeMistakePath(snapshotAtSubmission, detail.predictionSubmitted) : []
+      setMistakePath(path.length > 0 ? path : null)
     }
 
     const isConceptual = detail.junctionDifficulty === 'CONCEPTUAL'
@@ -234,6 +240,10 @@ export default function AlgorithmPage() {
 
   useEffect(() => {
     setExplanationLinkVisible(false)
+  }, [stepIndex])
+
+  useEffect(() => {
+    setMistakePath(null)
   }, [stepIndex])
 
   function openExplanationTab() {
@@ -375,7 +385,12 @@ export default function AlgorithmPage() {
                   isPlaying && mode === AlgorithmMode.DEMO && !prefersReducedMotion && 'canvas-pulse-border',
                 )}
               >
-                <CanvasContainer onElementClick={handleElementClick} selectedIndex={canvasSelectedIndex} />
+                <CanvasContainer
+                  onElementClick={handleElementClick}
+                  selectedIndex={canvasSelectedIndex}
+                  mistakePath={mistakePath}
+                  onMistakePathComplete={() => setMistakePath(null)}
+                />
               </div>
             </motion.div>
 

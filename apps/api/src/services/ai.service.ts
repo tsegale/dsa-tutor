@@ -31,6 +31,7 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     consequenceExplanation: data.consequenceExplanation,
     socraticHint: data.socraticHint,
     xpAwarded: data.xpAwarded,
+    counterfactualTrace: data.counterfactualTrace ?? '',
   }
 }
 

@@ -14,6 +14,7 @@ class PredictionResponse(CamelModel):
     consequence_explanation: str
     socratic_hint: str
     xp_awarded: int
+    counterfactual_trace: str = ""
 
 
 class HintResponse(CamelModel):

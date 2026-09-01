@@ -177,6 +177,8 @@ export interface PredictionResponse {
   consequenceExplanation: string
   socraticHint: string
   xpAwarded: number
+  /** Two-sentence trace of what would happen if the wrong answer were applied. Empty when correct. */
+  counterfactualTrace: string
 }
 
 export interface HintRequest {

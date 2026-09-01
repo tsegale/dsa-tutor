@@ -101,6 +101,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
             consequence_explanation=feedback["consequence_explanation"],
             socratic_hint=feedback["socratic_hint"],
             xp_awarded=feedback.get("xp_awarded", 10 if correct else 0),
+            counterfactual_trace="" if correct else feedback.get("counterfactual_trace", ""),
         )
     except Exception:
         return get_fallback_prediction_response(correct)

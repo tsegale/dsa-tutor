@@ -76,6 +76,16 @@ schema:
     still larger than the value at index 2 (which is 3). If we leave
     them in this order, the 7 will stay in the wrong position and the
     next pass will have to deal with it again.,
+  "counterfactual_trace": A two-sentence trace of what would happen to
+    the algorithm state if the student's wrong answer were applied. Be
+    specific: name the array values, indices, and what the array would
+    look like after one more step if the wrong operation were executed.
+    If the answer is correct, return empty string. Example style: If we
+    skip this swap, the array becomes [..., 7, 3, ...] and the 7 remains
+    at index 2. On the next inner loop iteration, the algorithm will
+    compare 7 with the element at index 4, meaning this unsorted 7 will
+    travel through additional unnecessary comparisons before eventually
+    reaching its correct position.,
   "socratic_hint": A single guiding question addressed directly to the
     student, maximum 20 words. Use second person. Do not start with
     You. Start with a question word: What, Which, How, Can, Does, If.

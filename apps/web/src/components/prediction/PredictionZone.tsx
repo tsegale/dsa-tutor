@@ -104,6 +104,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
   const [mistakeAnalysis, setMistakeAnalysis] = useState<string | null>(null)
   const [mistakeHint, setMistakeHint] = useState<string | null>(null)
+  const [mistakeCounterfactual, setMistakeCounterfactual] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
@@ -125,6 +126,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     setSubmissionState('idle')
     setMistakeAnalysis(null)
     setMistakeHint(null)
+    setMistakeCounterfactual(null)
     setHint(null)
     setHintLoading(false)
     setHintsRequestedCount(0)
@@ -219,6 +221,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     setCurrentAnswer(null)
     setMistakeAnalysis(null)
     setMistakeHint(null)
+    setMistakeCounterfactual(null)
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
@@ -291,17 +294,24 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     const attempt = attemptCountRef.current
 
     if (scaffoldingLevel === ScaffoldingLevel.NONE) {
+      // No elaboration from Claude at all, per the NONE scaffolding contract.
       setMistakeAnalysis('Incorrect. Consider the algorithm state and try again.')
       setMistakeHint(null)
+      setMistakeCounterfactual(null)
     } else if (scaffoldingLevel === ScaffoldingLevel.LOW) {
+      // Brief, one-sentence analysis only; the counterfactual trace is
+      // extra elaboration that contradicts "reason through it independently".
       setMistakeAnalysis(firstSentence(response.consequenceExplanation))
       setMistakeHint(null)
+      setMistakeCounterfactual(null)
     } else if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
       setMistakeAnalysis(response.consequenceExplanation)
       setMistakeHint(response.socraticHint)
+      setMistakeCounterfactual(response.counterfactualTrace || null)
     } else {
       setMistakeAnalysis(response.consequenceExplanation)
       setMistakeHint(null)
+      setMistakeCounterfactual(response.counterfactualTrace || null)
     }
 
     if (scaffoldingLevel === ScaffoldingLevel.NONE && attempt >= MAX_ATTEMPTS_BEFORE_ADVANCE) {
@@ -348,10 +358,12 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
             <MistakeAnalysisToast
               message={mistakeAnalysis}
               hint={mistakeHint}
+              counterfactualTrace={mistakeCounterfactual}
               pseudocodeLine={snapshot.pseudocodeLine}
               onDismiss={() => {
                 setMistakeAnalysis(null)
                 setMistakeHint(null)
+                setMistakeCounterfactual(null)
               }}
             />
 
