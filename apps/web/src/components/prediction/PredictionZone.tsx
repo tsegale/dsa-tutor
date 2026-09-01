@@ -39,6 +39,7 @@ export const CLEAR_CANVAS_SELECTION_EVENT = 'dsa-tutor:clear-canvas-selection'
 export const REQUEST_HINT_EVENT = 'request-hint'
 export const ESCAPE_EVENT = 'dsa-tutor:escape'
 export const SHOW_EXPLANATION_LINK_EVENT = 'dsa-tutor:show-explanation-link'
+export const HANDS_ON_ANSWER_EVENT = 'dsa-tutor:hands-on-answer'
 
 const PROACTIVE_HINT_DELAY_MS = 8000
 const TILE_PRIME_DELAY_MS = 15000
@@ -118,7 +119,12 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const attemptCountRef = useRef(0)
   const proactiveHintFiredRef = useRef(false)
 
-  const isVisible = mode === AlgorithmMode.PRACTICE && snapshot !== null && snapshot.isPredictionRequired
+  const isVisible =
+    (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) &&
+    snapshot !== null &&
+    snapshot.isPredictionRequired
+  const isHandsOnSwapDecision =
+    mode === AlgorithmMode.HANDS_ON && snapshot?.criticalJunctionType === CriticalJunctionType.SWAP_DECISION
   const stepIndex = snapshot?.stepIndex ?? null
 
   useEffect(() => {
@@ -143,6 +149,23 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     }
     window.addEventListener(CANVAS_ELEMENT_SELECTED_EVENT, handleCanvasSelect)
     return () => window.removeEventListener(CANVAS_ELEMENT_SELECTED_EVENT, handleCanvasSelect)
+  }, [])
+
+  // Hands-On mode: the drag gesture itself is the submission, so this
+  // fires handleSubmit directly rather than just staging currentAnswer.
+  // A ref keeps the call bound to the latest handleSubmit closure without
+  // needing to re-subscribe the listener on every dependency change.
+  const handleSubmitRef = useRef(handleSubmit)
+  handleSubmitRef.current = handleSubmit
+
+  useEffect(() => {
+    function handleHandsOnAnswer(event: Event) {
+      const answer = (event as CustomEvent<'swap' | 'no-swap'>).detail
+      setCurrentAnswer(answer)
+      void handleSubmitRef.current(answer)
+    }
+    window.addEventListener(HANDS_ON_ANSWER_EVENT, handleHandsOnAnswer)
+    return () => window.removeEventListener(HANDS_ON_ANSWER_EVENT, handleHandsOnAnswer)
   }, [])
 
   useEffect(() => {
@@ -225,9 +248,10 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
-  async function handleSubmit() {
-    if (currentAnswer === null || isSubmitting || !snapshot) return
-    onSubmit(currentAnswer)
+  async function handleSubmit(explicitAnswer?: string) {
+    const answer = explicitAnswer ?? currentAnswer
+    if (answer === null || isSubmitting || !snapshot) return
+    onSubmit(answer)
     setIsSubmitting(true)
 
     // The engine only ever marks isPredictionRequired true alongside a
@@ -242,7 +266,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
         dataStructureState: snapshot.dataStructureState,
         activeIndices: snapshot.activeIndices,
       },
-      studentAnswer: currentAnswer,
+      studentAnswer: answer,
       errorHistory: [],
       scaffoldingLevel,
       sessionId: sessionId ?? 'local-session',
@@ -258,7 +282,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     onPredictionResult?.({
       correct: response.correct,
       stepIndex: snapshot.stepIndex,
-      predictionSubmitted: currentAnswer,
+      predictionSubmitted: answer,
       misconceptionCategory: response.correct ? null : response.misconceptionCategory,
       hintsRequestedForStep: hintsRequestedCount,
       timeSpentSeconds,
@@ -410,7 +434,17 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                 transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
                 className="min-w-0 flex-1"
               >
-                {snapshot.predictionType === PredictionType.CANVAS_CLICK && (
+                {snapshot.predictionType === PredictionType.CANVAS_CLICK && isHandsOnSwapDecision && (
+                  <div className="flex h-full flex-col justify-center gap-1">
+                    <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
+                      {snapshot.description}
+                    </p>
+                    <p className="text-xs text-text-muted dark:text-dark-text-secondary">
+                      ↑ Drag the bars in the canvas above to answer
+                    </p>
+                  </div>
+                )}
+                {snapshot.predictionType === PredictionType.CANVAS_CLICK && !isHandsOnSwapDecision && (
                   <CanvasClickInput
                     prompt={snapshot.description}
                     onSelect={(index) => setCurrentAnswer(String(index))}
@@ -442,7 +476,12 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
               </motion.div>
 
               <div className="flex w-[120px] shrink-0 items-center justify-center">
-                {submissionState === 'idle' && (
+                {submissionState === 'idle' && isHandsOnSwapDecision && (
+                  <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
+                    Drag to answer
+                  </span>
+                )}
+                {submissionState === 'idle' && !isHandsOnSwapDecision && (
                   <button
                     type="button"
                     onClick={() => void handleSubmit()}

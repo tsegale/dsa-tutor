@@ -10,6 +10,7 @@
 export const AlgorithmMode = {
   DEMO: 'DEMO',
   PRACTICE: 'PRACTICE',
+  HANDS_ON: 'HANDS_ON',
 } as const
 export type AlgorithmMode = (typeof AlgorithmMode)[keyof typeof AlgorithmMode]
 

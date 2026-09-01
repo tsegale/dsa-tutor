@@ -14,6 +14,7 @@ const SHORTCUTS: { keys: string; action: string }[] = [
   { keys: 'F', action: 'Toggle Focus Mode' },
   { keys: 'D', action: 'Switch to Demo Mode' },
   { keys: 'P', action: 'Switch to Practice Mode' },
+  { keys: 'O', action: 'Switch to Hands-On Mode' },
   { keys: 'T', action: 'Toggle Dark / Light Theme' },
   { keys: '1', action: 'Explanation Tab' },
   { keys: '2', action: 'Pseudocode Tab' },

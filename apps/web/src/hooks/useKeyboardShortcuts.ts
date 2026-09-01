@@ -48,6 +48,9 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
         case 'KeyP':
           store.setMode(AlgorithmMode.PRACTICE)
           break
+        case 'KeyO':
+          store.setMode(AlgorithmMode.HANDS_ON)
+          break
         case 'KeyT': {
           const isDark = document.documentElement.classList.toggle('dark')
           localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light')

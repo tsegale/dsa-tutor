@@ -5,6 +5,7 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 const OPTIONS: { label: string; value: AlgorithmMode }[] = [
   { label: 'Demo', value: AlgorithmMode.DEMO },
   { label: 'Practice', value: AlgorithmMode.PRACTICE },
+  { label: 'Hands-On', value: AlgorithmMode.HANDS_ON },
 ]
 
 export default function ModeToggle() {

@@ -28,6 +28,7 @@ enum Difficulty {
 enum Mode {
   DEMO
   PRACTICE
+  HANDS_ON
 }
 
 enum ScaffoldingLevel {

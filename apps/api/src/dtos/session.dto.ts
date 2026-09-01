@@ -1,6 +1,6 @@
 export interface CreateSessionDto {
   algorithmTopicId: string
-  mode: 'DEMO' | 'PRACTICE'
+  mode: 'DEMO' | 'PRACTICE' | 'HANDS_ON'
   scaffoldingLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
 }
 
