@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlgorithmMode, CriticalJunctionType, JunctionDifficulty, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
-import type { AlgorithmSnapshot, HintRequest, MisconceptionCategory, PredictionRequest } from '@dsa-tutor/types'
+import type {
+  AlgorithmSnapshot,
+  CodeEvalResponse,
+  HintRequest,
+  MisconceptionCategory,
+  PredictionRequest,
+} from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { submitPrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
@@ -9,12 +15,14 @@ import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { firstSentence } from '@/utils/predictionJunction'
+import { bubbleSortEngine } from '@/engine/bubbleSort'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import MistakeAnalysisToast from './MistakeAnalysisToast'
+import CodeEditorInput from './CodeEditorInput'
 
 export interface PredictionOutcomeDetail {
   correct: boolean
@@ -25,7 +33,17 @@ export interface PredictionOutcomeDetail {
   timeSpentSeconds: number
   junctionType: CriticalJunctionType
   junctionDifficulty: JunctionDifficulty
+  /** True for every Code Editor submission (correct or not). Tells the page
+   * level to skip the tile-flow's computeMistakePath fallback entirely -
+   * a code-eval outcome drives the canvas only via codeEvalBuggyState. */
+  isCodeEval?: boolean
+  /** Set only for an incorrect, visualisable Code Editor submission - the
+   * array state the student's buggy code actually produces, so the page
+   * level can play it on the canvas via the Phase 15 mistake path. */
+  codeEvalBuggyState?: { resultingState: number[]; activeIndices: number[] } | null
 }
+
+const CODE_EVAL_XP = 5
 
 interface PredictionZoneProps {
   onSubmit: (answer: string) => void
@@ -126,6 +144,17 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot): string {
   }
 }
 
+/** What the array looks like after correctly resolving a SWAP_DECISION junction - the same rule the engine itself applies. */
+function computeExpectedNextState(snapshot: AlgorithmSnapshot): number[] {
+  const arr = [...(snapshot.dataStructureState as number[])]
+  const [i, j] = snapshot.activeIndices
+  if (i === undefined || j === undefined || arr[i] === undefined || arr[j] === undefined) return arr
+  if (arr[i] > arr[j]) {
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
 function CheckIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -190,6 +219,8 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const [xpVisible, setXpVisible] = useState(false)
   const [hintsRequestedCount, setHintsRequestedCount] = useState(0)
   const [stepStartTime, setStepStartTime] = useState(() => Date.now())
+  const [codeEvalPraise, setCodeEvalPraise] = useState<string | null>(null)
+  const [codeSubmitting, setCodeSubmitting] = useState(false)
 
   const attemptCountRef = useRef(0)
   const proactiveHintFiredRef = useRef(false)
@@ -218,6 +249,8 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     setHintLoading(false)
     setHintsRequestedCount(0)
     setStepStartTime(Date.now())
+    setCodeEvalPraise(null)
+    setCodeSubmitting(false)
     attemptCountRef.current = 0
     proactiveHintFiredRef.current = false
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -421,6 +454,77 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
+  // Code Editor Mode's entire submission flow: CodeEditorInput owns the
+  // evaluateCode call itself and hands back the full response here, since
+  // its response shape (CodeEvalResponse) and XP rule (flat 5 XP) are
+  // unrelated to the tile/value flow's submitPrediction contract above.
+  async function handleCodeEvalResult(result: CodeEvalResponse, submittedCode: string) {
+    if (!snapshot) return
+
+    const timeSpentSeconds = Math.round((Date.now() - stepStartTime) / 1000)
+    const junctionType = snapshot.criticalJunctionType ?? CriticalJunctionType.SWAP_DECISION
+    const junctionDifficulty = snapshot.junctionDifficulty ?? JunctionDifficulty.PROCEDURAL
+
+    onPredictionResult?.({
+      correct: result.isLogicallyCorrect,
+      stepIndex: snapshot.stepIndex,
+      predictionSubmitted: submittedCode,
+      // bug_type uses its own taxonomy (off_by_one/wrong_condition/missing_swap/
+      // wrong_index/syntax) that doesn't map cleanly onto MisconceptionCategory,
+      // so this deliberately never feeds the AI Challenge misconception signal.
+      misconceptionCategory: null,
+      hintsRequestedForStep: hintsRequestedCount,
+      timeSpentSeconds,
+      junctionType,
+      junctionDifficulty,
+      isCodeEval: true,
+      codeEvalBuggyState:
+        !result.isLogicallyCorrect && !result.hasSyntaxError && result.executeVisually && result.resultingState
+          ? { resultingState: result.resultingState, activeIndices: snapshot.activeIndices }
+          : null,
+    })
+
+    if (result.hasSyntaxError) {
+      // CodeEditorInput already renders the red border and inline error;
+      // nothing else to show, and the canvas must not animate.
+      return
+    }
+
+    if (result.isLogicallyCorrect) {
+      play('correct')
+      setSubmissionState('correct')
+      setCodeEvalPraise(result.correctiveHint)
+      addXP(CODE_EVAL_XP)
+      apiFetch('/api/v1/auth/xp', { method: 'POST', body: JSON.stringify({ amount: CODE_EVAL_XP }) }).catch(() => {
+        // XP persistence is best-effort; the local session XP already
+        // reflects the award regardless of whether this call lands.
+      })
+      setXpAmount(CODE_EVAL_XP)
+      setXpVisible(true)
+      play('xp')
+
+      if (result.executeVisually && result.resultingState) {
+        await wait(400)
+        const { codeEditorMode, activeChallengeType, setAlgorithm: setAlg, setActiveChallengeType } =
+          useAlgorithmStore.getState()
+        setAlg('Bubble Sort', bubbleSortEngine(result.resultingState, codeEditorMode))
+        // setAlgorithm always clears activeChallengeType for a fresh load;
+        // restore it so an in-progress AI Challenge run's completion bonus
+        // (Feature 2) still fires when this run eventually finishes.
+        if (activeChallengeType) setActiveChallengeType(activeChallengeType)
+      }
+      return
+    }
+
+    play('incorrect')
+    setSubmissionState('incorrect')
+    setShakeToken((token) => token + 1)
+    setMistakeAnalysis(result.errorExplanation ?? 'Your code does not correctly implement this step.')
+    setMistakeHint(null)
+    setMistakeCounterfactual(null)
+    setHint(result.correctiveHint)
+  }
+
   return (
     <>
       <AnimatePresence>
@@ -432,7 +536,11 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
             className={cn(
-              'absolute bottom-0 left-0 z-20 h-[35%] w-full rounded-t-lg border-t bg-white shadow-lg dark:bg-dark-surface',
+              'absolute bottom-0 left-0 z-20 w-full rounded-t-lg border-t bg-white shadow-lg dark:bg-dark-surface',
+              // Code Editor Mode needs real room for a multi-line textarea,
+              // language tabs and its own submit button - the 35% budget
+              // that fits a single tile prompt comfortably clips it.
+              snapshot.predictionType === PredictionType.CODE_EDITOR ? 'h-[70%]' : 'h-[35%]',
               'transition-colors duration-300',
               submissionState === 'correct' ? 'border-success' : 'border-border',
             )}
@@ -463,7 +571,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                       <TooltipTrigger asChild>
                         <div className="opacity-50">
                           <HintAvatar
-                            hintAvailable
+                            hintAvailable={!codeSubmitting}
                             onRequestHint={() => void handleRequestHint(false)}
                             hint={hint}
                             isLoading={hintLoading}
@@ -476,7 +584,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                     </Tooltip>
                   ) : (
                     <HintAvatar
-                      hintAvailable
+                      hintAvailable={!codeSubmitting}
                       onRequestHint={() => void handleRequestHint(false)}
                       hint={hint}
                       isLoading={hintLoading}
@@ -484,88 +592,112 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                   ))}
               </div>
 
-              <motion.div
-                key={shakeToken}
-                animate={
-                  submissionState === 'incorrect' &&
-                  !prefersReducedMotion &&
-                  snapshot.predictionType !== PredictionType.TILE_GRID
-                    ? { x: [0, -4, 4, -4, 4, -4, 4, 0] }
-                    : { x: 0 }
-                }
-                transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-                className="min-w-0 flex-1"
-              >
-                {isHandsOnSwapDecision && (
-                  <div className="flex h-full flex-col justify-center gap-1">
-                    <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
-                      {getPromptForSnapshot(snapshot)}
-                    </p>
-                    <p className="text-xs text-text-muted dark:text-dark-text-secondary">
-                      ↑ Drag the bars in the canvas above to answer
-                    </p>
-                  </div>
-                )}
-                {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
-                  <ValueInput
-                    prompt={snapshot.description}
-                    onValueChange={setCurrentAnswer}
-                    value={currentAnswer ?? ''}
-                    submissionState={submissionState}
-                    onSubmit={() => void handleSubmit()}
-                  />
-                )}
-                {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.TILE_GRID && (
-                  <TileGrid
+              {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.CODE_EDITOR ? (
+                <div className="flex min-w-0 flex-1 flex-col">
+                  {codeEvalPraise && (
+                    <div className="mb-2 shrink-0 rounded-md border-l-4 border-success bg-success-light p-2.5">
+                      <p className="text-xs font-bold text-success">Your code is correct!</p>
+                      <p className="mt-0.5 text-[13px] text-text-primary">{codeEvalPraise}</p>
+                    </div>
+                  )}
+                  <CodeEditorInput
+                    key={snapshot.stepIndex}
                     prompt={getPromptForSnapshot(snapshot)}
-                    options={currentTiles}
-                    onSelect={setCurrentAnswer}
-                    selectedId={currentAnswer}
-                    submissionState={submissionState}
-                    snapshot={snapshot}
+                    stepDescription={snapshot.description}
+                    currentArrayState={snapshot.dataStructureState as number[]}
+                    activeIndices={snapshot.activeIndices}
+                    expectedNextState={computeExpectedNextState(snapshot)}
+                    algorithmName={algorithmName}
+                    onSubmit={(result, code) => void handleCodeEvalResult(result, code)}
+                    onLoadingChange={setCodeSubmitting}
                   />
-                )}
-              </motion.div>
-
-              <div className="flex w-[120px] shrink-0 items-center justify-center">
-                {submissionState === 'idle' && isHandsOnSwapDecision && (
-                  <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
-                    Drag to answer
-                  </span>
-                )}
-                {submissionState === 'idle' && !isHandsOnSwapDecision && (
-                  <button
-                    type="button"
-                    onClick={() => void handleSubmit()}
-                    disabled={currentAnswer === null || isSubmitting}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-md bg-secondary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                </div>
+              ) : (
+                <>
+                  <motion.div
+                    key={shakeToken}
+                    animate={
+                      submissionState === 'incorrect' &&
+                      !prefersReducedMotion &&
+                      snapshot.predictionType !== PredictionType.TILE_GRID
+                        ? { x: [0, -4, 4, -4, 4, -4, 4, 0] }
+                        : { x: 0 }
+                    }
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+                    className="min-w-0 flex-1"
                   >
-                    {isSubmitting ? <Spinner /> : 'Submit'}
-                  </button>
-                )}
-                {submissionState === 'correct' && (
-                  <div className="flex flex-col items-center gap-1 text-success">
-                    <CheckIcon />
-                    <span className="text-xs font-medium">Correct!</span>
-                  </div>
-                )}
-                {submissionState === 'incorrect' && (
-                  <div className="flex flex-col items-center gap-1 text-error">
-                    <XIcon />
-                    {scaffoldingLevel === ScaffoldingLevel.HIGH ? (
+                    {isHandsOnSwapDecision && (
+                      <div className="flex h-full flex-col justify-center gap-1">
+                        <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
+                          {getPromptForSnapshot(snapshot)}
+                        </p>
+                        <p className="text-xs text-text-muted dark:text-dark-text-secondary">
+                          ↑ Drag the bars in the canvas above to answer
+                        </p>
+                      </div>
+                    )}
+                    {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
+                      <ValueInput
+                        prompt={snapshot.description}
+                        onValueChange={setCurrentAnswer}
+                        value={currentAnswer ?? ''}
+                        submissionState={submissionState}
+                        onSubmit={() => void handleSubmit()}
+                      />
+                    )}
+                    {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.TILE_GRID && (
+                      <TileGrid
+                        prompt={getPromptForSnapshot(snapshot)}
+                        options={currentTiles}
+                        onSelect={setCurrentAnswer}
+                        selectedId={currentAnswer}
+                        submissionState={submissionState}
+                        snapshot={snapshot}
+                      />
+                    )}
+                  </motion.div>
+
+                  <div className="flex w-[120px] shrink-0 items-center justify-center">
+                    {submissionState === 'idle' && isHandsOnSwapDecision && (
+                      <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
+                        Drag to answer
+                      </span>
+                    )}
+                    {submissionState === 'idle' && !isHandsOnSwapDecision && (
                       <button
                         type="button"
-                        onClick={handleTryAgain}
-                        className="text-xs font-medium underline underline-offset-2"
+                        onClick={() => void handleSubmit()}
+                        disabled={currentAnswer === null || isSubmitting}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-md bg-secondary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Try again
+                        {isSubmitting ? <Spinner /> : 'Submit'}
                       </button>
-                    ) : (
-                      <span className="text-xs font-medium">Try again</span>
+                    )}
+                    {submissionState === 'correct' && (
+                      <div className="flex flex-col items-center gap-1 text-success">
+                        <CheckIcon />
+                        <span className="text-xs font-medium">Correct!</span>
+                      </div>
+                    )}
+                    {submissionState === 'incorrect' && (
+                      <div className="flex flex-col items-center gap-1 text-error">
+                        <XIcon />
+                        {scaffoldingLevel === ScaffoldingLevel.HIGH ? (
+                          <button
+                            type="button"
+                            onClick={handleTryAgain}
+                            className="text-xs font-medium underline underline-offset-2"
+                          >
+                            Try again
+                          </button>
+                        ) : (
+                          <span className="text-xs font-medium">Try again</span>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

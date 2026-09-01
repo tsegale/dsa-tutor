@@ -34,6 +34,10 @@ export interface AlgorithmStoreState {
   sessionCorrectPredictions: number
   sessionTotalPredictions: number
   sessionHintsRequested: number
+  // When true, the snapshot engine renders SWAP_DECISION junctions as a
+  // CODE_EDITOR prediction instead of TILE_GRID. Toggling only affects
+  // snapshots generated after the change, not the array already loaded.
+  codeEditorMode: boolean
 
   stepForward: () => void
   stepBackward: () => void
@@ -54,6 +58,7 @@ export interface AlgorithmStoreState {
   setChallengeHint: (hint: string | null) => void
   setActiveChallengeType: (type: string | null) => void
   recordPredictionResult: (correct: boolean, hintsRequestedForStep: number) => void
+  toggleCodeEditorMode: () => void
 }
 
 const MAX_RECENT_MISCONCEPTIONS = 10
@@ -92,6 +97,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   sessionCorrectPredictions: 0,
   sessionTotalPredictions: 0,
   sessionHintsRequested: 0,
+  codeEditorMode: false,
 
   // Advances the step index only. Pausing playback at a prediction step
   // is the playback interval's job (see startPlayback) - stepForward
@@ -212,6 +218,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       sessionHintsRequested: state.sessionHintsRequested + hintsRequestedForStep,
     }))
   },
+
+  toggleCodeEditorMode: () => set((state) => ({ codeEditorMode: !state.codeEditorMode })),
 }))
 
 export const selectCurrentSnapshot = (state: AlgorithmStoreState): AlgorithmSnapshot | null =>

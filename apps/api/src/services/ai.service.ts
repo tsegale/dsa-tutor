@@ -7,6 +7,8 @@ import type {
   FeynmanResponse,
   ChallengeRequest,
   ChallengeResponse,
+  CodeEvalRequest,
+  CodeEvalResponse,
 } from '@dsa-tutor/types'
 
 const AI_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
@@ -92,6 +94,36 @@ export async function proxyChallenge(request: ChallengeRequest): Promise<Challen
     challengeType: data.challenge_type,
     explanation: data.explanation,
     hintForStudent: data.hint_for_student,
+  }
+}
+
+// Like FeynmanResponse/ChallengeResponse, the AI service's CodeEvalResponse
+// model is a plain Pydantic BaseModel (no camelCase alias generator), so
+// its JSON comes back snake_case and needs explicit field mapping here.
+export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalResponse> {
+  const response = await fetch(`${AI_URL}/api/v1/code-eval/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      current_array_state: request.currentArrayState,
+      active_indices: request.activeIndices,
+      expected_next_state: request.expectedNextState,
+      student_code: request.studentCode,
+      language: request.language,
+      step_description: request.stepDescription,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI code-eval error: ${response.status}`)
+  const data = (await response.json()) as any
+  return {
+    isLogicallyCorrect: data.is_logically_correct,
+    hasSyntaxError: data.has_syntax_error,
+    resultingState: data.resulting_state ?? null,
+    errorExplanation: data.error_explanation ?? null,
+    bugType: data.bug_type ?? null,
+    correctiveHint: data.corrective_hint,
+    executeVisually: data.execute_visually,
   }
 }
 

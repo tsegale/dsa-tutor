@@ -14,7 +14,11 @@ interface ArrayCanvasProps {
   /** When set, the canvas plays a "what your answer would cause" trace instead of the real state. */
   mistakePath?: AlgorithmSnapshot[] | null
   onMistakePathComplete?: () => void
+  /** Caption shown over the mistake wash. Defaults to the tile-prediction wording. */
+  mistakeLabel?: string
 }
+
+const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 
 const PADDING = 32
 
@@ -38,6 +42,7 @@ export default function ArrayCanvas({
   height = 300,
   mistakePath = null,
   onMistakePathComplete,
+  mistakeLabel = DEFAULT_MISTAKE_LABEL,
 }: ArrayCanvasProps) {
   const storeSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const mode = useAlgorithmStore((state) => state.mode)
@@ -274,7 +279,7 @@ export default function ArrayCanvas({
             textAnchor="middle"
             className="fill-error text-[12px] italic"
           >
-            What your answer would cause...
+            {mistakeLabel}
           </text>
         </>
       )}

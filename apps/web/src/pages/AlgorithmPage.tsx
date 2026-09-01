@@ -110,6 +110,7 @@ export default function AlgorithmPage() {
   const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
   const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
   const [mistakePath, setMistakePath] = useState<AlgorithmSnapshot[] | null>(null)
+  const [mistakeLabel, setMistakeLabel] = useState<string | undefined>(undefined)
   const [showFeynman, setShowFeynman] = useState(false)
 
   // Guards against re-triggering the modal every time the learner steps
@@ -161,8 +162,37 @@ export default function AlgorithmPage() {
       runBadgeCheck()
     } else {
       const snapshotAtSubmission = useAlgorithmStore.getState().snapshotArray[detail.stepIndex]
-      const path = snapshotAtSubmission ? computeMistakePath(snapshotAtSubmission, detail.predictionSubmitted) : []
-      setMistakePath(path.length > 0 ? path : null)
+      if (detail.isCodeEval) {
+        // Code Editor Mode drives the canvas only via codeEvalBuggyState (or
+        // not at all, e.g. a syntax error) - never via the tile-flow's
+        // computeMistakePath, which would misread the submitted code text
+        // as a "swap"/"no-swap" tile answer.
+        if (detail.codeEvalBuggyState && snapshotAtSubmission) {
+          const { resultingState, activeIndices } = detail.codeEvalBuggyState
+          setMistakeLabel('Your code produced this...')
+          setMistakePath([
+            {
+              ...snapshotAtSubmission,
+              dataStructureState: resultingState,
+              activeIndices,
+              comparedIndices: activeIndices,
+              swappedIndices: [],
+              isPredictionRequired: false,
+              criticalJunctionType: null,
+              junctionDifficulty: null,
+              isFinalStep: false,
+              description: `Your code produced [${resultingState.join(', ')}].`,
+            },
+          ])
+        } else {
+          setMistakeLabel(undefined)
+          setMistakePath(null)
+        }
+      } else {
+        const path = snapshotAtSubmission ? computeMistakePath(snapshotAtSubmission, detail.predictionSubmitted) : []
+        setMistakeLabel(undefined)
+        setMistakePath(path.length > 0 ? path : null)
+      }
       if (detail.misconceptionCategory) {
         useAlgorithmStore.getState().addMisconception(detail.misconceptionCategory)
       }
@@ -427,6 +457,7 @@ export default function AlgorithmPage() {
                 <CanvasContainer
                   mistakePath={mistakePath}
                   onMistakePathComplete={() => setMistakePath(null)}
+                  mistakeLabel={mistakeLabel}
                 />
               </div>
             </motion.div>

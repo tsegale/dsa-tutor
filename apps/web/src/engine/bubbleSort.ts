@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty } from '@dsa-tutor/types'
+import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 // Matches the pseudocode panel's line numbers, so a snapshot's
 // pseudocodeLine tells the UI exactly which line to highlight.
@@ -33,6 +33,7 @@ interface SnapshotParams {
   isFinalStep?: boolean
   criticalJunctionType?: CriticalJunctionType | null
   junctionDifficulty?: JunctionDifficulty | null
+  predictionType?: PredictionType
 }
 
 function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
@@ -43,8 +44,10 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     isPredictionRequired: params.isPredictionRequired,
     // Bubble Sort's entire prediction interaction is tile selection: two
     // bars pulse on the canvas, the learner reads the values, then picks
-    // a tile below. There is no click-to-select-a-bar input path.
-    predictionType: 'TILE_GRID',
+    // a tile below. There is no click-to-select-a-bar input path, except
+    // at SWAP_DECISION junctions in Code Editor Mode (see codeEditorMode
+    // param below), which use CODE_EDITOR instead.
+    predictionType: params.predictionType ?? PredictionType.TILE_GRID,
     dataStructureState: [...params.dataStructureState],
     activeIndices: [...(params.activeIndices ?? [])],
     highlightIndices: [...(params.highlightIndices ?? [])],
@@ -61,8 +64,13 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
  * the complete, immutable sequence of steps from start to finish.
  * Never mutates `input`; every snapshot's dataStructureState is an
  * independent copy of the array at that instant.
+ *
+ * codeEditorMode swaps predictionType to CODE_EDITOR on SWAP_DECISION
+ * junctions only - the three conceptual junctions (PASS_COMPLETE,
+ * EARLY_TERMINATION, ALGORITHM_COMPLETE) always stay TILE_GRID, since
+ * Code Editor Mode only applies to the swap execution step.
  */
-export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
+export function bubbleSortEngine(input: number[], codeEditorMode = false): AlgorithmSnapshot[] {
   const working = [...input]
   const n = working.length
   const snapshots: AlgorithmSnapshot[] = []
@@ -133,6 +141,7 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
           highlightIndices: finalized,
           criticalJunctionType: isSwapJunction ? CriticalJunctionType.SWAP_DECISION : null,
           junctionDifficulty: isSwapJunction ? JunctionDifficulty.PROCEDURAL : null,
+          predictionType: isSwapJunction && codeEditorMode ? PredictionType.CODE_EDITOR : PredictionType.TILE_GRID,
         }),
       )
 

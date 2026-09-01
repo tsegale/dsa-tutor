@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
+import { cn } from '@/lib/utils'
 
 interface LeftPanelProps {
   collapsed: boolean
@@ -58,6 +59,14 @@ function RefreshIcon() {
   )
 }
 
+function CodeBracketsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M8 4 4 12l4 8M16 4l4 8-4 8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function ChevronIcon({ pointRight }: { pointRight: boolean }) {
   return (
     <svg
@@ -100,6 +109,8 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
   const resetAlgorithm = useAlgorithmStore((state) => state.resetAlgorithm)
   const setPlaybackSpeed = useAlgorithmStore((state) => state.setPlaybackSpeed)
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
+  const codeEditorMode = useAlgorithmStore((state) => state.codeEditorMode)
+  const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
 
   const [arrayInput, setArrayInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
@@ -116,14 +127,14 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
       return
     }
     setInputError(null)
-    setAlgorithm('Bubble Sort', bubbleSortEngine(parsed))
+    setAlgorithm('Bubble Sort', bubbleSortEngine(parsed, codeEditorMode))
   }
 
   function handleRandom() {
     const values = generateRandomArray()
     setInputError(null)
     setArrayInput(values.join(','))
-    setAlgorithm('Bubble Sort', bubbleSortEngine(values))
+    setAlgorithm('Bubble Sort', bubbleSortEngine(values, codeEditorMode))
   }
 
   return (
@@ -250,6 +261,33 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
               value={[playbackSpeed]}
               onValueChange={([value]) => setPlaybackSpeed(value)}
             />
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={toggleCodeEditorMode}
+              aria-pressed={codeEditorMode}
+              className={cn(
+                'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors',
+                codeEditorMode
+                  ? 'border-primary bg-primary-light text-primary'
+                  : 'border-border text-text-primary hover:bg-surface dark:text-dark-text-primary dark:hover:bg-dark-border',
+              )}
+            >
+              <span className="flex items-center gap-1.5">
+                <CodeBracketsIcon />
+                Code Mode
+              </span>
+              <span
+                className={cn(
+                  'flex h-5 w-9 items-center rounded-full px-0.5 transition-colors',
+                  codeEditorMode ? 'justify-end bg-primary' : 'justify-start bg-border',
+                )}
+              >
+                <span className="size-4 rounded-full bg-white shadow-sm" />
+              </span>
+            </button>
           </section>
 
           <section className="flex flex-col gap-2">

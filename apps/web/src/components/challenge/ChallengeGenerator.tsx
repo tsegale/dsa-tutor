@@ -52,6 +52,7 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
         sessionTotalPredictions,
         sessionHintsRequested,
         sessionId,
+        codeEditorMode,
       } = useAlgorithmStore.getState()
 
       const correctRate =
@@ -70,7 +71,7 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
 
       const { setAlgorithm, setActiveChallengeType, setChallengeExplanation, setChallengeHint } =
         useAlgorithmStore.getState()
-      setAlgorithm('Bubble Sort', bubbleSortEngine(response.array))
+      setAlgorithm('Bubble Sort', bubbleSortEngine(response.array, codeEditorMode))
       setActiveChallengeType(response.challengeType)
       setChallengeExplanation(response.explanation)
       setChallengeHint(response.hintForStudent)

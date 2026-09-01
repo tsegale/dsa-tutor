@@ -6,9 +6,14 @@ import ArrayCanvas from './ArrayCanvas'
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
   onMistakePathComplete?: () => void
+  mistakeLabel?: string
 }
 
-export default function CanvasContainer({ mistakePath = null, onMistakePathComplete }: CanvasContainerProps) {
+export default function CanvasContainer({
+  mistakePath = null,
+  onMistakePathComplete,
+  mistakeLabel,
+}: CanvasContainerProps) {
   // Only Bubble Sort exists today (Phase 15 gates additional algorithms).
   // Future TreeCanvas/GraphCanvas types will branch on algorithmName here.
   useAlgorithmStore((state) => state.algorithmName)
@@ -56,6 +61,7 @@ export default function CanvasContainer({ mistakePath = null, onMistakePathCompl
         height={size.height}
         mistakePath={mistakePath}
         onMistakePathComplete={onMistakePathComplete}
+        {...(mistakeLabel !== undefined ? { mistakeLabel } : {})}
       />
     </div>
   )

@@ -26,6 +26,7 @@ export const PredictionType = {
   CANVAS_CLICK: 'CANVAS_CLICK',
   VALUE_INPUT: 'VALUE_INPUT',
   TILE_GRID: 'TILE_GRID',
+  CODE_EDITOR: 'CODE_EDITOR',
 } as const
 export type PredictionType = (typeof PredictionType)[keyof typeof PredictionType]
 
@@ -199,6 +200,26 @@ export interface ChallengeResponse {
   challengeType: string
   explanation: string
   hintForStudent: string
+}
+
+export interface CodeEvalRequest {
+  algorithmName: string
+  currentArrayState: number[]
+  activeIndices: number[]
+  expectedNextState: number[]
+  studentCode: string
+  language: 'pseudocode' | 'python' | 'java'
+  stepDescription: string
+}
+
+export interface CodeEvalResponse {
+  isLogicallyCorrect: boolean
+  hasSyntaxError: boolean
+  resultingState: number[] | null
+  errorExplanation: string | null
+  bugType: string | null
+  correctiveHint: string
+  executeVisually: boolean
 }
 
 /**
