@@ -1,4 +1,11 @@
-import type { PredictionRequest, PredictionResponse, HintRequest, HintResponse } from '@dsa-tutor/types'
+import type {
+  PredictionRequest,
+  PredictionResponse,
+  HintRequest,
+  HintResponse,
+  FeynmanRequest,
+  FeynmanResponse,
+} from '@dsa-tutor/types'
 
 const AI_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
 
@@ -32,6 +39,32 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     socraticHint: data.socraticHint,
     xpAwarded: data.xpAwarded,
     counterfactualTrace: data.counterfactualTrace ?? '',
+  }
+}
+
+// Unlike PredictionResponse/HintResponse, the AI service's FeynmanResponse
+// model is a plain Pydantic BaseModel (no camelCase alias generator), so
+// its JSON comes back snake_case and needs explicit field mapping here.
+export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResponse> {
+  const response = await fetch(`${AI_URL}/api/v1/feynman/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      algorithm_context: request.algorithmContext,
+      student_explanation: request.studentExplanation,
+      completion_context: request.completionContext,
+      session_id: request.sessionId,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI feynman error: ${response.status}`)
+  const data = (await response.json()) as any
+  return {
+    score: data.score,
+    feedbackSummary: data.feedback_summary,
+    followUpQuestion: data.follow_up_question ?? null,
+    missingConcepts: data.missing_concepts ?? [],
+    isComplete: data.is_complete,
   }
 }
 

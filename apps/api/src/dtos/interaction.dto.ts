@@ -10,6 +10,8 @@ export interface CreateInteractionDto {
   junctionDifficulty?: string | null
   scaffoldingLevelAtTime?: string
   masteryScoreAtTime?: number
+  /** 'PREDICTION' (default) for a normal step submission, 'FEYNMAN' for a reverse-tutoring evaluation. */
+  interactionType?: string
 }
 
 export interface InteractionDto {
@@ -25,5 +27,6 @@ export interface InteractionDto {
   junctionDifficulty: string | null
   scaffoldingLevelAtTime: string
   masteryScoreAtTime: number
+  interactionType: string
   createdAt: string
 }

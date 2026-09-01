@@ -98,6 +98,7 @@ model Interaction {
   junctionDifficulty      String?
   scaffoldingLevelAtTime  String   @default("MEDIUM")
   masteryScoreAtTime      Int      @default(0)
+  interactionType         String   @default("PREDICTION")
   createdAt               DateTime @default(now())
 
   session Session @relation(fields: [sessionId], references: [id])

@@ -160,6 +160,33 @@ export interface HintResponse {
 }
 
 /**
+ * Feynman Technique mode (reverse tutoring): the learner explains the
+ * algorithm back to a simulated confused peer, which evaluates the
+ * explanation against a concept rubric.
+ */
+export interface FeynmanRequest {
+  algorithmName: string
+  algorithmContext: string
+  studentExplanation: string
+  completionContext: string
+  sessionId: string
+}
+
+export interface FeynmanResponse {
+  score: number
+  feedbackSummary: string
+  followUpQuestion: string | null
+  missingConcepts: string[]
+  isComplete: boolean
+}
+
+export const InteractionType = {
+  PREDICTION: 'PREDICTION',
+  FEYNMAN: 'FEYNMAN',
+} as const
+export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]
+
+/**
  * A summary of a completed (or in-progress) tutoring session,
  * persisted by the API and surfaced in student progress views.
  */
@@ -225,6 +252,8 @@ export interface InteractionLog {
   junctionDifficulty: JunctionDifficulty | null
   scaffoldingLevelAtTime: ScaffoldingLevel
   masteryScoreAtTime: number
+  /** 'PREDICTION' (default) for a normal step submission, 'FEYNMAN' for a reverse-tutoring evaluation. */
+  interactionType: InteractionType
 }
 
 /** Aggregated class-wide data for the educator analytics dashboard. */

@@ -21,6 +21,7 @@ import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnal
 import BadgeAwardModal from '@/components/ui/BadgeAwardModal'
 import StreakToast from '@/components/ui/StreakToast'
 import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToast'
+import FeynmanModal from '@/components/feynman/FeynmanModal'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -77,6 +78,8 @@ export default function AlgorithmPage() {
   const isBubbleSort = algorithmNameParam === IMPLEMENTED_ALGORITHM_NAME
 
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
+  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const setMode = useAlgorithmStore((state) => state.setMode)
   const setSessionId = useAlgorithmStore((state) => state.setSessionId)
@@ -106,6 +109,13 @@ export default function AlgorithmPage() {
   const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
   const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
   const [mistakePath, setMistakePath] = useState<AlgorithmSnapshot[] | null>(null)
+  const [showFeynman, setShowFeynman] = useState(false)
+
+  // Guards against re-triggering the modal every time the learner steps
+  // back to the final step and forward again within the same practice
+  // run. Reset when a fresh run starts (stepIndex back to 0) so a genuine
+  // new completion can trigger it again.
+  const feynmanShownRef = useRef(false)
 
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
@@ -242,6 +252,24 @@ export default function AlgorithmPage() {
   useEffect(() => {
     setMistakePath(null)
   }, [stepIndex])
+
+  useEffect(() => {
+    if (stepIndex === 0) feynmanShownRef.current = false
+  }, [stepIndex])
+
+  // Feynman Technique mode: when the learner completes a full run in
+  // Practice Mode, give the completion animation a beat to finish, then
+  // ask them to explain the algorithm back. Never triggers in Demo Mode.
+  useEffect(() => {
+    const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
+    if (!snapshot?.isFinalStep || mode !== AlgorithmMode.PRACTICE || showFeynman || feynmanShownRef.current) return
+
+    const timer = setTimeout(() => {
+      feynmanShownRef.current = true
+      setShowFeynman(true)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [stepIndex, mode, showFeynman])
 
   function openExplanationTab() {
     setExplanationLinkVisible(false)
@@ -427,6 +455,16 @@ export default function AlgorithmPage() {
         message={scaffoldingTransitionMessage}
         onDismiss={() => setScaffoldingTransitionMessage(null)}
       />
+      {showFeynman && sessionId && (
+        <FeynmanModal
+          algorithmName={algorithmName}
+          completionContext={`You just completed a full ${algorithmName} sort on the array [${
+            (snapshotArray[0]?.dataStructureState as number[] | undefined)?.join(', ') ?? ''
+          }]`}
+          sessionId={sessionId}
+          onClose={() => setShowFeynman(false)}
+        />
+      )}
     </div>
   )
 }

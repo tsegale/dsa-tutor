@@ -15,6 +15,7 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       junctionDifficulty: dto.junctionDifficulty ?? null,
       ...(dto.scaffoldingLevelAtTime && { scaffoldingLevelAtTime: dto.scaffoldingLevelAtTime }),
       ...(dto.masteryScoreAtTime !== undefined && { masteryScoreAtTime: dto.masteryScoreAtTime }),
+      ...(dto.interactionType && { interactionType: dto.interactionType }),
     },
   })
   return {
@@ -30,6 +31,7 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
     junctionDifficulty: interaction.junctionDifficulty,
     scaffoldingLevelAtTime: interaction.scaffoldingLevelAtTime,
     masteryScoreAtTime: interaction.masteryScoreAtTime,
+    interactionType: interaction.interactionType,
     createdAt: interaction.createdAt.toISOString(),
   }
 }
@@ -52,6 +54,7 @@ export async function getSessionInteractions(sessionId: string): Promise<Interac
     junctionDifficulty: i.junctionDifficulty,
     scaffoldingLevelAtTime: i.scaffoldingLevelAtTime,
     masteryScoreAtTime: i.masteryScoreAtTime,
+    interactionType: i.interactionType,
     createdAt: i.createdAt.toISOString(),
   }))
 }
