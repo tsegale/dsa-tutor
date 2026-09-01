@@ -62,12 +62,17 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     })
     const topMisconception = Object.entries(miscCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
 
+    const latestChallengeSession = [...student.sessions]
+      .filter((s) => s.challengeExplanation)
+      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())[0]
+
     return {
       userId: student.id,
       name: student.name,
       totalSessions: student.sessions.length,
       averageCorrectRate: rate,
       topMisconception,
+      challengeExplanation: latestChallengeSession?.challengeExplanation ?? null,
     }
   })
 

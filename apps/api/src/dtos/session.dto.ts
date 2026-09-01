@@ -8,6 +8,7 @@ export interface UpdateSessionDto {
   endTime?: string
   completed?: boolean
   scaffoldingLevel?: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+  challengeExplanation?: string
 }
 
 export interface SessionDto {
@@ -19,6 +20,7 @@ export interface SessionDto {
   startTime: string
   endTime: string | null
   completed: boolean
+  challengeExplanation: string | null
   topic: {
     name: string
     displayName: string

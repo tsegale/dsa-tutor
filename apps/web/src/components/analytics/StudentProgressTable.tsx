@@ -24,13 +24,14 @@ function accuracyColorClass(rate: number): string {
 }
 
 function generateCSV(students: EducatorAnalyticsDto['studentProgress']): string {
-  const header = 'Student,Sessions,Accuracy Rate,Top Misconception'
+  const header = 'Student,Sessions,Accuracy Rate,Top Misconception,AI Challenge Type'
   const rows = students.map((s, i) =>
     [
       `Student ${i + 1}`,
       s.totalSessions,
       `${s.averageCorrectRate}%`,
       s.topMisconception ? formatCategory(s.topMisconception) : 'None',
+      s.challengeExplanation ? `"${s.challengeExplanation.replace(/"/g, '""')}"` : 'None',
     ].join(','),
   )
   return [header, ...rows].join('\n')
@@ -159,6 +160,9 @@ export default function StudentProgressTable({ students }: StudentProgressTableP
                   </th>
                 ))}
                 <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                  AI Challenge Type
+                </th>
+                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
                   Progress
                 </th>
               </tr>
@@ -176,6 +180,15 @@ export default function StudentProgressTable({ students }: StudentProgressTableP
                   <td className="px-4 py-3">
                     {student.topMisconception ? (
                       <span className="text-text-primary">{formatCategory(student.topMisconception)}</span>
+                    ) : (
+                      <span className="text-text-muted">None</span>
+                    )}
+                  </td>
+                  <td className="max-w-xs px-4 py-3">
+                    {student.challengeExplanation ? (
+                      <span className="text-text-primary" title={student.challengeExplanation}>
+                        {student.challengeExplanation}
+                      </span>
                     ) : (
                       <span className="text-text-muted">None</span>
                     )}

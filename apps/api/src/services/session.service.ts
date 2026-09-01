@@ -11,6 +11,7 @@ function toSessionDto(session: any): SessionDto {
     startTime: session.startTime.toISOString(),
     endTime: session.endTime?.toISOString() ?? null,
     completed: session.completed,
+    challengeExplanation: session.challengeExplanation ?? null,
     topic: {
       name: session.algorithmTopic.name,
       displayName: session.algorithmTopic.displayName,
@@ -45,6 +46,7 @@ export async function updateSession(
       ...(dto.endTime && { endTime: new Date(dto.endTime) }),
       ...(dto.completed !== undefined && { completed: dto.completed }),
       ...(dto.scaffoldingLevel && { scaffoldingLevel: dto.scaffoldingLevel }),
+      ...(dto.challengeExplanation !== undefined && { challengeExplanation: dto.challengeExplanation }),
     },
     include: { algorithmTopic: true },
   })

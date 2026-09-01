@@ -17,6 +17,24 @@ export interface AlgorithmStoreState {
   sessionId: string | null
   userId: string | null
 
+  // Last 10 misconception categories from incorrect predictions this
+  // session, most recent last. Feeds AI Challenge generation's "top
+  // misconception" signal.
+  recentMisconceptions: string[]
+  // Educator-facing rationale for the most recently generated AI
+  // challenge array. Never shown to the student.
+  currentChallengeExplanation: string | null
+  // Student-facing framing sentence for the most recently generated AI
+  // challenge array, shown in a dismissible banner above the canvas.
+  challengeHint: string | null
+  // Non-null while the loaded array came from AI Challenge generation
+  // (cleared by any other setAlgorithm call), so the final-step
+  // completion handler knows whether to award the challenge XP bonus.
+  activeChallengeType: string | null
+  sessionCorrectPredictions: number
+  sessionTotalPredictions: number
+  sessionHintsRequested: number
+
   stepForward: () => void
   stepBackward: () => void
   resetAlgorithm: () => void
@@ -31,7 +49,14 @@ export interface AlgorithmStoreState {
   setUserId: (id: string) => void
   startPlayback: () => void
   stopPlayback: () => void
+  addMisconception: (category: string) => void
+  setChallengeExplanation: (explanation: string | null) => void
+  setChallengeHint: (hint: string | null) => void
+  setActiveChallengeType: (type: string | null) => void
+  recordPredictionResult: (correct: boolean, hintsRequestedForStep: number) => void
 }
+
+const MAX_RECENT_MISCONCEPTIONS = 10
 
 const MIN_PLAYBACK_SPEED = 0.5
 const MAX_PLAYBACK_SPEED = 3.0
@@ -60,6 +85,13 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   playbackSpeed: 1.0,
   sessionId: null,
   userId: null,
+  recentMisconceptions: [],
+  currentChallengeExplanation: null,
+  challengeHint: null,
+  activeChallengeType: null,
+  sessionCorrectPredictions: 0,
+  sessionTotalPredictions: 0,
+  sessionHintsRequested: 0,
 
   // Advances the step index only. Pausing playback at a prediction step
   // is the playback interval's job (see startPlayback) - stepForward
@@ -93,7 +125,15 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   setAlgorithm: (name, snapshots) => {
     clearPlaybackInterval()
-    set({ algorithmName: name, snapshotArray: snapshots, stepIndex: 0, isPlaying: false })
+    set({
+      algorithmName: name,
+      snapshotArray: snapshots,
+      stepIndex: 0,
+      isPlaying: false,
+      // A freshly loaded array is not an AI challenge unless the caller
+      // opts back in via setActiveChallengeType right after this call.
+      activeChallengeType: null,
+    })
   },
 
   toggleFocusMode: () => set((state) => ({ focusModeActive: !state.focusModeActive })),
@@ -151,6 +191,26 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   stopPlayback: () => {
     clearPlaybackInterval()
     set({ isPlaying: false })
+  },
+
+  addMisconception: (category) => {
+    set((state) => ({
+      recentMisconceptions: [...state.recentMisconceptions, category].slice(-MAX_RECENT_MISCONCEPTIONS),
+    }))
+  },
+
+  setChallengeExplanation: (explanation) => set({ currentChallengeExplanation: explanation }),
+
+  setChallengeHint: (hint) => set({ challengeHint: hint }),
+
+  setActiveChallengeType: (type) => set({ activeChallengeType: type }),
+
+  recordPredictionResult: (correct, hintsRequestedForStep) => {
+    set((state) => ({
+      sessionTotalPredictions: state.sessionTotalPredictions + 1,
+      sessionCorrectPredictions: state.sessionCorrectPredictions + (correct ? 1 : 0),
+      sessionHintsRequested: state.sessionHintsRequested + hintsRequestedForStep,
+    }))
   },
 }))
 

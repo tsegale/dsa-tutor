@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { proxyPrediction, proxyHint, proxyFeynman } from '../services/ai.service'
+import { proxyPrediction, proxyHint, proxyFeynman, proxyChallenge } from '../services/ai.service'
 
 const router = Router()
 router.use(authenticate)
@@ -29,6 +29,15 @@ router.post('/feynman', async (req: AuthRequest, res: Response) => {
     res.json({ data: result, error: null })
   } catch {
     res.status(502).json({ data: null, error: { code: 'AI_ERROR', message: 'Feynman evaluation unavailable' } })
+  }
+})
+
+router.post('/challenges', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await proxyChallenge(req.body)
+    res.json({ data: result, error: null })
+  } catch {
+    res.status(502).json({ data: null, error: { code: 'AI_ERROR', message: 'Challenge generation unavailable' } })
   }
 })
 

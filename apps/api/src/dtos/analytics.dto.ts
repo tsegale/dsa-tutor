@@ -14,5 +14,6 @@ export interface EducatorAnalyticsDto {
     totalSessions: number
     averageCorrectRate: number
     topMisconception: string | null
+    challengeExplanation: string | null
   }>
 }

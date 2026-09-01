@@ -5,6 +5,8 @@ import type {
   HintResponse,
   FeynmanRequest,
   FeynmanResponse,
+  ChallengeRequest,
+  ChallengeResponse,
 } from '@dsa-tutor/types'
 
 const AI_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
@@ -65,6 +67,31 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
     followUpQuestion: data.follow_up_question ?? null,
     missingConcepts: data.missing_concepts ?? [],
     isComplete: data.is_complete,
+  }
+}
+
+// Like FeynmanResponse, the AI service's ChallengeResponse model is a
+// plain Pydantic BaseModel (no camelCase alias generator), so its JSON
+// comes back snake_case and needs explicit field mapping here.
+export async function proxyChallenge(request: ChallengeRequest): Promise<ChallengeResponse> {
+  const response = await fetch(`${AI_URL}/api/v1/challenges/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      top_misconception: request.topMisconception,
+      difficulty: request.difficulty,
+      session_history: request.sessionHistory,
+      array_size: request.arraySize ?? 7,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI challenge error: ${response.status}`)
+  const data = (await response.json()) as any
+  return {
+    array: data.array,
+    challengeType: data.challenge_type,
+    explanation: data.explanation,
+    hintForStudent: data.hint_for_student,
   }
 }
 

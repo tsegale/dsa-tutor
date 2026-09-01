@@ -8,6 +8,7 @@ load_dotenv()
 
 from models.response_models import HealthResponse
 from routers import hints, predictions
+from routers.challenges import router as challenges_router
 from routers.feynman import router as feynman_router
 
 app = FastAPI(title="DSA Tutor AI Service")
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(predictions.router, prefix="/api/v1/predictions", tags=["predictions"])
 app.include_router(hints.router, prefix="/api/v1/hints", tags=["hints"])
 app.include_router(feynman_router, prefix="/api/v1")
+app.include_router(challenges_router, prefix="/api/v1")
 
 
 @app.get("/health", response_model=HealthResponse)

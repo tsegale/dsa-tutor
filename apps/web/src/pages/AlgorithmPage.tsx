@@ -22,6 +22,7 @@ import BadgeAwardModal from '@/components/ui/BadgeAwardModal'
 import StreakToast from '@/components/ui/StreakToast'
 import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToast'
 import FeynmanModal from '@/components/feynman/FeynmanModal'
+import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -117,6 +118,11 @@ export default function AlgorithmPage() {
   // new completion can trigger it again.
   const feynmanShownRef = useRef(false)
 
+  // Guards against re-awarding the AI Challenge completion bonus every
+  // time the learner steps back to the final step and forward again.
+  // Reset alongside feynmanShownRef when a fresh run starts.
+  const challengeXpAwardedRef = useRef(false)
+
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
   const predictionStatsRef = useRef({ correct: 0, total: 0, hints: 0 })
@@ -149,6 +155,7 @@ export default function AlgorithmPage() {
 
   function handlePredictionResult(detail: PredictionOutcomeDetail) {
     predictionStatsRef.current.total += 1
+    useAlgorithmStore.getState().recordPredictionResult(detail.correct, detail.hintsRequestedForStep)
     if (detail.correct) {
       predictionStatsRef.current.correct += 1
       runBadgeCheck()
@@ -156,6 +163,9 @@ export default function AlgorithmPage() {
       const snapshotAtSubmission = useAlgorithmStore.getState().snapshotArray[detail.stepIndex]
       const path = snapshotAtSubmission ? computeMistakePath(snapshotAtSubmission, detail.predictionSubmitted) : []
       setMistakePath(path.length > 0 ? path : null)
+      if (detail.misconceptionCategory) {
+        useAlgorithmStore.getState().addMisconception(detail.misconceptionCategory)
+      }
     }
 
     const isConceptual = detail.junctionDifficulty === 'CONCEPTUAL'
@@ -254,8 +264,29 @@ export default function AlgorithmPage() {
   }, [stepIndex])
 
   useEffect(() => {
-    if (stepIndex === 0) feynmanShownRef.current = false
+    if (stepIndex === 0) {
+      feynmanShownRef.current = false
+      challengeXpAwardedRef.current = false
+    }
   }, [stepIndex])
+
+  // AI Challenge completion bonus: award once per run when the learner
+  // finishes a full sort in Practice Mode on an AI-generated array.
+  useEffect(() => {
+    const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
+    const { activeChallengeType } = useAlgorithmStore.getState()
+    if (!snapshot?.isFinalStep || mode !== AlgorithmMode.PRACTICE || !activeChallengeType || challengeXpAwardedRef.current) {
+      return
+    }
+    challengeXpAwardedRef.current = true
+    const { addXP } = useAlgorithmStore.getState()
+    addXP(10)
+    play('xp')
+    apiFetch('/api/v1/auth/xp', { method: 'POST', body: JSON.stringify({ amount: 10 }) }).catch(() => {
+      // XP persistence is best-effort; the local session total already
+      // reflects the award regardless of whether it lands server-side.
+    })
+  }, [stepIndex, mode, play])
 
   // Feynman Technique mode: when the learner completes a full run in
   // Practice Mode, give the completion animation a beat to finish, then
@@ -372,7 +403,11 @@ export default function AlgorithmPage() {
         animate={{ opacity: focusModeActive ? 0.1 : 1 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
       >
-        <LeftPanel collapsed={leftCollapsed} onToggle={() => setLeftCollapsed((c) => !c)} />
+        <LeftPanel
+          collapsed={leftCollapsed}
+          onToggle={() => setLeftCollapsed((c) => !c)}
+          difficulty={currentTopic?.difficulty ?? 'BEGINNER'}
+        />
       </motion.div>
 
       <div style={{ gridArea: 'canvas', overflow: 'hidden', position: 'relative' }} data-canvas-area>
@@ -401,6 +436,8 @@ export default function AlgorithmPage() {
               onHintRequested={handleHintRequested}
               onPredictionResult={handlePredictionResult}
             />
+
+            <ChallengeHintBanner />
 
             {focusModeActive && (
               <div className="absolute right-4 bottom-4 z-20 rounded-full bg-active px-3 py-1.5 text-xs font-medium text-white shadow-md">

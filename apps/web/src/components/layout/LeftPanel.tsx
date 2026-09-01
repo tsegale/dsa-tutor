@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
+import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 
 interface LeftPanelProps {
   collapsed: boolean
   onToggle: () => void
+  difficulty: string
 }
 
 const EXPANDED_WIDTH = 280
@@ -88,7 +90,7 @@ function generateRandomArray(): number[] {
   return Array.from({ length }, () => Math.floor(Math.random() * 20) + 1)
 }
 
-export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
+export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanelProps) {
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
   const playbackSpeed = useAlgorithmStore((state) => state.playbackSpeed)
   const startPlayback = useAlgorithmStore((state) => state.startPlayback)
@@ -271,6 +273,7 @@ export default function LeftPanel({ collapsed, onToggle }: LeftPanelProps) {
             <Button variant="outline" size="sm" onClick={handleRandom}>
               Random
             </Button>
+            <ChallengeGenerator difficulty={difficulty} />
           </section>
 
           <button

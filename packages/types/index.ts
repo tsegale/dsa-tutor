@@ -186,6 +186,21 @@ export const InteractionType = {
 } as const
 export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]
 
+export interface ChallengeRequest {
+  algorithmName: string
+  topMisconception: string | null
+  difficulty: string
+  sessionHistory: Record<string, unknown>
+  arraySize?: number
+}
+
+export interface ChallengeResponse {
+  array: number[]
+  challengeType: string
+  explanation: string
+  hintForStudent: string
+}
+
 /**
  * A summary of a completed (or in-progress) tutoring session,
  * persisted by the API and surfaced in student progress views.
@@ -273,5 +288,6 @@ export interface EducatorAnalyticsDto {
     totalSessions: number
     averageCorrectRate: number
     topMisconception: string | null
+    challengeExplanation: string | null
   }>
 }

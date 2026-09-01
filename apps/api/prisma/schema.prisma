@@ -49,8 +49,8 @@ model User {
   lastActiveDate DateTime?
   createdAt      DateTime  @default(now())
 
-  sessions    Session[]
-  userBadges  UserBadge[]
+  sessions   Session[]
+  userBadges UserBadge[]
 }
 
 model AlgorithmTopic {
@@ -68,14 +68,15 @@ model AlgorithmTopic {
 }
 
 model Session {
-  id               String    @id @default(cuid())
-  userId           String
-  algorithmTopicId String
-  mode             Mode
-  scaffoldingLevel ScaffoldingLevel
-  startTime        DateTime  @default(now())
-  endTime          DateTime?
-  completed        Boolean   @default(false)
+  id                   String           @id @default(cuid())
+  userId               String
+  algorithmTopicId     String
+  mode                 Mode
+  scaffoldingLevel     ScaffoldingLevel
+  startTime            DateTime         @default(now())
+  endTime              DateTime?
+  completed            Boolean          @default(false)
+  challengeExplanation String?
 
   user           User           @relation(fields: [userId], references: [id])
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
@@ -86,20 +87,20 @@ model Session {
 }
 
 model Interaction {
-  id                      String   @id @default(cuid())
-  sessionId               String
-  stepIndex               Int
-  predictionSubmitted     String?
-  predictionCorrect       Boolean?
-  misconceptionCategory   String?
-  hintsRequested          Int      @default(0)
-  timeSpentSeconds        Int
-  criticalJunctionType    String?
-  junctionDifficulty      String?
-  scaffoldingLevelAtTime  String   @default("MEDIUM")
-  masteryScoreAtTime      Int      @default(0)
-  interactionType         String   @default("PREDICTION")
-  createdAt               DateTime @default(now())
+  id                     String   @id @default(cuid())
+  sessionId              String
+  stepIndex              Int
+  predictionSubmitted    String?
+  predictionCorrect      Boolean?
+  misconceptionCategory  String?
+  hintsRequested         Int      @default(0)
+  timeSpentSeconds       Int
+  criticalJunctionType   String?
+  junctionDifficulty     String?
+  scaffoldingLevelAtTime String   @default("MEDIUM")
+  masteryScoreAtTime     Int      @default(0)
+  interactionType        String   @default("PREDICTION")
+  createdAt              DateTime @default(now())
 
   session Session @relation(fields: [sessionId], references: [id])
 
@@ -117,10 +118,10 @@ model Badge {
 }
 
 model UserBadge {
-  id         String   @id @default(cuid())
-  userId     String
-  badgeId    String
-  awardedAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id])
   badge Badge @relation(fields: [badgeId], references: [id])
