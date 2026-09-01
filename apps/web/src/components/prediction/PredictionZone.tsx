@@ -1,31 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlgorithmMode, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
-import type {
-  CriticalJunctionType,
-  HintRequest,
-  JunctionDifficulty,
-  MisconceptionCategory,
-  PredictionRequest,
-} from '@dsa-tutor/types'
+import { AlgorithmMode, CriticalJunctionType, JunctionDifficulty, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
+import type { HintRequest, MisconceptionCategory, PredictionRequest } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { submitPrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import {
-  classifyCriticalJunction,
-  classifyJunctionDifficulty,
-  firstSentence,
-  getExpectedSwapOptionId,
-} from '@/utils/predictionJunction'
+import { firstSentence, getCorrectTileOptionId, getCriticalJunctionTileOptions } from '@/utils/predictionJunction'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import CanvasClickInput from './CanvasClickInput'
 import ValueInput from './ValueInput'
-import TileGrid, { type TileOption } from './TileGrid'
+import TileGrid from './TileGrid'
 import MistakeAnalysisToast from './MistakeAnalysisToast'
 
 export interface PredictionOutcomeDetail {
@@ -50,11 +39,6 @@ export const CLEAR_CANVAS_SELECTION_EVENT = 'dsa-tutor:clear-canvas-selection'
 export const REQUEST_HINT_EVENT = 'request-hint'
 export const ESCAPE_EVENT = 'dsa-tutor:escape'
 export const SHOW_EXPLANATION_LINK_EVENT = 'dsa-tutor:show-explanation-link'
-
-const SWAP_OPTIONS: TileOption[] = [
-  { id: 'swap', label: 'Swap them', description: 'The left value is greater, swap' },
-  { id: 'no-swap', label: 'No swap needed', description: 'Already in the right order' },
-]
 
 const PROACTIVE_HINT_DELAY_MS = 8000
 const TILE_PRIME_DELAY_MS = 15000
@@ -204,7 +188,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     if (currentAnswer !== null || submissionState !== 'idle') return
 
     const timer = setTimeout(() => {
-      setPrimedOptionId(getExpectedSwapOptionId(snapshot))
+      setPrimedOptionId(getCorrectTileOptionId(snapshot.criticalJunctionType))
     }, TILE_PRIME_DELAY_MS)
     return () => clearTimeout(timer)
   }, [isVisible, scaffoldingLevel, snapshot, currentAnswer, submissionState])
@@ -243,6 +227,11 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     onSubmit(currentAnswer)
     setIsSubmitting(true)
 
+    // The engine only ever marks isPredictionRequired true alongside a
+    // junction type, so these fallbacks are defensive, not expected.
+    const junctionType = snapshot.criticalJunctionType ?? CriticalJunctionType.SWAP_DECISION
+    const junctionDifficulty = snapshot.junctionDifficulty ?? JunctionDifficulty.PROCEDURAL
+
     const request: PredictionRequest = {
       algorithmName,
       stepIndex: snapshot.stepIndex,
@@ -254,14 +243,14 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
       errorHistory: [],
       scaffoldingLevel,
       sessionId: sessionId ?? 'local-session',
+      junctionType,
+      junctionDifficulty,
     }
 
     const response = await submitPrediction(request)
     setIsSubmitting(false)
 
     const timeSpentSeconds = Math.round((Date.now() - stepStartTime) / 1000)
-    const junctionType = classifyCriticalJunction(snapshot)
-    const junctionDifficulty = classifyJunctionDifficulty(snapshot)
 
     onPredictionResult?.({
       correct: response.correct,
@@ -428,7 +417,10 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                 {snapshot.predictionType === PredictionType.TILE_GRID && (
                   <TileGrid
                     prompt={snapshot.description}
-                    options={SWAP_OPTIONS}
+                    options={(getCriticalJunctionTileOptions(snapshot.criticalJunctionType) ?? []).map((option) => ({
+                      id: option.id,
+                      label: option.label,
+                    }))}
                     onSelect={setCurrentAnswer}
                     selectedId={currentAnswer}
                     submissionState={submissionState}

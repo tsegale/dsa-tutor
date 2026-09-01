@@ -20,6 +20,20 @@ class MisconceptionCategory(str, Enum):
     COMPLEXITY_MISATTRIBUTION = "COMPLEXITY_MISATTRIBUTION"
 
 
+# Mirrors CriticalJunctionType in packages/types/index.ts. Keep in sync.
+class CriticalJunctionType(str, Enum):
+    SWAP_DECISION = "SWAP_DECISION"
+    PASS_COMPLETE = "PASS_COMPLETE"
+    EARLY_TERMINATION = "EARLY_TERMINATION"
+    ALGORITHM_COMPLETE = "ALGORITHM_COMPLETE"
+
+
+# Mirrors JunctionDifficulty in packages/types/index.ts. Keep in sync.
+class JunctionDifficulty(str, Enum):
+    CONCEPTUAL = "CONCEPTUAL"
+    PROCEDURAL = "PROCEDURAL"
+
+
 class PredictionRequest(BaseModel):
     algorithm_name: str
     step_index: int
@@ -28,6 +42,8 @@ class PredictionRequest(BaseModel):
     error_history: list[str] = []
     scaffolding_level: ScaffoldingLevel
     session_id: str
+    junction_type: CriticalJunctionType | None = None
+    junction_difficulty: JunctionDifficulty | None = None
 
 
 class HintRequest(BaseModel):

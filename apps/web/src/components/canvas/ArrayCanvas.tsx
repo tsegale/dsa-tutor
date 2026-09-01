@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import * as d3 from 'd3'
 import { motion } from 'framer-motion'
-import { AlgorithmMode } from '@dsa-tutor/types'
+import { AlgorithmMode, PredictionType } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
@@ -68,7 +68,10 @@ export default function ArrayCanvas({
   }, [snapshot, width, height])
 
   const isInteractive =
-    Boolean(onElementClick) && snapshot?.isPredictionRequired === true && mode === AlgorithmMode.PRACTICE
+    Boolean(onElementClick) &&
+    snapshot?.isPredictionRequired === true &&
+    snapshot?.predictionType === PredictionType.CANVAS_CLICK &&
+    mode === AlgorithmMode.PRACTICE
 
   if (!snapshot || bars.length === 0) {
     return (

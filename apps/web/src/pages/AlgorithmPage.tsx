@@ -145,7 +145,7 @@ export default function AlgorithmPage() {
       runBadgeCheck()
     }
 
-    const isConceptual = detail.junctionType !== 'SWAP_DECISION'
+    const isConceptual = detail.junctionDifficulty === 'CONCEPTUAL'
     const nextMetrics: MasteryMetrics = {
       totalPredictions: masteryMetrics.totalPredictions + 1,
       correctPredictions: masteryMetrics.correctPredictions + (detail.correct ? 1 : 0),

@@ -17,6 +17,46 @@ Common errors to watch for:
   Remind them that equal values are already in a valid relative order.
 """
 
+# What each Critical Junction type is actually testing, so the feedback
+# prompt can stay targeted instead of defaulting to per-comparison
+# language for a conceptual question. Keys mirror CriticalJunctionType.
+CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
+    "SWAP_DECISION": (
+        "The student was asked whether two specific adjacent elements "
+        "should be swapped. Ground the feedback in those two exact "
+        "values and indices."
+    ),
+    "PASS_COMPLETE": (
+        "The student was asked what is now guaranteed about the array "
+        "after this pass completed. The invariant being tested is that "
+        "the largest unsorted element is now in its correct final "
+        "position. Ground the feedback in this invariant, not in any "
+        "single comparison."
+    ),
+    "EARLY_TERMINATION": (
+        "The student was asked why the algorithm stopped early. The "
+        "concept being tested is the no-swaps optimisation: if a full "
+        "pass makes no swaps, the array is already sorted from that "
+        "point on. Ground the feedback in this optimisation, not in "
+        "any single comparison."
+    ),
+    "ALGORITHM_COMPLETE": (
+        "The student was asked to identify the invariant that proves "
+        "sorting is complete. The correct invariant is that no adjacent "
+        "pair is out of order. Ground the feedback in this invariant, "
+        "not in any single comparison."
+    ),
+}
+
+# Mirrors CRITICAL_JUNCTION_TILE_OPTIONS in packages/types/index.ts: the
+# fixed, data-independent correct option id for each CONCEPTUAL junction
+# type. Keep in sync.
+CONCEPTUAL_JUNCTION_CORRECT_OPTION_IDS: dict[str, str] = {
+    "PASS_COMPLETE": "largest-in-place",
+    "EARLY_TERMINATION": "no-swaps-needed",
+    "ALGORITHM_COMPLETE": "no-adjacent-out-of-order",
+}
+
 BUBBLE_SORT_PSEUDOCODE = """1  procedure bubbleSort(A: list)
 2      n = length(A)
 3      repeat

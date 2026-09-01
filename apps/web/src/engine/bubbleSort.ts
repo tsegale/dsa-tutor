@@ -1,4 +1,5 @@
 import type { AlgorithmSnapshot, PredictionType } from '@dsa-tutor/types'
+import { CriticalJunctionType, JunctionDifficulty } from '@dsa-tutor/types'
 
 // Matches the pseudocode panel's line numbers, so a snapshot's
 // pseudocodeLine tells the UI exactly which line to highlight.
@@ -12,6 +13,13 @@ const PSEUDOCODE_LINE = {
   DONE: 6,
 } as const
 
+// A comparison whose values differ by more than this is "obvious": the
+// outcome isn't genuinely ambiguous, so pausing for a prediction there
+// tests attention span rather than understanding. Critical Junctions
+// only interrupt at comparisons where the decision is non-obvious, or
+// at the first comparison of a pass (to teach the pass structure).
+const OBVIOUS_DIFFERENCE_THRESHOLD = 3
+
 interface SnapshotParams {
   stepIndex: number
   description: string
@@ -24,6 +32,8 @@ interface SnapshotParams {
   comparedIndices?: number[]
   swappedIndices?: number[]
   isFinalStep?: boolean
+  criticalJunctionType?: CriticalJunctionType | null
+  junctionDifficulty?: JunctionDifficulty | null
 }
 
 function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
@@ -39,6 +49,8 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     comparedIndices: [...(params.comparedIndices ?? [])],
     swappedIndices: [...(params.swappedIndices ?? [])],
     isFinalStep: params.isFinalStep ?? false,
+    criticalJunctionType: params.criticalJunctionType ?? null,
+    junctionDifficulty: params.junctionDifficulty ?? null,
   }
 }
 
@@ -100,6 +112,14 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
       const right = working[i + 1]
       const needsSwap = left > right
 
+      // Critical Junction gating: only pause for a prediction when the
+      // decision is genuinely ambiguous (close values) or it's the
+      // pass's first comparison (teaches the pass structure). A large,
+      // obvious gap skips the prediction and just narrates.
+      const isFirstComparisonOfPass = i === 0
+      const isAmbiguous = Math.abs(left - right) <= OBVIOUS_DIFFERENCE_THRESHOLD
+      const isSwapJunction = isFirstComparisonOfPass || isAmbiguous
+
       snapshots.push(
         makeSnapshot({
           stepIndex: stepIndex++,
@@ -107,12 +127,14 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
             ? `Comparing index ${i} (value ${left}) and index ${i + 1} (value ${right}). Since ${left} > ${right}, a swap is needed.`
             : `Comparing index ${i} (value ${left}) and index ${i + 1} (value ${right}). Since ${left} <= ${right}, no swap is needed.`,
           pseudocodeLine: PSEUDOCODE_LINE.COMPARISON,
-          isPredictionRequired: true,
+          isPredictionRequired: isSwapJunction,
           predictionType: 'CANVAS_CLICK',
           dataStructureState: working,
           activeIndices: [i, i + 1],
           comparedIndices: [i, i + 1],
           highlightIndices: finalized,
+          criticalJunctionType: isSwapJunction ? CriticalJunctionType.SWAP_DECISION : null,
+          junctionDifficulty: isSwapJunction ? JunctionDifficulty.PROCEDURAL : null,
         }),
       )
 
@@ -164,10 +186,54 @@ export function bubbleSortEngine(input: number[]): AlgorithmSnapshot[] {
       }),
     )
 
+    if (swappedThisPass) {
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `Pass ${pass + 1} is complete. What is now guaranteed about the array?`,
+          pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
+          isPredictionRequired: true,
+          predictionType: 'TILE_GRID',
+          dataStructureState: working,
+          highlightIndices: finalized,
+          criticalJunctionType: CriticalJunctionType.PASS_COMPLETE,
+          junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+        }),
+      )
+    } else {
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: 'No swaps occurred during this pass. Why did the algorithm stop early?',
+          pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
+          isPredictionRequired: true,
+          predictionType: 'TILE_GRID',
+          dataStructureState: working,
+          highlightIndices: finalized,
+          criticalJunctionType: CriticalJunctionType.EARLY_TERMINATION,
+          junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+        }),
+      )
+    }
+
     if (!swappedThisPass) {
       break
     }
   }
+
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description: 'The array is fully sorted. What invariant proves that sorting is complete?',
+      pseudocodeLine: PSEUDOCODE_LINE.DONE,
+      isPredictionRequired: true,
+      predictionType: 'TILE_GRID',
+      dataStructureState: working,
+      highlightIndices: Array.from({ length: n }, (_, idx) => idx),
+      criticalJunctionType: CriticalJunctionType.ALGORITHM_COMPLETE,
+      junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+    }),
+  )
 
   snapshots.push(
     makeSnapshot({

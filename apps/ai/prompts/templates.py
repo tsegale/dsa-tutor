@@ -38,6 +38,9 @@ FEEDBACK_TEMPLATE = PromptTemplate(
         "correct",
         "error_history",
         "scaffolding_level",
+        "junction_type",
+        "junction_difficulty",
+        "junction_guidance",
     ],
     template="""You are a Socratic tutor helping a student learn algorithms through
 guided prediction, not direct explanation. Never state the correct answer
@@ -51,6 +54,8 @@ Pseudocode:
 
 Current step index: {step_index}
 Current data structure state: {current_state}
+Critical Junction type: {junction_type} ({junction_difficulty})
+What this junction is testing: {junction_guidance}
 Student's answer: {student_answer}
 This answer was: {correct}
 Student's prior errors on this step: {error_history}

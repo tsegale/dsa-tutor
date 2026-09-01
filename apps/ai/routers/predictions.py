@@ -2,9 +2,14 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from models.request_models import PredictionRequest
+from models.request_models import CriticalJunctionType, PredictionRequest
 from models.response_models import PredictionResponse
-from prompts.bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
+from prompts.bubble_sort import (
+    BUBBLE_SORT_CONTEXT,
+    BUBBLE_SORT_PSEUDOCODE,
+    CONCEPTUAL_JUNCTION_CORRECT_OPTION_IDS,
+    CRITICAL_JUNCTION_GUIDANCE,
+)
 from prompts.templates import FEEDBACK_TEMPLATE
 from services.claude_service import call_claude_for_feedback
 from services.fallback_service import get_fallback_prediction_response
@@ -46,9 +51,28 @@ def evaluate_bubble_sort_answer(request: PredictionRequest) -> bool:
     return answered_index == larger_index
 
 
+def evaluate_conceptual_junction_answer(request: PredictionRequest) -> bool:
+    """PASS_COMPLETE / EARLY_TERMINATION / ALGORITHM_COMPLETE correctness
+    is a fixed property of the algorithm's invariants, not the current
+    array values, so it's just an option-id comparison."""
+    if request.junction_type is None or request.student_answer is None:
+        return False
+    correct_id = CONCEPTUAL_JUNCTION_CORRECT_OPTION_IDS.get(request.junction_type.value)
+    return correct_id is not None and request.student_answer.strip() == correct_id
+
+
+def evaluate_answer(request: PredictionRequest) -> bool:
+    if request.junction_type is not None and request.junction_type != CriticalJunctionType.SWAP_DECISION:
+        return evaluate_conceptual_junction_answer(request)
+    return evaluate_bubble_sort_answer(request)
+
+
 @router.post("/", response_model=PredictionResponse)
 async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
-    correct = evaluate_bubble_sort_answer(request)
+    correct = evaluate_answer(request)
+
+    junction_type = request.junction_type.value if request.junction_type else CriticalJunctionType.SWAP_DECISION.value
+    junction_difficulty = request.junction_difficulty.value if request.junction_difficulty else "PROCEDURAL"
 
     prompt = FEEDBACK_TEMPLATE.format(
         algorithm_context=BUBBLE_SORT_CONTEXT,
@@ -59,6 +83,9 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
         correct="correct" if correct else "incorrect",
         error_history=request.error_history,
         scaffolding_level=request.scaffolding_level.value,
+        junction_type=junction_type,
+        junction_difficulty=junction_difficulty,
+        junction_guidance=CRITICAL_JUNCTION_GUIDANCE.get(junction_type, ""),
     )
 
     try:

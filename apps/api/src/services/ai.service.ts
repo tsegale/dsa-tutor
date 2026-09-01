@@ -19,6 +19,8 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
       error_history: request.errorHistory,
       scaffolding_level: request.scaffoldingLevel,
       session_id: request.sessionId,
+      junction_type: request.junctionType ?? null,
+      junction_difficulty: request.junctionDifficulty ?? null,
     }),
   })
   if (!response.ok) throw new Error(`AI service error: ${response.status}`)

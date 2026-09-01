@@ -35,19 +35,21 @@ describe('bubbleSortEngine', () => {
     expect(swaps.length).toBe(10) // n(n-1)/2 for n=5
   })
 
-  it('returns exactly 2 snapshots for a single element array', () => {
+  it('returns exactly 3 snapshots for a single element array (start, algorithm-complete junction, done)', () => {
     const snapshots = bubbleSortEngine([42])
 
-    expect(snapshots.length).toBe(2)
-    expect(snapshots.every((s) => !s.isPredictionRequired)).toBe(true)
+    expect(snapshots.length).toBe(3)
+    expect(snapshots[1].criticalJunctionType).toBe('ALGORITHM_COMPLETE')
+    expect(snapshots[1].isPredictionRequired).toBe(true)
+    expect(snapshots[2].isPredictionRequired).toBe(false)
     expect(snapshots.some((s) => s.pseudocodeLine === PSEUDOCODE_SWAP)).toBe(false)
   })
 
-  it('returns exactly 2 snapshots for an empty array without throwing', () => {
+  it('returns exactly 3 snapshots for an empty array without throwing', () => {
     const snapshots = bubbleSortEngine([])
 
-    expect(snapshots.length).toBe(2)
-    expect(snapshots[1].isFinalStep).toBe(true)
+    expect(snapshots.length).toBe(3)
+    expect(snapshots[snapshots.length - 1].isFinalStep).toBe(true)
   })
 
   it('does not swap equal elements', () => {
@@ -99,14 +101,63 @@ describe('bubbleSortEngine', () => {
     expect(indices).toEqual(snapshots.map((_, i) => i))
   })
 
-  it('gives every prediction-required snapshot a specific, comparison-worded description', () => {
+  it('gives every SWAP_DECISION junction a specific, comparison-worded description', () => {
     const snapshots = bubbleSortEngine([5, 3, 1, 4, 2])
-    const predictionSteps = snapshots.filter((s) => s.isPredictionRequired)
+    const swapDecisionSteps = snapshots.filter((s) => s.criticalJunctionType === 'SWAP_DECISION')
 
-    expect(predictionSteps.length).toBeGreaterThan(0)
-    for (const step of predictionSteps) {
+    expect(swapDecisionSteps.length).toBeGreaterThan(0)
+    for (const step of swapDecisionSteps) {
       expect(step.description).toContain('Comparing')
       expect(step.description).toMatch(/index \d+/)
     }
+  })
+
+  it('skips prediction on obvious (large-difference) comparisons for a reverse sorted array', () => {
+    const snapshots = bubbleSortEngine([5, 4, 3, 2, 1])
+    const comparisons = snapshots.filter((s) => s.pseudocodeLine === PSEUDOCODE_COMPARISON)
+
+    expect(comparisons.some((s) => s.isPredictionRequired)).toBe(true)
+    expect(comparisons.every((s) => s.isPredictionRequired)).toBe(false)
+
+    // Obvious comparisons are narrated but are not Critical Junctions.
+    const skipped = comparisons.filter((s) => !s.isPredictionRequired)
+    expect(skipped.length).toBeGreaterThan(0)
+    for (const step of skipped) {
+      expect(step.criticalJunctionType).toBeNull()
+      expect(step.junctionDifficulty).toBeNull()
+    }
+  })
+
+  it('produces exactly one PASS_COMPLETE or EARLY_TERMINATION junction per completed pass', () => {
+    const snapshots = bubbleSortEngine([5, 3, 1, 4, 2])
+    const passNarrations = snapshots.filter(
+      (s) => s.pseudocodeLine === PSEUDOCODE_OUTER_LOOP_END && !s.isPredictionRequired,
+    )
+    const passCompleteJunctions = snapshots.filter((s) => s.criticalJunctionType === 'PASS_COMPLETE')
+    const earlyTerminationJunctions = snapshots.filter((s) => s.criticalJunctionType === 'EARLY_TERMINATION')
+
+    expect(passCompleteJunctions.length).toBeGreaterThan(0)
+    for (const step of passCompleteJunctions.concat(earlyTerminationJunctions)) {
+      expect(step.predictionType).toBe('TILE_GRID')
+      expect(step.isPredictionRequired).toBe(true)
+      expect(step.junctionDifficulty).toBe('CONCEPTUAL')
+    }
+    expect(passCompleteJunctions.length + earlyTerminationJunctions.length).toBe(passNarrations.length)
+  })
+
+  it('produces an EARLY_TERMINATION junction when sorting an already-sorted array', () => {
+    const snapshots = bubbleSortEngine([1, 2, 3, 4, 5])
+
+    expect(snapshots.some((s) => s.criticalJunctionType === 'EARLY_TERMINATION')).toBe(true)
+  })
+
+  it('places exactly one ALGORITHM_COMPLETE junction as the second-to-last snapshot', () => {
+    const snapshots = bubbleSortEngine([5, 3, 1, 4, 2])
+    const algorithmCompleteJunctions = snapshots.filter((s) => s.criticalJunctionType === 'ALGORITHM_COMPLETE')
+
+    expect(algorithmCompleteJunctions.length).toBe(1)
+    expect(snapshots[snapshots.length - 2].criticalJunctionType).toBe('ALGORITHM_COMPLETE')
+    expect(snapshots[snapshots.length - 2].isPredictionRequired).toBe(true)
+    expect(snapshots[snapshots.length - 1].criticalJunctionType).toBeNull()
   })
 })

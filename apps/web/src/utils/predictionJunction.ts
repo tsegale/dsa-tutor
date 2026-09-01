@@ -1,57 +1,24 @@
-import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty } from '@dsa-tutor/types'
+import type { CriticalJunctionType, TileOptionSpec } from '@dsa-tutor/types'
+import { CRITICAL_JUNCTION_TILE_OPTIONS } from '@dsa-tutor/types'
 
 /**
- * Classifies the pedagogical nature of the decision point a snapshot
- * represents. Bubble Sort's snapshot engine only marks the pairwise
- * comparison step as `isPredictionRequired`, so today every real
- * prediction resolves to SWAP_DECISION (procedural); the other values
- * exist for junctions later algorithms (Phase 16+) will introduce.
+ * The TILE_GRID options for a Critical Junction, as set by the snapshot
+ * engine. Only the three CONCEPTUAL junction types have a static option
+ * set here; SWAP_DECISION resolves through CANVAS_CLICK instead.
  */
-export function classifyCriticalJunction(snapshot: AlgorithmSnapshot): CriticalJunctionType {
-  if (snapshot.isFinalStep) return CriticalJunctionType.ALGORITHM_COMPLETE
-  if (snapshot.comparedIndices.length === 2) return CriticalJunctionType.SWAP_DECISION
-  return CriticalJunctionType.PASS_COMPLETE
-}
-
-export function isConceptualJunction(junctionType: CriticalJunctionType): boolean {
-  return junctionType !== CriticalJunctionType.SWAP_DECISION
+export function getCriticalJunctionTileOptions(junctionType: CriticalJunctionType | null): TileOptionSpec[] | null {
+  if (!junctionType) return null
+  return CRITICAL_JUNCTION_TILE_OPTIONS[junctionType] ?? null
 }
 
 /**
- * A comparison between near-equal values is easier to mis-judge than one
- * between clearly separated values, so difficulty is derived from how
- * close the two compared values are.
+ * For HIGH-scaffolding tile priming only: the option id to lightly
+ * highlight after inactivity. Never used for grading, which stays
+ * server-side.
  */
-export function classifyJunctionDifficulty(snapshot: AlgorithmSnapshot): JunctionDifficulty {
-  const state = snapshot.dataStructureState
-  if (snapshot.comparedIndices.length !== 2 || !Array.isArray(state)) {
-    return JunctionDifficulty.MEDIUM
-  }
-
-  const [left, right] = snapshot.comparedIndices
-  const diff = Math.abs(Number(state[left]) - Number(state[right]))
-
-  if (diff <= 1) return JunctionDifficulty.HARD
-  if (diff <= 3) return JunctionDifficulty.MEDIUM
-  return JunctionDifficulty.EASY
-}
-
-/**
- * For HIGH-scaffolding tile priming only: the swap/no-swap option a
- * TILE_GRID prompt should lightly highlight after inactivity. Never used
- * for grading, which stays server-side.
- */
-export function getExpectedSwapOptionId(snapshot: AlgorithmSnapshot): 'swap' | 'no-swap' | null {
-  const state = snapshot.dataStructureState
-  if (snapshot.activeIndices.length !== 2 || !Array.isArray(state)) return null
-
-  const [left, right] = snapshot.activeIndices
-  const leftValue = Number(state[left])
-  const rightValue = Number(state[right])
-  if (Number.isNaN(leftValue) || Number.isNaN(rightValue)) return null
-
-  return leftValue > rightValue ? 'swap' : 'no-swap'
+export function getCorrectTileOptionId(junctionType: CriticalJunctionType | null): string | null {
+  const options = getCriticalJunctionTileOptions(junctionType)
+  return options?.find((option) => option.correct)?.id ?? null
 }
 
 /** LOW scaffolding shows a one-sentence mistake analysis only. */
