@@ -117,4 +117,31 @@ describe('useAlgorithmStore', () => {
     expect(selectCurrentSnapshot(state)?.isPredictionRequired).toBe(true)
     expect(selectIsPredictionStep(state)).toBe(false)
   })
+
+  it('stepForward advances past prediction steps in DEMO mode', () => {
+    const store = useAlgorithmStore.getState()
+    store.setMode(AlgorithmMode.DEMO)
+    // Find a snapshot with isPredictionRequired true
+    const predictionIndex = store.snapshotArray.findIndex((s) => s.isPredictionRequired)
+    if (predictionIndex === -1) return // no prediction steps in this array
+    useAlgorithmStore.setState({ stepIndex: predictionIndex - 1 })
+    store.stepForward()
+    expect(useAlgorithmStore.getState().stepIndex).toBe(predictionIndex)
+    store.stepForward()
+    expect(useAlgorithmStore.getState().stepIndex).toBe(predictionIndex + 1)
+  })
+
+  it('playback does not stop at prediction steps in DEMO mode', async () => {
+    const store = useAlgorithmStore.getState()
+    store.setMode(AlgorithmMode.DEMO)
+    useAlgorithmStore.setState({ playbackSpeed: 3.0 }) // fast for testing
+    store.startPlayback()
+    // Wait long enough for several steps. At 3x speed the interval is
+    // ~333ms, so this gives real-timer scheduling jitter enough margin
+    // to reliably land more than 2 ticks (a tighter window is flaky).
+    await new Promise((resolve) => setTimeout(resolve, 1400))
+    store.stopPlayback()
+    // Should have advanced well past step 0
+    expect(useAlgorithmStore.getState().stepIndex).toBeGreaterThan(2)
+  })
 })

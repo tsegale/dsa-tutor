@@ -61,16 +61,18 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   sessionId: null,
   userId: null,
 
+  // Advances the step index only. Pausing playback at a prediction step
+  // is the playback interval's job (see startPlayback) - stepForward
+  // itself has no opinion on mode or isPredictionRequired, since manual
+  // stepping (arrow key, Step Forward button) must always advance
+  // regardless of mode. The prediction zone appears because the new
+  // snapshot has isPredictionRequired: true and mode is PRACTICE, not
+  // because stepForward blocked anything.
   stepForward: () => {
-    const { stepIndex, snapshotArray, isPlaying } = get()
-    if (stepIndex >= snapshotArray.length - 1) return
-
-    const newStepIndex = stepIndex + 1
-    const newSnapshot = snapshotArray[newStepIndex]
-    set({
-      stepIndex: newStepIndex,
-      isPlaying: isPlaying && newSnapshot.isPredictionRequired ? false : isPlaying,
-    })
+    const { stepIndex, snapshotArray } = get()
+    if (stepIndex < snapshotArray.length - 1) {
+      set({ stepIndex: stepIndex + 1 })
+    }
   },
 
   stepBackward: () => {
@@ -120,17 +122,29 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
     const { playbackSpeed } = get()
     playbackInterval = setInterval(() => {
-      get().stepForward()
+      const { stepIndex, snapshotArray, mode } = get()
+      const currentSnapshot = snapshotArray[stepIndex]
 
-      const after = get()
-      const currentSnapshot = after.snapshotArray[after.stepIndex]
-      const reachedPredictionStep = currentSnapshot?.isPredictionRequired ?? false
-      const reachedFinalStep = after.stepIndex === after.snapshotArray.length - 1
-
-      if (reachedPredictionStep || reachedFinalStep) {
+      // Stop at the final step regardless of mode.
+      if (stepIndex >= snapshotArray.length - 1) {
         clearPlaybackInterval()
         set({ isPlaying: false })
+        return
       }
+
+      // PRACTICE and HANDS_ON only: pause at prediction steps so the
+      // learner can answer (PredictionZone's own visibility condition is
+      // the same PRACTICE-or-HANDS_ON check, mirrored here). DEMO mode
+      // ignores isPredictionRequired entirely and plays straight through
+      // to the final snapshot.
+      const isInteractiveMode = mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON
+      if (isInteractiveMode && currentSnapshot?.isPredictionRequired) {
+        clearPlaybackInterval()
+        set({ isPlaying: false })
+        return
+      }
+
+      get().stepForward()
     }, 1000 / playbackSpeed)
   },
 
