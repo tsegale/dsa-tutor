@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { AlgorithmMode } from '@dsa-tutor/types'
+import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
 import type { AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
@@ -16,16 +16,57 @@ import KeyboardShortcutsModal from '@/components/layout/KeyboardShortcutsModal'
 import PredictionZone, {
   CANVAS_ELEMENT_SELECTED_EVENT,
   CLEAR_CANVAS_SELECTION_EVENT,
+  SHOW_EXPLANATION_LINK_EVENT,
+  type PredictionOutcomeDetail,
 } from '@/components/prediction/PredictionZone'
 import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnalysisToast'
 import BadgeAwardModal from '@/components/ui/BadgeAwardModal'
 import StreakToast from '@/components/ui/StreakToast'
+import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToast'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { calculateMastery, type MasteryMetrics } from '@/utils/masteryScore'
 import { cn } from '@/lib/utils'
+
+const SCAFFOLDING_LEVEL_ORDER: ScaffoldingLevel[] = [
+  ScaffoldingLevel.HIGH,
+  ScaffoldingLevel.MEDIUM,
+  ScaffoldingLevel.LOW,
+  ScaffoldingLevel.NONE,
+]
+
+const TRANSITION_MESSAGES: Record<string, string> = {
+  HIGH_to_MEDIUM: 'Good progress. We are reducing hints as your understanding grows.',
+  MEDIUM_to_LOW: 'Strong performance. You are now working more independently.',
+  LOW_to_NONE: 'Excellent, you have demonstrated mastery. Full autonomy mode active.',
+  MEDIUM_to_HIGH: 'No worries, we are adding more support to help you through this section.',
+  LOW_to_MEDIUM: 'We are adding some support back for this section.',
+  NONE_to_LOW: 'Bringing back some guidance for the next section.',
+}
+
+function getTransitionMessage(from: ScaffoldingLevel, to: ScaffoldingLevel): string {
+  const direct = TRANSITION_MESSAGES[`${from}_to_${to}`]
+  if (direct) return direct
+
+  const raisingSupport = SCAFFOLDING_LEVEL_ORDER.indexOf(to) < SCAFFOLDING_LEVEL_ORDER.indexOf(from)
+  return raisingSupport
+    ? `We are adding more support back, moving to ${to} scaffolding.`
+    : `Great work, moving to ${to} scaffolding as your understanding grows.`
+}
+
+const INITIAL_MASTERY_METRICS: MasteryMetrics = {
+  totalPredictions: 0,
+  correctPredictions: 0,
+  conceptualCorrect: 0,
+  conceptualTotal: 0,
+  proceduralCorrect: 0,
+  proceduralTotal: 0,
+  hintsRequested: 0,
+  consecutiveCorrect: 0,
+}
 
 // Bubble Sort is the only algorithm with a real snapshot engine until
 // Phase 15; every other seeded topic renders a "coming soon" canvas.
@@ -42,6 +83,9 @@ export default function AlgorithmPage() {
   const setSessionId = useAlgorithmStore((state) => state.setSessionId)
   const mode = useAlgorithmStore((state) => state.mode)
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
+  const sessionId = useAlgorithmStore((state) => state.sessionId)
+  const setScaffoldingLevel = useAlgorithmStore((state) => state.setScaffoldingLevel)
+  const setScaffoldingReasoning = useAlgorithmStore((state) => state.setScaffoldingReasoning)
   const { user, refreshUser } = useAuth()
   const { play } = useSoundEffects()
   const prefersReducedMotion = useReducedMotion()
@@ -60,6 +104,9 @@ export default function AlgorithmPage() {
   const [pendingBadge, setPendingBadge] = useState<string | null>(null)
   const [streakToastVisible, setStreakToastVisible] = useState(false)
   const [streakCountForToast, setStreakCountForToast] = useState(0)
+  const [masteryMetrics, setMasteryMetrics] = useState<MasteryMetrics>(INITIAL_MASTERY_METRICS)
+  const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
+  const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
 
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
@@ -91,11 +138,65 @@ export default function AlgorithmPage() {
     predictionStatsRef.current.hints += 1
   }
 
-  function handlePredictionResult(correct: boolean) {
+  function handlePredictionResult(detail: PredictionOutcomeDetail) {
     predictionStatsRef.current.total += 1
-    if (correct) {
+    if (detail.correct) {
       predictionStatsRef.current.correct += 1
       runBadgeCheck()
+    }
+
+    const isConceptual = detail.junctionType !== 'SWAP_DECISION'
+    const nextMetrics: MasteryMetrics = {
+      totalPredictions: masteryMetrics.totalPredictions + 1,
+      correctPredictions: masteryMetrics.correctPredictions + (detail.correct ? 1 : 0),
+      conceptualTotal: masteryMetrics.conceptualTotal + (isConceptual ? 1 : 0),
+      conceptualCorrect: masteryMetrics.conceptualCorrect + (isConceptual && detail.correct ? 1 : 0),
+      proceduralTotal: masteryMetrics.proceduralTotal + (isConceptual ? 0 : 1),
+      proceduralCorrect: masteryMetrics.proceduralCorrect + (!isConceptual && detail.correct ? 1 : 0),
+      hintsRequested: masteryMetrics.hintsRequested + detail.hintsRequestedForStep,
+      consecutiveCorrect: detail.correct ? masteryMetrics.consecutiveCorrect + 1 : 0,
+    }
+    setMasteryMetrics(nextMetrics)
+
+    const assessment = calculateMastery(nextMetrics)
+    const currentLevel = useAlgorithmStore.getState().scaffoldingLevel
+    setScaffoldingReasoning(assessment.reasoning)
+
+    if (sessionId) {
+      apiFetch('/api/v1/interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId,
+          stepIndex: detail.stepIndex,
+          predictionSubmitted: detail.predictionSubmitted,
+          predictionCorrect: detail.correct,
+          misconceptionCategory: detail.misconceptionCategory,
+          hintsRequested: detail.hintsRequestedForStep,
+          timeSpentSeconds: detail.timeSpentSeconds,
+          criticalJunctionType: detail.junctionType,
+          junctionDifficulty: detail.junctionDifficulty,
+          scaffoldingLevelAtTime: currentLevel,
+          masteryScoreAtTime: assessment.overallScore,
+        }),
+      }).catch(() => {
+        // Interaction logging is best-effort; it must never block the
+        // learner's practice flow if the backend is unreachable.
+      })
+    }
+
+    if (assessment.recommendedLevel !== currentLevel) {
+      setScaffoldingLevel(assessment.recommendedLevel)
+      setScaffoldingTransitionMessage(getTransitionMessage(currentLevel, assessment.recommendedLevel))
+
+      if (sessionId) {
+        apiFetch(`/api/v1/sessions/${sessionId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ scaffoldingLevel: assessment.recommendedLevel }),
+        }).catch(() => {
+          // Best-effort: the local scaffolding level already reflects the
+          // transition regardless of whether persistence lands.
+        })
+      }
     }
   }
 
@@ -119,6 +220,27 @@ export default function AlgorithmPage() {
     window.addEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
     return () => window.removeEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
   }, [])
+
+  // NONE scaffolding: after the prediction zone auto-advances past a
+  // step the learner missed twice, offer a brief link into the
+  // explanation tab instead of any further elaboration inline.
+  useEffect(() => {
+    function handleShowExplanationLink() {
+      setExplanationLinkVisible(true)
+    }
+    window.addEventListener(SHOW_EXPLANATION_LINK_EVENT, handleShowExplanationLink)
+    return () => window.removeEventListener(SHOW_EXPLANATION_LINK_EVENT, handleShowExplanationLink)
+  }, [])
+
+  useEffect(() => {
+    setExplanationLinkVisible(false)
+  }, [stepIndex])
+
+  function openExplanationTab() {
+    setExplanationLinkVisible(false)
+    setRightCollapsed(false)
+    setActiveTab(1)
+  }
 
   // Clear the canvas selection ring whenever the algorithm advances to a
   // new step, so a stale ring doesn't linger on the next prediction.
@@ -268,6 +390,16 @@ export default function AlgorithmPage() {
                 Focus Mode
               </div>
             )}
+
+            {explanationLinkVisible && (
+              <button
+                type="button"
+                onClick={openExplanationTab}
+                className="absolute bottom-4 left-4 z-20 rounded-full border border-primary bg-white px-3 py-1.5 text-xs font-medium text-primary shadow-md dark:bg-dark-surface"
+              >
+                Explanation available
+              </button>
+            )}
           </>
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
@@ -301,6 +433,10 @@ export default function AlgorithmPage() {
         streakCount={streakCountForToast}
         visible={streakToastVisible}
         onDismiss={() => setStreakToastVisible(false)}
+      />
+      <ScaffoldingTransitionToast
+        message={scaffoldingTransitionMessage}
+        onDismiss={() => setScaffoldingTransitionMessage(null)}
       />
     </div>
   )

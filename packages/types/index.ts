@@ -39,6 +39,21 @@ export const MisconceptionCategory = {
 export type MisconceptionCategory =
   (typeof MisconceptionCategory)[keyof typeof MisconceptionCategory]
 
+export const CriticalJunctionType = {
+  SWAP_DECISION: 'SWAP_DECISION',
+  PASS_COMPLETE: 'PASS_COMPLETE',
+  EARLY_TERMINATION: 'EARLY_TERMINATION',
+  ALGORITHM_COMPLETE: 'ALGORITHM_COMPLETE',
+} as const
+export type CriticalJunctionType = (typeof CriticalJunctionType)[keyof typeof CriticalJunctionType]
+
+export const JunctionDifficulty = {
+  EASY: 'EASY',
+  MEDIUM: 'MEDIUM',
+  HARD: 'HARD',
+} as const
+export type JunctionDifficulty = (typeof JunctionDifficulty)[keyof typeof JunctionDifficulty]
+
 export const AlgorithmTrack = {
   FOUNDATIONS: 'FOUNDATIONS',
   SORTING: 'SORTING',
@@ -196,6 +211,10 @@ export interface InteractionLog {
   misconceptionCategory: MisconceptionCategory | null
   hintsRequested: number
   timeSpentSeconds: number
+  criticalJunctionType: CriticalJunctionType | null
+  junctionDifficulty: JunctionDifficulty | null
+  scaffoldingLevelAtTime: ScaffoldingLevel
+  masteryScoreAtTime: number
 }
 
 /** Aggregated class-wide data for the educator analytics dashboard. */

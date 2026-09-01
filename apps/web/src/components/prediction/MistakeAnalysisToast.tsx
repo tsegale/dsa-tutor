@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 
 interface MistakeAnalysisToastProps {
   message: string | null
+  hint?: string | null
   pseudocodeLine: number | null
   onDismiss: () => void
 }
@@ -16,6 +17,7 @@ const toastVariants = {
 
 export default function MistakeAnalysisToast({
   message,
+  hint,
   pseudocodeLine,
   onDismiss,
 }: MistakeAnalysisToastProps) {
@@ -40,6 +42,12 @@ export default function MistakeAnalysisToast({
           </button>
           <p className="pr-4 text-xs font-bold text-error">What went wrong</p>
           <p className="mt-1 pr-4 text-[13px] text-text-primary">{message}</p>
+          {hint && (
+            <p className="mt-2 pr-4 text-[13px] text-secondary italic">
+              <span className="font-bold not-italic">Hint: </span>
+              {hint}
+            </p>
+          )}
           {pseudocodeLine !== null && (
             <button
               type="button"

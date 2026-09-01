@@ -1,35 +1,70 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlgorithmMode, PredictionType } from '@dsa-tutor/types'
-import type { HintRequest, PredictionRequest } from '@dsa-tutor/types'
+import { AlgorithmMode, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
+import type {
+  CriticalJunctionType,
+  HintRequest,
+  JunctionDifficulty,
+  MisconceptionCategory,
+  PredictionRequest,
+} from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { submitPrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import {
+  classifyCriticalJunction,
+  classifyJunctionDifficulty,
+  firstSentence,
+  getExpectedSwapOptionId,
+} from '@/utils/predictionJunction'
 import XPToast from '@/components/ui/XPToast'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import CanvasClickInput from './CanvasClickInput'
 import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import MistakeAnalysisToast from './MistakeAnalysisToast'
 
+export interface PredictionOutcomeDetail {
+  correct: boolean
+  stepIndex: number
+  predictionSubmitted: string
+  misconceptionCategory: MisconceptionCategory | null
+  hintsRequestedForStep: number
+  timeSpentSeconds: number
+  junctionType: CriticalJunctionType
+  junctionDifficulty: JunctionDifficulty
+}
+
 interface PredictionZoneProps {
   onSubmit: (answer: string) => void
   onHintRequested?: () => void
-  onPredictionResult?: (correct: boolean) => void
+  onPredictionResult?: (detail: PredictionOutcomeDetail) => void
 }
 
 export const CANVAS_ELEMENT_SELECTED_EVENT = 'dsa-tutor:canvas-element-selected'
 export const CLEAR_CANVAS_SELECTION_EVENT = 'dsa-tutor:clear-canvas-selection'
 export const REQUEST_HINT_EVENT = 'request-hint'
 export const ESCAPE_EVENT = 'dsa-tutor:escape'
+export const SHOW_EXPLANATION_LINK_EVENT = 'dsa-tutor:show-explanation-link'
 
 const SWAP_OPTIONS: TileOption[] = [
   { id: 'swap', label: 'Swap them', description: 'The left value is greater, swap' },
   { id: 'no-swap', label: 'No swap needed', description: 'Already in the right order' },
 ]
+
+const PROACTIVE_HINT_DELAY_MS = 8000
+const TILE_PRIME_DELAY_MS = 15000
+const AUTO_RESET_DELAY_MS = 1200
+const NONE_ADVANCE_DELAY_MS = 1500
+const MAX_ATTEMPTS_BEFORE_ADVANCE = 2
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function CheckIcon() {
   return (
@@ -84,6 +119,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const [currentAnswer, setCurrentAnswer] = useState<string | null>(null)
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
   const [mistakeAnalysis, setMistakeAnalysis] = useState<string | null>(null)
+  const [mistakeHint, setMistakeHint] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
@@ -92,6 +128,10 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const [xpVisible, setXpVisible] = useState(false)
   const [hintsRequestedCount, setHintsRequestedCount] = useState(0)
   const [stepStartTime, setStepStartTime] = useState(() => Date.now())
+  const [primedOptionId, setPrimedOptionId] = useState<string | null>(null)
+
+  const attemptCountRef = useRef(0)
+  const proactiveHintFiredRef = useRef(false)
 
   const isVisible = mode === AlgorithmMode.PRACTICE && snapshot !== null && snapshot.isPredictionRequired
   const stepIndex = snapshot?.stepIndex ?? null
@@ -100,10 +140,14 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     setCurrentAnswer(null)
     setSubmissionState('idle')
     setMistakeAnalysis(null)
+    setMistakeHint(null)
     setHint(null)
     setHintLoading(false)
     setHintsRequestedCount(0)
     setStepStartTime(Date.now())
+    setPrimedOptionId(null)
+    attemptCountRef.current = 0
+    proactiveHintFiredRef.current = false
   }, [stepIndex])
 
   useEffect(() => {
@@ -129,18 +173,49 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
 
   useEffect(() => {
     function handleRequestHintEvent() {
-      void handleRequestHint()
+      void handleRequestHint(false)
     }
     window.addEventListener(REQUEST_HINT_EVENT, handleRequestHintEvent)
     return () => window.removeEventListener(REQUEST_HINT_EVENT, handleRequestHintEvent)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hint, hintLoading])
 
-  async function handleRequestHint() {
+  // HIGH scaffolding only: surface a hint on its own after a stretch of
+  // inactivity, rather than waiting for the learner to press H. Fires at
+  // most once per step so it doesn't nag after a manual dismissal.
+  useEffect(() => {
+    if (!isVisible || scaffoldingLevel !== ScaffoldingLevel.HIGH) return
+    if (submissionState !== 'idle' || hint !== null || hintLoading) return
+    if (proactiveHintFiredRef.current) return
+
+    const timer = setTimeout(() => {
+      proactiveHintFiredRef.current = true
+      void handleRequestHint(true)
+    }, PROACTIVE_HINT_DELAY_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, scaffoldingLevel, submissionState, hint, hintLoading, stepIndex])
+
+  // HIGH scaffolding only: after a longer stretch of inactivity on a
+  // TILE_GRID prompt, lightly prime (not reveal) the correct option.
+  useEffect(() => {
+    if (!isVisible || scaffoldingLevel !== ScaffoldingLevel.HIGH || !snapshot) return
+    if (snapshot.predictionType !== PredictionType.TILE_GRID) return
+    if (currentAnswer !== null || submissionState !== 'idle') return
+
+    const timer = setTimeout(() => {
+      setPrimedOptionId(getExpectedSwapOptionId(snapshot))
+    }, TILE_PRIME_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [isVisible, scaffoldingLevel, snapshot, currentAnswer, submissionState])
+
+  async function handleRequestHint(proactive: boolean) {
     if (hint !== null || hintLoading || !snapshot) return
     setHintLoading(true)
-    setHintsRequestedCount((count) => count + 1)
-    onHintRequested?.()
+    if (!proactive) {
+      setHintsRequestedCount((count) => count + 1)
+      onHintRequested?.()
+    }
 
     const request: HintRequest = {
       algorithmName,
@@ -153,6 +228,14 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     const response = await requestHint(request)
     setHint(response.hint)
     setHintLoading(false)
+  }
+
+  function handleTryAgain() {
+    setSubmissionState('idle')
+    setCurrentAnswer(null)
+    setMistakeAnalysis(null)
+    setMistakeHint(null)
+    window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
   async function handleSubmit() {
@@ -177,25 +260,19 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
     setIsSubmitting(false)
 
     const timeSpentSeconds = Math.round((Date.now() - stepStartTime) / 1000)
-    if (sessionId) {
-      apiFetch('/api/v1/interactions', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId,
-          stepIndex: snapshot.stepIndex,
-          predictionSubmitted: currentAnswer,
-          predictionCorrect: response.correct,
-          misconceptionCategory: response.correct ? null : response.misconceptionCategory,
-          hintsRequested: hintsRequestedCount,
-          timeSpentSeconds,
-        }),
-      }).catch(() => {
-        // Interaction logging is best-effort; it must never block the
-        // learner's practice flow if the backend is unreachable.
-      })
-    }
+    const junctionType = classifyCriticalJunction(snapshot)
+    const junctionDifficulty = classifyJunctionDifficulty(snapshot)
 
-    onPredictionResult?.(response.correct)
+    onPredictionResult?.({
+      correct: response.correct,
+      stepIndex: snapshot.stepIndex,
+      predictionSubmitted: currentAnswer,
+      misconceptionCategory: response.correct ? null : response.misconceptionCategory,
+      hintsRequestedForStep: hintsRequestedCount,
+      timeSpentSeconds,
+      junctionType,
+      junctionDifficulty,
+    })
 
     if (response.correct) {
       play('correct')
@@ -213,18 +290,52 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
       setXpAmount(response.xpAwarded)
       setXpVisible(true)
       play('xp')
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await wait(400)
       stepForward()
-    } else {
-      play('incorrect')
-      setSubmissionState('incorrect')
+      return
+    }
+
+    play('incorrect')
+    setSubmissionState('incorrect')
+    setShakeToken((token) => token + 1)
+    attemptCountRef.current += 1
+    const attempt = attemptCountRef.current
+
+    if (scaffoldingLevel === ScaffoldingLevel.NONE) {
+      setMistakeAnalysis('Incorrect. Consider the algorithm state and try again.')
+      setMistakeHint(null)
+    } else if (scaffoldingLevel === ScaffoldingLevel.LOW) {
+      setMistakeAnalysis(firstSentence(response.consequenceExplanation))
+      setMistakeHint(null)
+    } else if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
       setMistakeAnalysis(response.consequenceExplanation)
-      setShakeToken((token) => token + 1)
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      setMistakeHint(response.socraticHint)
+    } else {
+      setMistakeAnalysis(response.consequenceExplanation)
+      setMistakeHint(null)
+    }
+
+    if (scaffoldingLevel === ScaffoldingLevel.NONE && attempt >= MAX_ATTEMPTS_BEFORE_ADVANCE) {
+      window.dispatchEvent(new CustomEvent(SHOW_EXPLANATION_LINK_EVENT))
+      await wait(NONE_ADVANCE_DELAY_MS)
       setSubmissionState('idle')
       setCurrentAnswer(null)
+      setMistakeAnalysis(null)
       window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
+      stepForward()
+      return
     }
+
+    if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
+      // Wait for the learner to click "Try again" rather than resetting
+      // automatically, so they see what went wrong before retrying.
+      return
+    }
+
+    await wait(AUTO_RESET_DELAY_MS)
+    setSubmissionState('idle')
+    setCurrentAnswer(null)
+    window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
   return (
@@ -247,8 +358,12 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
           >
             <MistakeAnalysisToast
               message={mistakeAnalysis}
+              hint={mistakeHint}
               pseudocodeLine={snapshot.pseudocodeLine}
-              onDismiss={() => setMistakeAnalysis(null)}
+              onDismiss={() => {
+                setMistakeAnalysis(null)
+                setMistakeHint(null)
+              }}
             />
 
             <div className="px-4 pt-2 text-[11px] font-semibold tracking-wide text-secondary uppercase">
@@ -257,12 +372,31 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
 
             <div className="flex h-[calc(100%-28px)] items-stretch gap-3 px-4 pb-3">
               <div className="flex w-16 shrink-0 items-start justify-center pt-2">
-                <HintAvatar
-                  hintAvailable
-                  onRequestHint={() => void handleRequestHint()}
-                  hint={hint}
-                  isLoading={hintLoading}
-                />
+                {scaffoldingLevel !== ScaffoldingLevel.NONE &&
+                  (scaffoldingLevel === ScaffoldingLevel.LOW ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="opacity-50">
+                          <HintAvatar
+                            hintAvailable
+                            onRequestHint={() => void handleRequestHint(false)}
+                            hint={hint}
+                            isLoading={hintLoading}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        You are performing well. Try to reason through this independently.
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <HintAvatar
+                      hintAvailable
+                      onRequestHint={() => void handleRequestHint(false)}
+                      hint={hint}
+                      isLoading={hintLoading}
+                    />
+                  ))}
               </div>
 
               <motion.div
@@ -298,6 +432,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                     onSelect={setCurrentAnswer}
                     selectedId={currentAnswer}
                     submissionState={submissionState}
+                    primedOptionId={primedOptionId}
                   />
                 )}
               </motion.div>
@@ -322,7 +457,17 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                 {submissionState === 'incorrect' && (
                   <div className="flex flex-col items-center gap-1 text-error">
                     <XIcon />
-                    <span className="text-xs font-medium">Try again</span>
+                    {scaffoldingLevel === ScaffoldingLevel.HIGH ? (
+                      <button
+                        type="button"
+                        onClick={handleTryAgain}
+                        className="text-xs font-medium underline underline-offset-2"
+                      >
+                        Try again
+                      </button>
+                    ) : (
+                      <span className="text-xs font-medium">Try again</span>
+                    )}
                   </div>
                 )}
               </div>

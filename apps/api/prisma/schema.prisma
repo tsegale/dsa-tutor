@@ -85,15 +85,19 @@ model Session {
 }
 
 model Interaction {
-  id                     String   @id @default(cuid())
-  sessionId              String
-  stepIndex              Int
-  predictionSubmitted    String?
-  predictionCorrect      Boolean?
-  misconceptionCategory  String?
-  hintsRequested         Int      @default(0)
-  timeSpentSeconds       Int
-  createdAt              DateTime @default(now())
+  id                      String   @id @default(cuid())
+  sessionId               String
+  stepIndex               Int
+  predictionSubmitted     String?
+  predictionCorrect       Boolean?
+  misconceptionCategory   String?
+  hintsRequested          Int      @default(0)
+  timeSpentSeconds        Int
+  criticalJunctionType    String?
+  junctionDifficulty      String?
+  scaffoldingLevelAtTime  String   @default("MEDIUM")
+  masteryScoreAtTime      Int      @default(0)
+  createdAt               DateTime @default(now())
 
   session Session @relation(fields: [sessionId], references: [id])
 

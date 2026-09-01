@@ -6,6 +6,10 @@ export interface CreateInteractionDto {
   misconceptionCategory: string | null
   hintsRequested: number
   timeSpentSeconds: number
+  criticalJunctionType?: string | null
+  junctionDifficulty?: string | null
+  scaffoldingLevelAtTime?: string
+  masteryScoreAtTime?: number
 }
 
 export interface InteractionDto {
@@ -17,5 +21,9 @@ export interface InteractionDto {
   misconceptionCategory: string | null
   hintsRequested: number
   timeSpentSeconds: number
+  criticalJunctionType: string | null
+  junctionDifficulty: string | null
+  scaffoldingLevelAtTime: string
+  masteryScoreAtTime: number
   createdAt: string
 }

@@ -9,6 +9,7 @@ export interface AlgorithmStoreState {
   stepIndex: number
   mode: AlgorithmMode
   scaffoldingLevel: ScaffoldingLevel
+  scaffoldingReasoning: string
   sessionXP: number
   focusModeActive: boolean
   isPlaying: boolean
@@ -25,6 +26,7 @@ export interface AlgorithmStoreState {
   addXP: (amount: number) => void
   setPlaybackSpeed: (speed: number) => void
   setScaffoldingLevel: (level: ScaffoldingLevel) => void
+  setScaffoldingReasoning: (reasoning: string) => void
   setSessionId: (id: string) => void
   setUserId: (id: string) => void
   startPlayback: () => void
@@ -51,6 +53,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   stepIndex: 0,
   mode: AlgorithmMode.DEMO,
   scaffoldingLevel: ScaffoldingLevel.HIGH,
+  scaffoldingReasoning: 'No interaction data yet. Starting with maximum support.',
   sessionXP: 0,
   focusModeActive: false,
   isPlaying: false,
@@ -104,6 +107,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   },
 
   setScaffoldingLevel: (level) => set({ scaffoldingLevel: level }),
+
+  setScaffoldingReasoning: (reasoning) => set({ scaffoldingReasoning: reasoning }),
 
   setSessionId: (id) => set({ sessionId: id }),
 

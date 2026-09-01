@@ -11,6 +11,10 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       misconceptionCategory: dto.misconceptionCategory,
       hintsRequested: dto.hintsRequested,
       timeSpentSeconds: dto.timeSpentSeconds,
+      criticalJunctionType: dto.criticalJunctionType ?? null,
+      junctionDifficulty: dto.junctionDifficulty ?? null,
+      ...(dto.scaffoldingLevelAtTime && { scaffoldingLevelAtTime: dto.scaffoldingLevelAtTime }),
+      ...(dto.masteryScoreAtTime !== undefined && { masteryScoreAtTime: dto.masteryScoreAtTime }),
     },
   })
   return {
@@ -22,6 +26,10 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
     misconceptionCategory: interaction.misconceptionCategory,
     hintsRequested: interaction.hintsRequested,
     timeSpentSeconds: interaction.timeSpentSeconds,
+    criticalJunctionType: interaction.criticalJunctionType,
+    junctionDifficulty: interaction.junctionDifficulty,
+    scaffoldingLevelAtTime: interaction.scaffoldingLevelAtTime,
+    masteryScoreAtTime: interaction.masteryScoreAtTime,
     createdAt: interaction.createdAt.toISOString(),
   }
 }
@@ -40,6 +48,10 @@ export async function getSessionInteractions(sessionId: string): Promise<Interac
     misconceptionCategory: i.misconceptionCategory,
     hintsRequested: i.hintsRequested,
     timeSpentSeconds: i.timeSpentSeconds,
+    criticalJunctionType: i.criticalJunctionType,
+    junctionDifficulty: i.junctionDifficulty,
+    scaffoldingLevelAtTime: i.scaffoldingLevelAtTime,
+    masteryScoreAtTime: i.masteryScoreAtTime,
     createdAt: i.createdAt.toISOString(),
   }))
 }

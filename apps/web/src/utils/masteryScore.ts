@@ -1,0 +1,72 @@
+export interface MasteryMetrics {
+  totalPredictions: number
+  correctPredictions: number
+  conceptualCorrect: number
+  conceptualTotal: number
+  proceduralCorrect: number
+  proceduralTotal: number
+  hintsRequested: number
+  consecutiveCorrect: number
+}
+
+export interface MasteryAssessment {
+  overallScore: number
+  conceptualScore: number
+  proceduralScore: number
+  recommendedLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+  reasoning: string
+}
+
+export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
+  if (metrics.totalPredictions === 0) {
+    return {
+      overallScore: 0,
+      conceptualScore: 0,
+      proceduralScore: 0,
+      recommendedLevel: 'HIGH',
+      reasoning: 'No interaction data yet. Starting with maximum support.',
+    }
+  }
+
+  const overallAccuracy = metrics.correctPredictions / metrics.totalPredictions
+  const conceptualAccuracy = metrics.conceptualTotal > 0 ? metrics.conceptualCorrect / metrics.conceptualTotal : 0
+  const proceduralAccuracy = metrics.proceduralTotal > 0 ? metrics.proceduralCorrect / metrics.proceduralTotal : 0
+
+  // Penalise hint usage: heavy hint reliance indicates lower mastery.
+  const hintPenalty = Math.min(0.2, (metrics.hintsRequested / Math.max(metrics.totalPredictions, 1)) * 0.4)
+
+  // Bonus for consecutive correct answers: sustained accuracy matters more than average.
+  const streakBonus = Math.min(0.1, metrics.consecutiveCorrect * 0.02)
+
+  const overallScore = Math.round(
+    Math.max(
+      0,
+      Math.min(
+        100,
+        overallAccuracy * 60 + conceptualAccuracy * 25 + proceduralAccuracy * 15 - hintPenalty * 100 + streakBonus * 100,
+      ),
+    ),
+  )
+
+  const conceptualScore = Math.round(conceptualAccuracy * 100)
+  const proceduralScore = Math.round(proceduralAccuracy * 100)
+
+  let recommendedLevel: MasteryAssessment['recommendedLevel']
+  let reasoning: string
+
+  if (overallScore >= 80 && metrics.consecutiveCorrect >= 5 && metrics.hintsRequested === 0) {
+    recommendedLevel = 'NONE'
+    reasoning = `Score ${overallScore}/100 with ${metrics.consecutiveCorrect} consecutive correct and no hints. Scaffolding fully removed.`
+  } else if (overallScore >= 65 && metrics.hintsRequested <= 1) {
+    recommendedLevel = 'LOW'
+    reasoning = `Score ${overallScore}/100. Hints available on request only, no proactive support.`
+  } else if (overallScore >= 45) {
+    recommendedLevel = 'MEDIUM'
+    reasoning = `Score ${overallScore}/100. Hints on request, targeted feedback on errors.`
+  } else {
+    recommendedLevel = 'HIGH'
+    reasoning = `Score ${overallScore}/100. Maximum support with proactive hints and detailed feedback.`
+  }
+
+  return { overallScore, conceptualScore, proceduralScore, recommendedLevel, reasoning }
+}

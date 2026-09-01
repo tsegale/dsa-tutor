@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import DifficultyTag from '@/components/ui/DifficultyTag'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
+import ScaffoldingBadge from '@/components/ui/ScaffoldingBadge'
 import SoundToggle from '@/components/ui/SoundToggle'
 
 const THEME_STORAGE_KEY = 'dsa-tutor-theme'
@@ -127,6 +128,8 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-3">
+        <ScaffoldingBadge />
+
         <div className="flex items-center gap-2">
           <div className="w-32">
             <ProgressBar />
