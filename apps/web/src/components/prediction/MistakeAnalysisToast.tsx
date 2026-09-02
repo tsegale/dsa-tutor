@@ -39,7 +39,7 @@ export default function MistakeAnalysisToast({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="absolute top-0 left-0 z-10 w-full rounded-md border-l-4 border-error bg-error-light p-4"
+          className="relative w-full shrink-0 rounded-md border-l-4 border-error bg-error-light p-4"
           aria-live="polite"
         >
           <button

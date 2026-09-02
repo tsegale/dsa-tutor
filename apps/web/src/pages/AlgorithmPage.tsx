@@ -114,6 +114,14 @@ export default function AlgorithmPage() {
   const [mistakeLabel, setMistakeLabel] = useState<string | undefined>(undefined)
   const [showFeynman, setShowFeynman] = useState(false)
 
+  // Owned here (not inside PredictionZone) so the AI Tutor tab in
+  // RightPanel can render the same MisconceptionToast and hint content
+  // without a second floating copy over the canvas.
+  const [mistakeAnalysis, setMistakeAnalysis] = useState<string | null>(null)
+  const [mistakeHint, setMistakeHint] = useState<string | null>(null)
+  const [mistakeCounterfactual, setMistakeCounterfactual] = useState<string | null>(null)
+  const [hint, setHint] = useState<string | null>(null)
+
   // Guards against re-triggering the modal every time the learner steps
   // back to the final step and forward again within the same practice
   // run. Reset when a fresh run starts (stepIndex back to 0) so a genuine
@@ -477,6 +485,11 @@ export default function AlgorithmPage() {
               onSubmit={handlePredictionSubmit}
               onHintRequested={handleHintRequested}
               onPredictionResult={handlePredictionResult}
+              setMistakeAnalysis={setMistakeAnalysis}
+              setMistakeHint={setMistakeHint}
+              setMistakeCounterfactual={setMistakeCounterfactual}
+              hint={hint}
+              setHint={setHint}
             />
 
             <ChallengeHintBanner />
@@ -519,6 +532,15 @@ export default function AlgorithmPage() {
           onToggle={() => setRightCollapsed((c) => !c)}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          mistakeAnalysis={mistakeAnalysis}
+          mistakeHint={mistakeHint}
+          mistakeCounterfactual={mistakeCounterfactual}
+          onDismissMistake={() => {
+            setMistakeAnalysis(null)
+            setMistakeHint(null)
+            setMistakeCounterfactual(null)
+          }}
+          hint={hint}
         />
       </motion.div>
 

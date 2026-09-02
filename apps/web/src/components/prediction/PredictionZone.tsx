@@ -21,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
-import MistakeAnalysisToast from './MistakeAnalysisToast'
 import CodeEditorInput from './CodeEditorInput'
 
 export interface PredictionOutcomeDetail {
@@ -49,6 +48,17 @@ interface PredictionZoneProps {
   onSubmit: (answer: string) => void
   onHintRequested?: () => void
   onPredictionResult?: (detail: PredictionOutcomeDetail) => void
+  // Mistake state is owned by the page level now, so the AI Tutor tab
+  // (RightPanel) can render the same MisconceptionToast without floating
+  // it over the canvas a second time - PredictionZone only ever writes
+  // it here, RightPanel is what reads it for display.
+  setMistakeAnalysis: (value: string | null) => void
+  setMistakeHint: (value: string | null) => void
+  setMistakeCounterfactual: (value: string | null) => void
+  // Hint text is also lifted so the Socratic guidance box in RightPanel
+  // can show it, but PredictionZone still reads it too (HintAvatar).
+  hint: string | null
+  setHint: (value: string | null) => void
 }
 
 export const CLEAR_CANVAS_SELECTION_EVENT = 'dsa-tutor:clear-canvas-selection'
@@ -194,7 +204,16 @@ function Spinner() {
   )
 }
 
-export default function PredictionZone({ onSubmit, onHintRequested, onPredictionResult }: PredictionZoneProps) {
+export default function PredictionZone({
+  onSubmit,
+  onHintRequested,
+  onPredictionResult,
+  setMistakeAnalysis,
+  setMistakeHint,
+  setMistakeCounterfactual,
+  hint,
+  setHint,
+}: PredictionZoneProps) {
   const mode = useAlgorithmStore((state) => state.mode)
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
@@ -208,11 +227,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
   const [currentAnswer, setCurrentAnswer] = useState<string | null>(null)
   const [currentTiles, setCurrentTiles] = useState<TileOption[]>([])
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
-  const [mistakeAnalysis, setMistakeAnalysis] = useState<string | null>(null)
-  const [mistakeHint, setMistakeHint] = useState<string | null>(null)
-  const [mistakeCounterfactual, setMistakeCounterfactual] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hint, setHint] = useState<string | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
   const [shakeToken, setShakeToken] = useState(0)
   const [xpAmount, setXpAmount] = useState(0)
@@ -283,7 +298,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
       window.removeEventListener(DISMISS_HINT_EVENT, handleDismiss)
       window.removeEventListener(ESCAPE_EVENT, handleDismiss)
     }
-  }, [])
+  }, [setHint])
 
   useEffect(() => {
     function handleRequestHintEvent() {
@@ -547,18 +562,6 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
             role="region"
             aria-label="Predict the next step"
           >
-            <MistakeAnalysisToast
-              message={mistakeAnalysis}
-              hint={mistakeHint}
-              counterfactualTrace={mistakeCounterfactual}
-              pseudocodeLine={snapshot.pseudocodeLine}
-              onDismiss={() => {
-                setMistakeAnalysis(null)
-                setMistakeHint(null)
-                setMistakeCounterfactual(null)
-              }}
-            />
-
             <div className="flex w-12 shrink-0 items-start justify-center pt-1">
               {scaffoldingLevel !== ScaffoldingLevel.NONE &&
                 (scaffoldingLevel === ScaffoldingLevel.LOW ? (

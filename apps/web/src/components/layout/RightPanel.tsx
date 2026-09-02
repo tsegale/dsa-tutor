@@ -1,15 +1,22 @@
 import { motion } from 'framer-motion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import ExplanationPanel from '@/components/canvas/ExplanationPanel'
+import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import PseudocodePanel from '@/components/canvas/PseudocodePanel'
 import ComplexityPanel from '@/components/canvas/ComplexityPanel'
+import ScaffoldingFader from './ScaffoldingFader'
+import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
 
 interface RightPanelProps {
   collapsed: boolean
   onToggle: () => void
   activeTab: number
   onTabChange: (tab: number) => void
+  mistakeAnalysis: string | null
+  mistakeHint: string | null
+  mistakeCounterfactual: string | null
+  onDismissMistake: () => void
+  hint: string | null
 }
 
 const EXPANDED_WIDTH = 320
@@ -56,7 +63,49 @@ function ChevronIcon({ pointRight }: { pointRight: boolean }) {
   )
 }
 
-export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange }: RightPanelProps) {
+function SocraticGuidanceBox({ hint }: { hint: string | null }) {
+  const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  const correct = useAlgorithmStore((state) => state.sessionCorrectPredictions)
+  const total = useAlgorithmStore((state) => state.sessionTotalPredictions)
+  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
+
+  return (
+    <div className="rounded-md border border-border bg-white p-3 dark:bg-dark-surface">
+      <p className="text-xs font-bold text-primary">Socratic guidance</p>
+      <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">
+        {snapshot?.description ?? 'Load an algorithm to begin.'}
+      </p>
+
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">Session accuracy</span>
+        <div className="h-1 flex-1 overflow-hidden rounded-full bg-border">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${accuracy}%` }} />
+        </div>
+        <span className="text-[11px] font-medium text-text-primary dark:text-dark-text-primary">{accuracy}%</span>
+      </div>
+
+      {hint && (
+        <div className="mt-3 rounded-md border-l-4 border-secondary bg-secondary-light p-2.5">
+          <p className="text-[13px] text-secondary italic">{hint}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function RightPanel({
+  collapsed,
+  onToggle,
+  activeTab,
+  onTabChange,
+  mistakeAnalysis,
+  mistakeHint,
+  mistakeCounterfactual,
+  onDismissMistake,
+  hint,
+}: RightPanelProps) {
+  const pseudocodeLine = useAlgorithmStore((state) => selectCurrentSnapshot(state)?.pseudocodeLine ?? null)
+
   function expandToTab(tab: number) {
     if (collapsed) onToggle()
     onTabChange(tab)
@@ -75,13 +124,13 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
               <button
                 type="button"
                 onClick={() => expandToTab(1)}
-                aria-label="Explanation"
+                aria-label="AI Tutor"
                 className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <ExplanationIcon />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="left">Explanation</TooltipContent>
+            <TooltipContent side="left">AI Tutor</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -129,12 +178,20 @@ export default function RightPanel({ collapsed, onToggle, activeTab, onTabChange
             className="flex h-full flex-col overflow-hidden"
           >
             <TabsList>
-              <TabsTrigger value="1">Explanation</TabsTrigger>
+              <TabsTrigger value="1">AI Tutor</TabsTrigger>
               <TabsTrigger value="2">Pseudocode</TabsTrigger>
               <TabsTrigger value="3">Complexity</TabsTrigger>
             </TabsList>
-            <TabsContent value="1" className="flex-1 overflow-y-auto">
-              <ExplanationPanel />
+            <TabsContent value="1" className="flex flex-1 flex-col gap-3 overflow-y-auto">
+              <ScaffoldingFader />
+              <MistakeAnalysisToast
+                message={mistakeAnalysis}
+                hint={mistakeHint}
+                counterfactualTrace={mistakeCounterfactual}
+                pseudocodeLine={pseudocodeLine}
+                onDismiss={onDismissMistake}
+              />
+              <SocraticGuidanceBox hint={hint} />
             </TabsContent>
             <TabsContent value="2" className="flex-1 overflow-y-auto">
               <PseudocodePanel />
