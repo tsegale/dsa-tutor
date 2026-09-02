@@ -15,7 +15,7 @@ interface LeftPanelProps {
   difficulty: string
 }
 
-const EXPANDED_WIDTH = 280
+const EXPANDED_WIDTH = 200
 const COLLAPSED_WIDTH = 48
 
 function PlayIcon() {

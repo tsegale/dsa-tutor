@@ -437,7 +437,11 @@ export default function AlgorithmPage() {
       style={{
         display: 'grid',
         gridTemplateRows: '56px 1fr',
-        gridTemplateColumns: 'auto 1fr auto',
+        // Literal 200px/280px expanded widths (matching LeftPanel/RightPanel's
+        // own EXPANDED_WIDTH constants) rather than `auto`, collapsing to
+        // 48px per side so the panel-collapse toggle still reclaims canvas
+        // space instead of leaving a dead gap in a fixed-width track.
+        gridTemplateColumns: `${leftCollapsed ? 48 : 200}px 1fr ${rightCollapsed ? 48 : 280}px`,
         gridTemplateAreas: "'topbar topbar topbar' 'left canvas right'",
         height: '100vh',
         overflow: 'hidden',

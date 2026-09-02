@@ -19,7 +19,7 @@ interface RightPanelProps {
   hint: string | null
 }
 
-const EXPANDED_WIDTH = 320
+const EXPANDED_WIDTH = 280
 const COLLAPSED_WIDTH = 48
 
 function ExplanationIcon() {

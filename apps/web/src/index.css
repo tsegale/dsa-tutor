@@ -179,3 +179,20 @@
   border-radius: 12px;
   animation: canvas-pulse-border 1.6s ease-in-out infinite;
 }
+
+@utility font-mono-code {
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+}
+
+@utility text-10 {
+  font-size: 10px;
+}
+
+@utility text-11 {
+  font-size: 11px;
+}
+
+@utility tracking-wider-caps {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
