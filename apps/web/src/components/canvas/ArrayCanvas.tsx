@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
 import { AlgorithmMode, CriticalJunctionType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
@@ -22,12 +22,14 @@ const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 
 const PADDING = 32
 
-const BAR_COLOR = {
-  success: '#16A34A',
-  secondary: '#F59E0B',
-  active: '#7C3AED',
-  primary: '#4F46E5',
-} as const
+type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted'
+
+const BAR_COLOURS: Record<BarState, { fill: string; value: string; opacity: number; glow?: string }> = {
+  neutral: { fill: '#c7c9e8', value: '#4a4d8a', opacity: 0.4 },
+  comparing: { fill: '#f59e0b', value: '#78350f', opacity: 1.0, glow: 'rgba(245,158,11,0.3)' },
+  swapping: { fill: '#7c3aed', value: '#ffffff', opacity: 1.0, glow: 'rgba(124,58,237,0.3)' },
+  sorted: { fill: '#16a34a', value: '#ffffff', opacity: 1.0 },
+}
 
 const MISTAKE_WASH_COLOR = 'rgba(220, 38, 38, 0.12)'
 // 0.5x speed of the nominal 800ms step interval used elsewhere.
@@ -48,6 +50,9 @@ export default function ArrayCanvas({
   const mode = useAlgorithmStore((state) => state.mode)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
+  // TODO(mastery-backend): swap for the real backend-computed mastery score
+  // once that endpoint exists; step progress is a placeholder for now.
+  const masteryPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
 
   const [mistakeStepIndex, setMistakeStepIndex] = useState(0)
@@ -245,8 +250,37 @@ export default function ArrayCanvas({
 
   const canvasLabel = `${algorithmName}, step ${snapshot.stepIndex + 1} of ${totalSteps}: ${snapshot.description}`
 
+  const masteryColorClass =
+    masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+
   return (
     <>
+    <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Mastery</span>
+        <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
+          <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
+        </div>
+        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+          {masteryPercent}%
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        {(
+          [
+            ['neutral', 'Neutral'],
+            ['comparing', 'Comparing'],
+            ['swapping', 'Swapping'],
+            ['sorted', 'Sorted'],
+          ] as const
+        ).map(([state, label]) => (
+          <div key={state} className="flex items-center gap-1">
+            <span className="size-2 rounded-sm" style={{ backgroundColor: BAR_COLOURS[state].fill }} aria-hidden="true" />
+            <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
     {handsOnTooltipVisible && (
       <div className="absolute top-2 left-1/2 z-30 w-[280px] max-w-[80%] -translate-x-1/2 rounded-md border-l-4 border-secondary bg-secondary-light p-3 text-center shadow-md">
         <p className="text-[13px] text-secondary">
@@ -302,7 +336,6 @@ export default function ArrayCanvas({
         const isHighlighted = snapshot.highlightIndices.includes(bar.index)
         const isSwapped = snapshot.swappedIndices.includes(bar.index)
         const isActive = snapshot.activeIndices.includes(bar.index)
-        const isSpecial = isHighlighted || isSwapped || isActive
         const isMistakeAffected = mistakeAffectedIndices?.has(bar.index) ?? false
 
         const isDraggableBar =
@@ -318,13 +351,9 @@ export default function ArrayCanvas({
               ? bars[handsOnLeft].x
               : bar.x
 
-        const fill = isHighlighted
-          ? BAR_COLOR.success
-          : isSwapped
-            ? BAR_COLOR.secondary
-            : isActive
-              ? BAR_COLOR.active
-              : BAR_COLOR.primary
+        // Priority order: sorted > swapping > comparing > neutral.
+        const barState: BarState = isHighlighted ? 'sorted' : isSwapped ? 'swapping' : isActive ? 'comparing' : 'neutral'
+        const colours = BAR_COLOURS[barState]
 
         const barDragX = bar.index === handsOnLeft ? dragXLeft : bar.index === handsOnRight ? dragXRight : undefined
 
@@ -333,7 +362,7 @@ export default function ArrayCanvas({
             key={bar.index}
             layout
             transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: 'easeInOut' }}
-            style={isDraggableBar ? { opacity: isSpecial ? 1 : 0.4, x: barDragX } : { opacity: isSpecial ? 1 : 0.4 }}
+            style={isDraggableBar ? { opacity: colours.opacity, x: barDragX } : { opacity: colours.opacity }}
             className={cn(
               'bar-group group',
               isActive && !prefersReducedMotion && 'animate-pulse-ring',
@@ -354,6 +383,19 @@ export default function ArrayCanvas({
                 }
               : {})}
           >
+            {colours.glow && (
+              <rect
+                x={displayX - 2}
+                y={bar.y}
+                width={bar.width + 4}
+                height={bar.height}
+                rx={8}
+                fill="none"
+                stroke={colours.glow}
+                strokeWidth={2}
+                opacity={0.5}
+              />
+            )}
             <rect
               x={displayX}
               y={bar.y}
@@ -361,7 +403,7 @@ export default function ArrayCanvas({
               height={bar.height}
               rx={4}
               className="bar-group"
-              style={{ fill }}
+              style={{ fill: colours.fill }}
             />
             {isMistakeAffected && (
               <rect
@@ -376,11 +418,29 @@ export default function ArrayCanvas({
                 strokeDasharray="6 4"
               />
             )}
+            <rect
+              x={displayX}
+              y={bar.y + bar.height}
+              width={bar.width}
+              height={12}
+              rx={3}
+              fill="rgba(0,0,0,0.06)"
+            />
+            <text
+              x={displayX + bar.width / 2}
+              y={bar.y + bar.height + 9}
+              textAnchor="middle"
+              className="fill-text-muted text-[9px]"
+              style={{ pointerEvents: 'none' }}
+            >
+              ⠿
+            </text>
             <text
               x={displayX + bar.width / 2}
               y={height - PADDING + 16}
               textAnchor="middle"
-              className="fill-text-primary text-xs font-medium dark:fill-dark-text-primary"
+              className="text-xs font-medium"
+              style={{ fill: colours.value }}
             >
               {bar.value}
             </text>
