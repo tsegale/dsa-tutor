@@ -22,6 +22,7 @@ import BadgeAwardModal from '@/components/ui/BadgeAwardModal'
 import StreakToast from '@/components/ui/StreakToast'
 import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToast'
 import FeynmanModal from '@/components/feynman/FeynmanModal'
+import { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton'
 import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
@@ -272,6 +273,16 @@ export default function AlgorithmPage() {
     }
     window.addEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
     return () => window.removeEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
+  }, [])
+
+  // Left panel's "Feynman Mode" button opens the same modal the automatic
+  // full-run trigger below opens - it just skips the completion wait.
+  useEffect(() => {
+    function handleOpenFeynman() {
+      setShowFeynman(true)
+    }
+    window.addEventListener(OPEN_FEYNMAN_MODAL_EVENT, handleOpenFeynman)
+    return () => window.removeEventListener(OPEN_FEYNMAN_MODAL_EVENT, handleOpenFeynman)
   }, [])
 
   // NONE scaffolding: after the prediction zone auto-advances past a

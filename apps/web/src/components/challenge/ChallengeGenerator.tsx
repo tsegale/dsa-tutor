@@ -104,7 +104,7 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
         size="sm"
         onClick={handleGenerate}
         disabled={isGenerating}
-        className="w-full gap-1.5"
+        className="w-full gap-1.5 text-white hover:text-white"
       >
         {isGenerating ? <SpinnerIcon /> : <TargetIcon />}
         {isGenerating ? 'Generating...' : 'AI Challenge'}

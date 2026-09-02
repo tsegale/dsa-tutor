@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
+import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
 import { cn } from '@/lib/utils'
 
 interface LeftPanelProps {
@@ -212,10 +213,10 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
           </button>
         </div>
       ) : (
-        <div className="flex h-full flex-col gap-6 overflow-y-auto p-4">
+        <div className="flex h-full flex-col gap-2.5 overflow-y-auto p-3">
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-dark-text-secondary">
-              Playback Controls
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+              Playback
             </h3>
             <div>
               <Button onClick={handlePlayPause} className="w-full gap-2" size="lg">
@@ -249,9 +250,11 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
             </div>
           </section>
 
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-dark-text-secondary">Speed</h3>
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+                Speed
+              </h3>
               <span className="font-mono text-xs text-text-primary dark:text-dark-text-primary">{playbackSpeed.toFixed(1)}x</span>
             </div>
             <Slider
@@ -263,7 +266,38 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
             />
           </section>
 
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+              Array Input
+            </h3>
+            <input
+              type="text"
+              value={arrayInput}
+              onChange={(event) => setArrayInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') applyArrayInput()
+              }}
+              placeholder="5,3,1,4,2"
+              className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
+            />
+            {inputError && <p className="text-xs text-error">{inputError}</p>}
+            <Button variant="outline" size="sm" onClick={applyArrayInput}>
+              Apply
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleRandom}>
+              Random
+            </Button>
+          </section>
+
+          <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+              AI Tools
+            </h3>
+            <ChallengeGenerator difficulty={difficulty} />
+            <FeynmanModeButton />
+          </section>
+
+          <section className="mt-auto flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <button
               type="button"
               onClick={toggleCodeEditorMode}
@@ -290,35 +324,11 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
             </button>
           </section>
 
-          <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted dark:text-dark-text-secondary">
-              Array Input
-            </h3>
-            <input
-              type="text"
-              value={arrayInput}
-              onChange={(event) => setArrayInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') applyArrayInput()
-              }}
-              placeholder="5,3,1,4,2"
-              className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
-            />
-            {inputError && <p className="text-xs text-error">{inputError}</p>}
-            <Button variant="outline" size="sm" onClick={applyArrayInput}>
-              Apply
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleRandom}>
-              Random
-            </Button>
-            <ChallengeGenerator difficulty={difficulty} />
-          </section>
-
           <button
             type="button"
             onClick={onToggle}
             aria-label="Collapse panel"
-            className="mt-auto flex items-center justify-center gap-1 self-start text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+            className="flex items-center justify-center gap-1 self-start text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
           >
             <ChevronIcon pointRight={false} />
           </button>
