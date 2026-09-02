@@ -1,24 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Difficulty } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { logout } from '@/api/auth'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import DifficultyTag from '@/components/ui/DifficultyTag'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
-import ScaffoldingBadge from '@/components/ui/ScaffoldingBadge'
 import SoundToggle from '@/components/ui/SoundToggle'
+import ZPDScaffoldingPill from '@/components/ui/ZPDScaffoldingPill'
 
 const THEME_STORAGE_KEY = 'dsa-tutor-theme'
 export const OPEN_SHORTCUTS_MODAL_EVENT = 'dsa-tutor:open-shortcuts-modal'
 
-// Track and difficulty metadata for the current algorithm isn't sourced
-// from the store yet (Phase 9+ wires topic data from the API). Bubble
-// Sort is hardcoded here as the only algorithm through Phase 15.
+// Track metadata for the current algorithm isn't sourced from the store
+// yet (Phase 9+ wires topic data from the API). Bubble Sort is hardcoded
+// here as the only algorithm through Phase 15.
 const TRACK_NAME = 'Sorting'
-const DIFFICULTY = Difficulty.BEGINNER
 
 function EyeIcon({ active }: { active: boolean }) {
   return (
@@ -120,7 +117,7 @@ export default function TopBar() {
           <span className="text-text-muted dark:text-dark-text-secondary">/</span>
           <span className="font-bold text-primary">{algorithmName}</span>
         </nav>
-        <DifficultyTag difficulty={DIFFICULTY} />
+        <ZPDScaffoldingPill />
       </div>
 
       <div className="absolute left-1/2 -translate-x-1/2">
@@ -128,13 +125,11 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <ScaffoldingBadge />
-
         <div className="flex items-center gap-2">
           <div className="w-32">
             <ProgressBar />
           </div>
-          <span className="text-xs text-text-secondary dark:text-dark-text-secondary">
+          <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">
             Step {Math.min(stepIndex + 1, snapshotArray.length)} of {snapshotArray.length}
           </span>
         </div>
