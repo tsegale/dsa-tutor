@@ -44,24 +44,25 @@ export default function PseudocodePanel() {
         {PSEUDOCODE_LINES.map((line, index) => {
           const isActive = index === activeLine
           return (
-            <div key={index} className="relative px-3 py-1">
+            <div key={index} className="relative flex py-1">
               <AnimatePresence>
                 {isActive && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute inset-0 border-l-4 border-primary bg-primary/10"
+                    className="absolute inset-0 border-l-[3px] border-[#378add] bg-[rgba(55,138,221,0.1)]"
                   />
                 )}
               </AnimatePresence>
+              <span className="relative w-5 shrink-0 pl-2 text-right text-[10px] text-text-muted select-none">
+                {index + 1}
+              </span>
               <span
                 className={cn(
-                  'relative whitespace-pre',
-                  isActive
-                    ? 'font-bold text-text-primary dark:text-dark-text-primary'
-                    : 'text-text-muted dark:text-dark-text-secondary',
+                  'relative pl-2 whitespace-pre',
+                  isActive ? 'font-medium text-text-accent' : 'font-normal text-text-primary dark:text-dark-text-primary',
                 )}
               >
                 {line}
