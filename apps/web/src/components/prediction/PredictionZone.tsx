@@ -536,13 +536,13 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
             className={cn(
-              'absolute bottom-0 left-0 z-20 w-full rounded-t-lg border-t bg-white shadow-lg dark:bg-dark-surface',
+              'absolute bottom-0 left-0 z-20 flex w-full items-start gap-3 rounded-t-lg border-t-2 bg-white px-4 py-3 shadow-lg dark:bg-dark-surface',
               // Code Editor Mode needs real room for a multi-line textarea,
               // language tabs and its own submit button - the 35% budget
               // that fits a single tile prompt comfortably clips it.
               snapshot.predictionType === PredictionType.CODE_EDITOR ? 'h-[70%]' : 'h-[35%]',
               'transition-colors duration-300',
-              submissionState === 'correct' ? 'border-success' : 'border-border',
+              submissionState === 'correct' ? 'border-t-success' : 'border-t-[#f59e0b]',
             )}
             role="region"
             aria-label="Predict the next step"
@@ -559,14 +559,9 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
               }}
             />
 
-            <div className="px-4 pt-2 text-[11px] font-semibold tracking-wide text-secondary uppercase">
-              Predict the next step
-            </div>
-
-            <div className="flex h-[calc(100%-28px)] items-stretch gap-3 px-4 pb-3">
-              <div className="flex w-16 shrink-0 items-start justify-center pt-2">
-                {scaffoldingLevel !== ScaffoldingLevel.NONE &&
-                  (scaffoldingLevel === ScaffoldingLevel.LOW ? (
+            <div className="flex w-12 shrink-0 items-start justify-center pt-1">
+              {scaffoldingLevel !== ScaffoldingLevel.NONE &&
+                (scaffoldingLevel === ScaffoldingLevel.LOW ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="opacity-50">
@@ -624,40 +619,44 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                         : { x: 0 }
                     }
                     transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-                    className="min-w-0 flex-1"
+                    className="flex min-w-0 flex-1 flex-col gap-1"
                   >
-                    {isHandsOnSwapDecision && (
-                      <div className="flex h-full flex-col justify-center gap-1">
-                        <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
-                          {getPromptForSnapshot(snapshot)}
-                        </p>
+                    <span className="text-[10px] font-semibold tracking-wide text-[#92400e] uppercase">
+                      Predict the next step
+                    </span>
+                    <p className="text-[13px] font-bold text-text-primary dark:text-dark-text-primary">
+                      {getPromptForSnapshot(snapshot)}
+                    </p>
+
+                    <div className="flex flex-1 flex-col justify-center">
+                      {isHandsOnSwapDecision && (
                         <p className="text-xs text-text-muted dark:text-dark-text-secondary">
                           ↑ Drag the bars in the canvas above to answer
                         </p>
-                      </div>
-                    )}
-                    {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
-                      <ValueInput
-                        prompt={snapshot.description}
-                        onValueChange={setCurrentAnswer}
-                        value={currentAnswer ?? ''}
-                        submissionState={submissionState}
-                        onSubmit={() => void handleSubmit()}
-                      />
-                    )}
-                    {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.TILE_GRID && (
-                      <TileGrid
-                        prompt={getPromptForSnapshot(snapshot)}
-                        options={currentTiles}
-                        onSelect={setCurrentAnswer}
-                        selectedId={currentAnswer}
-                        submissionState={submissionState}
-                        snapshot={snapshot}
-                      />
-                    )}
+                      )}
+                      {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
+                        <ValueInput
+                          prompt=""
+                          onValueChange={setCurrentAnswer}
+                          value={currentAnswer ?? ''}
+                          submissionState={submissionState}
+                          onSubmit={() => void handleSubmit()}
+                        />
+                      )}
+                      {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.TILE_GRID && (
+                        <TileGrid
+                          prompt=""
+                          options={currentTiles}
+                          onSelect={setCurrentAnswer}
+                          selectedId={currentAnswer}
+                          submissionState={submissionState}
+                          snapshot={snapshot}
+                        />
+                      )}
+                    </div>
                   </motion.div>
 
-                  <div className="flex w-[120px] shrink-0 items-center justify-center">
+                  <div className="flex shrink-0 items-center justify-center">
                     {submissionState === 'idle' && isHandsOnSwapDecision && (
                       <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
                         Drag to answer
@@ -668,7 +667,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                         type="button"
                         onClick={() => void handleSubmit()}
                         disabled={currentAnswer === null || isSubmitting}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-md bg-secondary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex items-center justify-center gap-1.5 rounded-md bg-secondary px-6 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {isSubmitting ? <Spinner /> : 'Submit'}
                       </button>
@@ -698,8 +697,7 @@ export default function PredictionZone({ onSubmit, onHintRequested, onPrediction
                   </div>
                 </>
               )}
-            </div>
-          </motion.div>
+            </motion.div>
         )}
       </AnimatePresence>
 
