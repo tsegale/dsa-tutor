@@ -4,13 +4,37 @@ interface MisconceptionTableProps {
   breakdown: Record<string, number>
 }
 
-const CATEGORY_DOT_CLASS: Record<string, string> = {
-  OFF_BY_ONE: 'bg-secondary',
-  ORDER_OF_OPERATIONS: 'bg-error',
-  STRUCTURAL_PROPERTY_VIOLATION: 'bg-purple-500',
-  POINTER_CONFUSION: 'bg-orange-500',
-  BASE_CASE_OMISSION: 'bg-blue-500',
-  COMPLEXITY_MISATTRIBUTION: 'bg-teal-500',
+const MISCONCEPTION_DESCRIPTIONS: Record<string, { readable: string; detail: string; dot: string }> = {
+  OFF_BY_ONE: {
+    readable: 'Off-by-one array indexing',
+    detail: 'Selecting index n instead of n-1 as the loop boundary',
+    dot: '#ef4444',
+  },
+  ORDER_OF_OPERATIONS: {
+    readable: 'Order of operations error',
+    detail: 'Swapping before comparing, or applying the wrong comparison direction',
+    dot: '#f59e0b',
+  },
+  STRUCTURAL_PROPERTY_VIOLATION: {
+    readable: 'Structural property violation',
+    detail: 'Swapping equal elements, breaks the stable sort invariant',
+    dot: '#8b5cf6',
+  },
+  POINTER_CONFUSION: {
+    readable: 'Pointer null reference confusion',
+    detail: 'Treating a pointer to a node as the node value itself',
+    dot: '#10b981',
+  },
+  BASE_CASE_OMISSION: {
+    readable: 'Base case omission',
+    detail: 'Failing to identify or apply the recursion termination condition',
+    dot: '#3b82f6',
+  },
+  COMPLEXITY_MISATTRIBUTION: {
+    readable: 'Complexity misattribution',
+    detail: 'Incorrectly stating or reasoning about time or space complexity',
+    dot: '#64748b',
+  },
 }
 
 function formatCategory(key: string): string {
@@ -57,13 +81,20 @@ export default function MisconceptionTable({ breakdown }: MisconceptionTableProp
             {entries.map(([category, count], index) => {
               const pct = total > 0 ? Math.round((count / total) * 100) : 0
               const sev = severity(count)
+              const desc = MISCONCEPTION_DESCRIPTIONS[category]
               return (
                 <tr key={category} className="border-t border-border">
                   <td className="px-4 py-3 text-text-muted">{index + 1}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className={cn('size-2.5 shrink-0 rounded-full', CATEGORY_DOT_CLASS[category] ?? 'bg-text-muted')} />
-                      <span className="text-text-primary">{formatCategory(category)}</span>
+                    <div className="flex items-start gap-2">
+                      <span
+                        className="mt-1.5 size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: desc?.dot ?? '#94a3b8' }}
+                      />
+                      <div>
+                        <p className="text-text-primary">{desc?.readable ?? formatCategory(category)}</p>
+                        {desc && <p className="mt-0.5 text-[10px] text-text-muted">{desc.detail}</p>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 font-bold text-text-primary">{count}</td>

@@ -45,14 +45,17 @@ export default function AnalyticsNav({ refetch, isFetching }: AnalyticsNavProps)
         >
           <BackArrowIcon />
         </button>
-        <span className="text-lg font-bold text-primary">Educator Dashboard</span>
-        <span className="rounded-full bg-primary-light px-2 py-0.5 text-[11px] font-semibold text-primary">
-          EDUCATOR
+        <span className="text-[14px] font-medium text-text-primary">Educator dashboard</span>
+        <span
+          className="rounded-[10px] px-2 py-0.5 text-[10px] font-medium"
+          style={{ backgroundColor: '#eef2ff', color: '#3730a3', border: '0.5px solid #c7d2fe' }}
+        >
+          Educator
         </span>
       </div>
 
       <div className="flex items-center gap-4">
-        <span className="text-xs text-text-muted">Last updated: just now</span>
+        <span className="text-[11px] text-text-muted">Last updated: just now</span>
         <button
           type="button"
           onClick={() => refetch()}

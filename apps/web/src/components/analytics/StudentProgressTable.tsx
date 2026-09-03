@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { ScaffoldingLevel } from '@dsa-tutor/types'
 import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import MasteryRing from '@/components/ui/MasteryRing'
 import { cn } from '@/lib/utils'
@@ -6,6 +7,34 @@ import { cn } from '@/lib/utils'
 interface StudentProgressTableProps {
   students: EducatorAnalyticsDto['studentProgress']
   onSelectStudent?: (student: EducatorAnalyticsDto['studentProgress'][0]) => void
+}
+
+const SCAFFOLDING_LEVEL_ORDER: string[] = [
+  ScaffoldingLevel.HIGH,
+  ScaffoldingLevel.MEDIUM,
+  ScaffoldingLevel.LOW,
+  ScaffoldingLevel.NONE,
+]
+
+function hintDependencyPercent(student: EducatorAnalyticsDto['studentProgress'][0]): number | null {
+  if (student.totalPredictions === 0) return null
+  return Math.round((student.hintsRequested / student.totalPredictions) * 100)
+}
+
+// A lightweight local proxy for "declining" - the real AI-computed
+// scaffoldingTrend only exists per-student, on demand, once the report
+// drawer is opened (an actual Claude call), so the whole-roster table
+// can't show it without firing a speculative AI call per row. This
+// instead compares the first vs. last scaffolding level already present
+// in the enriched analytics payload: needing more support at the end of
+// the progression than at the start is the same signal in miniature.
+function isLocallyDeclining(student: EducatorAnalyticsDto['studentProgress'][0]): boolean {
+  const progression = student.scaffoldingProgression
+  if (progression.length < 2) return false
+  const startIndex = SCAFFOLDING_LEVEL_ORDER.indexOf(progression[0])
+  const endIndex = SCAFFOLDING_LEVEL_ORDER.indexOf(progression[progression.length - 1])
+  if (startIndex === -1 || endIndex === -1) return false
+  return endIndex < startIndex
 }
 
 type SortColumn = 'student' | 'sessions' | 'accuracy' | 'misconception'
@@ -46,6 +75,18 @@ function downloadCSV(content: string, filename: string) {
   a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function AlertTriangleIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path
+        d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a1 1 0 0 0 .86 1.5h18.64a1 1 0 0 0 .86-1.5L13.71 3.86a1 1 0 0 0-1.72 0Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
 function SortArrow({ direction }: { direction: SortDirection }) {
@@ -164,12 +205,31 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                   AI Challenge Type
                 </th>
                 <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                  Hint dependency
+                </th>
+                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                  Action needed
+                </th>
+                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
                   Progress
                 </th>
               </tr>
             </thead>
             <tbody>
-              {sorted.map((student) => (
+              {sorted.map((student) => {
+                const hintPct = hintDependencyPercent(student)
+                const declining = isLocallyDeclining(student)
+                const needsManualReview = student.averageCorrectRate < 50 && (hintPct ?? 0) > 70
+                const barStyle =
+                  hintPct === null
+                    ? null
+                    : hintPct < 40
+                      ? { bar: '#d1fae5', text: '#065f46' }
+                      : hintPct <= 70
+                        ? { bar: '#fed7aa', text: '#9a3412' }
+                        : { bar: '#fca5a5', text: '#7f1d1d' }
+
+                return (
                 <tr
                   key={student.userId}
                   onClick={() => onSelectStudent?.(student)}
@@ -202,10 +262,48 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                     )}
                   </td>
                   <td className="px-4 py-3">
+                    {hintPct === null || !barStyle ? (
+                      <span className="text-text-muted">&mdash;</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${hintPct}%`, backgroundColor: barStyle.bar }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium" style={{ color: barStyle.text }}>
+                          {hintPct}%
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {needsManualReview ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{ backgroundColor: '#fecaca', color: '#7f1d1d' }}
+                      >
+                        <AlertTriangleIcon />
+                        Manual review
+                      </span>
+                    ) : declining ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{ backgroundColor: '#faeeda', color: '#854f0b' }}
+                      >
+                        Declining trend
+                      </span>
+                    ) : (
+                      <span className="text-text-muted">&mdash;</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <MasteryRing progress={student.averageCorrectRate / 100} size={32} strokeWidth={3} />
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

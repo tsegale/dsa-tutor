@@ -10,6 +10,14 @@ interface StepHeatmapProps {
   totalStudents: number
 }
 
+const BUBBLE_SORT_PHASES = [
+  { label: '1. Initialisation', sub: 'Setup', isHot: false, stepRange: [0, 0] },
+  { label: '2. Outer loop', sub: 'Pass start', isHot: false, stepRange: [1, 10] },
+  { label: '3. Comparison check', sub: null, isHot: true, stepRange: [11, 50] },
+  { label: '4. Pointer swap', sub: 'If needed', isHot: false, stepRange: [51, 70] },
+  { label: '5. Pass boundary', sub: 'Invariant check', isHot: false, stepRange: [71, 999] },
+] as const
+
 function heatmapColour(intensity: number): string {
   // intensity is 0.0 to 1.0
   if (intensity === 0) return '#FFFFFF'
@@ -32,7 +40,14 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
     .filter((h) => h.algorithmName === selectedAlgorithm)
     .sort((a, b) => a.stepIndex - b.stepIndex)
 
-  const maxErrorCount = Math.max(1, ...cells.map((c) => c.errorCount))
+  const isBubbleSort = selectedAlgorithm === 'Bubble Sort'
+
+  const phaseTotals = BUBBLE_SORT_PHASES.map((phase) =>
+    cells
+      .filter((c) => c.stepIndex >= phase.stepRange[0] && c.stepIndex <= phase.stepRange[1])
+      .reduce((sum, c) => sum + c.errorCount, 0),
+  )
+  const maxPhaseTotal = Math.max(1, ...phaseTotals)
 
   return (
     <div>
@@ -57,9 +72,68 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
       <div className="rounded-md border border-border bg-white p-6">
         {cells.length === 0 ? (
           <p className="text-center text-sm text-text-muted">No error data yet for this algorithm.</p>
+        ) : isBubbleSort ? (
+          <div>
+            <div className="grid grid-cols-5 gap-3">
+              {BUBBLE_SORT_PHASES.map((phase) => (
+                <div
+                  key={phase.label}
+                  className="rounded-md p-2"
+                  style={phase.isHot ? { backgroundColor: '#fef2f2' } : undefined}
+                >
+                  <p className="text-[10px] font-medium text-text-primary">{phase.label}</p>
+                  {phase.sub && <p className="text-[10px] text-text-muted">{phase.sub}</p>}
+                  {phase.isHot && (
+                    <span className="mt-1 inline-block rounded-full bg-[#fecaca] px-1.5 py-0.5 text-[10px] text-[#a32d2d]">
+                      High error rate
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 grid grid-cols-5 gap-3">
+              {BUBBLE_SORT_PHASES.map((phase, i) => {
+                const total = phaseTotals[i]
+                const intensity = total / maxPhaseTotal
+                return (
+                  <Tooltip key={phase.label}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="flex h-9 items-center justify-center rounded-sm border border-border text-sm font-semibold text-text-primary"
+                        style={{ backgroundColor: heatmapColour(intensity) }}
+                      >
+                        {total}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {phase.label}: {total} errors across {totalStudents} students
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+
+            <div className="mt-4 flex items-center gap-4">
+              {(
+                [
+                  ['No errors', '#FFFFFF'],
+                  ['Low', 'rgba(245, 158, 11, 0.3)'],
+                  ['Medium', 'rgba(239, 68, 68, 0.5)'],
+                  ['High', 'rgba(185, 28, 28, 0.8)'],
+                ] as const
+              ).map(([label, colour]) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-sm border border-border" style={{ backgroundColor: colour }} />
+                  <span className="text-[10px] text-text-muted">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="flex flex-wrap gap-3">
             {cells.map((cell) => {
+              const maxErrorCount = Math.max(1, ...cells.map((c) => c.errorCount))
               const intensity = cell.errorCount / maxErrorCount
               return (
                 <Tooltip key={cell.stepIndex}>

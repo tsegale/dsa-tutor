@@ -6,7 +6,7 @@ interface SummaryStatsProps {
 
 function UsersIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-primary">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="9" cy="8" r="3.5" />
       <circle cx="16" cy="9" r="2.75" />
       <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" strokeLinecap="round" />
@@ -17,16 +17,16 @@ function UsersIcon() {
 
 function PlayIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-primary">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="12" cy="12" r="9" />
       <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" stroke="none" />
     </svg>
   )
 }
 
-function TargetIcon({ className }: { className: string }) {
+function TargetIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="5.5" />
       <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
@@ -36,7 +36,7 @@ function TargetIcon({ className }: { className: string }) {
 
 function WarningIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-secondary">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M12 3 2 20h20L12 3Z" strokeLinejoin="round" />
       <path d="M12 10v4" strokeLinecap="round" />
       <circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none" />
@@ -51,14 +51,45 @@ function formatCategory(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function accuracyColorClass(rate: number): string {
-  if (rate >= 70) return 'text-success'
-  if (rate >= 50) return 'text-secondary'
-  return 'text-error'
+function accuracyColor(rate: number): string {
+  if (rate >= 70) return '#3b6d11'
+  if (rate >= 50) return '#854f0b'
+  return '#a32d2d'
 }
 
-function StatCard({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-white p-4">{children}</div>
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  value,
+  valueColor,
+  valueSizeClass = 'text-[32px]',
+  label,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  iconColor: string
+  value: React.ReactNode
+  valueColor: string
+  valueSizeClass?: string
+  label: string
+}) {
+  return (
+    <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-white p-4">
+      <div
+        className="flex size-11 shrink-0 items-center justify-center rounded-md"
+        style={{ backgroundColor: iconBg, color: iconColor }}
+      >
+        {icon}
+      </div>
+      <div>
+        <div className={`${valueSizeClass} leading-tight font-bold`} style={{ color: valueColor }}>
+          {value}
+        </div>
+        <div className="text-xs text-text-muted">{label}</div>
+      </div>
+    </div>
+  )
 }
 
 export default function SummaryStats({ analytics }: SummaryStatsProps) {
@@ -66,43 +97,42 @@ export default function SummaryStats({ analytics }: SummaryStatsProps) {
 
   return (
     <div className="flex gap-4">
-      <StatCard>
-        <UsersIcon />
-        <div>
-          <div className="text-[32px] leading-none font-bold text-primary">{analytics.totalStudents}</div>
-          <div className="text-xs text-text-muted">Students enrolled</div>
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<UsersIcon />}
+        iconBg="#eef2ff"
+        iconColor="#3730a3"
+        value={analytics.totalStudents}
+        valueColor="#3730a3"
+        label="Students enrolled"
+      />
 
-      <StatCard>
-        <PlayIcon />
-        <div>
-          <div className="text-[32px] leading-none font-bold text-text-primary">{analytics.totalSessions}</div>
-          <div className="text-xs text-text-muted">Practice sessions completed</div>
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<PlayIcon />}
+        iconBg="#eaf3de"
+        iconColor="#3b6d11"
+        value={analytics.totalSessions}
+        valueColor="#3b6d11"
+        label="Practice sessions completed"
+      />
 
-      <StatCard>
-        <TargetIcon className={accuracyColorClass(analytics.averageCorrectRate)} />
-        <div>
-          <div className={`text-[32px] leading-none font-bold ${accuracyColorClass(analytics.averageCorrectRate)}`}>
-            {analytics.averageCorrectRate}%
-          </div>
-          <div className="text-xs text-text-muted">Mean prediction accuracy</div>
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<TargetIcon />}
+        iconBg="#faeeda"
+        iconColor="#854f0b"
+        value={`${analytics.averageCorrectRate}%`}
+        valueColor={accuracyColor(analytics.averageCorrectRate)}
+        label="Mean prediction accuracy"
+      />
 
-      <StatCard>
-        <WarningIcon />
-        <div>
-          {topMisconceptionEntry ? (
-            <div className="text-xl leading-tight font-bold text-text-primary">{formatCategory(topMisconceptionEntry[0])}</div>
-          ) : (
-            <div className="text-xl leading-tight font-bold text-text-muted">None yet</div>
-          )}
-          <div className="text-xs text-text-muted">Top misconception this period</div>
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<WarningIcon />}
+        iconBg="#fcebeb"
+        iconColor="#a32d2d"
+        value={topMisconceptionEntry ? formatCategory(topMisconceptionEntry[0]) : 'None yet'}
+        valueColor={topMisconceptionEntry ? '#a32d2d' : 'var(--color-text-muted)'}
+        valueSizeClass="text-xl"
+        label="Top misconception this period"
+      />
     </div>
   )
 }

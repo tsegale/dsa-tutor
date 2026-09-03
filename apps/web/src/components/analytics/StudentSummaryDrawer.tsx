@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { EducatorAnalyticsDto, StudentSummaryResponse } from '@dsa-tutor/types'
 import { getStudentSummary } from '@/api/summaries'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { cn } from '@/lib/utils'
 
 interface StudentSummaryDrawerProps {
   student: EducatorAnalyticsDto['studentProgress'][0] | null
@@ -13,11 +12,11 @@ interface StudentSummaryDrawerProps {
 // Only Bubble Sort has real content until Phase 16 adds more algorithms.
 const ALGORITHM_NAME = 'Bubble Sort'
 
-const TREND_STYLE: Record<StudentSummaryResponse['scaffoldingTrend'], { label: string; className: string }> = {
-  improving: { label: 'Trend: Improving', className: 'bg-success-light text-success' },
-  stable: { label: 'Trend: Stable', className: 'bg-secondary-light text-secondary' },
-  declining: { label: 'Trend: Declining', className: 'bg-error-light text-error' },
-  insufficient_data: { label: 'Trend: Not enough data', className: 'bg-surface text-text-muted' },
+const TREND_STYLE: Record<StudentSummaryResponse['scaffoldingTrend'], { label: string; bg: string; color: string }> = {
+  improving: { label: 'Trend: Improving', bg: '#d1fae5', color: '#065f46' },
+  stable: { label: 'Trend: Stable', bg: '#e0e7ff', color: '#3730a3' },
+  declining: { label: 'Trend: Declining', bg: '#fecaca', color: '#7f1d1d' },
+  insufficient_data: { label: 'Trend: Not enough data', bg: 'var(--color-surface)', color: 'var(--color-text-muted)' },
 }
 
 function CheckIcon() {
@@ -112,10 +111,11 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
             <div className="flex flex-col gap-5">
               <div>
                 <span
-                  className={cn(
-                    'inline-block rounded-full px-3 py-1 text-xs font-semibold',
-                    TREND_STYLE[summary.scaffoldingTrend].className,
-                  )}
+                  className="inline-block rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{
+                    backgroundColor: TREND_STYLE[summary.scaffoldingTrend].bg,
+                    color: TREND_STYLE[summary.scaffoldingTrend].color,
+                  }}
                 >
                   {TREND_STYLE[summary.scaffoldingTrend].label}
                 </span>
