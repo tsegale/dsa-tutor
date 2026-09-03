@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { login, register } from '@/api/auth'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
-import { DSATutorLogo, AuthIllustration } from '@/components/brand'
+import { DSATutorLogo } from '@/components/brand'
 
 type Role = 'student' | 'instructor'
 
@@ -36,18 +36,6 @@ function ChartLineIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <path d="M3 17l6-6 4 4 8-8M15 7h6v6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function SchoolIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path
-        d="M12 3 2 8l10 5 10-5-10-5ZM6 10.5V16c0 1.1 2.7 3 6 3s6-1.9 6-3v-5.5M22 8v6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   )
 }
@@ -226,44 +214,42 @@ export default function AuthPage() {
 
         <div className="flex flex-1 flex-col justify-center gap-6 py-8">
           <div>
-            <h1 className="text-[22px] leading-[1.4] font-medium text-white">
+            <h1 className="text-[18px] leading-[1.5] font-medium text-white">
               Master data structures through adaptive AI scaffolding and active state manipulation
             </h1>
-            <p className="mt-3 text-[13px] leading-[1.6] text-[#a5b4fc]">
+            <p className="mt-3 text-[12px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.65)' }}>
               A research-grade ITS grounded in Vygotsky's Zone of Proximal Development, not a passive visualiser
             </p>
           </div>
 
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col" style={{ gap: 8 }}>
             {PILLARS.map((pillar) => (
               <div
                 key={pillar.title}
-                className="flex gap-2.5 rounded-[10px] p-3"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)' }}
+                className="flex gap-2.5 rounded-[10px]"
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', padding: '10px 12px' }}
               >
                 <div
-                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-white"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-white"
                   style={{ backgroundColor: pillar.iconBg }}
                 >
                   {pillar.icon}
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-[#e0e7ff]">{pillar.title}</p>
-                  <p className="mt-0.5 text-[11px] leading-[1.4] text-[#a5b4fc]">{pillar.desc}</p>
+                  <p className="text-[11px] font-medium text-[#e0e7ff]">{pillar.title}</p>
+                  <p className="mt-0.5 text-[10px] leading-[1.35] text-[#a5b4fc]">{pillar.desc}</p>
                 </div>
               </div>
             ))}
           </div>
-
-          <AuthIllustration className="mt-2" />
         </div>
       </div>
 
-      <div className="flex w-full flex-1 flex-col items-center justify-center bg-white p-10">
+      <div className="flex w-full flex-1 flex-col items-center justify-center bg-white px-10 py-16">
         <div className="w-full max-w-[320px]">
-          <h1 className="mb-6 text-center text-lg font-semibold text-text-primary md:hidden">DSA Tutor</h1>
+          <h1 className="mb-8 text-center text-lg font-semibold text-text-primary md:hidden">DSA Tutor</h1>
 
-          <div className="mb-4">
+          <div className="mb-6">
             <p className="mb-2 text-[11px] font-medium tracking-wide text-text-muted uppercase">I am a</p>
             <div className="flex gap-0.5 rounded-lg border-[0.5px] border-border bg-surface p-[3px]">
               {(['student', 'instructor'] as const).map((option) => (
@@ -299,29 +285,15 @@ export default function AuthPage() {
                 Register
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="login" className="mt-4">
+            <TabsContent value="login" className="mt-6">
               <LoginForm role={role} />
             </TabsContent>
-            <TabsContent value="register" className="mt-4">
+            <TabsContent value="register" className="mt-6">
               <RegisterForm role={role} />
             </TabsContent>
           </Tabs>
 
-          <div className="my-4 flex items-center gap-3">
-            <div className="h-[0.5px] flex-1 bg-border" />
-            <span className="text-[11px] text-text-muted">or</span>
-            <div className="h-[0.5px] flex-1 bg-border" />
-          </div>
-
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border-[0.5px] border-border bg-transparent py-2 text-xs text-text-primary hover:bg-surface"
-          >
-            <SchoolIcon />
-            Continue with university SSO
-          </button>
-
-          <p className="mt-4 text-center text-[11px] text-text-muted">
+          <p className="mt-8 text-center text-[11px] text-text-muted">
             Forgot password?{' '}
             <button type="button" className="font-medium text-[#3730a3] hover:underline">
               Reset it
