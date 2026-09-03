@@ -35,6 +35,22 @@ function PauseIcon() {
   )
 }
 
+function ArrowLeftIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function SkipBackIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -213,47 +229,64 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
           </button>
         </div>
       ) : (
-        <div className="flex h-full flex-col gap-2.5 overflow-y-auto p-3">
+        <div className="flex h-full flex-col gap-2 overflow-y-auto p-3">
           <section className="flex flex-col gap-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
               Playback
             </h3>
-            <div>
-              <Button onClick={handlePlayPause} className="w-full gap-2" size="lg">
-                {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                {isPlaying ? 'Pause' : 'Play'}
-              </Button>
-              <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">Space</p>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Button variant="outline" onClick={stepBackward} className="w-full gap-1.5">
-                  <SkipBackIcon />
-                  Back
-                </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <button
+                  type="button"
+                  onClick={stepBackward}
+                  style={{ backgroundColor: '#3730a3', borderRadius: 8, padding: 10, fontSize: 13, fontWeight: 500 }}
+                  className="flex w-full items-center justify-center gap-1.5 text-white"
+                >
+                  <ArrowLeftIcon />
+                  Step back
+                </button>
                 <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">←</p>
               </div>
-              <div className="flex-1">
-                <Button variant="outline" onClick={stepForward} className="w-full gap-1.5">
-                  <SkipForwardIcon />
-                  Next
-                </Button>
+              <div>
+                <button
+                  type="button"
+                  onClick={stepForward}
+                  style={{ backgroundColor: '#3730a3', borderRadius: 8, padding: 10, fontSize: 13, fontWeight: 500 }}
+                  className="flex w-full items-center justify-center gap-1.5 text-white"
+                >
+                  Step forward
+                  <ArrowRightIcon />
+                </button>
                 <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">→</p>
               </div>
             </div>
             <div>
-              <Button variant="ghost" onClick={resetAlgorithm} className="w-full gap-1.5">
-                <RefreshIcon />
-                Reset
-              </Button>
-              <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">R</p>
+              <button
+                type="button"
+                onClick={handlePlayPause}
+                style={{ borderColor: '#3730a3', color: '#3730a3', fontSize: 12 }}
+                className="flex w-full items-center justify-center gap-1.5 rounded-md border py-2"
+              >
+                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                {isPlaying ? 'Pause' : 'Auto play'}
+              </button>
+              <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">Space</p>
             </div>
+            <button
+              type="button"
+              onClick={resetAlgorithm}
+              style={{ fontSize: 12 }}
+              className="flex items-center justify-center gap-1 self-center bg-transparent text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+            >
+              <RefreshIcon />
+              Reset
+            </button>
           </section>
 
           <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
-                Speed
+                Playback speed
               </h3>
               <span className="font-mono text-xs text-text-primary dark:text-dark-text-primary">{playbackSpeed.toFixed(1)}x</span>
             </div>
@@ -268,7 +301,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
 
           <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
-              Array Input
+              Custom array
             </h3>
             <input
               type="text"

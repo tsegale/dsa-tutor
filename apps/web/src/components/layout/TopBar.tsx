@@ -125,11 +125,11 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <div className="w-32">
             <ProgressBar />
           </div>
-          <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">
+          <span className="text-[11px] whitespace-nowrap text-text-muted dark:text-dark-text-secondary">
             Step {Math.min(stepIndex + 1, snapshotArray.length)} of {snapshotArray.length}
           </span>
         </div>
@@ -140,7 +140,7 @@ export default function TopBar() {
               type="button"
               onClick={toggleFocusMode}
               aria-label="Toggle focus mode"
-              className="flex size-8 items-center justify-center rounded-md hover:bg-surface dark:hover:bg-dark-border"
+              className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface dark:hover:bg-dark-border"
             >
               <EyeIcon active={focusModeActive} />
             </button>
@@ -148,20 +148,22 @@ export default function TopBar() {
           <TooltipContent>Focus Mode (F)</TooltipContent>
         </Tooltip>
 
-        <SoundToggle />
+        <div className="shrink-0">
+          <SoundToggle />
+        </div>
 
         <button
           type="button"
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className="flex size-8 items-center justify-center rounded-md hover:bg-surface"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface"
         >
           <ThemeIcon isDark={isDark} />
         </button>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={resetAlgorithm} className="gap-1.5">
+            <Button variant="outline" size="sm" onClick={resetAlgorithm} className="shrink-0 gap-1.5">
               <RefreshIcon />
               Reset
             </Button>
@@ -173,7 +175,7 @@ export default function TopBar() {
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SHORTCUTS_MODAL_EVENT))}
           aria-label="Keyboard shortcuts"
-          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
         >
           ?
         </button>
@@ -187,7 +189,7 @@ export default function TopBar() {
                 navigate('/auth')
               }}
               aria-label="Log out"
-              className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+              className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
             >
               <LogoutIcon />
             </button>

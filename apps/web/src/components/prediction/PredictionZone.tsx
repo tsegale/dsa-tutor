@@ -551,7 +551,7 @@ export default function PredictionZone({
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
             className={cn(
-              'absolute bottom-0 left-0 z-20 flex w-full items-start gap-3 rounded-t-lg border-t-2 bg-white px-4 py-3 shadow-lg dark:bg-dark-surface',
+              'absolute bottom-0 left-0 z-20 flex w-full items-start gap-3 rounded-t-lg border-t-2 bg-white px-[14px] py-[10px] shadow-lg dark:bg-dark-surface',
               // Code Editor Mode needs real room for a multi-line textarea,
               // language tabs and its own submit button - the 35% budget
               // that fits a single tile prompt comfortably clips it.
@@ -622,12 +622,12 @@ export default function PredictionZone({
                         : { x: 0 }
                     }
                     transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-                    className="flex min-w-0 flex-1 flex-col gap-1"
+                    className="flex min-w-0 flex-1 flex-col"
                   >
-                    <span className="text-[10px] font-semibold tracking-wide text-[#92400e] uppercase">
+                    <span className="mb-1 text-[10px] font-semibold tracking-wide text-[#92400e] uppercase">
                       Predict the next step
                     </span>
-                    <p className="text-[13px] font-bold text-text-primary dark:text-dark-text-primary">
+                    <p className="mb-1.5 text-[13px] font-bold text-text-primary dark:text-dark-text-primary">
                       {getPromptForSnapshot(snapshot)}
                     </p>
 

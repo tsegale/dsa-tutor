@@ -116,6 +116,7 @@ export default function RightPanel({
       animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       className="flex h-full flex-col overflow-hidden border-l border-border bg-white dark:bg-dark-surface"
+      style={{ overflowX: 'hidden' }}
     >
       {collapsed ? (
         <div className="flex h-full flex-col items-center gap-2 py-3">
@@ -171,16 +172,22 @@ export default function RightPanel({
           </button>
         </div>
       ) : (
-        <div className="flex h-full flex-col overflow-hidden p-3">
+        <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden px-3 py-2.5">
           <Tabs
             value={String(activeTab)}
             onValueChange={(value) => onTabChange(Number(value))}
             className="flex h-full flex-col overflow-hidden"
           >
             <TabsList>
-              <TabsTrigger value="1">AI Tutor</TabsTrigger>
-              <TabsTrigger value="2">Pseudocode</TabsTrigger>
-              <TabsTrigger value="3">Complexity</TabsTrigger>
+              <TabsTrigger value="1" className="px-[10px] py-2 text-[12px] tracking-normal">
+                AI Tutor
+              </TabsTrigger>
+              <TabsTrigger value="2" className="px-[10px] py-2 text-[12px] tracking-normal">
+                Pseudocode
+              </TabsTrigger>
+              <TabsTrigger value="3" className="px-[10px] py-2 text-[12px] tracking-normal">
+                Complexity
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="1" className="flex flex-1 flex-col gap-3 overflow-y-auto">
               <ScaffoldingFader />

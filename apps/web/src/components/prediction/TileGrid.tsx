@@ -59,13 +59,13 @@ function isCorrectTile(
 
 export default function TileGrid({ prompt, options, onSelect, selectedId, submissionState, snapshot }: TileGridProps) {
   const prefersReducedMotion = useReducedMotion()
-  const columns = options.length === 4 ? 'grid-cols-2' : 'grid-cols-1'
+  const isHorizontal = options.length === 2
   const locked = submissionState !== 'idle'
 
   return (
     <div className="flex h-full flex-col justify-center gap-2">
       <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">{prompt}</p>
-      <div className={cn('grid gap-2', columns)}>
+      <div style={{ display: 'grid', gridTemplateColumns: isHorizontal ? '1fr 1fr' : '1fr', gap: 8 }}>
         {options.map((option) => {
           const isSelected = option.id === selectedId
           const isSelectedCorrect = isSelected && submissionState === 'correct'
@@ -84,8 +84,13 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
                 isSelectedIncorrect && !prefersReducedMotion ? { x: [0, -4, 4, -4, 4, -4, 4, 0] } : { x: 0 }
               }
               transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+              style={{
+                minHeight: isHorizontal ? 52 : 44,
+                padding: isHorizontal ? '10px 14px' : '8px 12px',
+                fontSize: isHorizontal ? 13 : 12,
+              }}
               className={cn(
-                'flex min-h-[72px] items-center justify-between gap-2 rounded-md border p-4 text-left transition-colors duration-300',
+                'flex items-center justify-between gap-2 rounded-md border text-left transition-colors duration-300',
                 isSelectedCorrect || isRevealedCorrect
                   ? 'border-success bg-success-light text-success'
                   : isSelectedIncorrect
@@ -95,7 +100,7 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
                       : 'border-border bg-white text-text-primary dark:bg-dark-background dark:text-dark-text-primary',
               )}
             >
-              <span className="text-sm font-medium">{option.label}</span>
+              <span className="font-medium">{option.label}</span>
               {(isSelectedCorrect || isRevealedCorrect) && <CheckIcon />}
               {isSelectedIncorrect && <XIcon />}
             </motion.button>

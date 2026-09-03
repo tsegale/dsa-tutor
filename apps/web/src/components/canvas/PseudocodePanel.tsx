@@ -29,22 +29,28 @@ export default function PseudocodePanel() {
   const activeLine = snapshot?.pseudocodeLine
 
   return (
-    <div className="flex h-full flex-col rounded-md border border-border bg-white dark:bg-dark-surface">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+    <div
+      className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-white dark:bg-dark-surface"
+      style={{ width: '100%' }}
+    >
+      <div className="border-b border-border px-4 py-2">
         <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Pseudocode</span>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="font-medium text-primary">Pseudocode</span>
-          <span className="text-text-muted dark:text-dark-text-secondary">|</span>
-          <ComingSoonLabel label="Python" />
-          <span className="text-text-muted dark:text-dark-text-secondary">|</span>
-          <ComingSoonLabel label="Java" />
-        </div>
       </div>
-      <div className="flex-1 overflow-auto p-2 font-mono text-sm">
+      <div
+        className="flex items-center gap-3 px-4 py-1.5 text-[11px]"
+        style={{ borderBottom: '0.5px solid var(--border)' }}
+      >
+        <span className="font-medium text-primary">Pseudocode</span>
+        <span className="text-text-muted dark:text-dark-text-secondary">|</span>
+        <ComingSoonLabel label="Python" />
+        <span className="text-text-muted dark:text-dark-text-secondary">|</span>
+        <ComingSoonLabel label="Java" />
+      </div>
+      <div className="flex-1 overflow-x-hidden overflow-y-auto p-2 font-mono">
         {PSEUDOCODE_LINES.map((line, index) => {
           const isActive = index === activeLine
           return (
-            <div key={index} className="relative flex py-1">
+            <div key={index} className="relative flex py-1" style={{ lineHeight: 1.7 }}>
               <AnimatePresence>
                 {isActive && (
                   <motion.div
@@ -61,9 +67,14 @@ export default function PseudocodePanel() {
               </span>
               <span
                 className={cn(
-                  'relative pl-2 whitespace-pre',
+                  'relative min-w-0 flex-1 pl-2 text-[11px]',
                   isActive ? 'font-medium text-text-accent' : 'font-normal text-text-primary dark:text-dark-text-primary',
                 )}
+                style={
+                  isActive
+                    ? { whiteSpace: 'nowrap', overflow: 'visible' }
+                    : { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                }
               >
                 {line}
               </span>

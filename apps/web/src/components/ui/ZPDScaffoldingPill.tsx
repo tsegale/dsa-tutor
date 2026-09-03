@@ -18,7 +18,7 @@ export default function ZPDScaffoldingPill() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1.5 rounded-[20px] border border-accent bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
+        <span className="inline-flex items-center gap-1.5 rounded-[20px] border border-accent bg-accent px-3 py-1 text-xs font-medium whitespace-nowrap text-accent-foreground">
           <span className={cn('size-2 shrink-0 rounded-full', DOT_COLOR[scaffoldingLevel])} aria-hidden="true" />
           ZPD scaffolding: {percent}% active
         </span>

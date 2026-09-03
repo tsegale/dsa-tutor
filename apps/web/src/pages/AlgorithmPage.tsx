@@ -452,7 +452,7 @@ export default function AlgorithmPage() {
       </div>
 
       <motion.div
-        style={{ gridArea: 'left' }}
+        style={{ gridArea: 'left', overflowY: 'auto' }}
         animate={{ opacity: focusModeActive ? 0.1 : 1 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
       >
@@ -527,7 +527,7 @@ export default function AlgorithmPage() {
       </div>
 
       <motion.div
-        style={{ gridArea: 'right' }}
+        style={{ gridArea: 'right', overflowY: 'auto' }}
         animate={{ opacity: focusModeActive ? 0.1 : 1 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
       >
