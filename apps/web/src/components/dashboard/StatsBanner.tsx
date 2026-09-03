@@ -1,82 +1,189 @@
+import { useQuery } from '@tanstack/react-query'
 import type { TopicDto, UserProfile } from '@dsa-tutor/types'
-import MasteryRing from '@/components/ui/MasteryRing'
+import { ScaffoldingLevel } from '@dsa-tutor/types'
+import { apiFetch } from '@/api/client'
+import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 
 interface StatsBannerProps {
   user: UserProfile
   topics: TopicDto[]
 }
 
-function BoltIcon() {
+interface SessionDto {
+  id: string
+  topic: { name: string; displayName: string }
+}
+
+interface InteractionDto {
+  predictionCorrect: boolean
+  misconceptionCategory: string | null
+}
+
+function formatCategory(key: string): string {
+  return key
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function BrainIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-secondary">
-      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path
+        d="M9.5 3a3 3 0 0 0-3 3v.3A3 3 0 0 0 5 12a3 3 0 0 0 1.5 5.7V18a3 3 0 0 0 3 3M14.5 3a3 3 0 0 1 3 3v.3A3 3 0 0 1 19 12a3 3 0 0 1-1.5 5.7V18a3 3 0 0 1-3 3M9.5 3v18M14.5 3v18"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function ChartLineIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M3 17l6-6 4 4 8-8M15 7h6v6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function AlertTriangleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path
+        d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a1 1 0 0 0 .86 1.5h18.64a1 1 0 0 0 .86-1.5L13.71 3.86a1 1 0 0 0-1.72 0Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
 function FlameIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-streak">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2c1 3-2 4.5-2 7.5A4.5 4.5 0 0 0 12 14a2.5 2.5 0 0 0 2.5-2.5c0-.9-.4-1.4-.8-1.9 2.3 1.2 3.8 3.6 3.8 6.4a5.5 5.5 0 0 1-11 0C6.5 12 8 9.5 8 7c0-2 1.5-3.8 4-5Z" />
     </svg>
   )
 }
 
-function TrophyIcon() {
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  value,
+  valueColor,
+  label,
+  sublabel,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  iconColor: string
+  value: React.ReactNode
+  valueColor: string
+  label: string
+  sublabel: string
+}) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EAB308" strokeWidth={2}>
-      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 5H5a3 3 0 0 0 3 5M16 5h3a3 3 0 0 1-3 5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 13v3M9 20h6M10 17h4v3h-4v-3Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-white p-4">
+      <div
+        className="flex size-10 shrink-0 items-center justify-center rounded-md"
+        style={{ backgroundColor: iconBg, color: iconColor }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[28px] leading-none font-bold" style={{ color: valueColor }}>
+          {value}
+        </div>
+        <div className="text-xs text-text-muted">{label}</div>
+        <div className="truncate text-[11px] text-text-muted">{sublabel}</div>
+      </div>
+    </div>
   )
 }
 
-function StatCard({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-white p-4">{children}</div>
+const SCAFFOLDING_SUBLABEL: Record<ScaffoldingLevel, string> = {
+  [ScaffoldingLevel.HIGH]: 'ZPD: active support',
+  [ScaffoldingLevel.MEDIUM]: 'ZPD: active support',
+  [ScaffoldingLevel.LOW]: 'ZPD: fading',
+  [ScaffoldingLevel.NONE]: 'ZPD: independent',
 }
 
 export default function StatsBanner({ user, topics }: StatsBannerProps) {
-  const masteredCount = topics.filter((t) => t.masteryPercent >= 80).length
+  const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
+
+  const { data: latestSession } = useQuery({
+    queryKey: ['sessions', 'latest', 'completed'],
+    queryFn: () => apiFetch<SessionDto | null>('/api/v1/sessions?latest=true&completed=true'),
+  })
+
+  // Only the most recent completed session's interactions are available
+  // without a "list all my sessions" endpoint, which this screen's UI-only
+  // scope can't add - so this is a recent-session proxy, not a lifetime total.
+  const { data: latestInteractions = [] } = useQuery({
+    queryKey: ['interactions', 'session', latestSession?.id],
+    queryFn: () => apiFetch<InteractionDto[]>(`/api/v1/interactions/session/${latestSession!.id}`),
+    enabled: !!latestSession?.id,
+  })
+
   const unlockedTopics = topics.filter((t) => !t.isLocked)
   const overallMastery =
     unlockedTopics.length > 0
       ? Math.round(unlockedTopics.reduce((sum, t) => sum + t.masteryPercent, 0) / unlockedTopics.length)
       : 0
+  const mostEngagedTopic = [...unlockedTopics].sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
+
+  const misconceptionCounts: Record<string, number> = {}
+  let misconceptionsResolved = 0
+  latestInteractions.forEach((i) => {
+    if (i.misconceptionCategory) {
+      misconceptionsResolved += 1
+      misconceptionCounts[i.misconceptionCategory] = (misconceptionCounts[i.misconceptionCategory] ?? 0) + 1
+    }
+  })
+  const topMisconception = Object.entries(misconceptionCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
 
   return (
     <div id="dashboard-stats-banner" className="flex gap-4 border-b border-border bg-surface px-6 py-4">
-      <StatCard>
-        <BoltIcon />
-        <div>
-          <div className="text-[28px] leading-none font-bold text-text-primary">{user.xpTotal}</div>
-          <div className="text-xs text-text-muted">Total XP</div>
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<BrainIcon />}
+        iconBg="#eef2ff"
+        iconColor="#3730a3"
+        value={`${overallMastery}%`}
+        valueColor="#3730a3"
+        label="Mastery index"
+        sublabel={mostEngagedTopic ? mostEngagedTopic.displayName : 'No topics started yet'}
+      />
 
-      <StatCard>
-        <FlameIcon />
-        <div>
-          <div className={`text-[28px] leading-none font-bold ${user.streakCount === 0 ? 'text-text-muted' : 'text-text-primary'}`}>
-            {user.streakCount}
-          </div>
-          <div className="text-xs text-text-muted">Day Streak</div>
-          {user.streakCount === 0 && <div className="text-[11px] text-text-muted">Practice today to start one</div>}
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<ChartLineIcon />}
+        iconBg="#faeeda"
+        iconColor="#854f0b"
+        value={scaffoldingLevel}
+        valueColor="#854f0b"
+        label="Scaffolding level"
+        sublabel={SCAFFOLDING_SUBLABEL[scaffoldingLevel]}
+      />
 
-      <StatCard>
-        <TrophyIcon />
-        <div>
-          <div className="text-[28px] leading-none font-bold text-text-primary">{masteredCount}</div>
-          <div className="text-xs text-text-muted">Mastered</div>
-        </div>
-      </StatCard>
+      <StatCard
+        icon={<AlertTriangleIcon />}
+        iconBg="#fcebeb"
+        iconColor="#a32d2d"
+        value={misconceptionsResolved}
+        valueColor="#a32d2d"
+        label="Misconceptions resolved"
+        sublabel={topMisconception ? formatCategory(topMisconception) : 'None yet'}
+      />
 
-      <StatCard>
-        <MasteryRing progress={overallMastery / 100} size={60} />
-        <div className="text-xs text-text-muted">Overall</div>
-      </StatCard>
+      <StatCard
+        icon={<FlameIcon />}
+        iconBg="#eaf3de"
+        iconColor="#3b6d11"
+        value={user.streakCount}
+        valueColor="#3b6d11"
+        label="Day streak"
+        sublabel="Practice daily"
+      />
     </div>
   )
 }

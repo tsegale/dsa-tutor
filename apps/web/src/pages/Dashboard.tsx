@@ -11,7 +11,7 @@ import CurriculumSidebar from '../components/dashboard/CurriculumSidebar'
 import TrackSection from '../components/dashboard/TrackSection'
 import StatsBanner from '../components/dashboard/StatsBanner'
 import BadgesSection from '../components/dashboard/BadgesSection'
-import ContinueSection from '../components/dashboard/ContinueSection'
+import AILearningPathBanner from '../components/dashboard/AILearningPathBanner'
 import WelcomeModal from '../components/onboarding/WelcomeModal'
 
 function DashboardSkeleton() {
@@ -70,7 +70,7 @@ export default function Dashboard() {
         <CurriculumSidebar topics={topics} activeTopic={null} onTopicSelect={(name) => handleStart(name, 'DEMO')} />
         <main className="flex-1 overflow-y-auto p-8">
           <div className="space-y-12">
-            <ContinueSection topics={topics} onContinue={(name) => handleStart(name, 'PRACTICE')} />
+            <AILearningPathBanner topics={topics} onStart={handleStart} />
 
             {trackOrder.map((track) => {
               const trackTopics = topics.filter((t) => t.track === track)

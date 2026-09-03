@@ -1,10 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { TopicDto } from '@dsa-tutor/types'
-import DifficultyTag from '@/components/ui/DifficultyTag'
 import MasteryRing from '@/components/ui/MasteryRing'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+
+function CompetencyBadge({ topic }: { topic: TopicDto }) {
+  const style = topic.isLocked
+    ? { label: 'Locked', bg: 'var(--color-surface)', color: 'var(--color-text-muted)' }
+    : topic.masteryPercent >= 80
+      ? { label: 'Independent mastery', bg: '#eaf3de', color: '#3b6d11' }
+      : topic.masteryPercent > 0
+        ? { label: 'Fading scaffolding', bg: '#faeeda', color: '#854f0b' }
+        : { label: 'Full guidance', bg: '#eef2ff', color: '#3730a3' }
+
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: style.bg, color: style.color }}
+    >
+      {style.label}
+    </span>
+  )
+}
 
 interface AlgorithmCardProps {
   topic: TopicDto
@@ -71,7 +89,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
       )}
 
       <div className="flex items-start justify-between">
-        <DifficultyTag difficulty={topic.difficulty} />
+        <CompetencyBadge topic={topic} />
         <div className="relative">
           <MasteryRing progress={topic.masteryPercent / 100} size={44} />
           {showFlash && (
@@ -111,16 +129,23 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
       ) : topic.masteryPercent === 0 ? (
         <button
           type="button"
-          onClick={() => onStart(topic.name, 'DEMO')}
+          onClick={() => onStart(topic.name, 'PRACTICE')}
           className={cn(
-            'w-full rounded-md bg-primary py-2 text-sm font-medium text-white transition-opacity',
+            'w-full rounded-md border-[1.5px] border-[#3730a3] py-2 text-sm font-medium text-[#3730a3] transition-opacity',
             'opacity-90 group-hover:opacity-100',
           )}
         >
-          Start Demo
+          Begin AI diagnostic
         </button>
-      ) : (
+      ) : topic.masteryPercent < 80 ? (
         <div className={cn('flex gap-2 transition-opacity', 'opacity-80 group-hover:opacity-100')}>
+          <button
+            type="button"
+            onClick={() => onStart(topic.name, 'PRACTICE')}
+            className="flex-1 rounded-md bg-[#3730a3] py-2 text-sm font-medium text-white"
+          >
+            Practice
+          </button>
           <button
             type="button"
             onClick={() => onStart(topic.name, 'DEMO')}
@@ -128,14 +153,15 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
           >
             Demo
           </button>
-          <button
-            type="button"
-            onClick={() => onStart(topic.name, 'PRACTICE')}
-            className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-white"
-          >
-            Practice
-          </button>
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onStart(topic.name, 'PRACTICE')}
+          className="w-full rounded-md bg-[#3730a3] py-2 text-sm font-medium text-white"
+        >
+          Continue practice
+        </button>
       )}
     </motion.div>
   )

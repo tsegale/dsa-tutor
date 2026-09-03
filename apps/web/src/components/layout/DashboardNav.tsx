@@ -7,12 +7,8 @@ import { getProgressToNextLevel } from '@/utils/xpLevels'
 
 function LogoIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <line x1="6" y1="6" x2="12" y2="18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <line x1="12" y1="18" x2="18" y2="6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <circle cx="6" cy="6" r="3" fill="currentColor" />
-      <circle cx="18" cy="6" r="3" fill="currentColor" />
-      <circle cx="12" cy="18" r="3" fill="currentColor" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -22,14 +18,6 @@ function SearchIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="11" cy="11" r="7" />
       <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function FlameIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-streak">
-      <path d="M12 2c1 3-2 4.5-2 7.5A4.5 4.5 0 0 0 12 14a2.5 2.5 0 0 0 2.5-2.5c0-.9-.4-1.4-.8-1.9 2.3 1.2 3.8 3.6 3.8 6.4a5.5 5.5 0 0 1-11 0C6.5 12 8 9.5 8 7c0-2 1.5-3.8 4-5Z" />
     </svg>
   )
 }
@@ -55,9 +43,9 @@ export default function DashboardNav() {
 
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-border bg-white px-6">
-      <div className="flex items-center gap-2 text-primary">
+      <div className="flex items-center gap-2 text-[#3730a3]">
         <LogoIcon />
-        <span className="text-xl font-bold text-primary">DSA Tutor</span>
+        <span className="text-[14px] font-medium text-[#3730a3]">DSA Tutor</span>
       </div>
 
       <div className="relative w-80">
@@ -89,16 +77,6 @@ export default function DashboardNav() {
             Educator Dashboard
           </button>
         )}
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5">
-              <FlameIcon />
-              <span className="text-sm font-bold text-text-primary">{user?.streakCount ?? 0}</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>Day streak — practice daily to keep it alive</TooltipContent>
-        </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
