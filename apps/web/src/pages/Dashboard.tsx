@@ -69,7 +69,7 @@ export default function Dashboard() {
       {user && <StatsBanner user={user} topics={topics} />}
       <div className="flex">
         <CurriculumSidebar topics={topics} activeTopic={null} onTopicSelect={(name) => handleStart(name, 'DEMO')} />
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto px-8 pt-8 pb-10">
           <div className="space-y-12">
             {topics.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-16 text-center">

@@ -57,22 +57,26 @@ export default function EducatorDashboard() {
   return (
     <div className="min-h-screen bg-surface">
       <AnalyticsNav refetch={refetch} isFetching={isFetching} />
-      <main className="mx-auto max-w-7xl space-y-12 px-8 py-8">
+      <main className="mx-auto max-w-7xl px-8 py-8">
         {analytics && (
           <>
-            <ClassSummaryCard analytics={analytics} />
-            <SummaryStats analytics={analytics} />
-            <section>
-              <h2 className="mb-6 text-xl font-bold text-primary">Misconception Analysis</h2>
-              <MisconceptionTable breakdown={analytics.misconceptionBreakdown} />
-            </section>
-            <section>
-              <StepHeatmap heatmap={analytics.stepDifficultyHeatmap} totalStudents={analytics.totalStudents} />
-            </section>
-            <section>
-              <h2 className="mb-6 text-xl font-bold text-primary">Student Progress</h2>
-              <StudentProgressTable students={analytics.studentProgress} onSelectStudent={handleSelectStudent} />
-            </section>
+            <div style={{ marginBottom: 16 }}>
+              <ClassSummaryCard analytics={analytics} />
+            </div>
+            <div className="space-y-12">
+              <SummaryStats analytics={analytics} />
+              <section>
+                <h2 className="mb-6 text-xl font-bold text-primary">Misconception Analysis</h2>
+                <MisconceptionTable breakdown={analytics.misconceptionBreakdown} />
+              </section>
+              <section>
+                <StepHeatmap heatmap={analytics.stepDifficultyHeatmap} totalStudents={analytics.totalStudents} />
+              </section>
+              <section>
+                <h2 className="mb-6 text-xl font-bold text-primary">Student Progress</h2>
+                <StudentProgressTable students={analytics.studentProgress} onSelectStudent={handleSelectStudent} />
+              </section>
+            </div>
           </>
         )}
       </main>

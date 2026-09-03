@@ -211,7 +211,10 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                 <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
                   Action needed
                 </th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th
+                  className="px-4 py-2.5 text-center text-[12px] font-semibold tracking-wide text-text-muted uppercase"
+                  style={{ width: 60 }}
+                >
                   Progress
                 </th>
               </tr>
@@ -304,8 +307,15 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                       <span className="text-text-muted">&mdash;</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <MasteryRing progress={student.averageCorrectRate / 100} size={32} strokeWidth={3} />
+                  <td className="px-4 py-3 text-center" style={{ width: 60 }}>
+                    <div className="flex justify-center">
+                      <MasteryRing
+                        progress={student.averageCorrectRate / 100}
+                        size={40}
+                        strokeWidth={3}
+                        showPercent={false}
+                      />
+                    </div>
                   </td>
                 </tr>
                 )

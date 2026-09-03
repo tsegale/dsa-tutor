@@ -76,9 +76,10 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
     <aside
       id="curriculum-sidebar"
       className={cn(
-        'shrink-0 border-r border-border bg-white transition-[width] duration-150',
+        'shrink-0 overflow-y-auto border-r border-border bg-white transition-[width] duration-150',
         collapsed ? 'w-12' : 'w-[260px]',
       )}
+      style={{ height: 'calc(100vh - 48px)' }}
     >
       <div className={cn('flex items-center px-4 pt-4', collapsed ? 'justify-center px-0' : 'justify-between')}>
         {!collapsed && <span className="text-[13px] font-semibold tracking-wide text-text-muted uppercase">Curriculum</span>}

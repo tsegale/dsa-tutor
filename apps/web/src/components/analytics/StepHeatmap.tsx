@@ -74,7 +74,7 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
           <p className="text-center text-sm text-text-muted">No error data yet for this algorithm.</p>
         ) : isBubbleSort ? (
           <div>
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-5 gap-3" style={{ minHeight: 52 }}>
               {BUBBLE_SORT_PHASES.map((phase) => (
                 <div
                   key={phase.label}
