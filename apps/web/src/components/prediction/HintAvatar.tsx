@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { AITutorAvatar } from '@/components/brand'
 
 interface HintAvatarProps {
   hintAvailable: boolean
@@ -51,19 +52,25 @@ export default function HintAvatar({ hintAvailable, onRequestHint, hint, isLoadi
   return (
     <motion.div layout className="relative">
       <div className="relative">
-        <motion.button
-          type="button"
-          onClick={onRequestHint}
-          disabled={!hintAvailable || isLoading || hint !== null}
-          aria-label="Request hint"
-          animate={shouldPulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-          transition={
-            shouldPulse ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity } : { duration: 0.2 }
-          }
-          className="relative flex size-11 items-center justify-center rounded-full bg-secondary-light text-secondary"
-        >
-          <LightbulbIcon />
-        </motion.button>
+        {hint !== null ? (
+          <div className="flex size-11 items-center justify-center" aria-label="AI Tutor hint">
+            <AITutorAvatar size={44} />
+          </div>
+        ) : (
+          <motion.button
+            type="button"
+            onClick={onRequestHint}
+            disabled={!hintAvailable || isLoading}
+            aria-label="Request hint"
+            animate={shouldPulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+            transition={
+              shouldPulse ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity } : { duration: 0.2 }
+            }
+            className="relative flex size-11 items-center justify-center rounded-full bg-secondary-light text-secondary"
+          >
+            <LightbulbIcon />
+          </motion.button>
+        )}
         {isLoading && <SpinnerRing />}
       </div>
 

@@ -13,6 +13,7 @@ import StatsBanner from '../components/dashboard/StatsBanner'
 import BadgesSection from '../components/dashboard/BadgesSection'
 import AILearningPathBanner from '../components/dashboard/AILearningPathBanner'
 import WelcomeModal from '../components/onboarding/WelcomeModal'
+import { EmptyStateIllustration } from '../components/brand'
 
 function DashboardSkeleton() {
   return (
@@ -70,13 +71,25 @@ export default function Dashboard() {
         <CurriculumSidebar topics={topics} activeTopic={null} onTopicSelect={(name) => handleStart(name, 'DEMO')} />
         <main className="flex-1 overflow-y-auto p-8">
           <div className="space-y-12">
-            <AILearningPathBanner topics={topics} onStart={handleStart} />
+            {topics.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <EmptyStateIllustration size={120} />
+                <p className="text-sm font-medium text-text-primary">No topics available yet</p>
+                <p className="max-w-xs text-xs text-text-muted">
+                  Start your first practice session to begin building your mastery profile.
+                </p>
+              </div>
+            ) : (
+              <>
+                <AILearningPathBanner topics={topics} onStart={handleStart} />
 
-            {trackOrder.map((track) => {
-              const trackTopics = topics.filter((t) => t.track === track)
-              if (trackTopics.length === 0) return null
-              return <TrackSection key={track} track={track} topics={trackTopics} onStart={handleStart} />
-            })}
+                {trackOrder.map((track) => {
+                  const trackTopics = topics.filter((t) => t.track === track)
+                  if (trackTopics.length === 0) return null
+                  return <TrackSection key={track} track={track} topics={trackTopics} onStart={handleStart} />
+                })}
+              </>
+            )}
 
             <BadgesSection />
           </div>

@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { MisconceptionShield } from '@/components/brand'
 
 interface MistakeAnalysisToastProps {
   message: string | null
@@ -50,8 +51,13 @@ export default function MistakeAnalysisToast({
           >
             x
           </button>
-          <p className="pr-4 text-xs font-bold text-error">What went wrong</p>
-          <p className="mt-1 pr-4 text-[13px] text-text-primary">{message}</p>
+          <div className="flex gap-3 pr-4">
+            <MisconceptionShield count={1} size={36} className="shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-error">What went wrong</p>
+              <p className="mt-1 text-[13px] text-text-primary">{message}</p>
+            </div>
+          </div>
           {hint && (
             <p className="mt-2 pr-4 text-[13px] text-secondary italic">
               <span className="font-bold not-italic">Hint: </span>

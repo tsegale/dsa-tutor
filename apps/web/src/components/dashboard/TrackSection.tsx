@@ -2,6 +2,7 @@ import { AlgorithmTrack } from '@dsa-tutor/types'
 import type { TopicDto } from '@dsa-tutor/types'
 import ProgressBar from '@/components/ui/ProgressBar'
 import AlgorithmCard from './AlgorithmCard'
+import { SortingBadge, TreesBadge, GraphsBadge } from '@/components/brand'
 
 interface TrackSectionProps {
   track: AlgorithmTrack
@@ -32,6 +33,31 @@ function LockIcon() {
   )
 }
 
+function FoundationsIcon() {
+  return (
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#3730a3]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} aria-hidden="true">
+        <rect x="3" y="3" width="8" height="18" rx="1.5" />
+        <rect x="13" y="3" width="8" height="8" rx="1.5" />
+        <rect x="13" y="13" width="8" height="8" rx="1.5" />
+      </svg>
+    </div>
+  )
+}
+
+function TrackIcon({ track }: { track: AlgorithmTrack }) {
+  switch (track) {
+    case AlgorithmTrack.SORTING:
+      return <SortingBadge size={36} />
+    case AlgorithmTrack.TREES:
+      return <TreesBadge size={36} />
+    case AlgorithmTrack.GRAPHS:
+      return <GraphsBadge size={36} />
+    case AlgorithmTrack.FOUNDATIONS:
+      return <FoundationsIcon />
+  }
+}
+
 export default function TrackSection({ track, topics, onStart }: TrackSectionProps) {
   const meanMastery =
     topics.length > 0 ? Math.round(topics.reduce((sum, t) => sum + t.masteryPercent, 0) / topics.length) : 0
@@ -42,6 +68,7 @@ export default function TrackSection({ track, topics, onStart }: TrackSectionPro
   return (
     <section>
       <div className="mb-3 flex items-center gap-4">
+        <TrackIcon track={track} />
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold text-primary">{TRACK_LABELS[track]}</h2>

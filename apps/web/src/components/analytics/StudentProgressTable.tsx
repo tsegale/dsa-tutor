@@ -3,6 +3,7 @@ import { ScaffoldingLevel } from '@dsa-tutor/types'
 import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import MasteryRing from '@/components/ui/MasteryRing'
 import { cn } from '@/lib/utils'
+import { StudentAvatar } from '@/components/brand'
 
 interface StudentProgressTableProps {
   students: EducatorAnalyticsDto['studentProgress']
@@ -217,6 +218,8 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
             </thead>
             <tbody>
               {sorted.map((student) => {
+                const label = anonymizedLabels.get(student.userId) ?? ''
+                const avatarInitials = `S${label.match(/\d+/)?.[0] ?? ''}`
                 const hintPct = hintDependencyPercent(student)
                 const declining = isLocallyDeclining(student)
                 const needsManualReview = student.averageCorrectRate < 50 && (hintPct ?? 0) > 70
@@ -239,7 +242,10 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                   )}
                 >
                   <td className="px-4 py-3 text-text-primary">
-                    {showNames ? student.name : anonymizedLabels.get(student.userId)}
+                    <div className="flex items-center gap-2">
+                      <StudentAvatar initials={avatarInitials} size={24} />
+                      <span>{showNames ? student.name : label}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-text-primary">{student.totalSessions}</td>
                   <td className={cn('px-4 py-3 font-semibold', accuracyColorClass(student.averageCorrectRate))}>

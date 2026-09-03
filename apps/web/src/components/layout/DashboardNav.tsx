@@ -4,14 +4,7 @@ import { useOnboarding } from '@/hooks/useOnboarding'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { getProgressToNextLevel } from '@/utils/xpLevels'
-
-function LogoIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
+import { DSATutorLogo, StudentAvatar } from '@/components/brand'
 
 function SearchIcon() {
   return (
@@ -43,10 +36,7 @@ export default function DashboardNav() {
 
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-border bg-white px-6">
-      <div className="flex items-center gap-2 text-[#3730a3]">
-        <LogoIcon />
-        <span className="text-[14px] font-medium text-[#3730a3]">DSA Tutor</span>
-      </div>
+      <DSATutorLogo variant="dark" showTagline={false} />
 
       <div className="relative w-80">
         <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-muted">
@@ -108,12 +98,8 @@ export default function DashboardNav() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Account menu"
-              className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-white"
-            >
-              {user?.name?.[0]?.toUpperCase() ?? '?'}
+            <button type="button" aria-label="Account menu" className="flex items-center justify-center rounded-full">
+              <StudentAvatar initials={user?.name?.[0]?.toUpperCase() ?? '?'} size={32} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

@@ -5,19 +5,12 @@ import { Button } from '@/components/ui/button'
 import { login, register } from '@/api/auth'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import { DSATutorLogo, AuthIllustration } from '@/components/brand'
 
 type Role = 'student' | 'instructor'
 
 const inputClassName =
   'w-full rounded-md border-2 border-border px-3 py-2 text-sm outline-none transition-colors focus:border-text-muted'
-
-function ChartBarIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 function BrainIcon() {
   return (
@@ -229,12 +222,7 @@ export default function AuthPage() {
         className="hidden flex-col justify-between p-8 text-white md:flex"
         style={{ width: '45%', backgroundColor: '#3730a3' }}
       >
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-indigo-600">
-            <ChartBarIcon />
-          </div>
-          <span className="text-[18px] font-medium text-white">DSA Tutor</span>
-        </div>
+        <DSATutorLogo variant="white" showTagline />
 
         <div className="flex flex-1 flex-col justify-center gap-6 py-8">
           <div>
@@ -266,6 +254,8 @@ export default function AuthPage() {
               </div>
             ))}
           </div>
+
+          <AuthIllustration className="mt-2" />
         </div>
       </div>
 
