@@ -36,6 +36,10 @@ import { linearSearchEngine } from '@/engine/linearSearch'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import { selectionSortEngine } from '@/engine/selectionSort'
 import { insertionSortEngine } from '@/engine/insertionSort'
+import { mergeSortEngine } from '@/engine/mergeSort'
+import { quickSortEngine } from '@/engine/quickSort'
+import { bstInsertEngine } from '@/engine/bst'
+import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { cn } from '@/lib/utils'
 
@@ -53,6 +57,14 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       return linearSearchEngine(defaultInput, defaultTarget)
     case 'binary-search':
       return binarySearchEngine(defaultInput, defaultTarget)
+    case 'merge-sort':
+      return mergeSortEngine(defaultInput)
+    case 'quick-sort':
+      return quickSortEngine(defaultInput)
+    case 'bst':
+      return bstInsertEngine(defaultInput)
+    case 'bfs':
+      return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
     case 'bubble-sort':
     default:
       return bubbleSortEngine(defaultInput)

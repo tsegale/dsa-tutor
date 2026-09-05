@@ -11,6 +11,10 @@ import { linearSearchEngine } from '@/engine/linearSearch'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import { selectionSortEngine } from '@/engine/selectionSort'
 import { insertionSortEngine } from '@/engine/insertionSort'
+import { mergeSortEngine } from '@/engine/mergeSort'
+import { quickSortEngine } from '@/engine/quickSort'
+import { bstInsertEngine } from '@/engine/bst'
+import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
@@ -31,6 +35,17 @@ function engineForSlug(slug: string | undefined, values: number[], codeEditorMod
       return linearSearchEngine(values, target)
     case 'binary-search':
       return binarySearchEngine(values, target)
+    case 'merge-sort':
+      return mergeSortEngine(values)
+    case 'quick-sort':
+      return quickSortEngine(values)
+    case 'bst':
+      return bstInsertEngine(values)
+    case 'bfs':
+      // BFS operates on a fixed graph, not a numeric array - the typed
+      // custom array has nothing to apply to, so this just reloads the
+      // default graph run instead of silently falling through to Bubble Sort.
+      return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
     case 'bubble-sort':
     default:
       return bubbleSortEngine(values, codeEditorMode)

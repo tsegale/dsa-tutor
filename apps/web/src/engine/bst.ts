@@ -1,0 +1,236 @@
+import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+
+export interface BSTNode {
+  value: number
+  left: BSTNode | null
+  right: BSTNode | null
+  /** Unique identifier (e.g. 'node-5-2') so the canvas can track a
+   * node's position even when duplicate values are allowed. */
+  id: string
+}
+
+export interface BSTState {
+  root: BSTNode | null
+  currentNode: BSTNode | null
+  targetValue: number
+  /** ids of nodes visited so far during this traversal. */
+  path: string[]
+  insertedValue?: number
+  foundNode?: BSTNode | null
+  operation: 'insert' | 'search'
+}
+
+const PSEUDOCODE_LINE = {
+  START: 0,
+  COMPARE: 1,
+  GO_LEFT: 2,
+  GO_RIGHT: 3,
+  INSERT_OR_FOUND: 4,
+  DONE: 5,
+} as const
+
+function cloneNode(node: BSTNode | null): BSTNode | null {
+  if (!node) return null
+  return { value: node.value, id: node.id, left: cloneNode(node.left), right: cloneNode(node.right) }
+}
+
+interface SnapshotParams {
+  stepIndex: number
+  description: string
+  pseudocodeLine: number
+  isPredictionRequired: boolean
+  state: BSTState
+  isFinalStep?: boolean
+  criticalJunctionType?: CriticalJunctionType | null
+  junctionDifficulty?: JunctionDifficulty | null
+}
+
+function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
+  return {
+    stepIndex: params.stepIndex,
+    description: params.description,
+    pseudocodeLine: params.pseudocodeLine,
+    isPredictionRequired: params.isPredictionRequired,
+    predictionType: PredictionType.TILE_GRID,
+    dataStructureState: {
+      ...params.state,
+      root: cloneNode(params.state.root),
+      currentNode: cloneNode(params.state.currentNode),
+      path: [...params.state.path],
+      foundNode: params.state.foundNode !== undefined ? cloneNode(params.state.foundNode) : undefined,
+    },
+    activeIndices: [],
+    highlightIndices: [],
+    comparedIndices: [],
+    swappedIndices: [],
+    isFinalStep: params.isFinalStep ?? false,
+    criticalJunctionType: params.criticalJunctionType ?? null,
+    junctionDifficulty: params.junctionDifficulty ?? null,
+  }
+}
+
+/**
+ * Pure snapshot engine for BST insertion. Inserts each value in
+ * `values` one at a time, producing a BST_DIRECTION snapshot for every
+ * node compared along the way (including the empty slot the value is
+ * ultimately inserted into), for every insertion. Duplicate values
+ * follow the standard convention of going right. Never mutates its
+ * own tree across calls - each call starts from an empty tree.
+ */
+export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+  let root: BSTNode | null = null
+  let idCounter = 0
+
+  function push(params: Omit<SnapshotParams, 'stepIndex'>) {
+    snapshots.push(makeSnapshot({ ...params, stepIndex: stepIndex++ }))
+  }
+
+  values.forEach((value, valueIndex) => {
+    const isLastValue = valueIndex === values.length - 1
+    const path: string[] = []
+    let node = root
+    let parent: BSTNode | null = null
+    let wentLeft = false
+
+    while (node !== null) {
+      path.push(node.id)
+      push({
+        description: `At node ${node.value} (id ${node.id}): is ${value} smaller or larger?`,
+        pseudocodeLine: PSEUDOCODE_LINE.COMPARE,
+        isPredictionRequired: true,
+        state: { root, currentNode: node, targetValue: value, path, operation: 'insert' },
+        criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
+        junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+      })
+
+      parent = node
+      if (value < node.value) {
+        wentLeft = true
+        node = node.left
+      } else {
+        wentLeft = false
+        node = node.right
+      }
+    }
+
+    push({
+      description:
+        parent === null
+          ? `The tree is empty. Insert ${value} here as the root.`
+          : `Reached an empty position to the ${wentLeft ? 'left' : 'right'} of node ${parent.value}. Insert ${value} here.`,
+      pseudocodeLine: PSEUDOCODE_LINE.INSERT_OR_FOUND,
+      isPredictionRequired: true,
+      state: { root, currentNode: null, targetValue: value, path, operation: 'insert' },
+      criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    })
+
+    const newNode: BSTNode = { value, left: null, right: null, id: `node-${value}-${idCounter++}` }
+    if (parent === null) {
+      root = newNode
+    } else if (wentLeft) {
+      parent.left = newNode
+    } else {
+      parent.right = newNode
+    }
+
+    push({
+      description:
+        parent === null
+          ? `${value} inserted as the root.`
+          : `${value} inserted to the ${wentLeft ? 'left' : 'right'} of node ${parent.value}.`,
+      pseudocodeLine: PSEUDOCODE_LINE.DONE,
+      isPredictionRequired: false,
+      state: { root, currentNode: newNode, targetValue: value, path, insertedValue: value, operation: 'insert' },
+      isFinalStep: isLastValue,
+    })
+  })
+
+  if (values.length === 0) {
+    push({
+      description: 'No values were given to insert; the tree remains empty.',
+      pseudocodeLine: PSEUDOCODE_LINE.DONE,
+      isPredictionRequired: false,
+      state: { root: null, currentNode: null, targetValue: 0, path: [], operation: 'insert' },
+      isFinalStep: true,
+    })
+  }
+
+  return snapshots
+}
+
+/**
+ * Pure snapshot engine for BST search. Takes an existing root (e.g.
+ * the final root produced by bstInsertEngine) and a target value,
+ * producing a BST_DIRECTION snapshot for every node visited. Never
+ * mutates the tree.
+ */
+export function bstSearchEngine(root: BSTNode | null, target: number): AlgorithmSnapshot[] {
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+
+  function push(params: Omit<SnapshotParams, 'stepIndex'>) {
+    snapshots.push(makeSnapshot({ ...params, stepIndex: stepIndex++ }))
+  }
+
+  push({
+    description: `Searching for ${target}, starting at the root.`,
+    pseudocodeLine: PSEUDOCODE_LINE.START,
+    isPredictionRequired: false,
+    state: { root, currentNode: root, targetValue: target, path: [], operation: 'search' },
+  })
+
+  const path: string[] = []
+  let node = root
+  let found: BSTNode | null = null
+
+  while (node !== null) {
+    path.push(node.id)
+
+    if (node.value === target) {
+      found = node
+      push({
+        description: `Found ${target} at node ${node.id}.`,
+        pseudocodeLine: PSEUDOCODE_LINE.INSERT_OR_FOUND,
+        isPredictionRequired: false,
+        state: { root, currentNode: node, targetValue: target, path, foundNode: node, operation: 'search' },
+      })
+      break
+    }
+
+    push({
+      description: `At node ${node.value} (id ${node.id}): is ${target} smaller or larger?`,
+      pseudocodeLine: PSEUDOCODE_LINE.COMPARE,
+      isPredictionRequired: true,
+      state: { root, currentNode: node, targetValue: target, path, operation: 'search' },
+      criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    })
+
+    node = target < node.value ? node.left : node.right
+  }
+
+  if (found === null && node === null) {
+    push({
+      description: `${target} was not found in the tree.`,
+      pseudocodeLine: PSEUDOCODE_LINE.INSERT_OR_FOUND,
+      isPredictionRequired: false,
+      state: { root, currentNode: null, targetValue: target, path, foundNode: null, operation: 'search' },
+    })
+  }
+
+  push({
+    description: found
+      ? `Search complete. ${target} was found in the tree.`
+      : `Search complete. ${target} was not found in the tree.`,
+    pseudocodeLine: PSEUDOCODE_LINE.DONE,
+    isPredictionRequired: false,
+    state: { root, currentNode: found, targetValue: target, path, foundNode: found, operation: 'search' },
+    isFinalStep: true,
+  })
+
+  return snapshots
+}

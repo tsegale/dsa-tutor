@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import ArrayCanvas from './ArrayCanvas'
+import TreeCanvas from './TreeCanvas'
+import GraphCanvas from './GraphCanvas'
 
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
@@ -14,9 +16,11 @@ export default function CanvasContainer({
   onMistakePathComplete,
   mistakeLabel,
 }: CanvasContainerProps) {
-  // Only Bubble Sort exists today (Phase 15 gates additional algorithms).
-  // Future TreeCanvas/GraphCanvas types will branch on algorithmName here.
-  useAlgorithmStore((state) => state.algorithmName)
+  // BST is a tree (TreeCanvas) and BFS is a graph (GraphCanvas); every
+  // other algorithm is a linear array (ArrayCanvas). Both placeholder
+  // canvases render straight from the store's current snapshot and
+  // don't yet support the mistake-path replay ArrayCanvas has.
+  const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -56,13 +60,19 @@ export default function CanvasContainer({
       ref={containerRef}
       className="relative h-full w-full rounded-md border border-border bg-white shadow-sm dark:bg-dark-surface"
     >
-      <ArrayCanvas
-        width={size.width}
-        height={size.height}
-        mistakePath={mistakePath}
-        onMistakePathComplete={onMistakePathComplete}
-        {...(mistakeLabel !== undefined ? { mistakeLabel } : {})}
-      />
+      {algorithmSlug === 'bst' ? (
+        <TreeCanvas width={size.width} height={size.height} />
+      ) : algorithmSlug === 'bfs' ? (
+        <GraphCanvas width={size.width} height={size.height} />
+      ) : (
+        <ArrayCanvas
+          width={size.width}
+          height={size.height}
+          mistakePath={mistakePath}
+          onMistakePathComplete={onMistakePathComplete}
+          {...(mistakeLabel !== undefined ? { mistakeLabel } : {})}
+        />
+      )}
     </div>
   )
 }

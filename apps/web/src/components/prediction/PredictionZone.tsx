@@ -124,6 +124,14 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
     }
 
     case CriticalJunctionType.PASS_COMPLETE:
+      if (algorithmName === 'Merge Sort') {
+        return shuffleArray([
+          { id: 'correct', label: 'Each merged segment is sorted within itself' },
+          { id: 'wrong-1', label: 'The entire array is now sorted' },
+          { id: 'wrong-2', label: 'Left halves are sorted but right halves are not yet' },
+          { id: 'wrong-3', label: 'Only adjacent pairs are guaranteed to be in order' },
+        ])
+      }
       return shuffleArray([
         { id: 'correct', label: 'The largest remaining unsorted element is now in its correct position' },
         { id: 'wrong-1', label: 'The entire array is now sorted' },
@@ -195,6 +203,52 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       ])
     }
 
+    case CriticalJunctionType.MERGE_DECISION: {
+      const s = snapshot.dataStructureState as { array: number[]; leftRegion: [number, number]; rightRegion: [number, number] }
+      const leftVal = s.array[s.leftRegion[0]]
+      const rightVal = s.array[s.rightRegion[0]]
+      // Same "competing claims, only one true" pattern already used by
+      // MIDPOINT_DECISION and TARGET_CHECK: the wrong tile states a
+      // false comparison, and the student's job is to recognise it.
+      return shuffleArray([
+        { id: 'take-left', label: `Take ${leftVal} from the left half - it is smaller` },
+        { id: 'take-right', label: `Take ${rightVal} from the right half - it is smaller` },
+      ])
+    }
+
+    case CriticalJunctionType.PARTITION_DECISION: {
+      const s = snapshot.dataStructureState as { array: number[]; leftPointer: number; pivotValue: number }
+      const leftVal = s.array[s.leftPointer]
+      const pivotVal = s.pivotValue
+      return shuffleArray([
+        { id: 'swap', label: `${leftVal} is less than pivot ${pivotVal} - swap it leftward` },
+        { id: 'skip', label: `${leftVal} is greater than or equal to pivot - leave it` },
+      ])
+    }
+
+    case CriticalJunctionType.BST_DIRECTION: {
+      const s = snapshot.dataStructureState as { currentNode: { value: number } | null; targetValue: number }
+      const currentVal = s.currentNode?.value
+      const targetVal = s.targetValue
+      return shuffleArray([
+        { id: 'go-left', label: `${targetVal} is less than ${currentVal} - go left` },
+        { id: 'go-right', label: `${targetVal} is greater than ${currentVal} - go right` },
+        { id: 'insert-here', label: 'This position is empty - insert here' },
+      ])
+    }
+
+    case CriticalJunctionType.NEXT_NODE_SELECTION: {
+      const s = snapshot.dataStructureState as { queue: string[]; visited: string[]; graph: Record<string, string[]> }
+      const nextNode = s.queue[0]
+      const distractors = Object.keys(s.graph)
+        .filter((n) => n !== nextNode && !s.visited.includes(n))
+        .slice(0, 3)
+      return shuffleArray([
+        { id: nextNode, label: `${nextNode} - it was added to the queue first` },
+        ...distractors.map((d) => ({ id: d, label: d })),
+      ])
+    }
+
     default:
       return []
   }
@@ -219,6 +273,7 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string
       if (algorithmName === 'Insertion Sort') {
         return 'The key has reached its final position. What is now guaranteed about the array?'
       }
+      if (algorithmName === 'Merge Sort') return 'What is guaranteed about the merged regions?'
       return 'This pass is now complete. What can we guarantee about the array?'
 
     case CriticalJunctionType.EARLY_TERMINATION:
@@ -249,6 +304,28 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string
       const s = snapshot.dataStructureState as { array: number[]; scanIndex: number; currentMin: number }
       return `Is index ${s.scanIndex} (value ${s.array[s.scanIndex]}) smaller than the current minimum at index ${s.currentMin} (value ${s.array[s.currentMin]})?`
     }
+
+    case CriticalJunctionType.MERGE_DECISION: {
+      const s = snapshot.dataStructureState as { array: number[]; leftRegion: [number, number]; rightRegion: [number, number] }
+      const leftVal = s.array[s.leftRegion[0]]
+      const rightVal = s.array[s.rightRegion[0]]
+      return `Comparing ${leftVal} (left run) with ${rightVal} (right run). Which goes into the merged result first?`
+    }
+
+    case CriticalJunctionType.PARTITION_DECISION: {
+      const s = snapshot.dataStructureState as { array: number[]; leftPointer: number; pivotValue: number }
+      return `Comparing index ${s.leftPointer} (value ${s.array[s.leftPointer]}) with the pivot ${s.pivotValue}. What happens next?`
+    }
+
+    case CriticalJunctionType.BST_DIRECTION: {
+      const s = snapshot.dataStructureState as { currentNode: { value: number } | null; targetValue: number }
+      return s.currentNode === null
+        ? `Reached an empty position. Where does ${s.targetValue} belong?`
+        : `At node ${s.currentNode.value}: is ${s.targetValue} smaller or larger?`
+    }
+
+    case CriticalJunctionType.NEXT_NODE_SELECTION:
+      return 'Which node gets dequeued next?'
 
     default:
       return 'What happens next?'
@@ -369,8 +446,15 @@ export default function PredictionZone({
     setCodeSubmitting(false)
     attemptCountRef.current = 0
     proactiveHintFiredRef.current = false
+    // algorithmName is also a dependency, not just stepIndex: when
+    // setAlgorithm() swaps in a brand new snapshotArray on mount, it
+    // resets stepIndex to 0 - the SAME value it already was - so if an
+    // algorithm's very first snapshot is itself a Critical Junction
+    // (e.g. BST's single-value insert), this effect would otherwise
+    // never re-fire for the real snapshot and currentTiles would stay
+    // stuck at its stale/empty value from before the algorithm loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIndex])
+  }, [stepIndex, algorithmName])
 
   // Hands-On mode: the drag gesture itself is the submission, so this
   // fires handleSubmit directly rather than just staging currentAnswer.

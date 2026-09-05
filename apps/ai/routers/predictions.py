@@ -89,6 +89,55 @@ def _evaluate_new_minimum(ds: dict, student_answer: str | None) -> bool:
     return False
 
 
+def _evaluate_merge_decision(ds: dict, student_answer: str | None) -> bool:
+    arr = ds.get("array") or []
+    left_region = ds.get("leftRegion") or [0, 0]
+    right_region = ds.get("rightRegion") or [0, 0]
+    left_idx, right_idx = left_region[0], right_region[0]
+    if not (0 <= left_idx < len(arr)) or not (0 <= right_idx < len(arr)):
+        return False
+    left_val, right_val = arr[left_idx], arr[right_idx]
+    take_left_correct = left_val <= right_val
+    if student_answer == "take-left":
+        return take_left_correct
+    if student_answer == "take-right":
+        return not take_left_correct
+    return False
+
+
+def _evaluate_partition_decision(ds: dict, student_answer: str | None) -> bool:
+    arr = ds.get("array") or []
+    left_pointer = ds.get("leftPointer")
+    pivot_val = ds.get("pivotValue")
+    if left_pointer is None or not (0 <= left_pointer < len(arr)):
+        return False
+    should_swap = arr[left_pointer] < pivot_val
+    if student_answer == "swap":
+        return should_swap
+    if student_answer == "skip":
+        return not should_swap
+    return False
+
+
+def _evaluate_bst_direction(ds: dict, student_answer: str | None) -> bool:
+    current_node = ds.get("currentNode")
+    target = ds.get("targetValue")
+    if current_node is None:
+        return student_answer == "insert-here"
+    current_val = current_node.get("value")
+    # Standard convention: a value equal to the current node goes right.
+    if target < current_val:
+        return student_answer == "go-left"
+    return student_answer == "go-right"
+
+
+def _evaluate_next_node_selection(ds: dict, student_answer: str | None) -> bool:
+    queue = ds.get("queue") or []
+    if not queue:
+        return False
+    return student_answer == queue[0]
+
+
 def evaluate_answer(request: PredictionRequest) -> bool:
     wrapper = request.current_state
     if not wrapper or not isinstance(wrapper, dict):
@@ -115,6 +164,18 @@ def evaluate_answer(request: PredictionRequest) -> bool:
 
     if junction_type == "NEW_MINIMUM":
         return _evaluate_new_minimum(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "MERGE_DECISION":
+        return _evaluate_merge_decision(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "PARTITION_DECISION":
+        return _evaluate_partition_decision(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "BST_DIRECTION":
+        return _evaluate_bst_direction(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "NEXT_NODE_SELECTION":
+        return _evaluate_next_node_selection(ds if isinstance(ds, dict) else {}, request.student_answer)
 
     return False
 
@@ -189,6 +250,41 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
             f"minimum at index {min_idx} (value {min_val}). "
             f"The student chose: {student_answer}."
         )
+
+    if junction_type == "MERGE_DECISION" and isinstance(ds, dict):
+        arr = ds.get("array") or []
+        left_region = ds.get("leftRegion") or [0, 0]
+        right_region = ds.get("rightRegion") or [0, 0]
+        left_val = arr[left_region[0]] if 0 <= left_region[0] < len(arr) else None
+        right_val = arr[right_region[0]] if 0 <= right_region[0] < len(arr) else None
+        return (
+            f"The left run's front value was {left_val} and the right run's front "
+            f"value was {right_val}. The student chose: {student_answer}."
+        )
+
+    if junction_type == "PARTITION_DECISION" and isinstance(ds, dict):
+        arr = ds.get("array") or []
+        left_pointer = ds.get("leftPointer")
+        pivot_val = ds.get("pivotValue")
+        left_val = arr[left_pointer] if left_pointer is not None and 0 <= left_pointer < len(arr) else None
+        return (
+            f"The element at index {left_pointer} (value {left_val}) was compared "
+            f"against the pivot (value {pivot_val}). The student chose: {student_answer}."
+        )
+
+    if junction_type == "BST_DIRECTION" and isinstance(ds, dict):
+        current_node = ds.get("currentNode")
+        target = ds.get("targetValue")
+        current_val = current_node.get("value") if current_node else None
+        return (
+            f"The target value {target} was compared against "
+            f"{'an empty position' if current_node is None else f'node value {current_val}'}. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "NEXT_NODE_SELECTION" and isinstance(ds, dict):
+        queue = ds.get("queue") or []
+        return f"The current queue (front first) was {queue}. The student chose: {student_answer}."
 
     return ""
 

@@ -49,6 +49,11 @@ export const CriticalJunctionType = {
   TARGET_CHECK: 'TARGET_CHECK',
   MIDPOINT_DECISION: 'MIDPOINT_DECISION',
   NEW_MINIMUM: 'NEW_MINIMUM',
+  MERGE_DECISION: 'MERGE_DECISION',
+  PIVOT_SELECTION: 'PIVOT_SELECTION',
+  PARTITION_DECISION: 'PARTITION_DECISION',
+  BST_DIRECTION: 'BST_DIRECTION',
+  NEXT_NODE_SELECTION: 'NEXT_NODE_SELECTION',
 } as const
 export type CriticalJunctionType = (typeof CriticalJunctionType)[keyof typeof CriticalJunctionType]
 
