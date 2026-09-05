@@ -94,13 +94,34 @@ function shuffleArray<T>(arr: T[]): T[] {
  * tile id only - shuffling changes display order, never which id is
  * correct, and the backend checks id, not position.
  */
-function getTilesForSnapshot(snapshot: AlgorithmSnapshot): TileOption[] {
+const SEARCH_ALGORITHM_NAMES = new Set(['Linear Search', 'Binary Search'])
+
+/** Shape shared by LinearSearchState and BinarySearchState - the only
+ * fields the ALGORITHM_COMPLETE tiles/prompt need for either. */
+interface SearchAlgorithmState {
+  found: boolean
+  foundIndex: number | null
+}
+
+function isInsertionSortSwapState(state: unknown): state is { array: number[]; currentKey: number; compareIndex: number } {
+  return typeof state === 'object' && state !== null && 'currentKey' in state
+}
+
+function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string): TileOption[] {
   switch (snapshot.criticalJunctionType) {
-    case CriticalJunctionType.SWAP_DECISION:
+    case CriticalJunctionType.SWAP_DECISION: {
+      const state = snapshot.dataStructureState
+      if (isInsertionSortSwapState(state)) {
+        return shuffleArray([
+          { id: 'shift', label: 'Shift right - the key is smaller, move it left' },
+          { id: 'stop', label: 'Stop - the key is in its correct position' },
+        ])
+      }
       return shuffleArray([
         { id: 'swap', label: 'Swap them' },
         { id: 'no-swap', label: 'Leave them' },
       ])
+    }
 
     case CriticalJunctionType.PASS_COMPLETE:
       return shuffleArray([
@@ -118,13 +139,61 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot): TileOption[] {
         { id: 'wrong-3', label: 'The first element reached its correct position' },
       ])
 
-    case CriticalJunctionType.ALGORITHM_COMPLETE:
+    case CriticalJunctionType.ALGORITHM_COMPLETE: {
+      if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
+        const state = snapshot.dataStructureState as SearchAlgorithmState
+        return state.found
+          ? shuffleArray([
+              { id: 'correct', label: `The element at index ${state.foundIndex} was confirmed equal to the target` },
+              { id: 'wrong-1', label: 'Every element in the array was visited' },
+              { id: 'wrong-2', label: 'The array became sorted during the search' },
+              { id: 'wrong-3', label: 'The target must appear at every index checked' },
+            ])
+          : shuffleArray([
+              { id: 'correct', label: 'The entire valid search space was eliminated without a match' },
+              { id: 'wrong-1', label: 'The array must be unsorted for the target to be missing' },
+              { id: 'wrong-2', label: 'The target could still be found by starting over' },
+              { id: 'wrong-3', label: 'One comparison is enough to prove absence' },
+            ])
+      }
       return shuffleArray([
         { id: 'correct', label: 'No adjacent pair is out of order anywhere in the array' },
         { id: 'wrong-1', label: 'Every element was visited the same number of times' },
         { id: 'wrong-2', label: 'The first and last elements are in their correct positions' },
         { id: 'wrong-3', label: 'The total number of swaps equals the array length' },
       ])
+    }
+
+    case CriticalJunctionType.TARGET_CHECK: {
+      const s = snapshot.dataStructureState as { array: number[]; currentIndex: number; target: number }
+      const val = s.array[s.currentIndex]
+      const target = s.target
+      return shuffleArray([
+        { id: 'match', label: `${val} equals ${target} - target found` },
+        { id: 'no-match', label: `${val} does not equal ${target} - keep searching` },
+      ])
+    }
+
+    case CriticalJunctionType.MIDPOINT_DECISION: {
+      const s = snapshot.dataStructureState as { array: number[]; mid: number | null; target: number }
+      const midVal = s.mid !== null ? s.array[s.mid] : undefined
+      const target = s.target
+      return shuffleArray([
+        { id: 'search-left', label: `${target} is smaller - search the left half` },
+        { id: 'search-right', label: `${target} is larger - search the right half` },
+        { id: 'found', label: `${midVal} equals ${target} - target found` },
+      ])
+    }
+
+    case CriticalJunctionType.NEW_MINIMUM: {
+      const s = snapshot.dataStructureState as { array: number[]; scanIndex: number; currentMin: number }
+      const scanVal = s.array[s.scanIndex]
+      const minVal = s.array[s.currentMin]
+      return shuffleArray([
+        { id: 'update', label: `${scanVal} is smaller than ${minVal} - update minimum` },
+        { id: 'keep', label: `${scanVal} is not smaller - keep current minimum` },
+      ])
+    }
 
     default:
       return []
@@ -132,22 +201,54 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot): TileOption[] {
 }
 
 /** The question shown above the tiles, read before the learner chooses. */
-function getPromptForSnapshot(snapshot: AlgorithmSnapshot): string {
-  const arr = snapshot.dataStructureState as number[]
-  const [i, j] = snapshot.activeIndices
-
+function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string): string {
   switch (snapshot.criticalJunctionType) {
-    case CriticalJunctionType.SWAP_DECISION:
+    case CriticalJunctionType.SWAP_DECISION: {
+      const state = snapshot.dataStructureState
+      if (isInsertionSortSwapState(state)) {
+        const compareVal = state.array[state.compareIndex]
+        return `The algorithm is comparing the key (${state.currentKey}) with the element at index ${state.compareIndex} (value ${compareVal}). What happens next?`
+      }
+      const arr = state as number[]
+      const [i, j] = snapshot.activeIndices
       return `The algorithm is comparing index ${i} (value ${arr[i]}) and index ${j} (value ${arr[j]}). What should happen next?`
+    }
 
     case CriticalJunctionType.PASS_COMPLETE:
+      if (algorithmName === 'Selection Sort') return 'What happens when the scan pass is complete?'
+      if (algorithmName === 'Insertion Sort') {
+        return 'The key has reached its final position. What is now guaranteed about the array?'
+      }
       return 'This pass is now complete. What can we guarantee about the array?'
 
     case CriticalJunctionType.EARLY_TERMINATION:
       return 'The algorithm stopped before completing all passes. Why?'
 
-    case CriticalJunctionType.ALGORITHM_COMPLETE:
-      return 'Bubble Sort has finished. What proves the array is fully sorted?'
+    case CriticalJunctionType.ALGORITHM_COMPLETE: {
+      if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
+        const state = snapshot.dataStructureState as SearchAlgorithmState
+        return state.found
+          ? `${algorithmName} has finished. What confirms the target was correctly located?`
+          : `${algorithmName} has finished without finding the target. What confirms the search correctly covered the whole space?`
+      }
+      return `${algorithmName} has finished. What proves the array is fully sorted?`
+    }
+
+    case CriticalJunctionType.TARGET_CHECK: {
+      const s = snapshot.dataStructureState as { array: number[]; currentIndex: number; target: number }
+      return `Checking index ${s.currentIndex} (value ${s.array[s.currentIndex]}) against the target ${s.target}. What should happen next?`
+    }
+
+    case CriticalJunctionType.MIDPOINT_DECISION: {
+      const s = snapshot.dataStructureState as { array: number[]; mid: number | null; target: number }
+      const midVal = s.mid !== null ? s.array[s.mid] : undefined
+      return `The midpoint is index ${s.mid} (value ${midVal}), and the target is ${s.target}. What should happen next?`
+    }
+
+    case CriticalJunctionType.NEW_MINIMUM: {
+      const s = snapshot.dataStructureState as { array: number[]; scanIndex: number; currentMin: number }
+      return `Is index ${s.scanIndex} (value ${s.array[s.scanIndex]}) smaller than the current minimum at index ${s.currentMin} (value ${s.array[s.currentMin]})?`
+    }
 
     default:
       return 'What happens next?'
@@ -253,7 +354,7 @@ export default function PredictionZone({
   // out from under the learner mid-decision.
   useEffect(() => {
     if (snapshot?.isPredictionRequired) {
-      setCurrentTiles(getTilesForSnapshot(snapshot))
+      setCurrentTiles(getTilesForSnapshot(snapshot, algorithmName))
     }
     setCurrentAnswer(null)
     setSubmissionState('idle')
@@ -600,7 +701,7 @@ export default function PredictionZone({
                   )}
                   <CodeEditorInput
                     key={snapshot.stepIndex}
-                    prompt={getPromptForSnapshot(snapshot)}
+                    prompt={getPromptForSnapshot(snapshot, algorithmName)}
                     stepDescription={snapshot.description}
                     currentArrayState={snapshot.dataStructureState as number[]}
                     activeIndices={snapshot.activeIndices}
@@ -628,7 +729,7 @@ export default function PredictionZone({
                       Predict the next step
                     </span>
                     <p className="mb-1.5 text-[13px] font-bold text-text-primary dark:text-dark-text-primary">
-                      {getPromptForSnapshot(snapshot)}
+                      {getPromptForSnapshot(snapshot, algorithmName)}
                     </p>
 
                     <div className="flex flex-1 flex-col justify-center">

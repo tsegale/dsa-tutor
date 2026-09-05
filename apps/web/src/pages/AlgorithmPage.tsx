@@ -31,7 +31,33 @@ import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { calculateMastery, type MasteryMetrics } from '@/utils/masteryScore'
 import { computeMistakePath } from '@/engine/mistakePath'
+import { bubbleSortEngine } from '@/engine/bubbleSort'
+import { linearSearchEngine } from '@/engine/linearSearch'
+import { binarySearchEngine } from '@/engine/binarySearch'
+import { selectionSortEngine } from '@/engine/selectionSort'
+import { insertionSortEngine } from '@/engine/insertionSort'
+import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { cn } from '@/lib/utils'
+
+function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
+  const entry = getAlgorithmRegistryEntry(algorithmName)
+  const defaultInput = entry?.defaultInput ?? [5, 3, 1, 4, 2]
+  const defaultTarget = entry?.defaultTarget ?? 9
+
+  switch (algorithmName) {
+    case 'selection-sort':
+      return selectionSortEngine(defaultInput)
+    case 'insertion-sort':
+      return insertionSortEngine(defaultInput)
+    case 'linear-search':
+      return linearSearchEngine(defaultInput, defaultTarget)
+    case 'binary-search':
+      return binarySearchEngine(defaultInput, defaultTarget)
+    case 'bubble-sort':
+    default:
+      return bubbleSortEngine(defaultInput)
+  }
+}
 
 const SCAFFOLDING_LEVEL_ORDER: ScaffoldingLevel[] = [
   ScaffoldingLevel.HIGH,
@@ -70,20 +96,20 @@ const INITIAL_MASTERY_METRICS: MasteryMetrics = {
   consecutiveCorrect: 0,
 }
 
-// Bubble Sort is the only algorithm with a real snapshot engine until
-// Phase 15; every other seeded topic renders a "coming soon" canvas.
-const IMPLEMENTED_ALGORITHM_NAME = 'bubble-sort'
-
 export default function AlgorithmPage() {
   const { algorithmName: algorithmNameParam } = useParams<{ algorithmName: string }>()
   const [searchParams] = useSearchParams()
-  const isBubbleSort = algorithmNameParam === IMPLEMENTED_ALGORITHM_NAME
+  // Five algorithms have real snapshot engines as of Phase 16; every
+  // other seeded topic (not yet in the registry) renders a "coming
+  // soon" canvas.
+  const isImplemented = algorithmNameParam !== undefined && getAlgorithmRegistryEntry(algorithmNameParam) !== undefined
 
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const setMode = useAlgorithmStore((state) => state.setMode)
+  const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   const setSessionId = useAlgorithmStore((state) => state.setSessionId)
   const mode = useAlgorithmStore((state) => state.mode)
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
@@ -366,6 +392,27 @@ export default function AlgorithmPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Load the route's algorithm into the store on mount and whenever the
+  // route param changes (e.g. navigating from one algorithm straight to
+  // another without an intervening dashboard visit). Local, per-run
+  // state (mastery metrics, mistake path, hint text, one-shot refs)
+  // is reset alongside it so nothing from a previous algorithm leaks in.
+  useEffect(() => {
+    if (!algorithmNameParam || !isImplemented) return
+    setAlgorithm(algorithmNameParam, loadAlgorithmEngine(algorithmNameParam))
+    setMasteryMetrics(INITIAL_MASTERY_METRICS)
+    setMistakePath(null)
+    setMistakeLabel(undefined)
+    setMistakeAnalysis(null)
+    setMistakeHint(null)
+    setMistakeCounterfactual(null)
+    setHint(null)
+    feynmanShownRef.current = false
+    challengeXpAwardedRef.current = false
+    predictionStatsRef.current = { correct: 0, total: 0, hints: 0 }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [algorithmNameParam, isImplemented])
+
   // Keep the breadcrumb in sync with the resolved topic's real display
   // name, without touching the snapshot engine's array/step state.
   useEffect(() => {
@@ -377,12 +424,13 @@ export default function AlgorithmPage() {
   // Create a database-backed session on mount and close it out on
   // unmount. Best-effort: a failure here shouldn't block the local
   // Zustand-driven practice flow, only the persisted history of it.
-  // Only Bubble Sort has real content worth logging a session for.
+  // Only algorithms with a real snapshot engine have content worth
+  // logging a session for.
   useEffect(() => {
     let cancelled = false
 
     async function createDbSession() {
-      if (!isBubbleSort || !currentTopic) return
+      if (!isImplemented || !currentTopic) return
       const streakBefore = user?.streakCount ?? 0
       try {
         const { mode, scaffoldingLevel } = useAlgorithmStore.getState()
@@ -419,7 +467,7 @@ export default function AlgorithmPage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBubbleSort, currentTopic, setSessionId])
+  }, [isImplemented, currentTopic, setSessionId])
 
   useKeyboardShortcuts({
     onTabChange: setActiveTab,
@@ -464,7 +512,7 @@ export default function AlgorithmPage() {
       </motion.div>
 
       <div style={{ gridArea: 'canvas', overflow: 'hidden', position: 'relative' }} data-canvas-area>
-        {isBubbleSort ? (
+        {isImplemented ? (
           <>
             <motion.div
               animate={{ scale: focusModeActive ? 1.02 : 1 }}

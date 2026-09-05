@@ -1,13 +1,41 @@
 import { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
+import { linearSearchEngine } from '@/engine/linearSearch'
+import { binarySearchEngine } from '@/engine/binarySearch'
+import { selectionSortEngine } from '@/engine/selectionSort'
+import { insertionSortEngine } from '@/engine/insertionSort'
+import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
 import { cn } from '@/lib/utils'
+
+// Custom Array / Random must run the SAME algorithm currently loaded on
+// the page, not always Bubble Sort - otherwise applying a custom array
+// while viewing e.g. Binary Search would silently swap the canvas back
+// to Bubble Sort while the rest of the page still says Binary Search.
+function engineForSlug(slug: string | undefined, values: number[], codeEditorMode: boolean): AlgorithmSnapshot[] {
+  const target = getAlgorithmRegistryEntry(slug ?? '')?.defaultTarget ?? 9
+  switch (slug) {
+    case 'selection-sort':
+      return selectionSortEngine(values)
+    case 'insertion-sort':
+      return insertionSortEngine(values)
+    case 'linear-search':
+      return linearSearchEngine(values, target)
+    case 'binary-search':
+      return binarySearchEngine(values, target)
+    case 'bubble-sort':
+    default:
+      return bubbleSortEngine(values, codeEditorMode)
+  }
+}
 
 interface LeftPanelProps {
   collapsed: boolean
@@ -117,6 +145,7 @@ function generateRandomArray(): number[] {
 }
 
 export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanelProps) {
+  const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
   const playbackSpeed = useAlgorithmStore((state) => state.playbackSpeed)
   const startPlayback = useAlgorithmStore((state) => state.startPlayback)
@@ -144,14 +173,16 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
       return
     }
     setInputError(null)
-    setAlgorithm('Bubble Sort', bubbleSortEngine(parsed, codeEditorMode))
+    const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
+    setAlgorithm(displayName, engineForSlug(algorithmSlug, parsed, codeEditorMode))
   }
 
   function handleRandom() {
     const values = generateRandomArray()
     setInputError(null)
     setArrayInput(values.join(','))
-    setAlgorithm('Bubble Sort', bubbleSortEngine(values, codeEditorMode))
+    const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
+    setAlgorithm(displayName, engineForSlug(algorithmSlug, values, codeEditorMode))
   }
 
   return (

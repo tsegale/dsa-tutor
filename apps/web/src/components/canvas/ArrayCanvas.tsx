@@ -39,6 +39,19 @@ const MISTAKE_PAUSE_MS = 1000
 const HANDS_ON_TOOLTIP_STORAGE_KEY = 'dsa-tutor-hands-on-tooltip-shown'
 const HANDS_ON_TOOLTIP_DURATION_MS = 5000
 
+// Bubble Sort's dataStructureState is a plain number[]; the Phase 16
+// algorithms (Linear/Binary Search, Selection/Insertion Sort) use a
+// richer object with the array nested under an `array` field, since
+// they also need to carry a target, indices, etc. This extracts the
+// bars to render regardless of which shape the current algorithm uses.
+function extractArray(state: unknown): number[] {
+  if (Array.isArray(state)) return state
+  if (state && typeof state === 'object' && Array.isArray((state as { array?: unknown }).array)) {
+    return (state as { array: number[] }).array
+  }
+  return []
+}
+
 export default function ArrayCanvas({
   width = 600,
   height = 300,
@@ -171,7 +184,7 @@ export default function ArrayCanvas({
   }
 
   const bars = useMemo(() => {
-    const values = (snapshot?.dataStructureState as number[] | undefined) ?? []
+    const values = extractArray(snapshot?.dataStructureState)
     if (values.length === 0) return []
 
     const xScale = d3
@@ -336,6 +349,7 @@ export default function ArrayCanvas({
         const isHighlighted = snapshot.highlightIndices.includes(bar.index)
         const isSwapped = snapshot.swappedIndices.includes(bar.index)
         const isActive = snapshot.activeIndices.includes(bar.index)
+        const isCompared = snapshot.comparedIndices.includes(bar.index)
         const isMistakeAffected = mistakeAffectedIndices?.has(bar.index) ?? false
 
         const isDraggableBar =
@@ -351,8 +365,21 @@ export default function ArrayCanvas({
               ? bars[handsOnLeft].x
               : bar.x
 
-        // Priority order: sorted > swapping > comparing > neutral.
-        const barState: BarState = isHighlighted ? 'sorted' : isSwapped ? 'swapping' : isActive ? 'comparing' : 'neutral'
+        // Priority order: sorted > swapping > comparing > compared > neutral.
+        // "compared" (e.g. Selection Sort's scan index against the
+        // current minimum) reuses the swapping/purple colour but only
+        // when the bar isn't already active - active always wins so
+        // Bubble Sort's SWAP_DECISION step (where active and compared
+        // are the same two bars) keeps its existing amber pulse.
+        const barState: BarState = isHighlighted
+          ? 'sorted'
+          : isSwapped
+            ? 'swapping'
+            : isActive
+              ? 'comparing'
+              : isCompared
+                ? 'swapping'
+                : 'neutral'
         const colours = BAR_COLOURS[barState]
 
         const barDragX = bar.index === handsOnLeft ? dragXLeft : bar.index === handsOnRight ? dragXRight : undefined

@@ -26,6 +26,9 @@ class CriticalJunctionType(str, Enum):
     PASS_COMPLETE = "PASS_COMPLETE"
     EARLY_TERMINATION = "EARLY_TERMINATION"
     ALGORITHM_COMPLETE = "ALGORITHM_COMPLETE"
+    TARGET_CHECK = "TARGET_CHECK"
+    MIDPOINT_DECISION = "MIDPOINT_DECISION"
+    NEW_MINIMUM = "NEW_MINIMUM"
 
 
 # Mirrors JunctionDifficulty in packages/types/index.ts. Keep in sync.
