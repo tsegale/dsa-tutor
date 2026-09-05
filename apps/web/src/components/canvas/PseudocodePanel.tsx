@@ -1,17 +1,89 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { useParams } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { cn } from '@/lib/utils'
 
-const PSEUDOCODE_LINES = [
-  'for i from 0 to n-1 do',
-  '  for j from 0 to n-i-2 do',
-  '    if arr[j] > arr[j+1] then',
-  '      swap arr[j] and arr[j+1]',
-  '  end for',
-  'end for',
-  'array is sorted',
-]
+// Each array's line order matches that algorithm's own PSEUDOCODE_LINE
+// constants in its engine file exactly (index-for-index), since the
+// active snapshot's `pseudocodeLine` is generated against those
+// constants and used directly as an index here - a couple of engines
+// declare a PSEUDOCODE_LINE value that's never actually emitted (e.g.
+// Selection Sort's inner-loop-start, BST's GO_LEFT/GO_RIGHT); those
+// still get a plausible line of text, they just never highlight.
+const PSEUDOCODE: Record<string, string[]> = {
+  'bubble-sort': [
+    'for i from 0 to n-1 do',
+    '  for j from 0 to n-i-2 do',
+    '    if arr[j] > arr[j+1] then',
+    '      swap arr[j] and arr[j+1]',
+    '  end for',
+    'end for',
+    'array is sorted',
+  ],
+  'linear-search': [
+    'for i from 0 to n-1 do',
+    '  if arr[i] == target then',
+    '    return i',
+    '  end if',
+    'return -1 (not found)',
+  ],
+  'binary-search': [
+    'low = 0, high = n-1',
+    'while low <= high do',
+    '  mid = (low + high) / 2',
+    '  if arr[mid] == target: return mid; else narrow low/high',
+    'return -1 (not found)',
+  ],
+  'selection-sort': [
+    'for i from 0 to n-1 do',
+    '  min_idx = i; for j from i+1 to n-1 do',
+    '    if arr[j] < arr[min_idx]:',
+    '      min_idx = j',
+    '  end for',
+    '  swap arr[i] and arr[min_idx]',
+    'array is sorted',
+  ],
+  'insertion-sort': [
+    'for i from 1 to n-1 do',
+    '  key = arr[i]',
+    '  while j >= 0 and arr[j] > key:',
+    '    arr[j+1] = arr[j]; j = j - 1',
+    '  arr[j+1] = key',
+    'array is sorted',
+  ],
+  'merge-sort': [
+    'for passSize = 1, 2, 4, ... while passSize < n do',
+    '  for each adjacent pair of runs of size passSize',
+    '    compare front elements of left and right runs',
+    '    place the smaller into the merged result',
+    '  end for',
+    'array is sorted',
+  ],
+  'quick-sort': [
+    'partition(low, high):',
+    '  pivot = arr[high]; i = low - 1',
+    '  for j from low to high-1: if arr[j] < pivot:',
+    '    i++; swap arr[i] and arr[j]',
+    '  swap arr[i+1] and arr[high]',
+    'array is sorted',
+  ],
+  bst: [
+    'insert(root, value):',
+    '  if value < root.value:',
+    '    go to root.left',
+    '  else go to root.right',
+    '  if root is null: insert new node here',
+    'insertion complete',
+  ],
+  bfs: [
+    'enqueue startNode; mark visited',
+    'while queue not empty: node = dequeue()',
+    '  mark node visited; check if node == target',
+    '  for each neighbour: if not visited, enqueue',
+    'search complete',
+  ],
+}
 
 function ComingSoonLabel({ label }: { label: string }) {
   return (
@@ -26,7 +98,9 @@ function ComingSoonLabel({ label }: { label: string }) {
 
 export default function PseudocodePanel() {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const activeLine = snapshot?.pseudocodeLine
+  const lines = PSEUDOCODE[algorithmSlug ?? ''] ?? PSEUDOCODE['bubble-sort']
 
   return (
     <div
@@ -47,7 +121,7 @@ export default function PseudocodePanel() {
         <ComingSoonLabel label="Java" />
       </div>
       <div className="flex-1 overflow-x-hidden overflow-y-auto p-2 font-mono">
-        {PSEUDOCODE_LINES.map((line, index) => {
+        {lines.map((line, index) => {
           const isActive = index === activeLine
           return (
             <div key={index} className="relative flex py-1" style={{ lineHeight: 1.7 }}>
