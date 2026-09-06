@@ -17,10 +17,8 @@ export default function EducatorDashboard() {
   const [selectedStudent, setSelectedStudent] = useState<EducatorAnalyticsDto['studentProgress'][0] | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  if (user && user.role !== 'EDUCATOR') {
-    return <Navigate to="/" replace />
-  }
-
+  // Hook must run unconditionally on every render (rules-of-hooks) - `enabled`
+  // is how we skip the actual fetch for a non-educator about to be redirected.
   const {
     data: analytics,
     isLoading,
@@ -31,11 +29,16 @@ export default function EducatorDashboard() {
     queryKey: ['educator-analytics'],
     queryFn: getAnalytics,
     refetchInterval: 30000,
+    enabled: !user || user.role === 'EDUCATOR',
   })
 
   function handleSelectStudent(student: EducatorAnalyticsDto['studentProgress'][0]) {
     setSelectedStudent(student)
     setDrawerOpen(true)
+  }
+
+  if (user && user.role !== 'EDUCATOR') {
+    return <Navigate to="/" replace />
   }
 
   if (isLoading) return <EducatorDashboardSkeleton />
