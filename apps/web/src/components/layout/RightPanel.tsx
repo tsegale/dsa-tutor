@@ -77,11 +77,12 @@ function SocraticGuidanceBox({ hint }: { hint: string | null }) {
       </p>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">Session accuracy</span>
+        <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">
+          {total > 0 ? `${correct}/${total} correct (${accuracy}%)` : 'No predictions yet'}
+        </span>
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-border">
           <div className="h-full rounded-full bg-primary" style={{ width: `${accuracy}%` }} />
         </div>
-        <span className="text-[11px] font-medium text-text-primary dark:text-dark-text-primary">{accuracy}%</span>
       </div>
 
       {hint && (
