@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { generateChallenge } from '@/api/challenges'
 import { apiFetch } from '@/api/client'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
@@ -41,6 +42,7 @@ function topMisconceptionOf(recent: string[]): string | null {
 export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions.length > 0)
 
   async function handleGenerate() {
     setIsGenerating(true)
@@ -97,18 +99,29 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
     }
   }
 
+  const button = (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={handleGenerate}
+      disabled={isGenerating}
+      className="w-full gap-1.5 text-white hover:text-white"
+    >
+      {isGenerating ? <SpinnerIcon /> : <TargetIcon />}
+      {isGenerating ? 'Generating...' : 'AI Challenge'}
+    </Button>
+  )
+
   return (
     <div className="flex flex-col gap-1">
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={handleGenerate}
-        disabled={isGenerating}
-        className="w-full gap-1.5 text-white hover:text-white"
-      >
-        {isGenerating ? <SpinnerIcon /> : <TargetIcon />}
-        {isGenerating ? 'Generating...' : 'AI Challenge'}
-      </Button>
+      {hasMisconceptions ? (
+        button
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>No errors detected yet, generating a general challenge</TooltipContent>
+        </Tooltip>
+      )}
       {error && <p className="text-xs text-error">{error}</p>}
     </div>
   )

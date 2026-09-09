@@ -135,7 +135,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
             'opacity-90 group-hover:opacity-100',
           )}
         >
-          Begin AI diagnostic
+          Start learning
         </button>
       ) : topic.masteryPercent < 80 ? (
         <div className={cn('flex gap-2 transition-opacity', 'opacity-80 group-hover:opacity-100')}>
@@ -160,7 +160,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
           onClick={() => onStart(topic.name, 'PRACTICE')}
           className="w-full rounded-md bg-[#3730a3] py-2 text-sm font-medium text-white"
         >
-          Continue practice
+          Practice again
         </button>
       )}
     </motion.div>
