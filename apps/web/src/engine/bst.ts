@@ -21,13 +21,22 @@ export interface BSTState {
   operation: 'insert' | 'search'
 }
 
+// Indices match the pseudocode panel's bst array exactly:
+//   0: 'insert(root, value):'
+//   1: '  if root is null: create node'
+//   2: '  if value < root.value:'
+//   3: '    insert(root.left, value)'
+//   4: '  else if value > root.value:'
+//   5: '    insert(root.right, value)'
+//   6: '  else: duplicate, ignore'
 const PSEUDOCODE_LINE = {
   START: 0,
-  COMPARE: 1,
-  GO_LEFT: 2,
-  GO_RIGHT: 3,
-  INSERT_OR_FOUND: 4,
-  DONE: 5,
+  CHECK_NULL: 1,
+  COMPARE_LESS: 2,
+  RECURSE_LEFT: 3,
+  COMPARE_GREATER: 4,
+  RECURSE_RIGHT: 5,
+  DUPLICATE: 6,
 } as const
 
 function cloneNode(node: BSTNode | null): BSTNode | null {
@@ -97,9 +106,14 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
 
     while (node !== null) {
       path.push(node.id)
+      const isDuplicate = value === node.value
       push({
         description: `At node ${node.value} (id ${node.id}): is ${value} smaller or larger?`,
-        pseudocodeLine: PSEUDOCODE_LINE.COMPARE,
+        pseudocodeLine: isDuplicate
+          ? PSEUDOCODE_LINE.DUPLICATE
+          : value < node.value
+            ? PSEUDOCODE_LINE.COMPARE_LESS
+            : PSEUDOCODE_LINE.COMPARE_GREATER,
         isPredictionRequired: true,
         state: { root, currentNode: node, targetValue: value, path, operation: 'insert' },
         criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
@@ -121,7 +135,7 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
         parent === null
           ? `The tree is empty. Insert ${value} here as the root.`
           : `Reached an empty position to the ${wentLeft ? 'left' : 'right'} of node ${parent.value}. Insert ${value} here.`,
-      pseudocodeLine: PSEUDOCODE_LINE.INSERT_OR_FOUND,
+      pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
       isPredictionRequired: true,
       state: { root, currentNode: null, targetValue: value, path, operation: 'insert' },
       criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
@@ -142,7 +156,7 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
         parent === null
           ? `${value} inserted as the root.`
           : `${value} inserted to the ${wentLeft ? 'left' : 'right'} of node ${parent.value}.`,
-      pseudocodeLine: PSEUDOCODE_LINE.DONE,
+      pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
       isPredictionRequired: false,
       state: { root, currentNode: newNode, targetValue: value, path, insertedValue: value, operation: 'insert' },
       isFinalStep: isLastValue,
@@ -152,7 +166,7 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
   if (values.length === 0) {
     push({
       description: 'No values were given to insert; the tree remains empty.',
-      pseudocodeLine: PSEUDOCODE_LINE.DONE,
+      pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
       isPredictionRequired: false,
       state: { root: null, currentNode: null, targetValue: 0, path: [], operation: 'insert' },
       isFinalStep: true,
@@ -194,7 +208,7 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
       found = node
       push({
         description: `Found ${target} at node ${node.id}.`,
-        pseudocodeLine: PSEUDOCODE_LINE.INSERT_OR_FOUND,
+        pseudocodeLine: PSEUDOCODE_LINE.DUPLICATE,
         isPredictionRequired: false,
         state: { root, currentNode: node, targetValue: target, path, foundNode: node, operation: 'search' },
       })
@@ -203,7 +217,7 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
 
     push({
       description: `At node ${node.value} (id ${node.id}): is ${target} smaller or larger?`,
-      pseudocodeLine: PSEUDOCODE_LINE.COMPARE,
+      pseudocodeLine: target < node.value ? PSEUDOCODE_LINE.COMPARE_LESS : PSEUDOCODE_LINE.COMPARE_GREATER,
       isPredictionRequired: true,
       state: { root, currentNode: node, targetValue: target, path, operation: 'search' },
       criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
@@ -216,7 +230,7 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
   if (found === null && node === null) {
     push({
       description: `${target} was not found in the tree.`,
-      pseudocodeLine: PSEUDOCODE_LINE.INSERT_OR_FOUND,
+      pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
       isPredictionRequired: false,
       state: { root, currentNode: null, targetValue: target, path, foundNode: null, operation: 'search' },
     })
@@ -226,7 +240,7 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
     description: found
       ? `Search complete. ${target} was found in the tree.`
       : `Search complete. ${target} was not found in the tree.`,
-    pseudocodeLine: PSEUDOCODE_LINE.DONE,
+    pseudocodeLine: PSEUDOCODE_LINE.START,
     isPredictionRequired: false,
     state: { root, currentNode: found, targetValue: target, path, foundNode: found, operation: 'search' },
     isFinalStep: true,

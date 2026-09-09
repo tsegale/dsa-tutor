@@ -41,7 +41,7 @@ describe('bfsEngine', () => {
 
   it('visits nodes in breadth-first (non-decreasing level) order', () => {
     const snapshots = bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
-    const visitSteps = snapshots.filter((s) => s.pseudocodeLine === 2) // VISIT
+    const visitSteps = snapshots.filter((s) => s.pseudocodeLine === 1) // MARK_VISITED
 
     let previousLevel = -1
     for (const step of visitSteps) {
@@ -66,7 +66,7 @@ describe('bfsEngine', () => {
     // Only VISIT steps pair currentNode with ITS OWN level; ENQUEUE
     // steps keep currentNode as the node being expanded from while
     // level reflects the newly-discovered NEIGHBOR's level instead.
-    const visitSteps = snapshots.filter((s) => s.pseudocodeLine === 2)
+    const visitSteps = snapshots.filter((s) => s.pseudocodeLine === 1)
     const finalLevels = new Map<string, number>()
 
     for (const step of visitSteps) {

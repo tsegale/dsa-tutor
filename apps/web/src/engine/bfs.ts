@@ -29,12 +29,22 @@ export interface BFSState {
   level: number
 }
 
+// Indices match the pseudocode panel's bfs array exactly:
+//   0: 'enqueue startNode'
+//   1: 'mark startNode visited'
+//   2: 'while queue not empty:'
+//   3: '  node = dequeue()'
+//   4: '  if node == target: found'
+//   5: '  for each neighbour of node:'
+//   6: '    if not visited: enqueue'
 const PSEUDOCODE_LINE = {
-  START: 0,
-  DEQUEUE: 1,
-  VISIT: 2,
-  ENQUEUE: 3,
-  DONE: 4,
+  ENQUEUE_START: 0,
+  MARK_VISITED: 1,
+  LOOP_CONDITION: 2,
+  DEQUEUE: 3,
+  CHECK_TARGET: 4,
+  FOR_NEIGHBOURS: 5,
+  ENQUEUE_NEIGHBOUR: 6,
 } as const
 
 // Prompting on every dequeue would fatigue the learner; every other
@@ -101,7 +111,7 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
 
   push({
     description: `Starting Breadth-First Search from ${startNode}, looking for ${targetNode}. BFS explores level by level using a queue.`,
-    pseudocodeLine: PSEUDOCODE_LINE.START,
+    pseudocodeLine: PSEUDOCODE_LINE.ENQUEUE_START,
     isPredictionRequired: false,
     state: { graph, startNode, targetNode, visited: [], queue: [startNode], currentNode: null, found: false, foundPath: [], level: 0 },
   })
@@ -109,7 +119,7 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
   if (startNode === targetNode) {
     push({
       description: `${startNode} is both the start and the target - found immediately, with no traversal needed.`,
-      pseudocodeLine: PSEUDOCODE_LINE.DONE,
+      pseudocodeLine: PSEUDOCODE_LINE.CHECK_TARGET,
       isPredictionRequired: false,
       state: { graph, startNode, targetNode, visited: [], queue: [], currentNode: startNode, found: true, foundPath: [startNode], level: 0 },
       isFinalStep: true,
@@ -146,7 +156,7 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
 
     push({
       description: `Dequeued ${node} and marked it visited.`,
-      pseudocodeLine: PSEUDOCODE_LINE.VISIT,
+      pseudocodeLine: PSEUDOCODE_LINE.MARK_VISITED,
       isPredictionRequired: false,
       state: { graph, startNode, targetNode, visited, queue, currentNode: node, found: false, foundPath: [], level: currentLevel },
     })
@@ -156,7 +166,7 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
       const foundPath = reconstructPath(parent, targetNode)
       push({
         description: `${targetNode} found. Path from ${startNode}: [${foundPath.join(' -> ')}].`,
-        pseudocodeLine: PSEUDOCODE_LINE.DONE,
+        pseudocodeLine: PSEUDOCODE_LINE.CHECK_TARGET,
         isPredictionRequired: false,
         state: { graph, startNode, targetNode, visited, queue, currentNode: node, found: true, foundPath, level: currentLevel },
         isFinalStep: true,
@@ -171,7 +181,7 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
       level.set(neighbor, currentLevel + 1)
       push({
         description: `Added ${neighbor} to the queue (discovered via ${node}).`,
-        pseudocodeLine: PSEUDOCODE_LINE.ENQUEUE,
+        pseudocodeLine: PSEUDOCODE_LINE.ENQUEUE_NEIGHBOUR,
         isPredictionRequired: false,
         state: { graph, startNode, targetNode, visited, queue, currentNode: node, found: false, foundPath: [], level: currentLevel + 1 },
       })
@@ -182,7 +192,7 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
     description: found
       ? `Search complete. ${targetNode} was found.`
       : `Search complete. The entire reachable graph from ${startNode} was explored and ${targetNode} was not found.`,
-    pseudocodeLine: PSEUDOCODE_LINE.DONE,
+    pseudocodeLine: PSEUDOCODE_LINE.LOOP_CONDITION,
     isPredictionRequired: false,
     state: { graph, startNode, targetNode, visited, queue, currentNode: null, found, foundPath: [], level: 0 },
     isFinalStep: true,
