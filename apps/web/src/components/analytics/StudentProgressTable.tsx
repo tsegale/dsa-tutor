@@ -311,7 +311,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                     <div className="flex justify-center">
                       <MasteryRing
                         progress={student.averageCorrectRate / 100}
-                        size={40}
+                        size={36}
                         strokeWidth={3}
                         showPercent={false}
                       />

@@ -85,7 +85,7 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
   }
 
   useEffect(() => {
-    if (open && student) {
+    if (open && student && student.totalSessions > 0) {
       setSummary(null)
       void fetchSummary()
     }
@@ -93,6 +93,7 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
   }, [open, student?.userId])
 
   const anonymizedName = student ? `Student ${student.userId.slice(-4)}` : ''
+  const hasNoSessions = student?.totalSessions === 0
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
@@ -103,71 +104,79 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-6">
-          {error && <p className="mb-3 text-sm text-error">{error}</p>}
+          {hasNoSessions ? (
+            <p className="text-sm text-text-muted">
+              {anonymizedName} has not completed any practice sessions yet. No summary available.
+            </p>
+          ) : (
+            <>
+              {error && <p className="mb-3 text-sm text-error">{error}</p>}
 
-          {isLoading && <LoadingLines />}
+              {isLoading && <LoadingLines />}
 
-          {summary && !isLoading && (
-            <div className="flex flex-col gap-5">
-              <div>
-                <span
-                  className="inline-block rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{
-                    backgroundColor: TREND_STYLE[summary.scaffoldingTrend].bg,
-                    color: TREND_STYLE[summary.scaffoldingTrend].color,
-                  }}
-                >
-                  {TREND_STYLE[summary.scaffoldingTrend].label}
-                </span>
-              </div>
+              {summary && !isLoading && (
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <span
+                      className="inline-block rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{
+                        backgroundColor: TREND_STYLE[summary.scaffoldingTrend].bg,
+                        color: TREND_STYLE[summary.scaffoldingTrend].color,
+                      }}
+                    >
+                      {TREND_STYLE[summary.scaffoldingTrend].label}
+                    </span>
+                  </div>
 
-              <p className="text-[14px] leading-[1.6] text-text-primary">{summary.narrativeSummary}</p>
+                  <p className="text-[14px] leading-[1.6] text-text-primary">{summary.narrativeSummary}</p>
 
-              {summary.strengthAreas.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold tracking-wide text-success uppercase">Strengths</h3>
-                  <ul className="mt-2 space-y-1.5">
-                    {summary.strengthAreas.map((strength, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[13px] text-text-primary">
-                        <span className="mt-0.5 shrink-0 text-success">
-                          <CheckIcon />
-                        </span>
-                        <span>{strength}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {summary.strengthAreas.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold tracking-wide text-success uppercase">Strengths</h3>
+                      <ul className="mt-2 space-y-1.5">
+                        {summary.strengthAreas.map((strength, i) => (
+                          <li key={i} className="flex items-start gap-2 text-[13px] text-text-primary">
+                            <span className="mt-0.5 shrink-0 text-success">
+                              <CheckIcon />
+                            </span>
+                            <span>{strength}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {summary.concernAreas.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold tracking-wide text-secondary uppercase">Concerns</h3>
+                      <ul className="mt-2 space-y-1.5">
+                        {summary.concernAreas.map((concern, i) => (
+                          <li key={i} className="flex items-start gap-2 text-[13px] text-text-primary">
+                            <span className="mt-0.5 shrink-0 text-secondary">
+                              <WarningIcon />
+                            </span>
+                            <span>{concern}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="rounded-md border-l-4 border-primary bg-primary-light p-3">
+                    <p className="text-xs font-semibold text-primary uppercase">Recommended Action</p>
+                    <p className="mt-1 text-[14px] font-bold text-text-primary">{summary.recommendedAction}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => void fetchSummary()}
+                    className="self-start text-[12px] text-text-muted hover:text-text-primary hover:underline"
+                  >
+                    Regenerate
+                  </button>
                 </div>
               )}
-
-              {summary.concernAreas.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold tracking-wide text-secondary uppercase">Concerns</h3>
-                  <ul className="mt-2 space-y-1.5">
-                    {summary.concernAreas.map((concern, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[13px] text-text-primary">
-                        <span className="mt-0.5 shrink-0 text-secondary">
-                          <WarningIcon />
-                        </span>
-                        <span>{concern}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="rounded-md border-l-4 border-primary bg-primary-light p-3">
-                <p className="text-xs font-semibold text-primary uppercase">Recommended Action</p>
-                <p className="mt-1 text-[14px] font-bold text-text-primary">{summary.recommendedAction}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void fetchSummary()}
-                className="self-start text-[12px] text-text-muted hover:text-text-primary hover:underline"
-              >
-                Regenerate
-              </button>
-            </div>
+            </>
           )}
         </div>
       </SheetContent>

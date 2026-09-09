@@ -25,7 +25,7 @@ export default function MasteryRing({ progress, size = 48, strokeWidth = 4, show
   const strokeDashoffset = circumference * (1 - clamped)
   const percent = Math.round(clamped * 100)
 
-  const fontSize = Math.max(8, Math.floor(size * 0.22))
+  const fontSize = Math.max(7, Math.floor(size * 0.2))
 
   return (
     <div className="relative inline-flex items-center justify-center">
