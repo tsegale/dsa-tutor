@@ -162,6 +162,8 @@ function generateRandomArray(): number[] {
 export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanelProps) {
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
+  const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   const playbackSpeed = useAlgorithmStore((state) => state.playbackSpeed)
   const startPlayback = useAlgorithmStore((state) => state.startPlayback)
   const stopPlayback = useAlgorithmStore((state) => state.stopPlayback)
@@ -176,8 +178,11 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
   const [arrayInput, setArrayInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
 
+  const isAtFinalStep = totalSteps > 0 && stepIndex >= totalSteps - 1
+
   function handlePlayPause() {
     if (isPlaying) stopPlayback()
+    else if (isAtFinalStep) resetAlgorithm()
     else startPlayback()
   }
 
@@ -214,13 +219,13 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
               <button
                 type="button"
                 onClick={handlePlayPause}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
+                aria-label={isPlaying ? 'Pause' : isAtFinalStep ? 'Replay' : 'Play'}
                 className="flex size-9 items-center justify-center rounded-md bg-primary text-white hover:bg-primary-hover"
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right">{isPlaying ? 'Pause' : 'Play'}</TooltipContent>
+            <TooltipContent side="right">{isPlaying ? 'Pause' : isAtFinalStep ? 'Replay' : 'Play'}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -275,7 +280,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
           </button>
         </div>
       ) : (
-        <div className="flex h-full flex-col gap-2 overflow-y-auto p-3">
+        <div className="flex h-full flex-col gap-2 overflow-y-auto px-3 pt-3 pb-1">
           <section className="flex flex-col gap-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
               Playback
@@ -314,7 +319,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
                 className="flex w-full items-center justify-center gap-1.5 rounded-md border py-2"
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                {isPlaying ? 'Pause' : 'Auto play'}
+                {isPlaying ? 'Pause' : isAtFinalStep ? 'Replay' : 'Auto play'}
               </button>
               <p className="mt-1 text-center text-[11px] text-text-muted dark:text-dark-text-secondary">Space</p>
             </div>
@@ -376,7 +381,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
             <FeynmanModeButton />
           </section>
 
-          <section className="mt-auto flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+          <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <button
               type="button"
               onClick={toggleCodeEditorMode}

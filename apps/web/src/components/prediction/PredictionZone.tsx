@@ -605,7 +605,7 @@ export default function PredictionZone({
       setXpAmount(response.xpAwarded)
       setXpVisible(true)
       play('xp')
-      await wait(400)
+      await wait(500)
       stepForward()
       return
     }
@@ -710,7 +710,7 @@ export default function PredictionZone({
       play('xp')
 
       if (result.executeVisually && result.resultingState) {
-        await wait(400)
+        await wait(500)
         const { codeEditorMode, activeChallengeType, setAlgorithm: setAlg, setActiveChallengeType } =
           useAlgorithmStore.getState()
         setAlg('Bubble Sort', bubbleSortEngine(result.resultingState, codeEditorMode))

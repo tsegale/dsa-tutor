@@ -1,7 +1,7 @@
 import { ScaffoldingLevel } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn, scaffoldingPercent } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 const DOT_COLOR: Record<ScaffoldingLevel, string> = {
   [ScaffoldingLevel.NONE]: 'bg-success',
@@ -22,7 +22,6 @@ const SCAFFOLDING_LABEL: Record<ScaffoldingLevel, string> = {
 export default function ZPDScaffoldingPill() {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const scaffoldingReasoning = useAlgorithmStore((state) => state.scaffoldingReasoning)
-  const percent = scaffoldingPercent(scaffoldingLevel)
 
   return (
     <Tooltip>

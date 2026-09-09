@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 interface DSATutorLogoProps {
   variant?: 'dark' | 'white'
   className?: string
@@ -5,6 +7,7 @@ interface DSATutorLogoProps {
 }
 
 export default function DSATutorLogo({ variant = 'dark', className = '', showTagline = true }: DSATutorLogoProps) {
+  const titleId = useId()
   const textColor = variant === 'white' ? '#fff' : '#1e293b'
   const accentColor = variant === 'white' ? '#a5b4fc' : '#3730a3'
   const taglineColor = variant === 'white' ? 'rgba(255,255,255,0.5)' : '#94a3b8'
@@ -16,7 +19,8 @@ export default function DSATutorLogo({ variant = 'dark', className = '', showTag
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" role="img" aria-labelledby={titleId}>
+        <title id={titleId}>DSA Tutor - AI Scaffolding Engine</title>
         <rect width="40" height="40" rx="10" fill={iconBg} stroke={iconStroke} strokeWidth="1" />
         <circle cx="8" cy="20" r="3.5" fill={nodeMain} />
         <circle cx="20" cy="10" r="3.5" fill={nodeSub} />

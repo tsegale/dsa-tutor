@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlgorithmTrack } from '@dsa-tutor/types'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { logout } from '@/api/auth'
 import { Button } from '@/components/ui/button'
@@ -84,6 +84,7 @@ export default function TopBar() {
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
+  const progressPercent = useAlgorithmStore(selectProgressPercent)
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const toggleFocusMode = useAlgorithmStore((state) => state.toggleFocusMode)
   const resetAlgorithm = useAlgorithmStore((state) => state.resetAlgorithm)
@@ -205,6 +206,11 @@ export default function TopBar() {
           <TooltipContent>Log out</TooltipContent>
         </Tooltip>
       </div>
+      <div
+        className="absolute inset-x-0 bottom-0 h-[2px] bg-primary"
+        style={{ width: `${progressPercent}%` }}
+        aria-hidden="true"
+      />
     </header>
   )
 }
