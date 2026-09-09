@@ -365,21 +365,19 @@ export default function ArrayCanvas({
               ? bars[handsOnLeft].x
               : bar.x
 
-        // Priority order: sorted > swapping > comparing > compared > neutral.
-        // "compared" (e.g. Selection Sort's scan index against the
-        // current minimum) reuses the swapping/purple colour but only
-        // when the bar isn't already active - active always wins so
-        // Bubble Sort's SWAP_DECISION step (where active and compared
-        // are the same two bars) keeps its existing amber pulse.
+        // Priority order: sorted > swapping > comparing/compared > neutral.
+        // comparedIndices and activeIndices share the amber "comparing"
+        // colour at every step (not only at prediction junctions), so the
+        // canvas reads as alive throughout Demo mode playback, not just at
+        // pauses. swappedIndices always wins over both since a bar that
+        // just swapped is the more important signal for that one step.
         const barState: BarState = isHighlighted
           ? 'sorted'
           : isSwapped
             ? 'swapping'
-            : isActive
+            : isActive || isCompared
               ? 'comparing'
-              : isCompared
-                ? 'swapping'
-                : 'neutral'
+              : 'neutral'
         const colours = BAR_COLOURS[barState]
 
         const barDragX = bar.index === handsOnLeft ? dragXLeft : bar.index === handsOnRight ? dragXRight : undefined
