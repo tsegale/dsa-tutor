@@ -224,7 +224,14 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
             // distinguishes "actively processing" from "the run is over",
             // so the target settles into visited/green instead of staying
             // amber forever after a successful search.
-            const isCurrent = state.currentNode === id && !state.found
+            // Before the first dequeue, currentNode is still null (the
+            // engine only sets it once the start node is actually
+            // processed) - without this, the start node renders as
+            // merely "queued" (translucent) on the very first step
+            // instead of standing out as the node about to be explored.
+            const isFirstStep = state.currentNode === null && state.visited.length === 0
+            const isCurrent =
+              (state.currentNode === id || (isFirstStep && id === state.startNode)) && !state.found
             const isVisited = state.visited.includes(id)
             const isQueued = !isVisited && state.queue.includes(id)
             const isTarget = id === state.targetNode && !isVisited
@@ -254,6 +261,26 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
                 >
                   {id}
                 </text>
+                {id === state.startNode && (
+                  <text
+                    x={pos.x}
+                    y={pos.y + NODE_RADIUS + 14}
+                    textAnchor="middle"
+                    style={{ fill: VISITED_FILL, fontSize: 10, fontWeight: 600 }}
+                  >
+                    Start
+                  </text>
+                )}
+                {id === state.targetNode && (
+                  <text
+                    x={pos.x}
+                    y={pos.y + NODE_RADIUS + 14}
+                    textAnchor="middle"
+                    style={{ fill: TARGET_RING, fontSize: 10, fontWeight: 600 }}
+                  >
+                    Target
+                  </text>
+                )}
               </g>
             )
           })}
