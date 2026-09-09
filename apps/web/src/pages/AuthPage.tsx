@@ -226,8 +226,8 @@ export default function AuthPage() {
             {PILLARS.map((pillar) => (
               <div
                 key={pillar.title}
-                className="flex gap-2.5 rounded-[10px]"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', padding: '10px 12px' }}
+                className="flex gap-2.5 rounded-[10px] bg-white/[0.08] dark:bg-white/[0.12]"
+                style={{ border: '0.5px solid rgba(255,255,255,0.15)', padding: '10px 12px' }}
               >
                 <div
                   className="flex size-6 shrink-0 items-center justify-center rounded-md text-white"
@@ -245,7 +245,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex w-full flex-1 flex-col items-center justify-center bg-white px-10 py-16">
+      <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-center bg-white px-10 py-16">
         <div className="w-full max-w-[320px]">
           <h1 className="mb-8 text-center text-lg font-semibold text-text-primary md:hidden">DSA Tutor</h1>
 
