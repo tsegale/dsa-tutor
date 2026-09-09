@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { logout } from '@/api/auth'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -12,10 +14,12 @@ import ZPDScaffoldingPill from '@/components/ui/ZPDScaffoldingPill'
 const THEME_STORAGE_KEY = 'dsa-tutor-theme'
 export const OPEN_SHORTCUTS_MODAL_EVENT = 'dsa-tutor:open-shortcuts-modal'
 
-// Track metadata for the current algorithm isn't sourced from the store
-// yet (Phase 9+ wires topic data from the API). Bubble Sort is hardcoded
-// here as the only algorithm through Phase 15.
-const TRACK_NAME = 'Sorting'
+const TRACK_DISPLAY_NAMES: Record<AlgorithmTrack, string> = {
+  [AlgorithmTrack.FOUNDATIONS]: 'Foundations',
+  [AlgorithmTrack.SORTING]: 'Sorting',
+  [AlgorithmTrack.TREES]: 'Trees',
+  [AlgorithmTrack.GRAPHS]: 'Graphs',
+}
 
 function EyeIcon({ active }: { active: boolean }) {
   return (
@@ -107,15 +111,19 @@ export default function TopBar() {
     localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light')
   }
 
+  const registryEntry = getAlgorithmRegistryEntry(algorithmName)
+  const algorithmDisplayName = registryEntry?.displayName ?? algorithmName
+  const trackDisplayName = registryEntry ? TRACK_DISPLAY_NAMES[registryEntry.track] : ''
+
   return (
     <header className="relative flex h-14 w-full items-center justify-between border-b border-border bg-white px-4 dark:bg-dark-surface">
       <div className="flex items-center gap-3">
         <nav className="flex items-center gap-1 text-[13px]">
           <span className="text-text-muted dark:text-dark-text-secondary">Dashboard</span>
           <span className="text-text-muted dark:text-dark-text-secondary">/</span>
-          <span className="text-text-muted dark:text-dark-text-secondary">{TRACK_NAME}</span>
+          <span className="text-text-muted dark:text-dark-text-secondary">{trackDisplayName}</span>
           <span className="text-text-muted dark:text-dark-text-secondary">/</span>
-          <span className="font-bold text-primary">{algorithmName}</span>
+          <span className="font-bold text-primary">{algorithmDisplayName}</span>
         </nav>
         <ZPDScaffoldingPill />
       </div>

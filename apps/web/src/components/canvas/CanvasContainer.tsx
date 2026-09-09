@@ -23,7 +23,7 @@ export default function CanvasContainer({
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
 
   const containerRef = useRef<HTMLDivElement>(null)
-  const [size, setSize] = useState({ width: 0, height: 0 })
+  const [size, setSize] = useState({ width: 800, height: 480 })
 
   useLayoutEffect(() => {
     const el = containerRef.current

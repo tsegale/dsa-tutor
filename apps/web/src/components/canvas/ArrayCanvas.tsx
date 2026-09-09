@@ -473,7 +473,7 @@ export default function ArrayCanvas({
             </text>
             <text
               x={displayX + bar.width / 2}
-              y={bar.y - 8}
+              y={height - 12}
               textAnchor="middle"
               className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
             >
