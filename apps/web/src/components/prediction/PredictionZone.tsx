@@ -407,6 +407,10 @@ export default function PredictionZone({
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hintLoading, setHintLoading] = useState(false)
+  // Only true when the current hint came from a manual H-key / avatar
+  // click, never from the proactive 8-second timer - drives whether
+  // HintAvatar's floating canvas bubble is allowed to render at all.
+  const [wasRequestedManually, setWasRequestedManually] = useState(false)
   const [shakeToken, setShakeToken] = useState(0)
   const [xpAmount, setXpAmount] = useState(0)
   const [xpVisible, setXpVisible] = useState(false)
@@ -440,6 +444,7 @@ export default function PredictionZone({
     setMistakeCounterfactual(null)
     setHint(null)
     setHintLoading(false)
+    setWasRequestedManually(false)
     setHintsRequestedCount(0)
     setStepStartTime(Date.now())
     setCodeEvalPraise(null)
@@ -513,6 +518,7 @@ export default function PredictionZone({
   async function handleRequestHint(proactive: boolean) {
     if (hint !== null || hintLoading || !snapshot) return
     setHintLoading(true)
+    setWasRequestedManually(!proactive)
     if (!proactive) {
       setHintsRequestedCount((count) => count + 1)
       onHintRequested?.()
@@ -722,6 +728,9 @@ export default function PredictionZone({
     setMistakeAnalysis(result.errorExplanation ?? 'Your code does not correctly implement this step.')
     setMistakeHint(null)
     setMistakeCounterfactual(null)
+    // Direct feedback on a submission the learner just made, not the idle
+    // timer, so it's eligible for the floating bubble like a manual hint.
+    setWasRequestedManually(true)
     setHint(result.correctiveHint)
   }
 
@@ -758,6 +767,7 @@ export default function PredictionZone({
                             onRequestHint={() => void handleRequestHint(false)}
                             hint={hint}
                             isLoading={hintLoading}
+                            wasRequestedManually={wasRequestedManually}
                           />
                         </div>
                       </TooltipTrigger>
@@ -771,6 +781,7 @@ export default function PredictionZone({
                       onRequestHint={() => void handleRequestHint(false)}
                       hint={hint}
                       isLoading={hintLoading}
+                      wasRequestedManually={wasRequestedManually}
                     />
                   ))}
               </div>

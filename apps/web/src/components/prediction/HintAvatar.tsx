@@ -7,6 +7,14 @@ interface HintAvatarProps {
   onRequestHint: () => void
   hint: string | null
   isLoading: boolean
+  /**
+   * True only when the current hint was fetched because the learner
+   * pressed H / clicked the avatar. Proactive hints (fired by the
+   * 8-second HIGH-scaffolding timer) set this to false so the floating
+   * canvas bubble stays hidden - the right panel AI Tutor tab is the
+   * only surface for those, avoiding showing the hint twice at once.
+   */
+  wasRequestedManually: boolean
 }
 
 export const DISMISS_HINT_EVENT = 'dsa-tutor:dismiss-hint'
@@ -46,8 +54,15 @@ function SpinnerRing() {
   )
 }
 
-export default function HintAvatar({ hintAvailable, onRequestHint, hint, isLoading }: HintAvatarProps) {
+export default function HintAvatar({
+  hintAvailable,
+  onRequestHint,
+  hint,
+  isLoading,
+  wasRequestedManually,
+}: HintAvatarProps) {
   const shouldPulse = hintAvailable && hint === null && !isLoading
+  const showBubble = hint !== null && wasRequestedManually === true
 
   return (
     <motion.div layout className="relative">
@@ -74,15 +89,19 @@ export default function HintAvatar({ hintAvailable, onRequestHint, hint, isLoadi
         {isLoading && <SpinnerRing />}
       </div>
 
-      {hint !== null && (
+      {showBubble && (
         <motion.div
           layout
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
+          // Anchored to the top of the prediction zone (this avatar sits
+          // at the top-left of that panel), so the bubble emerges upward
+          // into the gap above the panel rather than drifting down over
+          // the canvas bars.
           className={cn(
-            'absolute bottom-full left-0 z-10 mb-2 w-[280px] max-w-[280px] rounded-md',
-            'border-l-4 border-secondary bg-secondary-light p-4',
+            'absolute bottom-[calc(100%+10px)] left-0 z-10 w-[280px] max-w-[280px] rounded-md',
+            'border-l-4 border-secondary bg-secondary-light p-4 shadow-md',
           )}
         >
           <button
