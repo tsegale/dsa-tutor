@@ -8,7 +8,7 @@ interface OnboardingControllerProps {
   onComplete: () => void
 }
 
-const NAVIGATION_SETTLE_MS = 500
+const NAVIGATION_SETTLE_MS = 1200
 
 export default function OnboardingController({ onComplete }: OnboardingControllerProps) {
   const navigate = useNavigate()
