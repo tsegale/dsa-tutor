@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
@@ -81,6 +81,7 @@ function LogoutIcon() {
 
 export default function TopBar() {
   const navigate = useNavigate()
+  const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
@@ -112,7 +113,12 @@ export default function TopBar() {
     localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light')
   }
 
-  const registryEntry = getAlgorithmRegistryEntry(algorithmName)
+  // Looked up from the URL slug, not the store's algorithmName: an
+  // AlgorithmPage effect overwrites algorithmName with the topic's
+  // display name (e.g. "Binary Search Tree") once the topics API call
+  // resolves, so a registry lookup keyed on that field would fail here
+  // and leave the track blank.
+  const registryEntry = getAlgorithmRegistryEntry(algorithmSlug ?? '')
   const algorithmDisplayName = registryEntry?.displayName ?? algorithmName
   const trackDisplayName = registryEntry ? TRACK_DISPLAY_NAMES[registryEntry.track] : ''
 
