@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -29,8 +30,17 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
   const masteryPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as StackState | undefined
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+
+  // the stack grows upward from a floor near the bottom of the svg, which
+  // sits below the fold of this overflow-auto wrapper as soon as the svg
+  // is taller than the wrapper - keep the floor in view as items change
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [state?.items.length])
 
   if (!state) {
     return (
@@ -66,7 +76,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
         </span>
       </div>
 
-      <div className="flex-1 overflow-auto pt-10">
+      <div ref={scrollRef} className="flex-1 overflow-auto pt-10">
         <svg width={width} height={height} role="img" aria-label={`Stack, ${snapshot?.description ?? ''}`}>
           <line x1={centerX - 90} y1={baseY} x2={centerX + 90} y2={baseY} stroke="#0f172a" strokeWidth={3} />
 

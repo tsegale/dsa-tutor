@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -18,8 +19,17 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
   const masteryPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as CallStackState | undefined
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+
+  // the deepest (most recent, currently active) frame sits at the floor
+  // near the bottom of the svg, which grows taller than this overflow-auto
+  // wrapper as recursion deepens - keep the floor in view as frames change
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [state?.frames.length])
 
   if (!state || state.frames.length === 0) {
     return (
@@ -52,7 +62,7 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
         </span>
       </div>
 
-      <div className="flex-1 overflow-auto pt-10">
+      <div ref={scrollRef} className="flex-1 overflow-auto pt-10">
         <svg width={width} height={svgHeight} role="img" aria-label={`Call stack, ${snapshot?.description ?? ''}`}>
           <line x1={centerX - FRAME_WIDTH / 2 - 10} y1={baseY} x2={centerX + FRAME_WIDTH / 2 + 10} y2={baseY} stroke="#0f172a" strokeWidth={3} />
 
