@@ -2,21 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
-
-export interface CallFrame {
-  id: string
-  functionName: string
-  argument: number
-  returnValue: number | null
-  status: 'active' | 'waiting' | 'returned'
-  depth: number
-}
-
-export interface CallStackState {
-  frames: CallFrame[]
-  baseCase: number
-  currentFrameId: string | null
-}
+import type { CallStackState } from '@/engine/recursionFactorial'
 
 interface CallStackCanvasProps {
   width?: number
