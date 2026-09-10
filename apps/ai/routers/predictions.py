@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from fastapi import APIRouter
@@ -138,6 +139,219 @@ def _evaluate_next_node_selection(ds: dict, student_answer: str | None) -> bool:
     return student_answer == queue[0]
 
 
+# --- Foundations track ------------------------------------------------
+# Every helper below mirrors the tile `id` convention the frontend uses
+# in getTilesForSnapshot (apps/web/src/components/prediction/
+# PredictionZone.tsx) exactly - the two sides never share code, so they
+# must agree on the same id strings by construction.
+
+
+def _evaluate_index_access(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"idx-{ds.get('targetIndex')}"
+
+
+def _evaluate_insert_position(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"idx-{ds.get('targetIndex', 0) + 2}"
+
+
+def _evaluate_delete_shift(ds: dict, student_answer: str | None) -> bool:
+    array = ds.get("array") or []
+    pos = ds.get("targetIndex", 0)
+    if pos < len(array):
+        return student_answer == f"idx-{pos}"
+    return student_answer == "end-of-array"
+
+
+def _evaluate_null_check(ds: dict, student_answer: str | None) -> bool:
+    nodes = ds.get("nodes") or []
+    if ds.get("operation") == "traverse":
+        return student_answer == "when-head-again"
+    current_id = ds.get("currentId")
+    current = next((n for n in nodes if n.get("id") == current_id), None)
+    if current is not None:
+        # Mid-traversal "is this the last node?" - true only when this
+        # existing node's own .next is null.
+        return student_answer == ("yes-last" if current.get("next") is None else "no-more")
+    # About to create a brand-new node: what will its .next point to?
+    return student_answer == ("current-head" if ds.get("headId") else "null")
+
+
+def _is_dll(ds: dict) -> bool:
+    nodes = ds.get("nodes") or []
+    return any("prev" in n for n in nodes)
+
+
+def _evaluate_insert_between(ds: dict, student_answer: str | None) -> bool:
+    if _is_dll(ds):
+        return student_answer == "all-four"
+    return student_answer == "new-then-prev"
+
+
+def _evaluate_delete_relink(ds: dict, student_answer: str | None) -> bool:
+    if _is_dll(ds):
+        return student_answer == "two"
+    return student_answer == "prev-next-eq-x-next"
+
+
+def _evaluate_pointer_follow(ds: dict, student_answer: str | None) -> bool:
+    nodes = ds.get("nodes") or []
+    current = next((n for n in nodes if n.get("id") == ds.get("currentId")), None)
+    if current is None:
+        return False
+    if ds.get("operation") == "reverse":
+        return student_answer == "the-previous-node"
+    active_pointer = ds.get("activePointer") or "next"
+    target_id = current.get(active_pointer)
+    return student_answer == (target_id if target_id is not None else "null")
+
+
+def _evaluate_wrap_check(student_answer: str | None) -> bool:
+    return student_answer == "the-head-node"
+
+
+def _evaluate_stack_push_result(student_answer: str | None) -> bool:
+    return student_answer == "pushed-value"
+
+
+def _evaluate_stack_pop_result(student_answer: str | None) -> bool:
+    return student_answer == "top-value"
+
+
+def _evaluate_overflow_check(student_answer: str | None) -> bool:
+    return student_answer == "no-overflow"
+
+
+def _evaluate_underflow_check(student_answer: str | None) -> bool:
+    return student_answer == "error-underflow"
+
+
+def _evaluate_queue_rear(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"idx-{ds.get('rearIndex')}"
+
+
+def _evaluate_queue_front(student_answer: str | None) -> bool:
+    return student_answer == "front-value"
+
+
+def _evaluate_circular_wrap(student_answer: str | None) -> bool:
+    # circularQueueEngine always wraps the rear back to index 0.
+    return student_answer == "idx-0"
+
+
+def _evaluate_deque_end(ds: dict, student_answer: str | None, description: str) -> bool:
+    is_front = "front" in description.lower()
+    return student_answer == ("front" if is_front else "back")
+
+
+def _evaluate_load_factor(ds: dict, student_answer: str | None) -> bool:
+    if "frontIndex" in ds:
+        return student_answer == f"wasted-{ds.get('frontIndex')}"
+    return student_answer == "yes-too-high"
+
+
+def _evaluate_hash_bucket(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"bucket-{ds.get('hashResult')}"
+
+
+def _evaluate_collision_resolve(student_answer: str | None) -> bool:
+    return student_answer == "back-of-chain"
+
+
+def _evaluate_probe_next(student_answer: str | None) -> bool:
+    return student_answer == "i-plus-1-mod"
+
+
+def _evaluate_jump_size(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"size-{ds.get('jumpSize')}"
+
+
+def _evaluate_probe_position(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"idx-{ds.get('probedIndex')}"
+
+
+def _evaluate_range_double(ds: dict, student_answer: str | None) -> bool:
+    array = ds.get("array") or []
+    bound = ds.get("bound")
+    target = ds.get("target")
+    if bound is None or not (0 <= bound < len(array)):
+        return False
+    too_small = array[bound] < target
+    if student_answer == "yes-too-small":
+        return too_small
+    if student_answer == "no-large-enough":
+        return not too_small
+    return False
+
+
+def _evaluate_base_case(student_answer: str | None) -> bool:
+    # factorial(0) and fib(1) both return 1.
+    return student_answer == "one"
+
+
+def _evaluate_return_value(student_answer: str | None, description: str) -> bool:
+    n_match = re.search(r"factorial\((\d+)\)", description)
+    prev_match = re.search(r"returned (\d+)", description)
+    if not n_match or not prev_match:
+        return False
+    n, prev = int(n_match.group(1)), int(prev_match.group(1))
+    return student_answer == f"mult-{n * prev}"
+
+
+def _evaluate_recursive_call(ds: dict, student_answer: str | None) -> bool:
+    frames = ds.get("frames") or []
+    if "totalCalls" in ds:
+        n = max((f.get("argument", 0) for f in frames), default=1)
+        return student_answer == f"exp-{2 ** n}"
+    remaining = min((f.get("argument", 0) for f in frames), default=0)
+    return student_answer == f"remaining-{remaining}"
+
+
+def _evaluate_pointer_move(ds: dict, student_answer: str | None) -> bool:
+    array = ds.get("array") or []
+    left = ds.get("leftPointerIndex", 0)
+    right = ds.get("rightPointerIndex", 0)
+    if ds.get("target") is not None:
+        if not (0 <= left < len(array)) or not (0 <= right < len(array)):
+            return False
+        total = array[left] + array[right]
+        target = ds["target"]
+        if student_answer == "move-left":
+            return total < target
+        if student_answer == "move-right":
+            return total > target
+        return False
+    if not (0 <= left < len(array)) or not (0 <= right < len(array)):
+        return False
+    matches = array[left] == array[right]
+    if student_answer == "match-inward":
+        return matches
+    if student_answer == "no-match":
+        return not matches
+    return False
+
+
+def _evaluate_window_sum(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == f"sum-{ds.get('windowSum')}"
+
+
+def _evaluate_window_expand(ds: dict, student_answer: str | None) -> bool:
+    target_sum = ds.get("targetSum")
+    window_sum = ds.get("windowSum", 0)
+    if target_sum is not None:
+        if student_answer == "expand":
+            return window_sum < target_sum
+        if student_answer == "shrink":
+            return window_sum >= target_sum
+        return False
+    array = ds.get("array") or []
+    window_start = ds.get("windowStart", 0)
+    window_end = ds.get("windowEnd", -1)
+    if not (0 <= window_start < len(array)) or not (0 <= window_end + 1 < len(array)):
+        return False
+    new_sum = window_sum - array[window_start] + array[window_end + 1]
+    return student_answer == f"sum-{new_sum}"
+
+
 def evaluate_answer(request: PredictionRequest) -> bool:
     wrapper = request.current_state
     if not wrapper or not isinstance(wrapper, dict):
@@ -176,6 +390,69 @@ def evaluate_answer(request: PredictionRequest) -> bool:
 
     if junction_type == "NEXT_NODE_SELECTION":
         return _evaluate_next_node_selection(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    # Foundations track
+    ds_dict = ds if isinstance(ds, dict) else {}
+    description = wrapper.get("description") or ""
+
+    if junction_type == "INDEX_ACCESS":
+        return _evaluate_index_access(ds_dict, request.student_answer)
+    if junction_type == "INSERT_POSITION":
+        return _evaluate_insert_position(ds_dict, request.student_answer)
+    if junction_type == "DELETE_SHIFT":
+        return _evaluate_delete_shift(ds_dict, request.student_answer)
+    if junction_type == "NULL_CHECK":
+        return _evaluate_null_check(ds_dict, request.student_answer)
+    if junction_type == "INSERT_BETWEEN":
+        return _evaluate_insert_between(ds_dict, request.student_answer)
+    if junction_type == "DELETE_RELINK":
+        return _evaluate_delete_relink(ds_dict, request.student_answer)
+    if junction_type in ("POINTER_FOLLOW", "TRAVERSE_DIRECTION"):
+        return _evaluate_pointer_follow(ds_dict, request.student_answer)
+    if junction_type == "WRAP_CHECK":
+        return _evaluate_wrap_check(request.student_answer)
+    if junction_type == "STACK_PUSH_RESULT":
+        return _evaluate_stack_push_result(request.student_answer)
+    if junction_type == "STACK_POP_RESULT":
+        return _evaluate_stack_pop_result(request.student_answer)
+    if junction_type == "OVERFLOW_CHECK":
+        return _evaluate_overflow_check(request.student_answer)
+    if junction_type == "UNDERFLOW_CHECK":
+        return _evaluate_underflow_check(request.student_answer)
+    if junction_type == "QUEUE_REAR":
+        return _evaluate_queue_rear(ds_dict, request.student_answer)
+    if junction_type == "QUEUE_FRONT":
+        return _evaluate_queue_front(request.student_answer)
+    if junction_type == "CIRCULAR_WRAP":
+        return _evaluate_circular_wrap(request.student_answer)
+    if junction_type == "DEQUE_END":
+        return _evaluate_deque_end(ds_dict, request.student_answer, description)
+    if junction_type == "LOAD_FACTOR":
+        return _evaluate_load_factor(ds_dict, request.student_answer)
+    if junction_type == "HASH_BUCKET":
+        return _evaluate_hash_bucket(ds_dict, request.student_answer)
+    if junction_type == "COLLISION_RESOLVE":
+        return _evaluate_collision_resolve(request.student_answer)
+    if junction_type == "PROBE_NEXT":
+        return _evaluate_probe_next(request.student_answer)
+    if junction_type == "JUMP_SIZE":
+        return _evaluate_jump_size(ds_dict, request.student_answer)
+    if junction_type == "PROBE_POSITION":
+        return _evaluate_probe_position(ds_dict, request.student_answer)
+    if junction_type == "RANGE_DOUBLE":
+        return _evaluate_range_double(ds_dict, request.student_answer)
+    if junction_type == "BASE_CASE":
+        return _evaluate_base_case(request.student_answer)
+    if junction_type == "RETURN_VALUE":
+        return _evaluate_return_value(request.student_answer, description)
+    if junction_type == "RECURSIVE_CALL":
+        return _evaluate_recursive_call(ds_dict, request.student_answer)
+    if junction_type == "POINTER_MOVE":
+        return _evaluate_pointer_move(ds_dict, request.student_answer)
+    if junction_type == "WINDOW_SUM":
+        return _evaluate_window_sum(ds_dict, request.student_answer)
+    if junction_type == "WINDOW_EXPAND":
+        return _evaluate_window_expand(ds_dict, request.student_answer)
 
     return False
 
