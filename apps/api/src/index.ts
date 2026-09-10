@@ -16,7 +16,6 @@ if (process.env.NODE_ENV === 'production') {
     console.log('Prisma migrations applied.')
   } catch (err) {
     console.error('Migration failed:', err)
-    
   }
 }
 
