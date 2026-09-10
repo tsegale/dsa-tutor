@@ -49,4 +49,73 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
 
         return BFS_CONTEXT, BFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
+    if name in ("array_access", "array_insert", "array_insertion", "array_delete", "array_deletion"):
+        from prompts.array_operations import (
+            ARRAY_OPERATIONS_CONTEXT,
+            ARRAY_OPERATIONS_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return ARRAY_OPERATIONS_CONTEXT, ARRAY_OPERATIONS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+    if name in (
+        "singly_linked_list",
+        "doubly_linked_list",
+        "circular_linked_list",
+    ):
+        from prompts.linked_list import LINKED_LIST_CONTEXT, LINKED_LIST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return LINKED_LIST_CONTEXT, LINKED_LIST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+    if name in ("stack", "queue", "circular_queue", "deque"):
+        from prompts.stack_queue import STACK_QUEUE_CONTEXT, STACK_QUEUE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return STACK_QUEUE_CONTEXT, STACK_QUEUE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+    if name in (
+        "hash_table_chaining",
+        "hash_table_(chaining)",
+        "hash_table_probing",
+        "hash_table_(linear_probing)",
+        "hash_table_linear_probing",
+    ):
+        from prompts.hash_table import HASH_TABLE_CONTEXT, HASH_TABLE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return HASH_TABLE_CONTEXT, HASH_TABLE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+    if name in ("jump_search", "interpolation_search", "exponential_search"):
+        from prompts.search_advanced import (
+            SEARCH_ADVANCED_CONTEXT,
+            SEARCH_ADVANCED_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return SEARCH_ADVANCED_CONTEXT, SEARCH_ADVANCED_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+    if name in (
+        "recursion_factorial",
+        "recursion:_factorial",
+        "recursion_fibonacci",
+        "recursion:_fibonacci",
+    ):
+        from prompts.recursion import RECURSION_CONTEXT, RECURSION_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return RECURSION_CONTEXT, RECURSION_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+    if name in (
+        "two_pointer",
+        "two_pointer_technique",
+        "sliding_window_fixed",
+        "sliding_window_(fixed)",
+        "sliding_window_variable",
+        "sliding_window_(variable)",
+    ):
+        from prompts.two_pointer_window import (
+            TWO_POINTER_WINDOW_CONTEXT,
+            TWO_POINTER_WINDOW_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return TWO_POINTER_WINDOW_CONTEXT, TWO_POINTER_WINDOW_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
     return "Generic algorithm context.", "No pseudocode available.", {}
