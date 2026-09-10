@@ -249,6 +249,426 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       ])
     }
 
+    // Foundations - array operations
+    case CriticalJunctionType.INDEX_ACCESS: {
+      const s = snapshot.dataStructureState as { array: number[]; targetIndex: number }
+      const candidates = [s.targetIndex, s.targetIndex - 1, s.targetIndex + 1, s.targetIndex - 2].filter(
+        (i, idx, arr) => i >= 0 && i < s.array.length && arr.indexOf(i) === idx,
+      )
+      return shuffleArray(candidates.slice(0, 4).map((i) => ({ id: `idx-${i}`, label: `${s.array[i]}` })))
+    }
+
+    case CriticalJunctionType.INSERT_POSITION: {
+      const s = snapshot.dataStructureState as { array: number[]; targetIndex: number }
+      const pos = s.targetIndex
+      const candidates = Array.from(new Set([pos + 2, pos - 1, pos, pos + 1])).filter(
+        (i) => i >= 0 && i < s.array.length,
+      )
+      return shuffleArray(candidates.map((i) => ({ id: `idx-${i}`, label: `${s.array[i]}` })))
+    }
+
+    case CriticalJunctionType.DELETE_SHIFT: {
+      const s = snapshot.dataStructureState as { array: number[]; targetIndex: number; operationValue: number | null }
+      const pos = s.targetIndex
+      const options: TileOption[] = []
+      options.push(
+        pos < s.array.length
+          ? { id: `idx-${pos}`, label: `${s.array[pos]}` }
+          : { id: 'end-of-array', label: 'Nothing - the array is now shorter' },
+      )
+      if (s.operationValue !== null) options.push({ id: 'deleted-value', label: `${s.operationValue} (the deleted value)` })
+      if (pos + 1 < s.array.length) options.push({ id: `idx-${pos + 1}`, label: `${s.array[pos + 1]}` })
+      if (pos - 1 >= 0) options.push({ id: `idx-${pos - 1}`, label: `${s.array[pos - 1]}` })
+      return shuffleArray(options)
+    }
+
+    // Foundations - linked lists (singly/doubly/circular all share this state shape)
+    case CriticalJunctionType.NULL_CHECK: {
+      const s = snapshot.dataStructureState as {
+        nodes: Array<{ id: string; value: number | string; next: string | null }>
+        currentId: string | null
+        operation: string
+      }
+      if (s.operation === 'traverse') {
+        return shuffleArray([
+          { id: 'when-null', label: 'When next is null' },
+          { id: 'when-head-again', label: 'When we reach the head again' },
+          { id: 'when-n-visited', label: 'When we visit n nodes' },
+          { id: 'when-value-match', label: 'When value equals head value' },
+        ])
+      }
+      const current = s.nodes.find((n) => n.id === s.currentId)
+      if (current) {
+        return shuffleArray([
+          { id: 'yes-last', label: 'Yes - next is null' },
+          { id: 'no-more', label: 'No - there is another node after this' },
+        ])
+      }
+      return shuffleArray([
+        { id: 'null', label: 'null' },
+        { id: 'current-head', label: 'the current head' },
+        { id: 'tail', label: 'the tail' },
+        { id: 'itself', label: 'the new node itself' },
+      ])
+    }
+
+    case CriticalJunctionType.INSERT_BETWEEN: {
+      const s = snapshot.dataStructureState as {
+        nodes: Array<{ id: string; value: number | string; next: string | null; prev?: string | null }>
+        currentId: string | null
+      }
+      const isDLL = s.nodes.some((n) => n.prev !== undefined)
+      if (isDLL) {
+        return shuffleArray([
+          { id: 'next-prev-only', label: 'new.next = B and new.prev = A only' },
+          { id: 'all-four', label: 'new.next = B, new.prev = A, B.prev = new, A.next = new' },
+          { id: 'a-b-only', label: 'A.next = new and B.prev = new only' },
+          { id: 'reversed', label: 'new.next = A and new.prev = B' },
+        ])
+      }
+      return shuffleArray([
+        { id: 'new-then-prev', label: 'New node.next = B, then A.next = new node' },
+        { id: 'prev-only', label: 'A.next = new node only' },
+        { id: 'wrong-order', label: 'B.next = new node, then A.next = new node' },
+        { id: 'swapped', label: 'New node.next = A, then B.next = new node' },
+      ])
+    }
+
+    case CriticalJunctionType.DELETE_RELINK: {
+      const s = snapshot.dataStructureState as {
+        nodes: Array<{ id: string; value: number | string; next: string | null; prev?: string | null }>
+      }
+      const isDLL = s.nodes.some((n) => n.prev !== undefined)
+      if (isDLL) {
+        return shuffleArray([
+          { id: 'one', label: '1' },
+          { id: 'two', label: '2' },
+          { id: 'three', label: '3' },
+          { id: 'four', label: '4' },
+        ])
+      }
+      return shuffleArray([
+        { id: 'prev-next-eq-x-next', label: 'prev.next = X.next' },
+        { id: 'prev-next-null', label: 'prev.next = null' },
+        { id: 'x-next-eq-prev', label: 'X.next = prev' },
+        { id: 'x-null', label: 'X = null' },
+      ])
+    }
+
+    case CriticalJunctionType.POINTER_FOLLOW: {
+      const s = snapshot.dataStructureState as {
+        nodes: Array<{ id: string; value: number | string; next: string | null; prev?: string | null }>
+        currentId: string | null
+        activePointer: 'next' | 'prev' | null
+        operation: string
+      }
+      const current = s.nodes.find((n) => n.id === s.currentId)
+      if (!current) return []
+      // Reverse: predicting where THIS node's own pointer should end up
+      // (not which node comes next), so the options are relationship
+      // descriptions rather than neighbouring node values.
+      if (s.operation === 'reverse') {
+        return shuffleArray([
+          { id: 'the-previous-node', label: 'the previous node' },
+          { id: 'the-next-node', label: 'the next node' },
+          { id: 'null', label: 'null' },
+          { id: 'the-head', label: 'the head' },
+        ])
+      }
+      const targetId = s.activePointer === 'prev' ? current.prev : current.next
+      const others = s.nodes.filter((n) => n.id !== current.id).slice(0, 3)
+      const options = [{ id: targetId ?? 'null', label: targetId ? `${s.nodes.find((n) => n.id === targetId)?.value}` : 'null' }]
+      for (const n of others) {
+        if (n.id !== targetId) options.push({ id: n.id, label: `${n.value}` })
+      }
+      return shuffleArray(options.slice(0, 4))
+    }
+
+    case CriticalJunctionType.TRAVERSE_DIRECTION: {
+      const s = snapshot.dataStructureState as {
+        nodes: Array<{ id: string; value: number | string; next: string | null; prev?: string | null }>
+        currentId: string | null
+        activePointer: 'next' | 'prev' | null
+        operation: string
+      }
+      const current = s.nodes.find((n) => n.id === s.currentId)
+      if (!current) return []
+      if (s.operation === 'reverse') {
+        return shuffleArray([
+          { id: 'the-previous-node', label: 'the previous node' },
+          { id: 'the-next-node', label: 'the next node' },
+          { id: 'null', label: 'null' },
+          { id: 'the-head', label: 'the head' },
+        ])
+      }
+      const targetId = s.activePointer === 'prev' ? current.prev : current.next
+      const others = s.nodes.filter((n) => n.id !== current.id).slice(0, 3)
+      const options = [{ id: targetId ?? 'null', label: targetId ? `${s.nodes.find((n) => n.id === targetId)?.value}` : 'null' }]
+      for (const n of others) {
+        if (n.id !== targetId) options.push({ id: n.id, label: `${n.value}` })
+      }
+      return shuffleArray(options.slice(0, 4))
+    }
+
+    case CriticalJunctionType.WRAP_CHECK:
+      return shuffleArray([
+        { id: 'null', label: 'null' },
+        { id: 'the-head-node', label: 'the head node' },
+        { id: 'itself', label: 'itself' },
+        { id: 'the-tail', label: 'the tail' },
+      ])
+
+    // Foundations - stack
+    case CriticalJunctionType.STACK_PUSH_RESULT: {
+      const s = snapshot.dataStructureState as { items: Array<{ value: number | string }>; lastOperationValue: number | string | null }
+      const pushed = s.lastOperationValue
+      const prevTop = s.items.length >= 2 ? s.items[s.items.length - 2].value : null
+      const options: TileOption[] = [{ id: 'pushed-value', label: `${pushed}` }]
+      if (prevTop !== null) options.push({ id: 'prev-top', label: `${prevTop}` })
+      if (s.items.length >= 3) options.push({ id: 'middle-value', label: `${s.items[0].value}` })
+      options.push({ id: 'random-value', label: `${Number(pushed) + 100}` })
+      return shuffleArray(options)
+    }
+
+    case CriticalJunctionType.STACK_POP_RESULT: {
+      const s = snapshot.dataStructureState as { items: Array<{ value: number | string }>; lastOperationValue: number | string | null }
+      const popped = s.lastOperationValue
+      const options: TileOption[] = [{ id: 'top-value', label: `${popped}` }]
+      if (s.items.length >= 1) options.push({ id: 'second-value', label: `${s.items[s.items.length - 1].value}` })
+      options.push({ id: 'random-value', label: `${Number(popped) + 50}` })
+      options.push({ id: 'null', label: 'null' })
+      return shuffleArray(options)
+    }
+
+    case CriticalJunctionType.OVERFLOW_CHECK:
+      return shuffleArray([
+        { id: 'yes-succeeds', label: 'Yes - push succeeds' },
+        { id: 'no-overflow', label: 'No - stack overflow' },
+      ])
+
+    case CriticalJunctionType.UNDERFLOW_CHECK:
+      return shuffleArray([
+        { id: 'zero', label: '0' },
+        { id: 'null', label: 'null' },
+        { id: 'error-underflow', label: 'Error - stack underflow' },
+        { id: 'neg-one', label: '-1' },
+      ])
+
+    // Foundations - queue
+    case CriticalJunctionType.QUEUE_REAR: {
+      const s = snapshot.dataStructureState as { rearIndex: number; frontIndex: number; capacity: number }
+      const options = Array.from(
+        new Set([s.rearIndex, s.rearIndex - 1, s.frontIndex, s.capacity - 1].filter((i) => i >= 0)),
+      )
+      return shuffleArray(options.map((i) => ({ id: `idx-${i}`, label: `${i}` })))
+    }
+
+    case CriticalJunctionType.QUEUE_FRONT: {
+      const s = snapshot.dataStructureState as { items: Array<{ value: number | string }>; lastOperationValue: number | string | null }
+      const options: TileOption[] = [{ id: 'front-value', label: `${s.lastOperationValue}` }]
+      if (s.items.length >= 1) options.push({ id: 'next-value', label: `${s.items[0].value}` })
+      options.push({ id: 'random-value', label: `${Number(s.lastOperationValue) + 50}` })
+      options.push({ id: 'undefined', label: 'undefined' })
+      return shuffleArray(options)
+    }
+
+    case CriticalJunctionType.CIRCULAR_WRAP: {
+      const s = snapshot.dataStructureState as { capacity: number }
+      return shuffleArray([
+        { id: 'idx-0', label: '0' },
+        { id: `idx-${s.capacity}`, label: `${s.capacity}` },
+        { id: `idx-${s.capacity + 1}`, label: `${s.capacity + 1}` },
+        { id: `idx-${s.capacity - 1}`, label: `${s.capacity - 1} (same index)` },
+      ])
+    }
+
+    case CriticalJunctionType.DEQUE_END:
+      return shuffleArray([
+        { id: 'front', label: 'Front (index 0)' },
+        { id: 'back', label: 'Back (last index)' },
+      ])
+
+    case CriticalJunctionType.LOAD_FACTOR: {
+      const s = snapshot.dataStructureState as {
+        frontIndex?: number
+        capacity: number
+        size?: number
+      }
+      if (typeof s.frontIndex === 'number') {
+        // Linear queue: wasted-space question.
+        const wasted = s.frontIndex
+        return shuffleArray([
+          { id: `wasted-${wasted}`, label: `${wasted}` },
+          { id: 'wasted-0', label: '0' },
+          { id: `wasted-half`, label: `${Math.floor(s.capacity / 2)}` },
+          { id: `wasted-full`, label: `${s.capacity}` },
+        ])
+      }
+      return shuffleArray([
+        { id: 'yes-too-high', label: 'Yes - load factor too high' },
+        { id: 'no-acceptable', label: 'No - still acceptable' },
+      ])
+    }
+
+    // Foundations - hash table
+    case CriticalJunctionType.HASH_BUCKET: {
+      const s = snapshot.dataStructureState as { hashResult: number | null; capacity: number }
+      const correct = s.hashResult ?? 0
+      const options = Array.from(
+        new Set([correct, (correct + 1) % s.capacity, (correct - 1 + s.capacity) % s.capacity, (correct + 2) % s.capacity]),
+      )
+      return shuffleArray(options.map((i) => ({ id: `bucket-${i}`, label: `${i}` })))
+    }
+
+    case CriticalJunctionType.COLLISION_RESOLVE:
+      return shuffleArray([
+        { id: 'front-of-chain', label: 'At the front of the chain' },
+        { id: 'back-of-chain', label: 'At the back of the chain' },
+        { id: 'new-bucket', label: 'In a new bucket' },
+        { id: 'insert-fails', label: 'The insert fails' },
+      ])
+
+    case CriticalJunctionType.PROBE_NEXT:
+      return shuffleArray([
+        { id: 'i-plus-1-mod', label: '(i + 1) % capacity' },
+        { id: 'i-plus-2-mod', label: '(i + 2) % capacity' },
+        { id: 'i-minus-1', label: 'i - 1' },
+        { id: 'i-times-2-mod', label: 'i * 2 % capacity' },
+      ])
+
+    // Foundations - advanced search
+    case CriticalJunctionType.JUMP_SIZE: {
+      const s = snapshot.dataStructureState as { array: number[] }
+      const n = s.array.length
+      const correct = Math.max(1, Math.round(Math.sqrt(n)))
+      return shuffleArray([
+        { id: `size-${correct}`, label: `${correct}` },
+        { id: `size-half`, label: `${Math.floor(n / 2)}` },
+        { id: `size-quarter`, label: `${Math.floor(n / 4)}` },
+        { id: 'size-1', label: '1' },
+      ])
+    }
+
+    case CriticalJunctionType.PROBE_POSITION: {
+      const s = snapshot.dataStructureState as { probedIndex: number | null; low: number; high: number }
+      const correct = s.probedIndex ?? s.low
+      const mid = Math.floor((s.low + s.high) / 2)
+      const options = Array.from(new Set([correct, mid, s.low + 1, s.high - 1].filter((i) => i >= s.low && i <= s.high)))
+      return shuffleArray(options.map((i) => ({ id: `idx-${i}`, label: `${i}` })))
+    }
+
+    case CriticalJunctionType.RANGE_DOUBLE:
+      return shuffleArray([
+        { id: 'yes-too-small', label: 'Yes - the value is smaller than the target, range is too small' },
+        { id: 'no-large-enough', label: 'No - the value is at least the target, binary search here' },
+      ])
+
+    // Foundations - recursion
+    case CriticalJunctionType.BASE_CASE: {
+      const s = snapshot.dataStructureState as { baseCase: number }
+      // factorial(0) = 1; fib(1) = 1 - both engines' base cases return 1.
+      return shuffleArray([
+        { id: 'zero', label: '0' },
+        { id: 'one', label: '1' },
+        { id: s.baseCase === 1 ? 'two' : 'undefined-alt', label: s.baseCase === 1 ? '2' : 'undefined' },
+        { id: 'undefined', label: 'undefined' },
+      ])
+    }
+
+    case CriticalJunctionType.RETURN_VALUE: {
+      // factorialEngine's RETURN_VALUE description always reads "factorial({n})
+      // called factorial({n-1}) which returned {prev}." - parsed instead of
+      // re-deriving from frames, since the frame that called n-1 has already
+      // been overwritten with n's own (not-yet-known) return value by now.
+      const n = Number(snapshot.description.match(/factorial\((\d+)\)/)?.[1])
+      const prev = Number(snapshot.description.match(/returned (\d+)/)?.[1])
+      if (!Number.isFinite(n) || !Number.isFinite(prev)) return []
+      return shuffleArray([
+        { id: `mult-${n * prev}`, label: `${n * prev}` },
+        { id: `add-${n + prev}`, label: `${n + prev}` },
+        { id: `mult-minus-${n * (prev - 1)}`, label: `${n * (prev - 1)}` },
+        { id: `prev-${prev}`, label: `${prev}` },
+      ])
+    }
+
+    case CriticalJunctionType.RECURSIVE_CALL: {
+      const s = snapshot.dataStructureState as { totalCalls?: number; frames: Array<{ argument: number }> }
+      if (typeof s.totalCalls === 'number') {
+        // Fibonacci: exponential call count question.
+        const n = Math.max(...s.frames.map((f) => f.argument), 1)
+        const exponential = 2 ** n
+        return shuffleArray([
+          { id: `exp-${exponential}`, label: `Roughly 2^${n} (exponential)` },
+          { id: 'linear', label: `Roughly ${n} (linear)` },
+          { id: 'quadratic', label: `Roughly ${n * n} (n squared)` },
+          { id: 'n-only', label: `Exactly ${n}` },
+        ])
+      }
+      // Factorial: how many more calls remain.
+      const remaining = s.frames.length > 0 ? Math.min(...s.frames.map((f) => f.argument)) : 0
+      return shuffleArray([
+        { id: `remaining-${remaining}`, label: `${remaining}` },
+        { id: `remaining-minus-${Math.max(0, remaining - 1)}`, label: `${Math.max(0, remaining - 1)}` },
+        { id: `remaining-plus-${remaining + 1}`, label: `${remaining + 1}` },
+        { id: 'remaining-0', label: '0' },
+      ])
+    }
+
+    // Foundations - two pointer / sliding window
+    case CriticalJunctionType.POINTER_MOVE: {
+      const s = snapshot.dataStructureState as {
+        array: (number | string)[]
+        target: number | null
+        leftPointerIndex: number
+        rightPointerIndex: number
+      }
+      if (s.target !== null) {
+        return shuffleArray([
+          { id: 'move-left', label: 'Move L right - sum is too small' },
+          { id: 'move-right', label: 'Move R left - sum is too large' },
+          { id: 'found', label: 'Both pointers found the pair' },
+          { id: 'no-solution', label: 'Neither - no solution' },
+        ])
+      }
+      return shuffleArray([
+        { id: 'match-inward', label: 'Yes - move both pointers inward' },
+        { id: 'no-match', label: 'No - not a palindrome' },
+      ])
+    }
+
+    case CriticalJunctionType.WINDOW_SUM: {
+      const s = snapshot.dataStructureState as { array: number[]; windowStart: number; windowEnd: number; windowSum: number }
+      const correct = s.windowSum
+      return shuffleArray([
+        { id: `sum-${correct}`, label: `${correct}` },
+        { id: `sum-plus`, label: `${correct + (s.array[s.windowEnd + 1] ?? 1)}` },
+        { id: `sum-minus`, label: `${correct - (s.array[s.windowStart] ?? 1)}` },
+        { id: `sum-random`, label: `${correct + 7}` },
+      ])
+    }
+
+    case CriticalJunctionType.WINDOW_EXPAND: {
+      const s = snapshot.dataStructureState as {
+        array: number[]
+        windowStart: number
+        windowEnd: number
+        windowSum: number
+        targetSum: number | null
+      }
+      if (s.targetSum !== null) {
+        return shuffleArray([
+          { id: 'expand', label: 'Expand - sum < target, add right element' },
+          { id: 'shrink', label: 'Shrink - sum >= target, try to reduce window size' },
+          { id: 'stop', label: 'Stop - found minimum window' },
+        ])
+      }
+      // Fixed window: incremental new-sum question.
+      const leftVal = s.array[s.windowStart - 1] ?? s.array[s.windowStart]
+      const rightVal = s.array[s.windowEnd]
+      const newSum = s.windowSum - leftVal + rightVal
+      return shuffleArray([{ id: `sum-${newSum}`, label: `${newSum}` }])
+    }
+
     default:
       return []
   }
@@ -328,7 +748,12 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string
       return 'Which node gets dequeued next?'
 
     default:
-      return 'What happens next?'
+      // Every Foundations engine already writes a specific, well-formed
+      // question into the snapshot's own description (e.g. "What does
+      // pop() return?") - falling back to that instead of a generic
+      // string means a new junction type gets a real prompt for free,
+      // without a dedicated case here.
+      return snapshot.description || 'What happens next?'
   }
 }
 
