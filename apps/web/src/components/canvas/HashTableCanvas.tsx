@@ -2,29 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
-
-export interface HashTableState {
-  buckets: Array<{
-    index: number
-    chain: Array<{ id: string; key: number | string; value: number | string }>
-  }>
-  capacity: number
-  size: number
-  activeKey: number | string | null
-  activeBucket: number | null
-  activeProbeSequence: number[]
-  collisionOccurred: boolean
-  operation: 'insert' | 'search' | 'delete'
-  variant: 'chaining' | 'linear_probing' | 'quadratic_probing'
-  hashResult: number | null
-  /**
-   * Open-addressing only: slots that held an entry which was since
-   * deleted. Rendered as a distinct "DELETED" tombstone rather than an
-   * empty slot, since search must keep probing past these instead of
-   * stopping - the key teaching point a plain empty cell would hide.
-   */
-  deletedIndices?: number[]
-}
+import type { HashTableState } from '@/engine/hashTable'
 
 interface HashTableCanvasProps {
   width?: number
