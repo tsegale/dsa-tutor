@@ -54,8 +54,74 @@ export const CriticalJunctionType = {
   PARTITION_DECISION: 'PARTITION_DECISION',
   BST_DIRECTION: 'BST_DIRECTION',
   NEXT_NODE_SELECTION: 'NEXT_NODE_SELECTION',
+
+  // Foundations track — array operations
+  INDEX_ACCESS: 'INDEX_ACCESS',
+  INSERT_POSITION: 'INSERT_POSITION',
+  DELETE_SHIFT: 'DELETE_SHIFT',
+
+  // Foundations track — linked list (singly/doubly/circular)
+  POINTER_FOLLOW: 'POINTER_FOLLOW',
+  NULL_CHECK: 'NULL_CHECK',
+  INSERT_BETWEEN: 'INSERT_BETWEEN',
+  DELETE_RELINK: 'DELETE_RELINK',
+  TRAVERSE_DIRECTION: 'TRAVERSE_DIRECTION',
+  WRAP_CHECK: 'WRAP_CHECK',
+
+  // Foundations track — stack
+  STACK_PUSH_RESULT: 'STACK_PUSH_RESULT',
+  STACK_POP_RESULT: 'STACK_POP_RESULT',
+  OVERFLOW_CHECK: 'OVERFLOW_CHECK',
+  UNDERFLOW_CHECK: 'UNDERFLOW_CHECK',
+
+  // Foundations track — queue
+  QUEUE_FRONT: 'QUEUE_FRONT',
+  QUEUE_REAR: 'QUEUE_REAR',
+  CIRCULAR_WRAP: 'CIRCULAR_WRAP',
+  DEQUE_END: 'DEQUE_END',
+
+  // Foundations track — hash table
+  HASH_BUCKET: 'HASH_BUCKET',
+  COLLISION_RESOLVE: 'COLLISION_RESOLVE',
+  PROBE_NEXT: 'PROBE_NEXT',
+  LOAD_FACTOR: 'LOAD_FACTOR',
+
+  // Foundations track — advanced search
+  JUMP_SIZE: 'JUMP_SIZE',
+  PROBE_POSITION: 'PROBE_POSITION',
+  RANGE_DOUBLE: 'RANGE_DOUBLE',
+
+  // Foundations track — recursion
+  BASE_CASE: 'BASE_CASE',
+  RECURSIVE_CALL: 'RECURSIVE_CALL',
+  RETURN_VALUE: 'RETURN_VALUE',
+
+  // Foundations track — two pointer / sliding window
+  POINTER_MOVE: 'POINTER_MOVE',
+  WINDOW_EXPAND: 'WINDOW_EXPAND',
+  WINDOW_SUM: 'WINDOW_SUM',
 } as const
 export type CriticalJunctionType = (typeof CriticalJunctionType)[keyof typeof CriticalJunctionType]
+
+// Discriminates which canvas component a snapshot should render on.
+// Existing algorithms (bubble/selection/insertion/merge/quick sort,
+// linear/binary search) don't set this field - CanvasContainer treats
+// a missing canvasType as CanvasType.ARRAY, its long-standing default.
+export const CanvasType = {
+  ARRAY: 'ARRAY',
+  LINKED_LIST: 'LINKED_LIST',
+  STACK: 'STACK',
+  QUEUE: 'QUEUE',
+  CIRCULAR_QUEUE: 'CIRCULAR_QUEUE',
+  HASH_TABLE: 'HASH_TABLE',
+  CALL_STACK: 'CALL_STACK',
+  RECURSION_TREE: 'RECURSION_TREE',
+  TWO_POINTER: 'TWO_POINTER',
+  SLIDING_WINDOW: 'SLIDING_WINDOW',
+  GRAPH: 'GRAPH',
+  TREE: 'TREE',
+} as const
+export type CanvasType = (typeof CanvasType)[keyof typeof CanvasType]
 
 // CONCEPTUAL junctions test understanding of WHY (PASS_COMPLETE,
 // EARLY_TERMINATION, ALGORITHM_COMPLETE); PROCEDURAL junctions test
@@ -106,6 +172,13 @@ export interface AlgorithmSnapshot {
   /** Non-null only on steps that are actually a Critical Junction (isPredictionRequired: true). */
   criticalJunctionType: CriticalJunctionType | null
   junctionDifficulty: JunctionDifficulty | null
+  /**
+   * Which canvas component should render this snapshot. Optional and
+   * omitted by every pre-Foundations engine (sorting, search, BST,
+   * BFS) - CanvasContainer treats a missing value as CanvasType.ARRAY,
+   * so none of those engines need updating.
+   */
+  canvasType?: CanvasType
 }
 
 /**

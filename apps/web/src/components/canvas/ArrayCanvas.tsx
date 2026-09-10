@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
-import { AlgorithmMode, CriticalJunctionType } from '@dsa-tutor/types'
+import { AlgorithmMode, CriticalJunctionType, CanvasType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -16,6 +16,38 @@ interface ArrayCanvasProps {
   onMistakePathComplete?: () => void
   /** Caption shown over the mistake wash. Defaults to the tile-prediction wording. */
   mistakeLabel?: string
+  /**
+   * TWO_POINTER and SLIDING_WINDOW render an extra overlay on top of
+   * the normal bars; every other value (including the default ARRAY)
+   * renders exactly as before. Pointer/window positions are read from
+   * dataStructureState (see extractTwoPointer/extractWindow below),
+   * not passed as separate props, so CanvasContainer only ever needs
+   * to forward canvasType - the same call site as plain ARRAY.
+   */
+  canvasType?: CanvasType
+}
+
+// Two-pointer engines are expected to put these fields directly on
+// dataStructureState alongside `array`. Falls back to `left`/`right`
+// for terser engine code.
+function extractTwoPointer(state: unknown): { left: number | null; right: number | null } {
+  if (!state || typeof state !== 'object') return { left: null, right: null }
+  const s = state as Record<string, unknown>
+  const left = typeof s.leftPointerIndex === 'number' ? s.leftPointerIndex : typeof s.left === 'number' ? s.left : null
+  const right = typeof s.rightPointerIndex === 'number' ? s.rightPointerIndex : typeof s.right === 'number' ? s.right : null
+  return { left, right }
+}
+
+// Sliding-window engines are expected to put these fields directly on
+// dataStructureState alongside `array`. windowSum is optional - a
+// fixed-size window shows "Window size" instead when it's absent.
+function extractWindow(state: unknown): { start: number | null; end: number | null; sum: number | null } {
+  if (!state || typeof state !== 'object') return { start: null, end: null, sum: null }
+  const s = state as Record<string, unknown>
+  const start = typeof s.windowStart === 'number' ? s.windowStart : null
+  const end = typeof s.windowEnd === 'number' ? s.windowEnd : null
+  const sum = typeof s.windowSum === 'number' ? s.windowSum : null
+  return { start, end, sum }
 }
 
 const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
@@ -58,6 +90,7 @@ export default function ArrayCanvas({
   mistakePath = null,
   onMistakePathComplete,
   mistakeLabel = DEFAULT_MISTAKE_LABEL,
+  canvasType = CanvasType.ARRAY,
 }: ArrayCanvasProps) {
   const storeSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const mode = useAlgorithmStore((state) => state.mode)
@@ -215,6 +248,15 @@ export default function ArrayCanvas({
       }
     })
   }, [snapshot, width, height])
+
+  const twoPointer = useMemo(
+    () => (canvasType === CanvasType.TWO_POINTER ? extractTwoPointer(snapshot?.dataStructureState) : { left: null, right: null }),
+    [canvasType, snapshot],
+  )
+  const windowOverlay = useMemo(
+    () => (canvasType === CanvasType.SLIDING_WINDOW ? extractWindow(snapshot?.dataStructureState) : { start: null, end: null, sum: null }),
+    [canvasType, snapshot],
+  )
 
   // Distance in px between the two draggable bars' slots: one bar
   // position's worth of travel is exactly what the drag constraints and
@@ -480,6 +522,73 @@ export default function ArrayCanvas({
           </motion.g>
         )
       })}
+
+      {canvasType === CanvasType.TWO_POINTER &&
+        twoPointer.left !== null &&
+        twoPointer.right !== null &&
+        bars[twoPointer.left] &&
+        bars[twoPointer.right] && (
+          <>
+            {twoPointer.left === twoPointer.right ? (
+              <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 6})`}>
+                <polygon points="0,-8 -7,4 7,4" fill="#7c3aed" />
+                <text y={16} textAnchor="middle" className="fill-active text-[11px] font-bold">
+                  L=R
+                </text>
+              </g>
+            ) : (
+              <>
+                <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 6})`}>
+                  <polygon points="0,-8 -7,4 7,4" fill="#16a34a" />
+                  <text y={16} textAnchor="middle" className="fill-success text-[11px] font-bold">
+                    L
+                  </text>
+                </g>
+                <g transform={`translate(${bars[twoPointer.right].x + bars[twoPointer.right].width / 2}, ${height - 6})`}>
+                  <polygon points="0,-8 -7,4 7,4" fill="#dc2626" />
+                  <text y={16} textAnchor="middle" className="fill-error text-[11px] font-bold">
+                    R
+                  </text>
+                </g>
+              </>
+            )}
+          </>
+        )}
+
+      {canvasType === CanvasType.SLIDING_WINDOW &&
+        windowOverlay.start !== null &&
+        windowOverlay.end !== null &&
+        bars[windowOverlay.start] &&
+        bars[windowOverlay.end] && (
+          <>
+            <motion.rect
+              layout
+              x={bars[windowOverlay.start].x}
+              y={PADDING}
+              width={bars[windowOverlay.end].x + bars[windowOverlay.end].width - bars[windowOverlay.start].x}
+              height={height - PADDING * 2}
+              rx={8}
+              fill="rgba(55, 48, 163, 0.15)"
+              stroke="#3730a3"
+              strokeWidth={2}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
+            />
+            <motion.text
+              layout
+              x={
+                (bars[windowOverlay.start].x + bars[windowOverlay.end].x + bars[windowOverlay.end].width) / 2
+              }
+              y={height - 4}
+              textAnchor="middle"
+              className="fill-active text-[11px] font-semibold"
+              transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
+            >
+              {windowOverlay.sum !== null
+                ? `Window sum: ${windowOverlay.sum}`
+                : `Window size: ${windowOverlay.end - windowOverlay.start + 1}`}
+            </motion.text>
+          </>
+        )}
     </svg>
     </>
   )

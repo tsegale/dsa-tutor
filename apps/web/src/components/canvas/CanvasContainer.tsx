@@ -1,9 +1,16 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { CanvasType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import ArrayCanvas from './ArrayCanvas'
 import TreeCanvas from './TreeCanvas'
 import GraphCanvas from './GraphCanvas'
+import LinkedListCanvas from './LinkedListCanvas'
+import StackCanvas from './StackCanvas'
+import QueueCanvas from './QueueCanvas'
+import HashTableCanvas from './HashTableCanvas'
+import CallStackCanvas from './CallStackCanvas'
 
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
@@ -16,11 +23,8 @@ export default function CanvasContainer({
   onMistakePathComplete,
   mistakeLabel,
 }: CanvasContainerProps) {
-  // BST is a tree (TreeCanvas) and BFS is a graph (GraphCanvas); every
-  // other algorithm is a linear array (ArrayCanvas). Both placeholder
-  // canvases render straight from the store's current snapshot and
-  // don't yet support the mistake-path replay ArrayCanvas has.
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
+  const snapshot = useAlgorithmStore(selectCurrentSnapshot)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 800, height: 480 })
@@ -54,25 +58,72 @@ export default function CanvasContainer({
     }
   }, [])
 
+  // Every pre-Foundations engine (sorting, search, BST, BFS) predates
+  // canvasType and never sets it on its snapshots, so this falls back
+  // to the route slug for those - the same routing CanvasContainer
+  // already used before canvasType existed. Once those engines are
+  // updated to set canvasType directly, this fallback can be deleted.
+  const canvasType: CanvasType =
+    snapshot?.canvasType ??
+    (algorithmSlug === 'bst' ? CanvasType.TREE : algorithmSlug === 'bfs' ? CanvasType.GRAPH : CanvasType.ARRAY)
+
+  function renderCanvas() {
+    switch (canvasType) {
+      case CanvasType.ARRAY:
+      case CanvasType.TWO_POINTER:
+      case CanvasType.SLIDING_WINDOW:
+        return (
+          <ArrayCanvas
+            width={size.width}
+            height={size.height}
+            mistakePath={mistakePath}
+            onMistakePathComplete={onMistakePathComplete}
+            canvasType={canvasType}
+            {...(mistakeLabel !== undefined ? { mistakeLabel } : {})}
+          />
+        )
+      case CanvasType.LINKED_LIST:
+        return <LinkedListCanvas width={size.width} height={size.height} />
+      case CanvasType.STACK:
+        return <StackCanvas width={size.width} height={size.height} />
+      case CanvasType.QUEUE:
+      case CanvasType.CIRCULAR_QUEUE:
+        // Linear vs. circular vs. deque is read from the snapshot's own
+        // dataStructureState.variant (the engine's source of truth),
+        // not re-derived here - see QueueCanvas.
+        return <QueueCanvas width={size.width} height={size.height} />
+      case CanvasType.HASH_TABLE:
+        return <HashTableCanvas width={size.width} height={size.height} />
+      case CanvasType.CALL_STACK:
+      case CanvasType.RECURSION_TREE:
+        // RECURSION_TREE (branching call tree) has no dedicated canvas
+        // yet - a future phase's addition. CallStackCanvas is a safe
+        // fallback since it already renders the same CallStackState.
+        return <CallStackCanvas width={size.width} height={size.height} />
+      case CanvasType.TREE:
+        return <TreeCanvas width={size.width} height={size.height} />
+      case CanvasType.GRAPH:
+        return <GraphCanvas width={size.width} height={size.height} />
+      default:
+        return (
+          <ArrayCanvas
+            width={size.width}
+            height={size.height}
+            mistakePath={mistakePath}
+            onMistakePathComplete={onMistakePathComplete}
+            {...(mistakeLabel !== undefined ? { mistakeLabel } : {})}
+          />
+        )
+    }
+  }
+
   return (
     <div
       id="algorithm-canvas"
       ref={containerRef}
       className="relative h-full w-full rounded-md border border-border bg-white shadow-sm dark:bg-dark-surface"
     >
-      {algorithmSlug === 'bst' ? (
-        <TreeCanvas width={size.width} height={size.height} />
-      ) : algorithmSlug === 'bfs' ? (
-        <GraphCanvas width={size.width} height={size.height} />
-      ) : (
-        <ArrayCanvas
-          width={size.width}
-          height={size.height}
-          mistakePath={mistakePath}
-          onMistakePathComplete={onMistakePathComplete}
-          {...(mistakeLabel !== undefined ? { mistakeLabel } : {})}
-        />
-      )}
+      {renderCanvas()}
     </div>
   )
 }
