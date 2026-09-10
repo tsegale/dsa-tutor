@@ -3,26 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
-
-export interface LinkedListNode {
-  id: string
-  value: number | string
-  next: string | null
-  prev?: string | null
-}
-
-export interface LinkedListState {
-  nodes: LinkedListNode[]
-  headId: string | null
-  tailId: string | null
-  currentId: string | null
-  highlightedId: string | null
-  activePointer: 'next' | 'prev' | null
-  operation: 'insert' | 'delete' | 'search' | 'traverse' | 'reverse'
-  operationValue: number | null
-  insertPosition: number | null
-  markedForDelete: string | null
-}
+import type { LinkedListNode, LinkedListState } from '@/engine/singlyLinkedList'
 
 interface LinkedListCanvasProps {
   width?: number
