@@ -73,8 +73,13 @@ function baseState(
     size: items.length,
     lastOperation: null,
     lastOperationValue: null,
-    isFull: items.length >= capacity,
-    isEmpty: items.length === 0,
+    // isFull/isEmpty are error flags for a rejected operation, not a
+    // description of the current size - a demo naturally starts empty and
+    // a successful op can naturally leave the queue empty or full, neither
+    // of which is an error. Only set true via an explicit override on the
+    // snapshot for an operation that was actually rejected.
+    isFull: false,
+    isEmpty: false,
     variant,
     ...overrides,
   }
