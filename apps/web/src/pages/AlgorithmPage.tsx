@@ -40,6 +40,20 @@ import { mergeSortEngine } from '@/engine/mergeSort'
 import { quickSortEngine } from '@/engine/quickSort'
 import { bstInsertEngine } from '@/engine/bst'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
+import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
+import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
+import { dllInsertBackEngine } from '@/engine/doublyLinkedList'
+import { cllInsertEngine } from '@/engine/circularLinkedList'
+import { stackPushEngine } from '@/engine/stack'
+import { queueEnqueueEngine, circularQueueEngine, dequeEngine } from '@/engine/queue'
+import { hashInsertChainingEngine, hashInsertLinearProbingEngine } from '@/engine/hashTable'
+import { jumpSearchEngine } from '@/engine/jumpSearch'
+import { interpolationSearchEngine } from '@/engine/interpolationSearch'
+import { exponentialSearchEngine } from '@/engine/exponentialSearch'
+import { factorialEngine } from '@/engine/recursionFactorial'
+import { fibonacciEngine } from '@/engine/recursionFibonacci'
+import { twoSumSortedEngine } from '@/engine/twoPointer'
+import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { cn } from '@/lib/utils'
 
@@ -65,6 +79,66 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       return bstInsertEngine(defaultInput)
     case 'bfs':
       return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
+
+    case 'array-access':
+      return arrayAccessEngine(defaultInput, 2)
+    case 'array-insert':
+      return arrayInsertEngine(defaultInput, 99, 2)
+    case 'array-delete':
+      return arrayDeleteEngine(defaultInput, 1)
+
+    case 'singly-linked-list':
+      return sllInsertBackEngine(defaultInput)
+    case 'doubly-linked-list':
+      return dllInsertBackEngine(defaultInput)
+    case 'circular-linked-list':
+      return cllInsertEngine(defaultInput)
+
+    case 'stack':
+      return stackPushEngine([], defaultInput, 6)
+    case 'queue':
+      return queueEnqueueEngine([], defaultInput, 6)
+    case 'circular-queue':
+      return circularQueueEngine(5, [
+        { op: 'enqueue', value: 5 },
+        { op: 'enqueue', value: 3 },
+        { op: 'dequeue' },
+        { op: 'enqueue', value: 8 },
+        { op: 'enqueue', value: 1 },
+        { op: 'enqueue', value: 9 },
+      ])
+    case 'deque':
+      return dequeEngine(5, [
+        { op: 'pushBack', value: 5 },
+        { op: 'pushFront', value: 3 },
+        { op: 'popFront' },
+        { op: 'pushBack', value: 8 },
+      ])
+
+    case 'hash-table-chaining':
+      return hashInsertChainingEngine(defaultInput, 7)
+    case 'hash-table-probing':
+      return hashInsertLinearProbingEngine(defaultInput, 7)
+
+    case 'jump-search':
+      return jumpSearchEngine(defaultInput, defaultTarget)
+    case 'interpolation-search':
+      return interpolationSearchEngine(defaultInput, defaultTarget)
+    case 'exponential-search':
+      return exponentialSearchEngine(defaultInput, defaultTarget)
+
+    case 'recursion-factorial':
+      return factorialEngine(defaultInput[0] ?? 6)
+    case 'recursion-fibonacci':
+      return fibonacciEngine(defaultInput[0] ?? 6)
+
+    case 'two-pointer':
+      return twoSumSortedEngine(defaultInput, defaultTarget)
+    case 'sliding-window-fixed':
+      return fixedWindowEngine(defaultInput, 3)
+    case 'sliding-window-variable':
+      return variableWindowEngine(defaultInput, defaultTarget)
+
     case 'bubble-sort':
     default:
       return bubbleSortEngine(defaultInput)
