@@ -662,11 +662,19 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
           { id: 'stop', label: 'Stop - found minimum window' },
         ])
       }
-      // Fixed window: incremental new-sum question.
-      const leftVal = s.array[s.windowStart - 1] ?? s.array[s.windowStart]
-      const rightVal = s.array[s.windowEnd]
+      // Fixed window: incremental new-sum question. This snapshot still
+      // holds the OLD window bounds (the slide happens right after), so
+      // the removed value is at windowStart and the added one is the
+      // slot just past windowEnd.
+      const leftVal = s.array[s.windowStart]
+      const rightVal = s.array[s.windowEnd + 1]
       const newSum = s.windowSum - leftVal + rightVal
-      return shuffleArray([{ id: `sum-${newSum}`, label: `${newSum}` }])
+      return shuffleArray([
+        { id: `sum-${newSum}`, label: `${newSum}` },
+        { id: 'sum-forgot-subtract', label: `${s.windowSum + rightVal}` },
+        { id: 'sum-forgot-add', label: `${s.windowSum - leftVal}` },
+        { id: 'sum-recompute-wrong', label: `${s.windowSum + rightVal - leftVal + 1}` },
+      ])
     }
 
     default:
