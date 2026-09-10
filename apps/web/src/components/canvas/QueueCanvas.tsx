@@ -2,19 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
-
-export interface QueueState {
-  items: Array<{ id: string; value: number | string; index: number }>
-  frontIndex: number
-  rearIndex: number
-  capacity: number
-  size: number
-  lastOperation: 'enqueue' | 'dequeue' | 'peekFront' | 'peekRear' | null
-  lastOperationValue: number | string | null
-  isFull: boolean
-  isEmpty: boolean
-  variant: 'linear' | 'circular' | 'deque'
-}
+import type { QueueState } from '@/engine/queue'
 
 interface QueueCanvasProps {
   width?: number
