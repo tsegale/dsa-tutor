@@ -174,6 +174,7 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
   }
 
   const loadFactor = state.capacity > 0 ? state.size / state.capacity : 0
+  const isHashBucketPending = snapshot?.isPredictionRequired && snapshot.criticalJunctionType === 'HASH_BUCKET'
 
   return (
     <div className="flex h-full flex-col">
@@ -198,7 +199,8 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
       {state.activeKey !== null && (
         <div className="mt-9 px-3">
           <div className="rounded-md border border-border bg-surface px-3 py-1.5 text-center font-mono text-[12px] text-text-primary dark:border-dark-border dark:bg-dark-border dark:text-dark-text-primary">
-            hash({state.activeKey}) = {state.activeKey} % {state.capacity} = {state.hashResult ?? '?'}
+            hash({state.activeKey}) = {state.activeKey} % {state.capacity} ={' '}
+            {isHashBucketPending ? '?' : (state.hashResult ?? '?')}
           </div>
         </div>
       )}

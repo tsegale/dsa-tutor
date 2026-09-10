@@ -122,7 +122,10 @@ export function hashInsertChainingEngine(keys: number[], capacity: number = DEFA
         description: `Inserting key ${key}. Which bucket does hash(${key}) = ${key} % ${capacity} map to?`,
         pseudocodeLine: LINE.HASH,
         isPredictionRequired: true,
-        state: baseState({ activeKey: key }),
+        // hashResult carries the answer for the AI evaluator to grade
+        // against - HashTableCanvas hides it from the formula display
+        // while this exact prediction is still pending.
+        state: baseState({ activeKey: key, hashResult: bucketIndex }),
         criticalJunctionType: CriticalJunctionType.HASH_BUCKET,
         junctionDifficulty: JunctionDifficulty.PROCEDURAL,
       }),
@@ -299,7 +302,10 @@ export function hashInsertLinearProbingEngine(
         description: `Inserting key ${key}. Which slot does hash(${key}) = ${key} % ${capacity} map to?`,
         pseudocodeLine: LINE.HASH,
         isPredictionRequired: true,
-        state: baseState({ activeKey: key }),
+        // hashResult carries the answer for the AI evaluator to grade
+        // against - HashTableCanvas hides it from the formula display
+        // while this exact prediction is still pending.
+        state: baseState({ activeKey: key, hashResult: home }),
         criticalJunctionType: CriticalJunctionType.HASH_BUCKET,
         junctionDifficulty: JunctionDifficulty.PROCEDURAL,
       }),
