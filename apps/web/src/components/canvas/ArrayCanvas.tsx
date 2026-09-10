@@ -76,12 +76,25 @@ const HANDS_ON_TOOLTIP_DURATION_MS = 5000
 // richer object with the array nested under an `array` field, since
 // they also need to carry a target, indices, etc. This extracts the
 // bars to render regardless of which shape the current algorithm uses.
-function extractArray(state: unknown): number[] {
+// Foundations' palindromeCheckEngine (TWO_POINTER mode) uses a
+// character array instead of numbers, so the return type covers both -
+// see barHeightValue below for how a character still gets a bar height.
+function extractDisplayValues(state: unknown): (number | string)[] {
   if (Array.isArray(state)) return state
   if (state && typeof state === 'object' && Array.isArray((state as { array?: unknown }).array)) {
-    return (state as { array: number[] }).array
+    return (state as { array: (number | string)[] }).array
   }
   return []
+}
+
+// Characters have no natural "height" the way numbers do - this maps
+// each character to a small positive number (a=1, b=2, ...) purely so
+// palindromeCheckEngine's bars still have some visual variation. The
+// bar's displayed label always shows the real character, never this.
+function barHeightValue(value: number | string): number {
+  if (typeof value === 'number') return value
+  const code = value.toLowerCase().charCodeAt(0) - 96
+  return code >= 1 && code <= 26 ? code : value.charCodeAt(0)
 }
 
 export default function ArrayCanvas({
@@ -217,8 +230,10 @@ export default function ArrayCanvas({
   }
 
   const bars = useMemo(() => {
-    const values = extractArray(snapshot?.dataStructureState)
+    const values = extractDisplayValues(snapshot?.dataStructureState)
     if (values.length === 0) return []
+
+    const heightValues = values.map(barHeightValue)
 
     const xScale = d3
       .scaleBand<number>()
@@ -228,14 +243,14 @@ export default function ArrayCanvas({
 
     const yScale = d3
       .scaleLinear()
-      .domain([0, d3.max(values) ?? 0])
+      .domain([0, d3.max(heightValues) ?? 0])
       .range([height - PADDING, PADDING])
 
     const bandwidth = xScale.bandwidth()
 
     return values.map((value, index) => {
       const x = xScale(index) ?? 0
-      const barY = yScale(value)
+      const barY = yScale(heightValues[index])
       const barHeight = height - PADDING - barY
 
       return {
