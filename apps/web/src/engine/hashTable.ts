@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface HashTableState {
   buckets: Array<{
@@ -36,6 +36,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
+    canvasType: CanvasType.HASH_TABLE,
     dataStructureState: {
       ...params.state,
       buckets: params.state.buckets.map((b) => ({ ...b, chain: b.chain.map((e) => ({ ...e })) })),

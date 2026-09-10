@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface CallFrame {
   id: string
@@ -38,6 +38,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
+    canvasType: CanvasType.CALL_STACK,
     dataStructureState: { ...params.state, frames: params.state.frames.map((f) => ({ ...f })) },
     activeIndices: [],
     highlightIndices: [],

@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface SlidingWindowState {
   array: number[]
@@ -31,6 +31,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
+    canvasType: CanvasType.SLIDING_WINDOW,
     dataStructureState: { ...params.state, array: [...params.state.array] },
     activeIndices: [],
     highlightIndices: [...(params.highlightIndices ?? [])],

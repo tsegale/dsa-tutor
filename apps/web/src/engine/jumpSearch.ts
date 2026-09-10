@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface JumpSearchState {
   array: number[]
@@ -34,6 +34,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
+    canvasType: CanvasType.ARRAY,
     dataStructureState: { ...params.state, array: [...params.state.array] },
     activeIndices: [...(params.activeIndices ?? [])],
     highlightIndices: [...(params.highlightIndices ?? [])],

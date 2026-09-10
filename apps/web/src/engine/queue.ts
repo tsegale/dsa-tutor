@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface QueueState {
   items: Array<{ id: string; value: number | string; index: number }>
@@ -32,6 +32,10 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
+    // Deque uses the same QueueCanvas layout as a linear queue (both
+    // ends just get an extra label), so only 'circular' maps to its
+    // own dedicated CanvasType - everything else renders as QUEUE.
+    canvasType: params.state.variant === 'circular' ? CanvasType.CIRCULAR_QUEUE : CanvasType.QUEUE,
     dataStructureState: { ...params.state, items: params.state.items.map((it) => ({ ...it })) },
     activeIndices: [],
     highlightIndices: [],

@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 import type { LinkedListNode, LinkedListState } from './singlyLinkedList'
 
 export type { LinkedListNode, LinkedListState }
@@ -22,6 +22,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
+    canvasType: CanvasType.LINKED_LIST,
     dataStructureState: { ...params.state, nodes: params.state.nodes.map((n) => ({ ...n })) },
     activeIndices: [],
     highlightIndices: [],
