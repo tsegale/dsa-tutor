@@ -2,16 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
-
-export interface StackState {
-  items: Array<{ id: string; value: number | string }>
-  topIndex: number
-  capacity: number | null
-  lastOperation: 'push' | 'pop' | 'peek' | null
-  lastOperationValue: number | string | null
-  isOverflow: boolean
-  isUnderflow: boolean
-}
+import type { StackState } from '@/engine/stack'
 
 interface StackCanvasProps {
   width?: number
