@@ -30,6 +30,7 @@ import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { jumpSearchEngine } from '@/engine/jumpSearch'
 import { interpolationSearchEngine } from '@/engine/interpolationSearch'
 import { exponentialSearchEngine } from '@/engine/exponentialSearch'
+import { bstInsertEngine, bstSearchEngine, type BSTNode } from '@/engine/bst'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 
 const inputClass =
@@ -68,6 +69,13 @@ const DQ_SEED: Array<{ op: 'pushFront' | 'pushBack'; value: number }> = [
   { op: 'pushBack', value: 8 },
 ]
 const LL_SEED = [3, 7, 1]
+const BST_SEED = [8, 4, 12, 2, 6, 10, 14]
+
+function bstRootFor(values: number[]): BSTNode | null {
+  const snapshots = bstInsertEngine(values)
+  const last = snapshots[snapshots.length - 1]
+  return (last?.dataStructureState as { root: BSTNode | null } | undefined)?.root ?? null
+}
 
 function NumberField({
   label,
@@ -416,6 +424,30 @@ function SearchControls({ slug }: { slug: string }) {
   )
 }
 
+// No delete engine exists for BST - Insert and Search only.
+function BSTControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [value, setValue] = useState('7')
+  const target = Number(value) || 0
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>BST operations</h3>
+      <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+      <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target]))}>
+        Insert
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => apply(slug, bstSearchEngine(bstRootFor(BST_SEED), target))}
+      >
+        Search
+      </Button>
+    </section>
+  )
+}
+
 function BfsControls() {
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
@@ -447,6 +479,7 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'interpolation-search',
   'exponential-search',
   'bfs',
+  'bst',
 ])
 
 /**
@@ -491,6 +524,8 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
       return <SearchControls slug={slug} />
     case 'bfs':
       return <BfsControls />
+    case 'bst':
+      return <BSTControls slug={slug} />
     default:
       return null
   }
