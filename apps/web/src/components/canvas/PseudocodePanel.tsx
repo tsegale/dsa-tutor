@@ -86,6 +86,146 @@ const PSEUDOCODE: Record<string, string[]> = {
     '  for each neighbour of node:',
     '    if not visited: enqueue',
   ],
+  stack: [
+    'push(value): if size == capacity: OVERFLOW',
+    '  else: top = top + 1; stack[top] = value',
+    'pop(): if top == -1: UNDERFLOW',
+    '  else: value = stack[top]; top = top - 1; return value',
+    'peek(): if top == -1: EMPTY',
+    '  else: return stack[top]',
+  ],
+  queue: [
+    'enqueue(value): if size == capacity: FULL',
+    '  else: queue[rear] = value; rear = rear + 1; size = size + 1',
+    'dequeue(): if size == 0: EMPTY',
+    '  else: value = queue[front]; front = front + 1; size = size - 1; return value',
+    'if rear reaches capacity: wrap rear back to 0 (circular queue only)',
+  ],
+  'circular-queue': [
+    'enqueue(value): if size == capacity: FULL',
+    '  else: queue[rear] = value; rear = rear + 1; size = size + 1',
+    'dequeue(): if size == 0: EMPTY',
+    '  else: value = queue[front]; front = front + 1; size = size - 1; return value',
+    'rear = (rear + 1) mod capacity  // wrap back to 0 at the end of the array',
+  ],
+  deque: [
+    'pushFront(value) / pushBack(value): if size == capacity: FULL',
+    '  else: insert value at the front or back; size = size + 1',
+    'popFront() / popBack(): if size == 0: EMPTY',
+    '  else: remove and return the value from that end; size = size - 1',
+    'both ends support insert and remove in O(1)',
+  ],
+  'singly-linked-list': [
+    'traverse: start at head, follow node.next until node.next is null',
+    'insertFront(value): newNode.next = head',
+    '  head = newNode',
+    'insertBack(value): find last node (node.next is null)',
+    '  last.next = newNode',
+    'delete(target): find node before target (prev.next.value == target)',
+    '  prev.next = prev.next.next  // unlink the target node',
+    'search(target): if node.value == target: found',
+    'reverse: prev = null; curr = head',
+    '  next = curr.next; curr.next = prev; prev = curr; curr = next',
+  ],
+  'doubly-linked-list': [
+    'traverse: start at head, follow node.next pointers',
+    'insert(value): newNode.next = node; newNode.prev = node.prev',
+    '  node.prev.next = newNode; node.prev = newNode',
+    'find node at the target position or value',
+    'delete(target): target.prev.next = target.next',
+    '  target.next.prev = target.prev  // relink both directions',
+    'reverse: curr = head; prev = null',
+    '  swap curr.next and curr.prev; prev = curr; curr = curr.next (original)',
+  ],
+  'circular-linked-list': [
+    'traverse: start at head, follow node.next until back at head',
+    'insert(value): newNode.next = head  // close the circle',
+    '  tail.next = newNode; tail = newNode',
+    'traverse: curr = curr.next',
+    'stop when curr == head again (full loop complete)',
+    'delete(target): prev.next = target.next  // relink around the deleted node',
+  ],
+  'array-access': [
+    'access(index):',
+    '  if index < 0 or index >= length: OUT OF BOUNDS',
+    '  return arr[index]',
+  ],
+  'array-insert': [
+    'insert(index, value):',
+    '  for i from length-1 down to index: arr[i+1] = arr[i]  // shift right',
+    '  arr[index] = value; length = length + 1',
+  ],
+  'array-delete': [
+    'delete(index):',
+    '  for i from index to length-2: arr[i] = arr[i+1]  // shift left',
+    '  length = length - 1',
+  ],
+  'hash-table-chaining': [
+    'index = hash(key) = key mod capacity',
+    'if bucket[index] already has an entry: append to its chain (collision)',
+    'insert (key, value) into bucket[index]',
+    'search(key): walk bucket[hash(key)]\'s chain; if key matches: return value',
+    'if key not found after checking the whole chain: return null',
+  ],
+  'hash-table-probing': [
+    'index = hash(key) = key mod capacity',
+    'if bucket[index] occupied: probe next slot, (index + 1) mod capacity',
+    'insert (key, value) into the first open slot found',
+    'search(key): probe from hash(key); if bucket[i].key == key: return value',
+    'if an empty slot is reached before a match: return null (not found)',
+  ],
+  'two-pointer': [
+    'left = 0, right = n - 1',
+    'while left < right: sum = arr[left] + arr[right]',
+    '  if sum < target: left = left + 1',
+    '  if sum > target: right = right - 1',
+    '  if sum == target: pair found',
+  ],
+  'sliding-window-fixed': [
+    'left = 0, right = 0, windowSum = 0',
+    'windowSum = sum of arr[left..right] for the first k elements',
+    'slide: windowSum = windowSum - arr[left] + arr[right+1]; left++, right++',
+    'compare windowSum against the best value seen so far',
+    'return the best window found',
+  ],
+  'sliding-window-variable': [
+    'left = 0, right = 0, windowSum = 0',
+    'windowSum = sum of arr[left..right]',
+    'expand: windowSum = windowSum + arr[right]; right = right + 1',
+    'while windowSum >= target: record window size; windowSum -= arr[left]; left++',
+    'return the smallest window that met the target',
+  ],
+  'jump-search': [
+    'jumpSize = floor(sqrt(n))',
+    'while arr[min(step, n) - 1] < target: step = step + jumpSize',
+    'linear search within the block [step - jumpSize, step)',
+    'if arr[i] == target: return i',
+    'return -1 (not found)',
+  ],
+  'interpolation-search': [
+    'low = 0, high = n - 1',
+    'while low <= high and target is within arr[low..high]:',
+    '  pos = low + ((target - arr[low]) * (high - low)) / (arr[high] - arr[low])',
+    '  if arr[pos] == target: return pos',
+    'return -1 (not found)',
+  ],
+  'exponential-search': [
+    'if arr[0] == target: return 0',
+    'bound = 1; while bound < n and arr[bound] < target: bound = bound * 2',
+    'binary search within [bound/2, min(bound, n-1)]',
+    'if arr[mid] == target: return mid',
+    'return -1 (not found)',
+  ],
+  'recursion-factorial': [
+    'factorial(n):',
+    '  if n == 0: return 1',
+    '  return n * factorial(n - 1)',
+  ],
+  'recursion-fibonacci': [
+    'fib(n):',
+    '  if n <= 1: return n',
+    '  return fib(n - 1) + fib(n - 2)',
+  ],
 }
 
 function ComingSoonLabel({ label }: { label: string }) {
@@ -103,7 +243,25 @@ export default function PseudocodePanel() {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const activeLine = snapshot?.pseudocodeLine
-  const lines = PSEUDOCODE[algorithmSlug ?? ''] ?? PSEUDOCODE['bubble-sort']
+  const lines = PSEUDOCODE[algorithmSlug ?? '']
+
+  if (!lines) {
+    return (
+      <div
+        className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-white dark:bg-dark-surface"
+        style={{ width: '100%' }}
+      >
+        <div className="border-b border-border px-4 py-2">
+          <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Pseudocode</span>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-4 text-center">
+          <span className="text-sm text-text-muted dark:text-dark-text-secondary">
+            No pseudocode available for this algorithm yet.
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

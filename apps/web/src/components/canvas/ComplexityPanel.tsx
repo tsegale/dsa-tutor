@@ -77,6 +77,146 @@ const COMPLEXITY: Record<string, ComplexityRow> = {
     space: 'O(V)', spaceNote: 'queue + visited',
     stable: false,
   },
+  stack: {
+    best: 'O(1)', bestNote: 'push/pop/peek',
+    average: 'O(1)', averageNote: '',
+    worst: 'O(1)', worstNote: 'push/pop/peek',
+    space: 'O(n)', spaceNote: 'n items on the stack',
+    stable: false,
+  },
+  queue: {
+    best: 'O(1)', bestNote: 'enqueue/dequeue',
+    average: 'O(1)', averageNote: '',
+    worst: 'O(1)', worstNote: 'enqueue/dequeue',
+    space: 'O(n)', spaceNote: 'n items in the queue',
+    stable: false,
+  },
+  'circular-queue': {
+    best: 'O(1)', bestNote: 'enqueue/dequeue',
+    average: 'O(1)', averageNote: '',
+    worst: 'O(1)', worstNote: 'enqueue/dequeue',
+    space: 'O(n)', spaceNote: 'fixed-capacity buffer',
+    stable: false,
+  },
+  deque: {
+    best: 'O(1)', bestNote: 'either end',
+    average: 'O(1)', averageNote: '',
+    worst: 'O(1)', worstNote: 'either end',
+    space: 'O(n)', spaceNote: 'n items in the deque',
+    stable: false,
+  },
+  'singly-linked-list': {
+    best: 'O(1)', bestNote: 'insert/delete at front',
+    average: 'O(n)', averageNote: 'search or delete by value',
+    worst: 'O(n)', worstNote: 'insert/delete at back',
+    space: 'O(n)', spaceNote: 'n nodes',
+    stable: false,
+  },
+  'doubly-linked-list': {
+    best: 'O(1)', bestNote: 'insert/delete at either end',
+    average: 'O(n)', averageNote: 'search or delete by value',
+    worst: 'O(n)', worstNote: 'search to the far end',
+    space: 'O(n)', spaceNote: 'n nodes, two pointers each',
+    stable: false,
+  },
+  'circular-linked-list': {
+    best: 'O(1)', bestNote: 'insert at tail',
+    average: 'O(n)', averageNote: 'search or delete by value',
+    worst: 'O(n)', worstNote: 'full loop traversal',
+    space: 'O(n)', spaceNote: 'n nodes',
+    stable: false,
+  },
+  'array-access': {
+    best: 'O(1)', bestNote: 'always',
+    average: 'O(1)', averageNote: '',
+    worst: 'O(1)', worstNote: 'always',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'array-insert': {
+    best: 'O(1)', bestNote: 'insert at end',
+    average: 'O(n)', averageNote: 'shifts remaining elements',
+    worst: 'O(n)', worstNote: 'insert at front',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'array-delete': {
+    best: 'O(1)', bestNote: 'delete at end',
+    average: 'O(n)', averageNote: 'shifts remaining elements',
+    worst: 'O(n)', worstNote: 'delete at front',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'hash-table-chaining': {
+    best: 'O(1)', bestNote: 'no collision',
+    average: 'O(1)', averageNote: 'good hash, low load factor',
+    worst: 'O(n)', worstNote: 'all keys collide',
+    space: 'O(n)', spaceNote: 'n entries across buckets',
+    stable: false,
+  },
+  'hash-table-probing': {
+    best: 'O(1)', bestNote: 'no collision',
+    average: 'O(1)', averageNote: 'good hash, low load factor',
+    worst: 'O(n)', worstNote: 'heavy clustering',
+    space: 'O(n)', spaceNote: 'n entries in the table',
+    stable: false,
+  },
+  'two-pointer': {
+    best: 'O(n)', bestNote: 'single pass',
+    average: 'O(n)', averageNote: '',
+    worst: 'O(n)', worstNote: 'single pass',
+    space: 'O(1)', spaceNote: 'two pointers only',
+    stable: false,
+  },
+  'sliding-window-fixed': {
+    best: 'O(n)', bestNote: 'single pass',
+    average: 'O(n)', averageNote: '',
+    worst: 'O(n)', worstNote: 'single pass',
+    space: 'O(1)', spaceNote: 'running sum only',
+    stable: false,
+  },
+  'sliding-window-variable': {
+    best: 'O(n)', bestNote: 'each pointer moves at most n times',
+    average: 'O(n)', averageNote: '',
+    worst: 'O(n)', worstNote: 'each pointer moves at most n times',
+    space: 'O(1)', spaceNote: 'running sum only',
+    stable: false,
+  },
+  'jump-search': {
+    best: 'O(1)', bestNote: 'first block',
+    average: 'O(√n)', averageNote: '',
+    worst: 'O(√n)', worstNote: 'not found',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'interpolation-search': {
+    best: 'O(1)', bestNote: 'exact estimate',
+    average: 'O(log log n)', averageNote: 'uniformly distributed data',
+    worst: 'O(n)', worstNote: 'non-uniform distribution',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'exponential-search': {
+    best: 'O(1)', bestNote: 'target near the start',
+    average: 'O(log n)', averageNote: '',
+    worst: 'O(log n)', worstNote: 'bounded binary search',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'recursion-factorial': {
+    best: 'O(n)', bestNote: 'always n recursive calls',
+    average: 'O(n)', averageNote: '',
+    worst: 'O(n)', worstNote: 'always n recursive calls',
+    space: 'O(n)', spaceNote: 'call stack depth',
+    stable: false,
+  },
+  'recursion-fibonacci': {
+    best: 'O(2ⁿ)', bestNote: 'naive, no memoisation',
+    average: 'O(2ⁿ)', averageNote: '',
+    worst: 'O(2ⁿ)', worstNote: 'naive, no memoisation',
+    space: 'O(n)', spaceNote: 'max call stack depth',
+    stable: false,
+  },
 }
 
 // "Stable sort" is only a meaningful notion for sorting algorithms;
@@ -101,7 +241,17 @@ function XIcon() {
 
 export default function ComplexityPanel() {
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
-  const data = COMPLEXITY[algorithmSlug ?? ''] ?? COMPLEXITY['bubble-sort']
+  const data = COMPLEXITY[algorithmSlug ?? '']
+
+  if (!data) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-md border border-border bg-white p-4 text-center dark:bg-dark-surface">
+        <span className="text-sm text-text-muted dark:text-dark-text-secondary">
+          Complexity data for this algorithm will be added soon.
+        </span>
+      </div>
+    )
+  }
 
   const rows = [
     { label: 'Best case', note: data.bestNote, value: data.best, colorClass: 'text-primary bg-primary-light' },
