@@ -70,3 +70,38 @@ export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
 
   return { overallScore, conceptualScore, proceduralScore, recommendedLevel, reasoning }
 }
+
+const LEVEL_ORDER: MasteryAssessment['recommendedLevel'][] = ['HIGH', 'MEDIUM', 'LOW', 'NONE']
+
+// Consecutive correct predictions required before stepping support down one
+// level, keyed by the level being stepped down FROM.
+const CONSECUTIVE_REQUIRED_TO_REDUCE: Record<'HIGH' | 'MEDIUM' | 'LOW', number> = {
+  HIGH: 3,
+  MEDIUM: 4,
+  LOW: 5,
+}
+
+/**
+ * calculateMastery's recommendedLevel is a raw diagnostic computed fresh
+ * from the current score - taken directly, a single lucky early streak can
+ * jump support down multiple levels at once (HIGH straight to LOW off one
+ * correct answer). This gates that: support can only ever step down one
+ * level at a time, and only once the learner has strung together enough
+ * consecutive correct predictions for the level they're currently at.
+ * Restoring support (a mistake pushing the target level back up) is never
+ * gated - that should always take effect immediately.
+ */
+export function gateScaffoldingReduction(
+  currentLevel: MasteryAssessment['recommendedLevel'],
+  targetLevel: MasteryAssessment['recommendedLevel'],
+  consecutiveCorrect: number,
+): MasteryAssessment['recommendedLevel'] {
+  const currentIndex = LEVEL_ORDER.indexOf(currentLevel)
+  const targetIndex = LEVEL_ORDER.indexOf(targetLevel)
+
+  if (targetIndex <= currentIndex) return targetLevel
+
+  const required = CONSECUTIVE_REQUIRED_TO_REDUCE[currentLevel as 'HIGH' | 'MEDIUM' | 'LOW']
+  if (consecutiveCorrect >= required) return LEVEL_ORDER[currentIndex + 1]
+  return currentLevel
+}

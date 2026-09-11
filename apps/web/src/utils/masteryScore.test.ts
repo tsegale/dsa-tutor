@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateMastery, type MasteryMetrics } from './masteryScore'
+import { calculateMastery, gateScaffoldingReduction, type MasteryMetrics } from './masteryScore'
 
 function metrics(overrides: Partial<MasteryMetrics> = {}): MasteryMetrics {
   return {
@@ -93,5 +93,34 @@ describe('calculateMastery', () => {
 
     expect(high.overallScore).toBeLessThanOrEqual(100)
     expect(low.overallScore).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('gateScaffoldingReduction', () => {
+  it('blocks a HIGH to LOW jump on a single correct answer', () => {
+    expect(gateScaffoldingReduction('HIGH', 'LOW', 1)).toBe('HIGH')
+  })
+
+  it('steps HIGH down to MEDIUM once 3 consecutive correct are reached, never skipping to LOW', () => {
+    expect(gateScaffoldingReduction('HIGH', 'LOW', 3)).toBe('MEDIUM')
+  })
+
+  it('keeps MEDIUM until 4 consecutive correct are reached', () => {
+    expect(gateScaffoldingReduction('MEDIUM', 'NONE', 3)).toBe('MEDIUM')
+    expect(gateScaffoldingReduction('MEDIUM', 'NONE', 4)).toBe('LOW')
+  })
+
+  it('keeps LOW until 5 consecutive correct are reached', () => {
+    expect(gateScaffoldingReduction('LOW', 'NONE', 4)).toBe('LOW')
+    expect(gateScaffoldingReduction('LOW', 'NONE', 5)).toBe('NONE')
+  })
+
+  it('never gates restoring support after a mistake', () => {
+    expect(gateScaffoldingReduction('NONE', 'HIGH', 0)).toBe('HIGH')
+    expect(gateScaffoldingReduction('LOW', 'MEDIUM', 0)).toBe('MEDIUM')
+  })
+
+  it('is a no-op when the target level matches the current level', () => {
+    expect(gateScaffoldingReduction('MEDIUM', 'MEDIUM', 0)).toBe('MEDIUM')
   })
 })

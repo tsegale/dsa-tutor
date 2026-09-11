@@ -29,7 +29,7 @@ import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { calculateMastery, type MasteryMetrics } from '@/utils/masteryScore'
+import { calculateMastery, gateScaffoldingReduction, type MasteryMetrics } from '@/utils/masteryScore'
 import { computeMistakePath } from '@/engine/mistakePath'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { linearSearchEngine } from '@/engine/linearSearch'
@@ -334,6 +334,7 @@ export default function AlgorithmPage() {
 
     const assessment = calculateMastery(nextMetrics)
     const currentLevel = useAlgorithmStore.getState().scaffoldingLevel
+    const gatedLevel = gateScaffoldingReduction(currentLevel, assessment.recommendedLevel, nextMetrics.consecutiveCorrect)
     setScaffoldingReasoning(assessment.reasoning)
 
     if (sessionId) {
@@ -358,14 +359,14 @@ export default function AlgorithmPage() {
       })
     }
 
-    if (assessment.recommendedLevel !== currentLevel) {
-      setScaffoldingLevel(assessment.recommendedLevel)
-      setScaffoldingTransitionMessage(getTransitionMessage(currentLevel, assessment.recommendedLevel))
+    if (gatedLevel !== currentLevel) {
+      setScaffoldingLevel(gatedLevel)
+      setScaffoldingTransitionMessage(getTransitionMessage(currentLevel, gatedLevel))
 
       if (sessionId) {
         apiFetch(`/api/v1/sessions/${sessionId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ scaffoldingLevel: assessment.recommendedLevel }),
+          body: JSON.stringify({ scaffoldingLevel: gatedLevel }),
         }).catch(() => {
           // Best-effort: the local scaffolding level already reflects the
           // transition regardless of whether persistence lands.
