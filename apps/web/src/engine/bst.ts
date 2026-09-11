@@ -108,7 +108,7 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
       path.push(node.id)
       const isDuplicate = value === node.value
       push({
-        description: `At node ${node.value} (id ${node.id}): is ${value} smaller or larger?`,
+        description: `At node ${node.value}: is ${value} smaller or larger?`,
         pseudocodeLine: isDuplicate
           ? PSEUDOCODE_LINE.DUPLICATE
           : value < node.value
@@ -207,7 +207,7 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
     if (node.value === target) {
       found = node
       push({
-        description: `Found ${target} at node ${node.id}.`,
+        description: `Found ${target} in the tree.`,
         pseudocodeLine: PSEUDOCODE_LINE.DUPLICATE,
         isPredictionRequired: false,
         state: { root, currentNode: node, targetValue: target, path, foundNode: node, operation: 'search' },
@@ -216,7 +216,7 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
     }
 
     push({
-      description: `At node ${node.value} (id ${node.id}): is ${target} smaller or larger?`,
+      description: `At node ${node.value}: is ${target} smaller or larger?`,
       pseudocodeLine: target < node.value ? PSEUDOCODE_LINE.COMPARE_LESS : PSEUDOCODE_LINE.COMPARE_GREATER,
       isPredictionRequired: true,
       state: { root, currentNode: node, targetValue: target, path, operation: 'search' },
