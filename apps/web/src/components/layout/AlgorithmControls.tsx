@@ -7,8 +7,10 @@ import { queueEnqueueEngine, queueDequeueEngine, circularQueueEngine, dequeEngin
 import {
   hashInsertChainingEngine,
   hashSearchChainingEngine,
+  hashDeleteChainingEngine,
   hashInsertLinearProbingEngine,
   hashSearchLinearProbingEngine,
+  hashDeleteLinearProbingEngine,
 } from '@/engine/hashTable'
 import {
   sllInsertFrontEngine,
@@ -30,7 +32,7 @@ import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { jumpSearchEngine } from '@/engine/jumpSearch'
 import { interpolationSearchEngine } from '@/engine/interpolationSearch'
 import { exponentialSearchEngine } from '@/engine/exponentialSearch'
-import { bstInsertEngine, bstSearchEngine, type BSTNode } from '@/engine/bst'
+import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from '@/engine/bst'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 
 const inputClass =
@@ -255,25 +257,38 @@ function LinkedListControls({ slug }: { slug: string }) {
   )
 }
 
-// No delete engine exists for either hash table variant - Insert and
-// Search only.
 function HashTableControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [key, setKey] = useState('15')
+  const [value, setValue] = useState('')
   const isProbing = slug === 'hash-table-probing'
   const insert = isProbing ? hashInsertLinearProbingEngine : hashInsertChainingEngine
   const search = isProbing ? hashSearchLinearProbingEngine : hashSearchChainingEngine
+  const del = isProbing ? hashDeleteLinearProbingEngine : hashDeleteChainingEngine
   const keyNum = Number(key) || 0
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
       <h3 className={labelClass}>Hash table operations</h3>
       <NumberField label="Key" value={key} onChange={setKey} min={1} max={99} />
+      <div className="flex flex-col gap-1">
+        <label className={labelClass}>Value (optional)</label>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="not used by this demo"
+          className={inputClass}
+        />
+      </div>
       <Button variant="outline" size="sm" onClick={() => apply(slug, insert([15, 8, 23, keyNum], 7))}>
         Insert
       </Button>
       <Button variant="outline" size="sm" onClick={() => apply(slug, search([15, 8, 23], keyNum, 7))}>
         Search
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => apply(slug, del([15, 8, 23], keyNum, 7))}>
+        Delete
       </Button>
     </section>
   )
@@ -424,7 +439,6 @@ function SearchControls({ slug }: { slug: string }) {
   )
 }
 
-// No delete engine exists for BST - Insert and Search only.
 function BSTControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
@@ -443,6 +457,13 @@ function BSTControls({ slug }: { slug: string }) {
         onClick={() => apply(slug, bstSearchEngine(bstRootFor(BST_SEED), target))}
       >
         Search
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => apply(slug, bstDeleteEngine(bstRootFor(BST_SEED), target))}
+      >
+        Delete
       </Button>
     </section>
   )
