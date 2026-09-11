@@ -45,6 +45,9 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
   // order, deepest last) renders reversed - deepest/most-recent frame
   // sits visually on top, matching how a real call stack grows.
   const framesTopFirst = [...state.frames].reverse()
+  const baseCasesReached = state.frames.filter(
+    (frame) => frame.argument === state.baseCase && frame.status === 'returned',
+  ).length
   const centerX = width / 2
   const totalHeight = state.frames.length * (FRAME_HEIGHT + FRAME_GAP)
   const svgHeight = Math.max(height, totalHeight + 60)
@@ -58,7 +61,7 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
           <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
         </div>
         <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-          Base case: {state.baseCase}
+          Base cases reached: {baseCasesReached}
         </span>
       </div>
 
