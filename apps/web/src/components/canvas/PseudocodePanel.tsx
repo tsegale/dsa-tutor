@@ -76,6 +76,8 @@ const PSEUDOCODE: Record<string, string[]> = {
     '  else if value > root.value:',
     '    insert(root.right, value)',
     '  else: duplicate, ignore',
+    'delete: leaf or one child - replace node with its child (or null)',
+    'delete: two children - copy in-order successor value, delete successor',
   ],
   bfs: [
     'enqueue startNode',
@@ -234,7 +236,7 @@ function ComingSoonLabel({ label }: { label: string }) {
       <TooltipTrigger asChild>
         <span className="cursor-not-allowed text-text-muted dark:text-dark-text-secondary">{label}</span>
       </TooltipTrigger>
-      <TooltipContent>Coming soon</TooltipContent>
+      <TooltipContent>{label} implementation coming soon</TooltipContent>
     </Tooltip>
   )
 }
@@ -281,11 +283,11 @@ export default function PseudocodePanel() {
         <span className="text-text-muted dark:text-dark-text-secondary">|</span>
         <ComingSoonLabel label="Java" />
       </div>
-      <div className="flex-1 overflow-x-hidden overflow-y-auto p-2 font-mono">
+      <div className="flex-1 overflow-x-auto overflow-y-auto p-2 font-mono">
         {lines.map((line, index) => {
           const isActive = index === activeLine
           return (
-            <div key={index} className="relative flex py-1" style={{ lineHeight: 1.7 }}>
+            <div key={index} className="relative flex py-1" style={{ lineHeight: 1.7, width: 'max-content', minWidth: '100%' }}>
               <AnimatePresence>
                 {isActive && (
                   <motion.div
@@ -305,11 +307,7 @@ export default function PseudocodePanel() {
                   'relative min-w-0 flex-1 pl-2 text-[11px]',
                   isActive ? 'font-medium text-text-accent' : 'font-normal text-text-primary dark:text-dark-text-primary',
                 )}
-                style={
-                  isActive
-                    ? { whiteSpace: 'nowrap', overflow: 'visible' }
-                    : { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
-                }
+                style={{ whiteSpace: 'nowrap', overflow: 'visible' }}
               >
                 {line}
               </span>
