@@ -12,7 +12,9 @@ const DOT_COLOR: Record<ScaffoldingLevel, string> = {
 
 // Plain-language labels so a student who has never heard of the Zone of
 // Proximal Development can still understand their current support level.
-const SCAFFOLDING_LABEL: Record<ScaffoldingLevel, string> = {
+// Exported so every other place that shows scaffolding level (e.g. the
+// dashboard stats banner) reuses the same wording instead of drifting.
+export const SCAFFOLDING_LABEL: Record<ScaffoldingLevel, string> = {
   [ScaffoldingLevel.HIGH]: 'Full support active',
   [ScaffoldingLevel.MEDIUM]: 'Guided mode',
   [ScaffoldingLevel.LOW]: 'Minimal hints',

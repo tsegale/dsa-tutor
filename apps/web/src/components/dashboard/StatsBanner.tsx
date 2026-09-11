@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import type { TopicDto, UserProfile } from '@dsa-tutor/types'
-import { ScaffoldingLevel } from '@dsa-tutor/types'
 import { apiFetch } from '@/api/client'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { SCAFFOLDING_LABEL } from '@/components/ui/ZPDScaffoldingPill'
 
 interface StatsBannerProps {
   user: UserProfile
@@ -102,13 +102,6 @@ function StatCard({
   )
 }
 
-const SCAFFOLDING_SUBLABEL: Record<ScaffoldingLevel, string> = {
-  [ScaffoldingLevel.HIGH]: 'ZPD: active support',
-  [ScaffoldingLevel.MEDIUM]: 'ZPD: active support',
-  [ScaffoldingLevel.LOW]: 'ZPD: fading',
-  [ScaffoldingLevel.NONE]: 'ZPD: independent',
-}
-
 export default function StatsBanner({ user, topics }: StatsBannerProps) {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
 
@@ -162,7 +155,7 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
         value={scaffoldingLevel}
         valueColor="#854f0b"
         label="Scaffolding level"
-        sublabel={SCAFFOLDING_SUBLABEL[scaffoldingLevel]}
+        sublabel={SCAFFOLDING_LABEL[scaffoldingLevel]}
       />
 
       <StatCard
