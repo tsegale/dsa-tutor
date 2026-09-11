@@ -49,28 +49,6 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     defaultInput: [5, 3, 1, 4, 2],
   },
   {
-    algorithmName: 'linear-search',
-    displayName: 'Linear Search',
-    engineFunction: (input) => linearSearchEngine(input, Math.floor(Math.random() * 20) + 1),
-    track: AlgorithmTrack.FOUNDATIONS,
-    difficulty: Difficulty.BEGINNER,
-    description: 'Check each element one by one until the target is found.',
-    estimatedMinutes: 4,
-    defaultInput: [3, 7, 1, 9, 4, 6],
-    defaultTarget: 9,
-  },
-  {
-    algorithmName: 'binary-search',
-    displayName: 'Binary Search',
-    engineFunction: (input) => binarySearchEngine(input, Math.floor(Math.random() * 20) + 1),
-    track: AlgorithmTrack.FOUNDATIONS,
-    difficulty: Difficulty.BEGINNER,
-    description: 'Search a sorted array by repeatedly halving the search space.',
-    estimatedMinutes: 6,
-    defaultInput: [1, 3, 5, 7, 9, 11, 15, 19],
-    defaultTarget: 7,
-  },
-  {
     algorithmName: 'selection-sort',
     displayName: 'Selection Sort',
     engineFunction: (input) => selectionSortEngine(input),
@@ -275,7 +253,51 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     defaultInput: [15, 11, 27, 8, 12],
   },
 
-  // Additional search
+  // Recursion
+  {
+    algorithmName: 'recursion-factorial',
+    displayName: 'Recursion: Factorial',
+    engineFunction: () => factorialEngine(6),
+    track: AlgorithmTrack.FOUNDATIONS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Classic recursion: n! computed by reducing to smaller subproblems.',
+    estimatedMinutes: 8,
+    defaultInput: [6],
+  },
+  {
+    algorithmName: 'recursion-fibonacci',
+    displayName: 'Recursion: Fibonacci',
+    engineFunction: () => fibonacciEngine(6),
+    track: AlgorithmTrack.FOUNDATIONS,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Naive recursive Fibonacci exposes the overlapping subproblems problem.',
+    estimatedMinutes: 10,
+    defaultInput: [6],
+  },
+
+  // Search algorithms
+  {
+    algorithmName: 'linear-search',
+    displayName: 'Linear Search',
+    engineFunction: (input) => linearSearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    track: AlgorithmTrack.FOUNDATIONS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Check each element one by one until the target is found.',
+    estimatedMinutes: 4,
+    defaultInput: [3, 7, 1, 9, 4, 6],
+    defaultTarget: 9,
+  },
+  {
+    algorithmName: 'binary-search',
+    displayName: 'Binary Search',
+    engineFunction: (input) => binarySearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    track: AlgorithmTrack.FOUNDATIONS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Search a sorted array by repeatedly halving the search space.',
+    estimatedMinutes: 6,
+    defaultInput: [1, 3, 5, 7, 9, 11, 15, 19],
+    defaultTarget: 7,
+  },
   {
     algorithmName: 'jump-search',
     displayName: 'Jump Search',
@@ -308,28 +330,6 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     estimatedMinutes: 6,
     defaultInput: [1, 2, 4, 8, 16, 32, 64, 128, 256],
     defaultTarget: 64,
-  },
-
-  // Recursion
-  {
-    algorithmName: 'recursion-factorial',
-    displayName: 'Recursion: Factorial',
-    engineFunction: () => factorialEngine(6),
-    track: AlgorithmTrack.FOUNDATIONS,
-    difficulty: Difficulty.BEGINNER,
-    description: 'Classic recursion: n! computed by reducing to smaller subproblems.',
-    estimatedMinutes: 8,
-    defaultInput: [6],
-  },
-  {
-    algorithmName: 'recursion-fibonacci',
-    displayName: 'Recursion: Fibonacci',
-    engineFunction: () => fibonacciEngine(6),
-    track: AlgorithmTrack.FOUNDATIONS,
-    difficulty: Difficulty.INTERMEDIATE,
-    description: 'Naive recursive Fibonacci exposes the overlapping subproblems problem.',
-    estimatedMinutes: 10,
-    defaultInput: [6],
   },
 
   // Two pointer and sliding window
