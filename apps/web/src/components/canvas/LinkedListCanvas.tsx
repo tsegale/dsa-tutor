@@ -342,10 +342,6 @@ export default function LinkedListCanvas({
                   >
                     {node.next ? '→' : isCircular && i === layout.length - 1 ? '→' : 'null'}
                   </text>
-
-                  <text x={NODE_WIDTH / 2} y={NODE_HEIGHT + 16} textAnchor="middle" className="fill-text-muted text-[10px] dark:fill-dark-text-secondary">
-                    {node.id}
-                  </text>
                 </motion.g>
               )
             })}
