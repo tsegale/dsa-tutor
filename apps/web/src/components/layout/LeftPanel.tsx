@@ -16,6 +16,7 @@ import { quickSortEngine } from '@/engine/quickSort'
 import { bstInsertEngine } from '@/engine/bst'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
+import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
 import { cn } from '@/lib/utils'
@@ -350,28 +351,32 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
             />
           </section>
 
-          <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
-              Custom array
-            </h3>
-            <input
-              type="text"
-              value={arrayInput}
-              onChange={(event) => setArrayInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') applyArrayInput()
-              }}
-              placeholder="5,3,1,4,2"
-              className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
-            />
-            {inputError && <p className="text-xs text-error">{inputError}</p>}
-            <Button variant="outline" size="sm" onClick={applyArrayInput}>
-              Apply
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleRandom}>
-              Random
-            </Button>
-          </section>
+          {algorithmSlug && CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug) ? (
+            <AlgorithmControls slug={algorithmSlug} />
+          ) : (
+            <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+                Custom array
+              </h3>
+              <input
+                type="text"
+                value={arrayInput}
+                onChange={(event) => setArrayInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') applyArrayInput()
+                }}
+                placeholder="5,3,1,4,2"
+                className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
+              />
+              {inputError && <p className="text-xs text-error">{inputError}</p>}
+              <Button variant="outline" size="sm" onClick={applyArrayInput}>
+                Apply
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleRandom}>
+                Random
+              </Button>
+            </section>
+          )}
 
           <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
