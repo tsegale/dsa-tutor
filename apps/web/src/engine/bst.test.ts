@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bstInsertEngine, bstSearchEngine, type BSTNode, type BSTState } from './bst'
+import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode, type BSTState } from './bst'
 
 function lastState(snapshots: ReturnType<typeof bstInsertEngine>): BSTState {
   return snapshots[snapshots.length - 1].dataStructureState as BSTState
@@ -119,5 +119,77 @@ describe('bstSearchEngine', () => {
     const state = lastState(snapshots)
 
     expect(state.foundNode).toBeNull()
+  })
+})
+
+describe('bstDeleteEngine', () => {
+  function buildTree(values: number[]): BSTNode {
+    const snapshots = bstInsertEngine(values)
+    return (snapshots[snapshots.length - 1].dataStructureState as BSTState).root!
+  }
+
+  function values(node: BSTNode | null): number[] {
+    if (!node) return []
+    return [...values(node.left), node.value, ...values(node.right)]
+  }
+
+  it('removes a leaf node', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = bstDeleteEngine(root, 2)
+    const state = lastState(snapshots)
+
+    expect(values(state.root)).not.toContain(2)
+    expect(isValidBST(state.root, -Infinity, Infinity)).toBe(true)
+  })
+
+  it('removes a node with one child, promoting the child', () => {
+    const root = buildTree([8, 4, 12, 2])
+    const snapshots = bstDeleteEngine(root, 4)
+    const state = lastState(snapshots)
+
+    expect(values(state.root)).toEqual(expect.arrayContaining([2, 8, 12]))
+    expect(values(state.root)).not.toContain(4)
+    expect(isValidBST(state.root, -Infinity, Infinity)).toBe(true)
+  })
+
+  it('removes a node with two children by promoting its in-order successor', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = bstDeleteEngine(root, 4)
+    const state = lastState(snapshots)
+
+    const result = values(state.root)
+    expect(result).not.toContain(4)
+    expect(result.filter((v) => v === 6)).toHaveLength(1)
+    expect(isValidBST(state.root, -Infinity, Infinity)).toBe(true)
+  })
+
+  it('removes the root when it has two children', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = bstDeleteEngine(root, 8)
+    const state = lastState(snapshots)
+
+    expect(values(state.root)).not.toContain(8)
+    expect(isValidBST(state.root, -Infinity, Infinity)).toBe(true)
+  })
+
+  it('reports nothing to delete for a value absent from the tree', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = bstDeleteEngine(root, 99)
+
+    expect(snapshots[snapshots.length - 1].description).toMatch(/not found|nothing to delete/i)
+    expect(values(lastState(snapshots).root)).toEqual(expect.arrayContaining([2, 4, 6, 8, 10, 12, 14]))
+  })
+
+  it('never mutates the tree passed in', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const before = values(root)
+    bstDeleteEngine(root, 4)
+    expect(values(root)).toEqual(before)
+  })
+
+  it('has sequential stepIndex values', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = bstDeleteEngine(root, 4)
+    expect(snapshots.map((s) => s.stepIndex)).toEqual(snapshots.map((_, i) => i))
   })
 })

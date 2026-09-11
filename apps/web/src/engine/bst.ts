@@ -18,7 +18,7 @@ export interface BSTState {
   path: string[]
   insertedValue?: number
   foundNode?: BSTNode | null
-  operation: 'insert' | 'search'
+  operation: 'insert' | 'search' | 'delete'
 }
 
 // Indices match the pseudocode panel's bst array exactly:
@@ -29,6 +29,8 @@ export interface BSTState {
 //   4: '  else if value > root.value:'
 //   5: '    insert(root.right, value)'
 //   6: '  else: duplicate, ignore'
+//   7: 'delete: leaf or one child - replace node with its child (or null)'
+//   8: 'delete: two children - copy in-order successor value, delete successor'
 const PSEUDOCODE_LINE = {
   START: 0,
   CHECK_NULL: 1,
@@ -37,6 +39,8 @@ const PSEUDOCODE_LINE = {
   COMPARE_GREATER: 4,
   RECURSE_RIGHT: 5,
   DUPLICATE: 6,
+  DELETE_SIMPLE: 7,
+  DELETE_SUCCESSOR: 8,
 } as const
 
 function cloneNode(node: BSTNode | null): BSTNode | null {
@@ -245,6 +249,135 @@ export function bstSearchEngine(root: BSTNode | null, target: number): Algorithm
     state: { root, currentNode: found, targetValue: target, path, foundNode: found, operation: 'search' },
     isFinalStep: true,
   })
+
+  return snapshots
+}
+
+/**
+ * Pure snapshot engine for BST deletion. Takes an existing root (e.g.
+ * the final root produced by bstInsertEngine) and deletes `target`,
+ * handling all three standard cases: leaf (removed outright), one
+ * child (child takes its place), and two children (copy the in-order
+ * successor's value up, then delete the successor - which itself has
+ * at most a right child, so that removal is always the simple case).
+ * Operates on a clone of `root`; never mutates the caller's tree.
+ */
+export function bstDeleteEngine(root: BSTNode | null, target: number): AlgorithmSnapshot[] {
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+  let workingRoot = cloneNode(root)
+
+  function push(params: Omit<SnapshotParams, 'stepIndex'>) {
+    snapshots.push(makeSnapshot({ ...params, stepIndex: stepIndex++ }))
+  }
+
+  push({
+    description: `Searching for ${target} to delete, starting at the root.`,
+    pseudocodeLine: PSEUDOCODE_LINE.START,
+    isPredictionRequired: false,
+    state: { root: workingRoot, currentNode: workingRoot, targetValue: target, path: [], operation: 'delete' },
+  })
+
+  const path: string[] = []
+  let node = workingRoot
+  let parent: BSTNode | null = null
+  let wentLeft = false
+
+  while (node !== null && node.value !== target) {
+    path.push(node.id)
+    push({
+      description: `At node ${node.value}: is ${target} smaller or larger?`,
+      pseudocodeLine: target < node.value ? PSEUDOCODE_LINE.COMPARE_LESS : PSEUDOCODE_LINE.COMPARE_GREATER,
+      isPredictionRequired: true,
+      state: { root: workingRoot, currentNode: node, targetValue: target, path, operation: 'delete' },
+      criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    })
+    parent = node
+    if (target < node.value) {
+      wentLeft = true
+      node = node.left
+    } else {
+      wentLeft = false
+      node = node.right
+    }
+  }
+
+  if (node === null) {
+    push({
+      description: `${target} was not found in the tree. Nothing to delete.`,
+      pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
+      isPredictionRequired: false,
+      state: { root: workingRoot, currentNode: null, targetValue: target, path, foundNode: null, operation: 'delete' },
+      isFinalStep: true,
+    })
+    return snapshots
+  }
+
+  path.push(node.id)
+
+  if (node.left !== null && node.right !== null) {
+    let successorParent = node
+    let successor = node.right
+    while (successor.left !== null) {
+      successorParent = successor
+      successor = successor.left
+    }
+
+    push({
+      description: `${node.value} has two children. Its in-order successor is ${successor.value} (leftmost node of the right subtree).`,
+      pseudocodeLine: PSEUDOCODE_LINE.DELETE_SUCCESSOR,
+      isPredictionRequired: true,
+      state: { root: workingRoot, currentNode: node, targetValue: target, path, operation: 'delete' },
+      criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
+      junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+    })
+
+    const successorValue = successor.value
+    if (successorParent === node) {
+      successorParent.right = successor.right
+    } else {
+      successorParent.left = successor.right
+    }
+    node.value = successorValue
+
+    push({
+      description: `${target} replaced by successor value ${successorValue}; the successor node is removed from its old position.`,
+      pseudocodeLine: PSEUDOCODE_LINE.DELETE_SUCCESSOR,
+      isPredictionRequired: false,
+      state: { root: workingRoot, currentNode: node, targetValue: target, path, insertedValue: successorValue, operation: 'delete' },
+      isFinalStep: true,
+    })
+  } else {
+    const child = node.left ?? node.right
+    push({
+      description:
+        child === null
+          ? `${node.value} is a leaf node. It is simply removed.`
+          : `${node.value} has one child (${child.value}). The child takes its place.`,
+      pseudocodeLine: PSEUDOCODE_LINE.DELETE_SIMPLE,
+      isPredictionRequired: true,
+      state: { root: workingRoot, currentNode: node, targetValue: target, path, operation: 'delete' },
+      criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
+      junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+    })
+
+    if (parent === null) {
+      workingRoot = child
+    } else if (wentLeft) {
+      parent.left = child
+    } else {
+      parent.right = child
+    }
+
+    push({
+      description: `${target} removed from the tree.`,
+      pseudocodeLine: PSEUDOCODE_LINE.DELETE_SIMPLE,
+      isPredictionRequired: false,
+      state: { root: workingRoot, currentNode: null, targetValue: target, path, operation: 'delete' },
+      isFinalStep: true,
+    })
+  }
 
   return snapshots
 }
