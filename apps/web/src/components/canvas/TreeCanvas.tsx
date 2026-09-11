@@ -108,9 +108,9 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
 
   const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
-  if (!state?.root) {
+  if (!state) {
     return (
-      <svg width={width} height={height} role="img" aria-label="Empty binary search tree">
+      <svg width={width} height={height} role="img" aria-label="No algorithm loaded">
         <text
           x={width / 2}
           y={height / 2}
@@ -119,6 +119,32 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
           className="fill-text-muted text-sm dark:fill-dark-text-secondary"
         >
           Load an algorithm to begin
+        </text>
+      </svg>
+    )
+  }
+
+  if (!state.root) {
+    const cx = width / 2
+    const cy = TOP_PADDING + NODE_RADIUS
+    return (
+      <svg width={width} height={height} role="img" aria-label="Empty binary search tree">
+        <circle
+          cx={cx}
+          cy={cy}
+          r={NODE_RADIUS}
+          fill="none"
+          stroke="#c7c9e8"
+          strokeWidth={2}
+          strokeDasharray="4 3"
+        />
+        <text
+          x={cx}
+          y={cy + NODE_RADIUS + 24}
+          textAnchor="middle"
+          className="fill-text-muted text-sm dark:fill-dark-text-secondary"
+        >
+          Empty tree: first insertion will become root
         </text>
       </svg>
     )
