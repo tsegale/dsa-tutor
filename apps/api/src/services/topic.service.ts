@@ -4,7 +4,7 @@ import type { TopicDto } from '../dtos/topic.dto'
 export async function getAllTopics(userId: string): Promise<TopicDto[]> {
   const [topics, interactions] = await Promise.all([
     prisma.algorithmTopic.findMany({
-      orderBy: [{ track: 'asc' }, { difficulty: 'asc' }],
+      orderBy: [{ track: 'asc' }, { order: 'asc' }],
     }),
     prisma.interaction.findMany({
       where: { session: { userId, mode: 'PRACTICE' } },

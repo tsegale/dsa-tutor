@@ -63,6 +63,7 @@ model AlgorithmTopic {
   description      String
   estimatedMinutes Int
   isLocked         Boolean    @default(false)
+  order            Int        @default(999)
   createdAt        DateTime   @default(now())
 
   sessions Session[]
