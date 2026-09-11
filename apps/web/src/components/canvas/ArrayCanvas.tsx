@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
 import { AlgorithmMode, CriticalJunctionType, CanvasType } from '@dsa-tutor/types'
@@ -63,6 +64,49 @@ const BAR_COLOURS: Record<BarState, { fill: string; value: string; opacity: numb
   sorted: { fill: '#16a34a', value: '#ffffff', opacity: 1.0 },
 }
 
+// The four colours (neutral/comparing/swapping/sorted) are reused across
+// every algorithm that renders through ArrayCanvas, but what each colour
+// actually MEANS differs by algorithm - sorting calls a highlighted bar
+// "Sorted", sliding window calls the same green "Window". Same colour
+// slots, different words, keyed by algorithm/canvasType context.
+const DEFAULT_LEGEND: Record<BarState, string> = {
+  neutral: 'Neutral',
+  comparing: 'Comparing',
+  swapping: 'Swapping',
+  sorted: 'Sorted',
+}
+const SLIDING_WINDOW_LEGEND: Record<BarState, string> = {
+  neutral: 'Window',
+  comparing: 'Current',
+  swapping: 'Max window',
+  sorted: 'Outside',
+}
+const JUMP_SEARCH_LEGEND: Record<BarState, string> = {
+  neutral: 'Jump position',
+  comparing: 'Backtrack range',
+  swapping: 'Found',
+  sorted: 'Unvisited',
+}
+const SEARCH_LEGEND: Record<BarState, string> = {
+  neutral: 'Current',
+  comparing: 'Eliminated',
+  swapping: 'Found',
+  sorted: 'Unvisited',
+}
+const SEARCH_ALGORITHM_SLUGS = new Set([
+  'linear-search',
+  'binary-search',
+  'interpolation-search',
+  'exponential-search',
+])
+
+function legendForContext(canvasType: CanvasType, algorithmSlug: string | undefined): Record<BarState, string> {
+  if (canvasType === CanvasType.SLIDING_WINDOW) return SLIDING_WINDOW_LEGEND
+  if (algorithmSlug === 'jump-search') return JUMP_SEARCH_LEGEND
+  if (algorithmSlug && SEARCH_ALGORITHM_SLUGS.has(algorithmSlug)) return SEARCH_LEGEND
+  return DEFAULT_LEGEND
+}
+
 const MISTAKE_WASH_COLOR = 'rgba(220, 38, 38, 0.12)'
 // 0.5x speed of the nominal 800ms step interval used elsewhere.
 const MISTAKE_STEP_INTERVAL_MS = 1600
@@ -108,6 +152,8 @@ export default function ArrayCanvas({
   const storeSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const mode = useAlgorithmStore((state) => state.mode)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
+  const legend = legendForContext(canvasType, algorithmSlug)
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   // TODO(mastery-backend): swap for the real backend-computed mastery score
   // once that endpoint exists; step progress is a placeholder for now.
@@ -336,17 +382,10 @@ export default function ArrayCanvas({
         </span>
       </div>
       <div className="flex items-center gap-3">
-        {(
-          [
-            ['neutral', 'Neutral'],
-            ['comparing', 'Comparing'],
-            ['swapping', 'Swapping'],
-            ['sorted', 'Sorted'],
-          ] as const
-        ).map(([state, label]) => (
+        {(['neutral', 'comparing', 'swapping', 'sorted'] as const).map((state) => (
           <div key={state} className="flex items-center gap-1">
             <span className="size-2 rounded-sm" style={{ backgroundColor: BAR_COLOURS[state].fill }} aria-hidden="true" />
-            <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{label}</span>
+            <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{legend[state]}</span>
           </div>
         ))}
       </div>
