@@ -240,6 +240,77 @@ export function hashSearchChainingEngine(
 }
 
 /**
+ * Builds a chaining hash table from `keys` (no junctions - setup), then
+ * deletes `target` by hashing to its bucket and removing it from the
+ * chain there. Chaining deletion needs no tombstone - the rest of the
+ * chain is still walked start-to-end on every future search.
+ */
+export function hashDeleteChainingEngine(
+  keys: number[],
+  target: number,
+  capacity: number = DEFAULT_CAPACITY,
+): AlgorithmSnapshot[] {
+  let buckets = emptyBuckets(capacity)
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+
+  for (const key of keys) {
+    const bucketIndex = hashOf(key, capacity)
+    buckets = buckets.map((b) =>
+      b.index === bucketIndex ? { ...b, chain: [...b.chain, { id: nextId(key), key, value: key }] } : b,
+    )
+  }
+
+  const baseState = (overrides: Partial<HashTableState> = {}): HashTableState => ({
+    buckets,
+    capacity,
+    size: keys.length,
+    activeKey: target,
+    activeBucket: null,
+    activeProbeSequence: [],
+    collisionOccurred: false,
+    operation: 'delete',
+    variant: 'chaining',
+    hashResult: null,
+    ...overrides,
+  })
+
+  const bucketIndex = hashOf(target, capacity)
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description: `Deleting key ${target}. Which bucket does hash(${target}) = ${target} % ${capacity} map to?`,
+      pseudocodeLine: LINE.HASH,
+      isPredictionRequired: true,
+      state: baseState(),
+      criticalJunctionType: CriticalJunctionType.HASH_BUCKET,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    }),
+  )
+
+  const bucket = buckets[bucketIndex]
+  const found = bucket.chain.some((e) => e.key === target)
+  if (found) {
+    buckets = buckets.map((b) => (b.index === bucketIndex ? { ...b, chain: b.chain.filter((e) => e.key !== target) } : b))
+  }
+
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description: found
+        ? `${target} removed from bucket ${bucketIndex}'s chain.`
+        : `Bucket ${bucketIndex}'s chain does not contain ${target}. Nothing to delete.`,
+      pseudocodeLine: found ? LINE.FOUND : LINE.NOT_FOUND,
+      isPredictionRequired: false,
+      state: baseState({ buckets, size: found ? keys.length - 1 : keys.length, activeBucket: bucketIndex, hashResult: bucketIndex }),
+      isFinalStep: true,
+    }),
+  )
+
+  return snapshots
+}
+
+/**
  * Inserts each key from `keys` into a linear-probing hash table of
  * `capacity` slots. HASH_BUCKET junction on every insert; PROBE_NEXT
  * on every occupied slot encountered while probing (fires again if
@@ -452,6 +523,105 @@ export function hashSearchLinearProbingEngine(
       pseudocodeLine: found ? LINE.FOUND : LINE.NOT_FOUND,
       isPredictionRequired: false,
       state: baseState({ activeBucket: found ? slot : null, hashResult: home, activeProbeSequence: probed }),
+      isFinalStep: true,
+    }),
+  )
+
+  return snapshots
+}
+
+/**
+ * Builds a linear-probing hash table from `keys` (no junctions -
+ * setup), then deletes `target` by probing forward from its home slot
+ * exactly like search. On a match, the slot is tombstoned rather than
+ * simply cleared: clearing it would break the probe sequence for any
+ * other key that happened to hash to an earlier slot and probed past
+ * this one to find its own spot - a later search for that key would
+ * stop early at the falsely-empty slot and report it missing.
+ */
+export function hashDeleteLinearProbingEngine(
+  keys: number[],
+  target: number,
+  capacity: number = DEFAULT_CAPACITY,
+): AlgorithmSnapshot[] {
+  let buckets = emptyBuckets(capacity)
+  let size = 0
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+
+  for (const key of keys) {
+    if (size >= capacity) break
+    let slot = hashOf(key, capacity)
+    while (buckets[slot].chain.length > 0) {
+      slot = (slot + 1) % capacity
+    }
+    buckets = buckets.map((b) => (b.index === slot ? { ...b, chain: [{ id: nextId(key), key, value: key }] } : b))
+    size += 1
+  }
+
+  const baseState = (overrides: Partial<HashTableState> = {}): HashTableState => ({
+    buckets,
+    capacity,
+    size,
+    activeKey: target,
+    activeBucket: null,
+    activeProbeSequence: [],
+    collisionOccurred: false,
+    operation: 'delete',
+    variant: 'linear_probing',
+    hashResult: null,
+    ...overrides,
+  })
+
+  const home = hashOf(target, capacity)
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description: `Deleting key ${target}. Which slot does hash(${target}) = ${target} % ${capacity} map to?`,
+      pseudocodeLine: LINE.HASH,
+      isPredictionRequired: true,
+      state: baseState({ hashResult: home }),
+      criticalJunctionType: CriticalJunctionType.HASH_BUCKET,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    }),
+  )
+
+  const probed: number[] = []
+  let slot = home
+  let found = false
+  for (let i = 0; i < capacity; i++) {
+    const entry = buckets[slot].chain[0]
+    if (!entry) break
+    if (entry.key === target) {
+      found = true
+      break
+    }
+    probed.push(slot)
+    slot = (slot + 1) % capacity
+  }
+
+  const deletedIndices = found ? [slot] : []
+  if (found) {
+    buckets = buckets.map((b) => (b.index === slot ? { ...b, chain: [] } : b))
+    size -= 1
+  }
+
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description: found
+        ? `${target} removed from index ${slot}. That slot is now tombstoned, not empty, so later searches keep probing past it.`
+        : `Reached an empty slot without finding ${target}. Nothing to delete.`,
+      pseudocodeLine: found ? LINE.FOUND : LINE.NOT_FOUND,
+      isPredictionRequired: false,
+      state: baseState({
+        buckets,
+        size,
+        activeBucket: found ? slot : null,
+        hashResult: home,
+        activeProbeSequence: probed,
+        deletedIndices,
+      }),
       isFinalStep: true,
     }),
   )

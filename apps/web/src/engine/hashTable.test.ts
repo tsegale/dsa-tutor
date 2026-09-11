@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   hashInsertChainingEngine,
   hashSearchChainingEngine,
+  hashDeleteChainingEngine,
   hashInsertLinearProbingEngine,
   hashSearchLinearProbingEngine,
+  hashDeleteLinearProbingEngine,
   type HashTableState,
 } from './hashTable'
 
@@ -176,6 +178,64 @@ describe('hashSearchLinearProbingEngine', () => {
 
   it('flags exactly one HASH_BUCKET junction', () => {
     const snapshots = hashSearchLinearProbingEngine([1, 2, 3], 2, 7)
+    const junctions = snapshots.filter((s) => s.criticalJunctionType === 'HASH_BUCKET')
+    expect(junctions.length).toBe(1)
+  })
+})
+
+describe('hashDeleteChainingEngine', () => {
+  it('removes a key that exists in the chain', () => {
+    const snapshots = hashDeleteChainingEngine([3, 10, 17], 10, 7)
+    const last = lastState(snapshots)
+    expect(last.buckets.flatMap((b) => b.chain.map((e) => e.key))).not.toContain(10)
+    expect(snapshots[snapshots.length - 1].description).toMatch(/removed/i)
+  })
+
+  it('leaves the rest of the chain intact', () => {
+    const snapshots = hashDeleteChainingEngine([3, 10, 17], 10, 7)
+    const last = lastState(snapshots)
+    expect(last.buckets.flatMap((b) => b.chain.map((e) => e.key))).toEqual(expect.arrayContaining([3, 17]))
+  })
+
+  it('reports nothing to delete when the key was never inserted', () => {
+    const snapshots = hashDeleteChainingEngine([1, 2, 3], 99, 7)
+    expect(snapshots[snapshots.length - 1].description).toMatch(/nothing to delete/i)
+  })
+
+  it('flags exactly one HASH_BUCKET junction', () => {
+    const snapshots = hashDeleteChainingEngine([1, 2, 3], 2, 7)
+    const junctions = snapshots.filter((s) => s.criticalJunctionType === 'HASH_BUCKET')
+    expect(junctions.length).toBe(1)
+  })
+})
+
+describe('hashDeleteLinearProbingEngine', () => {
+  it('removes a key placed directly at its home slot', () => {
+    const snapshots = hashDeleteLinearProbingEngine([3], 3, 7)
+    const last = lastState(snapshots)
+    expect(last.buckets.find((b) => b.index === 3)?.chain).toHaveLength(0)
+    expect(snapshots[snapshots.length - 1].description).toMatch(/removed/i)
+  })
+
+  it('tombstones the deleted slot instead of leaving it plain-empty', () => {
+    const snapshots = hashDeleteLinearProbingEngine([3], 3, 7)
+    const last = lastState(snapshots)
+    expect(last.deletedIndices).toContain(3)
+  })
+
+  it('removes a key that was probed to a different slot', () => {
+    const snapshots = hashDeleteLinearProbingEngine([1, 8], 8, 7)
+    const last = lastState(snapshots)
+    expect(last.buckets.flatMap((b) => b.chain.map((e) => e.key))).not.toContain(8)
+  })
+
+  it('reports nothing to delete when the key was never inserted', () => {
+    const snapshots = hashDeleteLinearProbingEngine([1, 2, 3], 99, 7)
+    expect(snapshots[snapshots.length - 1].description).toMatch(/nothing to delete/i)
+  })
+
+  it('flags exactly one HASH_BUCKET junction', () => {
+    const snapshots = hashDeleteLinearProbingEngine([1, 2, 3], 2, 7)
     const junctions = snapshots.filter((s) => s.criticalJunctionType === 'HASH_BUCKET')
     expect(junctions.length).toBe(1)
   })
