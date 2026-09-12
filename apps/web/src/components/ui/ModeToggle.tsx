@@ -58,9 +58,19 @@ const BUTTONS_ARE_HANDS_ON = new Set([
 const HANDS_ON_COMING_SOON = new Set([
   'array-insert',
   'array-delete',
+  'counting-sort',
+  'radix-sort',
 ])
 
-const HANDS_ON_ACTIVE = new Set(['bubble-sort', 'insertion-sort', 'selection-sort', 'merge-sort', 'quick-sort'])
+const HANDS_ON_ACTIVE = new Set([
+  'bubble-sort',
+  'insertion-sort',
+  'selection-sort',
+  'merge-sort',
+  'quick-sort',
+  'shell-sort',
+  'heap-sort',
+])
 
 export default function ModeToggle() {
   const mode = useAlgorithmStore((state) => state.mode)
