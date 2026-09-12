@@ -204,6 +204,19 @@ function getHandsOnDragTarget(snapshot: AlgorithmSnapshot | null): HandsOnDragTa
     return { indexA: s.leftRegion[0], indexB: s.rightRegion[0], kind: 'pick-one', answerA: 'take-left', answerB: 'take-right' }
   }
 
+  if (snapshot.criticalJunctionType === CriticalJunctionType.GAP_COMPARISON) {
+    const s = state as { keyIndex: number; compareIndex: number }
+    return { indexA: s.keyIndex, indexB: s.compareIndex, kind: 'threshold', answerA: 'shift', answerB: 'no-shift' }
+  }
+
+  if (snapshot.criticalJunctionType === CriticalJunctionType.HEAP_COMPARE) {
+    if (snapshot.activeIndices.length === 2) {
+      const [parent, child] = snapshot.activeIndices
+      return { indexA: child, indexB: parent, kind: 'threshold', answerA: 'sift', answerB: 'stay' }
+    }
+    return null
+  }
+
   return null
 }
 
@@ -367,7 +380,11 @@ export default function ArrayCanvas({
         ? 'Drag the compared bar onto the current minimum if it is smaller, or leave it in place if not.'
         : snapshot?.criticalJunctionType === CriticalJunctionType.PARTITION_DECISION
           ? 'Drag the bar past the pivot if it belongs on the pivot’s side, or leave it if it belongs left of the pivot.'
-          : 'Drag the bars to swap them, or leave them in place if no swap is needed.'
+          : snapshot?.criticalJunctionType === CriticalJunctionType.GAP_COMPARISON
+            ? 'Drag the key bar across the gap if it should shift left, or leave it in place if not.'
+            : snapshot?.criticalJunctionType === CriticalJunctionType.HEAP_COMPARE
+              ? 'Drag the larger child onto the parent if it should sift down, or leave it in place if not.'
+              : 'Drag the bars to swap them, or leave them in place if no swap is needed.'
 
   const bars = useMemo(() => {
     const values = extractDisplayValues(snapshot?.dataStructureState)
