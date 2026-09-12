@@ -136,7 +136,7 @@ export function mergeSortEngine(input: number[]): AlgorithmSnapshot[] {
       let isFirstComparison = true
 
       push({
-        description: `Merging sub-array [${leftStart}, ${leftEnd}] with sub-array [${rightStart}, ${rightEnd}].`,
+        description: `Merging [${leftArr.join(', ')}] with [${rightArr.join(', ')}].`,
         pseudocodeLine: PSEUDOCODE_LINE.MERGE_START,
         isPredictionRequired: false,
         state: { array: working, leftRegion: [leftStart, leftEnd], rightRegion: [rightStart, rightEnd], mergedRegion: [leftStart, leftStart - 1], phase: 'merging', passSize },
