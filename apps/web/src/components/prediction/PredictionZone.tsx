@@ -74,6 +74,8 @@ const HANDS_ON_DRAG_JUNCTIONS: Set<CriticalJunctionType> = new Set([
   CriticalJunctionType.NEW_MINIMUM,
   CriticalJunctionType.PARTITION_DECISION,
   CriticalJunctionType.MERGE_DECISION,
+  CriticalJunctionType.GAP_COMPARISON,
+  CriticalJunctionType.HEAP_COMPARE,
 ])
 
 const PROACTIVE_HINT_DELAY_MS = 8000
@@ -157,6 +159,22 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       ])
 
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
+      if (algorithmName === 'Counting Sort') {
+        return shuffleArray([
+          { id: 'correct', label: 'Every element was placed using its count-derived index, exactly once' },
+          { id: 'wrong-1', label: 'Adjacent elements were compared and swapped' },
+          { id: 'wrong-2', label: 'The array was recursively divided in half' },
+          { id: 'wrong-3', label: 'A pivot was chosen and elements partitioned around it' },
+        ])
+      }
+      if (algorithmName === 'Radix Sort (LSD)') {
+        return shuffleArray([
+          { id: 'correct', label: 'Every digit position was sorted (stably) from least to most significant' },
+          { id: 'wrong-1', label: 'Elements were compared directly against each other' },
+          { id: 'wrong-2', label: 'Only the most significant digit needed sorting' },
+          { id: 'wrong-3', label: 'The buckets were collected in a different order each pass' },
+        ])
+      }
       if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
         const state = snapshot.dataStructureState as SearchAlgorithmState
         return state.found
@@ -686,6 +704,78 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       ])
     }
 
+    // Shell Sort
+    case CriticalJunctionType.GAP_COMPARISON: {
+      const s = snapshot.dataStructureState as { array: number[]; keyIndex: number }
+      const keyVal = s.array[s.keyIndex]
+      return shuffleArray([
+        { id: 'shift', label: `${keyVal} is smaller - shift it left` },
+        { id: 'no-shift', label: `${keyVal} is not smaller - leave it in place` },
+      ])
+    }
+
+    // Heap Sort
+    case CriticalJunctionType.HEAP_COMPARE: {
+      const s = snapshot.dataStructureState as { array: number[] }
+      const [parent, child] = snapshot.activeIndices
+      return shuffleArray([
+        { id: 'sift', label: `Sift down ${s.array[parent]} - child ${s.array[child]} is larger` },
+        { id: 'stay', label: `Stay - ${s.array[parent]} is already at least as large` },
+      ])
+    }
+
+    case CriticalJunctionType.HEAP_EXTRACT: {
+      const s = snapshot.dataStructureState as { array: number[] }
+      return [{ id: 'extract', label: `Extract ${s.array[0]} - it's the current maximum` }]
+    }
+
+    // Counting Sort
+    case CriticalJunctionType.COUNT_INCREMENT: {
+      const s = snapshot.dataStructureState as { input: number[]; currentInputIndex: number }
+      const val = s.input[s.currentInputIndex]
+      const distractors = Array.from(new Set([val + 1, Math.max(0, val - 1)])).filter((d) => d !== val)
+      return shuffleArray([
+        { id: String(val), label: `Bucket ${val}` },
+        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: `Bucket ${d}` })),
+      ])
+    }
+
+    case CriticalJunctionType.PREFIX_ACCUMULATE: {
+      const s = snapshot.dataStructureState as { count: number[]; currentCountIndex: number }
+      const i = s.currentCountIndex
+      const newVal = s.count[i] + s.count[i - 1]
+      const distractors = Array.from(new Set([newVal + 1, Math.max(0, newVal - 1)])).filter((d) => d !== newVal)
+      return shuffleArray([
+        { id: String(newVal), label: String(newVal) },
+        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: String(d) })),
+      ])
+    }
+
+    case CriticalJunctionType.PLACE_ELEMENT: {
+      const s = snapshot.dataStructureState as { input: number[]; count: number[]; currentInputIndex: number }
+      const val = s.input[s.currentInputIndex]
+      const correctIdx = s.count[val] - 1
+      const distractors = Array.from(new Set([correctIdx + 1, Math.max(0, correctIdx - 1)])).filter((d) => d !== correctIdx)
+      return shuffleArray([
+        { id: String(correctIdx), label: `Output index ${correctIdx}` },
+        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: `Output index ${d}` })),
+      ])
+    }
+
+    // Radix Sort (LSD)
+    case CriticalJunctionType.DIGIT_BUCKET: {
+      const s = snapshot.dataStructureState as { currentDigit: number }
+      const correct = s.currentDigit
+      const options = [correct]
+      let offset = 1
+      while (options.length < 4) {
+        const d = (correct + offset) % 10
+        if (!options.includes(d)) options.push(d)
+        offset++
+      }
+      return shuffleArray(options.map((d) => ({ id: String(d), label: `Bucket ${d}` })))
+    }
+
     default:
       return []
   }
@@ -916,7 +1006,21 @@ export default function PredictionZone({
   useEffect(() => {
     function handleHandsOnAnswer(event: Event) {
       const answer = (
-        event as CustomEvent<'swap' | 'no-swap' | 'shift' | 'stop' | 'update' | 'keep' | 'skip' | 'take-left' | 'take-right'>
+        event as CustomEvent<
+          | 'swap'
+          | 'no-swap'
+          | 'shift'
+          | 'stop'
+          | 'update'
+          | 'keep'
+          | 'skip'
+          | 'take-left'
+          | 'take-right'
+          | 'no-shift'
+          | 'sift'
+          | 'stay'
+          | 'extract'
+        >
       ).detail
       setCurrentAnswer(answer)
       void handleSubmitRef.current(answer)
