@@ -10,8 +10,9 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
   { label: 'Hands-On', value: AlgorithmMode.HANDS_ON },
 ]
 
-// Hands-On mode's drag-to-swap canvas interaction only exists for Bubble
-// Sort's SWAP_DECISION junctions today. Three distinct situations for
+// Hands-On mode's drag canvas interaction exists for all five sorting
+// algorithms (Bubble, Insertion, Selection, Merge, Quick Sort) via
+// ArrayCanvas's getHandsOnDragTarget. Three distinct situations for
 // every other algorithm, rather than one blanket "disabled" tab:
 //
 // 1. NO_HANDS_ON - no physical drag interaction makes sense (pointer
@@ -23,9 +24,9 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
 // 2. BUTTONS_ARE_HANDS_ON - the left panel's operation buttons (push,
 //    enqueue, insert, search...) already ARE the hands-on interaction
 //    for these data structures - tab isn't shown.
-// 3. Sorting algorithms other than Bubble Sort DO have the same
-//    swap-based interaction model, just not built yet - tab is shown,
-//    disabled, with a "coming soon" tooltip instead of a dead end.
+// 3. array-insert/array-delete DO have the same drag-based interaction
+//    model in mind, just not built yet - tab is shown, disabled, with
+//    a "coming soon" tooltip instead of a dead end.
 const NO_HANDS_ON = new Set([
   'recursion-factorial',
   'recursion-fibonacci',
@@ -55,15 +56,11 @@ const BUTTONS_ARE_HANDS_ON = new Set([
 ])
 
 const HANDS_ON_COMING_SOON = new Set([
-  'insertion-sort',
-  'selection-sort',
-  'merge-sort',
-  'quick-sort',
   'array-insert',
   'array-delete',
 ])
 
-const HANDS_ON_ACTIVE_SLUG = 'bubble-sort'
+const HANDS_ON_ACTIVE = new Set(['bubble-sort', 'insertion-sort', 'selection-sort', 'merge-sort', 'quick-sort'])
 
 export default function ModeToggle() {
   const mode = useAlgorithmStore((state) => state.mode)
@@ -72,7 +69,7 @@ export default function ModeToggle() {
   const slug = algorithmSlug ?? ''
   const handsOnHidden = NO_HANDS_ON.has(slug) || BUTTONS_ARE_HANDS_ON.has(slug)
   const handsOnComingSoon = HANDS_ON_COMING_SOON.has(slug)
-  const handsOnAvailable = slug === HANDS_ON_ACTIVE_SLUG
+  const handsOnAvailable = HANDS_ON_ACTIVE.has(slug)
 
   const visibleOptions = OPTIONS.filter((option) => option.value !== AlgorithmMode.HANDS_ON || !handsOnHidden)
 
@@ -112,7 +109,7 @@ export default function ModeToggle() {
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent>{handsOnComingSoon ? 'Drag interaction coming soon' : 'Available for Bubble Sort only'}</TooltipContent>
+            <TooltipContent>{handsOnComingSoon ? 'Drag interaction coming soon' : 'Not available for this algorithm'}</TooltipContent>
           </Tooltip>
         )
       })}
