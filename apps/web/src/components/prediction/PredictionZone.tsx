@@ -67,6 +67,15 @@ export const ESCAPE_EVENT = 'dsa-tutor:escape'
 export const SHOW_EXPLANATION_LINK_EVENT = 'dsa-tutor:show-explanation-link'
 export const HANDS_ON_ANSWER_EVENT = 'dsa-tutor:hands-on-answer'
 
+// Every junction ArrayCanvas's getHandsOnDragTarget recognises a drag
+// interaction for - keep this list in sync with that function's cases.
+const HANDS_ON_DRAG_JUNCTIONS: Set<CriticalJunctionType> = new Set([
+  CriticalJunctionType.SWAP_DECISION,
+  CriticalJunctionType.NEW_MINIMUM,
+  CriticalJunctionType.PARTITION_DECISION,
+  CriticalJunctionType.MERGE_DECISION,
+])
+
 const PROACTIVE_HINT_DELAY_MS = 8000
 const AUTO_RESET_DELAY_MS = 1200
 const NONE_ADVANCE_DELAY_MS = 1500
@@ -860,7 +869,10 @@ export default function PredictionZone({
     snapshot !== null &&
     snapshot.isPredictionRequired
   const isHandsOnSwapDecision =
-    mode === AlgorithmMode.HANDS_ON && snapshot?.criticalJunctionType === CriticalJunctionType.SWAP_DECISION
+    mode === AlgorithmMode.HANDS_ON &&
+    snapshot?.criticalJunctionType !== null &&
+    snapshot?.criticalJunctionType !== undefined &&
+    HANDS_ON_DRAG_JUNCTIONS.has(snapshot.criticalJunctionType)
   const stepIndex = snapshot?.stepIndex ?? null
 
   // Tiles (and their shuffled order) are generated once per prediction
@@ -903,7 +915,9 @@ export default function PredictionZone({
 
   useEffect(() => {
     function handleHandsOnAnswer(event: Event) {
-      const answer = (event as CustomEvent<'swap' | 'no-swap'>).detail
+      const answer = (
+        event as CustomEvent<'swap' | 'no-swap' | 'shift' | 'stop' | 'update' | 'keep' | 'skip' | 'take-left' | 'take-right'>
+      ).detail
       setCurrentAnswer(answer)
       void handleSubmitRef.current(answer)
     }

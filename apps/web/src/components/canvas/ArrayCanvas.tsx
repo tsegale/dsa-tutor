@@ -141,6 +141,72 @@ function barHeightValue(value: number | string): number {
   return code >= 1 && code <= 26 ? code : value.charCodeAt(0)
 }
 
+/**
+ * Hands-On drag targets for every sorting junction that has one. Two
+ * interaction shapes:
+ * - 'threshold': one bar is dragged toward the other; crossing the
+ *   midpoint between them fires answerA, staying put fires answerB.
+ *   Both bars are draggable (dragging either one toward the other
+ *   works, matching Bubble Sort's existing feel).
+ * - 'pick-one': the two bars are peers, not a "should this cross"
+ *   comparison - Merge Sort's front-of-left-run vs front-of-right-run.
+ *   Dragging either bar any perceptible distance answers for that bar,
+ *   regardless of direction.
+ *
+ * Returns null when the current snapshot has no drag interaction (every
+ * junction type this doesn't recognise, and the two purely conceptual
+ * junctions PASS_COMPLETE/ALGORITHM_COMPLETE/EARLY_TERMINATION which
+ * still use the tile grid even in Hands-On mode).
+ */
+interface HandsOnDragTarget {
+  indexA: number
+  indexB: number
+  kind: 'threshold' | 'pick-one'
+  answerA: string
+  answerB: string
+}
+
+function getHandsOnDragTarget(snapshot: AlgorithmSnapshot | null): HandsOnDragTarget | null {
+  if (!snapshot || !snapshot.isPredictionRequired) return null
+  const state = snapshot.dataStructureState
+
+  if (snapshot.criticalJunctionType === CriticalJunctionType.SWAP_DECISION) {
+    if (state && typeof state === 'object' && 'currentKey' in state) {
+      const s = state as unknown as { keyIndex: number; compareIndex: number }
+      return { indexA: s.keyIndex, indexB: s.compareIndex, kind: 'threshold', answerA: 'shift', answerB: 'stop' }
+    }
+    if (snapshot.activeIndices.length === 2) {
+      const [a, b] = snapshot.activeIndices
+      return { indexA: a, indexB: b, kind: 'threshold', answerA: 'swap', answerB: 'no-swap' }
+    }
+    return null
+  }
+
+  if (snapshot.criticalJunctionType === CriticalJunctionType.NEW_MINIMUM) {
+    const s = state as { currentMin: number; scanIndex: number }
+    return { indexA: s.scanIndex, indexB: s.currentMin, kind: 'threshold', answerA: 'update', answerB: 'keep' }
+  }
+
+  if (snapshot.criticalJunctionType === CriticalJunctionType.PARTITION_DECISION) {
+    // Unlike the other three, leftPointer (indexA) always starts strictly
+    // to the LEFT of the pivot (indexB) - the Lomuto scheme never lets it
+    // reach the pivot's own slot. So "crossing" here means dragging it
+    // rightward PAST the pivot, which represents "this belongs on the
+    // pivot's side, not the smaller-elements side" - the opposite polarity
+    // from Bubble/Insertion/Selection, where the compared element starts
+    // on the side that "crossing" moves it away from.
+    const s = state as { leftPointer: number; pivotIndex: number }
+    return { indexA: s.leftPointer, indexB: s.pivotIndex, kind: 'threshold', answerA: 'skip', answerB: 'swap' }
+  }
+
+  if (snapshot.criticalJunctionType === CriticalJunctionType.MERGE_DECISION) {
+    const s = state as { leftRegion: [number, number]; rightRegion: [number, number] }
+    return { indexA: s.leftRegion[0], indexB: s.rightRegion[0], kind: 'pick-one', answerA: 'take-left', answerB: 'take-right' }
+  }
+
+  return null
+}
+
 export default function ArrayCanvas({
   width = 600,
   height = 300,
@@ -207,18 +273,35 @@ export default function ArrayCanvas({
       ])
     : null
 
-  // Hands-On mode: direct-manipulation drag-to-swap replaces the click-to-
-  // select flow, but only at SWAP_DECISION junctions. Conceptual junctions
+  // Hands-On mode: direct-manipulation drag replaces the click-to-select
+  // flow, but only at junctions getHandsOnDragTarget recognises (every
+  // sorting algorithm's per-element comparison). Conceptual junctions
   // (PASS_COMPLETE, EARLY_TERMINATION, ALGORITHM_COMPLETE) fall back to the
   // TILE_GRID input rendered by PredictionZone, same as Practice mode.
-  const isHandsOnSwapStep =
-    !isMistakeMode &&
-    mode === AlgorithmMode.HANDS_ON &&
-    snapshot?.isPredictionRequired === true &&
-    snapshot?.criticalJunctionType === CriticalJunctionType.SWAP_DECISION
-  const [handsOnLeft, handsOnRight] = isHandsOnSwapStep ? snapshot!.activeIndices : []
+  const handsOnDragTarget =
+    !isMistakeMode && mode === AlgorithmMode.HANDS_ON ? getHandsOnDragTarget(snapshot ?? null) : null
+  const isHandsOnSwapStep = handsOnDragTarget !== null
+  // handsOnLeft/handsOnRight are the same two indices in screen (index)
+  // order, used only for the dashed drop-zone box and drag distance - the
+  // dragTarget's own A/B order (not necessarily left-to-right on screen)
+  // is what determines which answer a given drag direction produces.
+  let handsOnLeft = -1
+  let handsOnRight = -1
+  if (handsOnDragTarget !== null) {
+    if (handsOnDragTarget.indexA <= handsOnDragTarget.indexB) {
+      handsOnLeft = handsOnDragTarget.indexA
+      handsOnRight = handsOnDragTarget.indexB
+    } else {
+      handsOnLeft = handsOnDragTarget.indexB
+      handsOnRight = handsOnDragTarget.indexA
+    }
+  }
 
   const [handsOnSwapped, setHandsOnSwapped] = useState(false)
+  // Which bar index the learner picked, for the 'pick-one' interaction
+  // (Merge Sort) - unlike handsOnSwapped's true/false, either index is a
+  // valid pick, so this needs to remember which one.
+  const [handsOnPicked, setHandsOnPicked] = useState<number | null>(null)
   const [handsOnLocked, setHandsOnLocked] = useState(false)
   const [handsOnTooltipVisible, setHandsOnTooltipVisible] = useState(false)
   const [draggingBarIndex, setDraggingBarIndex] = useState<number | null>(null)
@@ -235,6 +318,7 @@ export default function ArrayCanvas({
 
   useEffect(() => {
     setHandsOnSwapped(false)
+    setHandsOnPicked(null)
     setHandsOnLocked(false)
     setDraggingBarIndex(null)
     dragXLeft.set(0)
@@ -248,6 +332,7 @@ export default function ArrayCanvas({
   useEffect(() => {
     function handleClear() {
       setHandsOnSwapped(false)
+      setHandsOnPicked(null)
       setHandsOnLocked(false)
       dragXLeft.set(0)
       dragXRight.set(0)
@@ -274,6 +359,15 @@ export default function ArrayCanvas({
     setHandsOnTooltipVisible(false)
     localStorage.setItem(HANDS_ON_TOOLTIP_STORAGE_KEY, 'true')
   }
+
+  const handsOnInstructionText =
+    handsOnDragTarget?.kind === 'pick-one'
+      ? 'Drag whichever bar is smaller down into the merged result.'
+      : snapshot?.criticalJunctionType === CriticalJunctionType.NEW_MINIMUM
+        ? 'Drag the compared bar onto the current minimum if it is smaller, or leave it in place if not.'
+        : snapshot?.criticalJunctionType === CriticalJunctionType.PARTITION_DECISION
+          ? 'Drag the bar past the pivot if it belongs on the pivot’s side, or leave it if it belongs left of the pivot.'
+          : 'Drag the bars to swap them, or leave them in place if no swap is needed.'
 
   const bars = useMemo(() => {
     const values = extractDisplayValues(snapshot?.dataStructureState)
@@ -325,18 +419,48 @@ export default function ArrayCanvas({
   const slotDistance =
     isHandsOnSwapStep && bars[handsOnLeft] && bars[handsOnRight] ? bars[handsOnRight].x - bars[handsOnLeft].x : 0
 
+  // Any drag past this many pixels counts as a deliberate pick for the
+  // 'pick-one' interaction (Merge Sort) - small enough to register a real
+  // drag, large enough that a stray click-without-moving doesn't submit.
+  const PICK_ONE_THRESHOLD_PX = 12
+
   function handleHandsOnDragEnd(barIndex: number, offsetX: number) {
     setDraggingBarIndex(null)
     // Zero the raw drag transform immediately so it doesn't linger as an
     // extra offset once `displayX` (below) moves the bar to its new slot.
     dragXLeft.set(0)
     dragXRight.set(0)
-    if (!isHandsOnSwapStep || handsOnLocked || slotDistance === 0) return
-    const threshold = slotDistance / 2
-    const crossed = barIndex === handsOnLeft ? offsetX > threshold : offsetX < -threshold
+    if (!handsOnDragTarget || handsOnLocked) return
+
+    if (handsOnDragTarget.kind === 'pick-one') {
+      if (Math.abs(offsetX) < PICK_ONE_THRESHOLD_PX) return
+      const answer = barIndex === handsOnDragTarget.indexA ? handsOnDragTarget.answerA : handsOnDragTarget.answerB
+      setHandsOnPicked(barIndex)
+      setHandsOnLocked(true)
+      window.dispatchEvent(new CustomEvent(HANDS_ON_ANSWER_EVENT, { detail: answer }))
+      return
+    }
+
+    if (slotDistance === 0) return
+    const { indexA, indexB, answerA, answerB } = handsOnDragTarget
+    // "Crossed" means indexA's bar ended up on the opposite side of
+    // indexB's original position from where it started - purely a
+    // geometric fact, computed from actual screen positions rather than
+    // assumed, since which of A/B starts left vs right differs per
+    // algorithm (see getHandsOnDragTarget's per-case comments).
+    const aStartsLeftOfB = bars[indexA].x < bars[indexB].x
+    const threshold = Math.abs(slotDistance) / 2
+    const draggedA = barIndex === indexA
+    const crossed = aStartsLeftOfB
+      ? draggedA
+        ? offsetX > threshold
+        : offsetX < -threshold
+      : draggedA
+        ? offsetX < -threshold
+        : offsetX > threshold
     setHandsOnSwapped(crossed)
     setHandsOnLocked(true)
-    window.dispatchEvent(new CustomEvent(HANDS_ON_ANSWER_EVENT, { detail: crossed ? 'swap' : 'no-swap' }))
+    window.dispatchEvent(new CustomEvent(HANDS_ON_ANSWER_EVENT, { detail: crossed ? answerA : answerB }))
   }
 
   // SVG paints in DOM order, so without this the bar being actively
@@ -392,9 +516,7 @@ export default function ArrayCanvas({
     </div>
     {handsOnTooltipVisible && (
       <div className="absolute top-2 left-1/2 z-30 w-[280px] max-w-[80%] -translate-x-1/2 rounded-md border-l-4 border-secondary bg-secondary-light p-3 text-center shadow-md">
-        <p className="text-[13px] text-secondary">
-          Drag the bars to swap them, or leave them in place if no swap is needed.
-        </p>
+        <p className="text-[13px] text-secondary">{handsOnInstructionText}</p>
       </div>
     )}
     <svg width={width} height={height} role="img" aria-label={canvasLabel}>
@@ -478,12 +600,22 @@ export default function ArrayCanvas({
 
         const barDragX = bar.index === handsOnLeft ? dragXLeft : bar.index === handsOnRight ? dragXRight : undefined
 
+        // Merge Sort's 'pick-one' interaction: once a bar is picked, the
+        // one NOT picked fades to signal it wasn't chosen - there's no
+        // "swap" animation to show since picking doesn't move anything.
+        const isUnpickedPeer =
+          handsOnDragTarget?.kind === 'pick-one' &&
+          handsOnPicked !== null &&
+          bar.index !== handsOnPicked &&
+          (bar.index === handsOnDragTarget.indexA || bar.index === handsOnDragTarget.indexB)
+        const displayOpacity = isUnpickedPeer ? 0.35 : colours.opacity
+
         return (
           <motion.g
             key={bar.index}
             layout
             transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: 'easeInOut' }}
-            style={isDraggableBar ? { opacity: colours.opacity, x: barDragX } : { opacity: colours.opacity }}
+            style={isDraggableBar ? { opacity: displayOpacity, x: barDragX } : { opacity: displayOpacity }}
             className={cn(
               'bar-group group',
               isActive && !prefersReducedMotion && 'animate-pulse-ring',
