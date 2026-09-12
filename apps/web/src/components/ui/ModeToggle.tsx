@@ -11,20 +11,74 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
 ]
 
 // Hands-On mode's drag-to-swap canvas interaction only exists for Bubble
-// Sort's SWAP_DECISION junctions today - kept visible (not removed) for
-// every other algorithm since it's part of the research contribution,
-// but disabled with an explanatory tooltip until it's built out further.
-const HANDS_ON_ALGORITHM_SLUG = 'bubble-sort'
+// Sort's SWAP_DECISION junctions today. Three distinct situations for
+// every other algorithm, rather than one blanket "disabled" tab:
+//
+// 1. NO_HANDS_ON - no physical drag interaction makes sense (pointer
+//    movement or recursion, not element reordering) - tab isn't shown.
+//    Judgment call: two-pointer and both sliding-window algorithms are
+//    grouped here with the other pointer-based (non-swap) algorithms,
+//    not with the sorting algorithms below - dragging a pointer isn't
+//    the same interaction as dragging a bar to swap it.
+// 2. BUTTONS_ARE_HANDS_ON - the left panel's operation buttons (push,
+//    enqueue, insert, search...) already ARE the hands-on interaction
+//    for these data structures - tab isn't shown.
+// 3. Sorting algorithms other than Bubble Sort DO have the same
+//    swap-based interaction model, just not built yet - tab is shown,
+//    disabled, with a "coming soon" tooltip instead of a dead end.
+const NO_HANDS_ON = new Set([
+  'recursion-factorial',
+  'recursion-fibonacci',
+  'bfs',
+  'binary-search',
+  'linear-search',
+  'jump-search',
+  'interpolation-search',
+  'exponential-search',
+  'array-access',
+  'two-pointer',
+  'sliding-window-fixed',
+  'sliding-window-variable',
+])
+
+const BUTTONS_ARE_HANDS_ON = new Set([
+  'stack',
+  'queue',
+  'circular-queue',
+  'deque',
+  'singly-linked-list',
+  'doubly-linked-list',
+  'circular-linked-list',
+  'hash-table-chaining',
+  'hash-table-probing',
+  'bst',
+])
+
+const HANDS_ON_COMING_SOON = new Set([
+  'insertion-sort',
+  'selection-sort',
+  'merge-sort',
+  'quick-sort',
+  'array-insert',
+  'array-delete',
+])
+
+const HANDS_ON_ACTIVE_SLUG = 'bubble-sort'
 
 export default function ModeToggle() {
   const mode = useAlgorithmStore((state) => state.mode)
   const setMode = useAlgorithmStore((state) => state.setMode)
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
-  const handsOnAvailable = algorithmSlug === HANDS_ON_ALGORITHM_SLUG
+  const slug = algorithmSlug ?? ''
+  const handsOnHidden = NO_HANDS_ON.has(slug) || BUTTONS_ARE_HANDS_ON.has(slug)
+  const handsOnComingSoon = HANDS_ON_COMING_SOON.has(slug)
+  const handsOnAvailable = slug === HANDS_ON_ACTIVE_SLUG
+
+  const visibleOptions = OPTIONS.filter((option) => option.value !== AlgorithmMode.HANDS_ON || !handsOnHidden)
 
   return (
     <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface p-1 dark:bg-dark-border">
-      {OPTIONS.map((option) => {
+      {visibleOptions.map((option) => {
         const isActive = mode === option.value
         const isDisabled = option.value === AlgorithmMode.HANDS_ON && !handsOnAvailable
 
@@ -58,7 +112,7 @@ export default function ModeToggle() {
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent>Available for Bubble Sort only</TooltipContent>
+            <TooltipContent>{handsOnComingSoon ? 'Drag interaction coming soon' : 'Available for Bubble Sort only'}</TooltipContent>
           </Tooltip>
         )
       })}
