@@ -120,6 +120,77 @@ def _evaluate_partition_decision(ds: dict, student_answer: str | None) -> bool:
     return False
 
 
+def _evaluate_gap_comparison(ds: dict, student_answer: str | None) -> bool:
+    array = ds.get("array") or []
+    key_index = ds.get("keyIndex")
+    compare_index = ds.get("compareIndex")
+    if key_index is None or compare_index is None:
+        return False
+    if not (0 <= key_index < len(array)) or not (0 <= compare_index < len(array)):
+        return False
+    should_shift = array[key_index] < array[compare_index]
+    if student_answer == "shift":
+        return should_shift
+    if student_answer == "no-shift":
+        return not should_shift
+    return False
+
+
+def _evaluate_heap_compare(wrapper: dict, student_answer: str | None) -> bool:
+    ds = wrapper.get("dataStructureState")
+    active = wrapper.get("activeIndices") or []
+    if not isinstance(ds, dict) or len(active) != 2:
+        return False
+    array = ds.get("array") or []
+    parent, child = active[0], active[1]
+    if max(parent, child) >= len(array) or min(parent, child) < 0:
+        return False
+    should_sift = array[child] > array[parent]
+    if student_answer == "sift":
+        return should_sift
+    if student_answer == "stay":
+        return not should_sift
+    return False
+
+
+def _evaluate_heap_extract(student_answer: str | None) -> bool:
+    return student_answer == "extract"
+
+
+def _evaluate_count_increment(ds: dict, student_answer: str | None) -> bool:
+    input_arr = ds.get("input") or []
+    idx = ds.get("currentInputIndex", -1)
+    if idx < 0 or idx >= len(input_arr):
+        return False
+    return student_answer == str(input_arr[idx])
+
+
+def _evaluate_prefix_accumulate(ds: dict, student_answer: str | None) -> bool:
+    count = ds.get("count") or []
+    i = ds.get("currentCountIndex", -1)
+    if i <= 0 or i >= len(count):
+        return False
+    expected = count[i] + count[i - 1]
+    return student_answer == str(expected)
+
+
+def _evaluate_place_element(ds: dict, student_answer: str | None) -> bool:
+    input_arr = ds.get("input") or []
+    count = ds.get("count") or []
+    idx = ds.get("currentInputIndex", -1)
+    if idx < 0 or idx >= len(input_arr):
+        return False
+    val = input_arr[idx]
+    if val < 0 or val >= len(count):
+        return False
+    expected_idx = count[val] - 1
+    return student_answer == str(expected_idx)
+
+
+def _evaluate_digit_bucket(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == str(ds.get("currentDigit", -1))
+
+
 def _evaluate_bst_direction(ds: dict, student_answer: str | None) -> bool:
     current_node = ds.get("currentNode")
     target = ds.get("targetValue")
@@ -384,6 +455,27 @@ def evaluate_answer(request: PredictionRequest) -> bool:
 
     if junction_type == "PARTITION_DECISION":
         return _evaluate_partition_decision(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "GAP_COMPARISON":
+        return _evaluate_gap_comparison(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "HEAP_COMPARE":
+        return _evaluate_heap_compare(wrapper, request.student_answer)
+
+    if junction_type == "HEAP_EXTRACT":
+        return _evaluate_heap_extract(request.student_answer)
+
+    if junction_type == "COUNT_INCREMENT":
+        return _evaluate_count_increment(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "PREFIX_ACCUMULATE":
+        return _evaluate_prefix_accumulate(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "PLACE_ELEMENT":
+        return _evaluate_place_element(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "DIGIT_BUCKET":
+        return _evaluate_digit_bucket(ds if isinstance(ds, dict) else {}, request.student_answer)
 
     if junction_type == "BST_DIRECTION":
         return _evaluate_bst_direction(ds if isinstance(ds, dict) else {}, request.student_answer)
