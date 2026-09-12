@@ -100,6 +100,15 @@ export const CriticalJunctionType = {
   POINTER_MOVE: 'POINTER_MOVE',
   WINDOW_EXPAND: 'WINDOW_EXPAND',
   WINDOW_SUM: 'WINDOW_SUM',
+
+  // Sorting track — Shell, Heap, Counting, Radix Sort
+  GAP_COMPARISON: 'GAP_COMPARISON',
+  HEAP_COMPARE: 'HEAP_COMPARE',
+  HEAP_EXTRACT: 'HEAP_EXTRACT',
+  COUNT_INCREMENT: 'COUNT_INCREMENT',
+  PREFIX_ACCUMULATE: 'PREFIX_ACCUMULATE',
+  PLACE_ELEMENT: 'PLACE_ELEMENT',
+  DIGIT_BUCKET: 'DIGIT_BUCKET',
 } as const
 export type CriticalJunctionType = (typeof CriticalJunctionType)[keyof typeof CriticalJunctionType]
 
@@ -120,6 +129,8 @@ export const CanvasType = {
   SLIDING_WINDOW: 'SLIDING_WINDOW',
   GRAPH: 'GRAPH',
   TREE: 'TREE',
+  COUNTING_SORT: 'COUNTING_SORT',
+  RADIX_SORT: 'RADIX_SORT',
 } as const
 export type CanvasType = (typeof CanvasType)[keyof typeof CanvasType]
 
