@@ -13,6 +13,8 @@ import { selectionSortEngine } from '@/engine/selectionSort'
 import { insertionSortEngine } from '@/engine/insertionSort'
 import { mergeSortEngine } from '@/engine/mergeSort'
 import { quickSortEngine } from '@/engine/quickSort'
+import { shellSortEngine } from '@/engine/shellSort'
+import { heapSortEngine } from '@/engine/heapSort'
 import { bstInsertEngine } from '@/engine/bst'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
@@ -40,6 +42,10 @@ function engineForSlug(slug: string | undefined, values: number[], codeEditorMod
       return mergeSortEngine(values)
     case 'quick-sort':
       return quickSortEngine(values)
+    case 'shell-sort':
+      return shellSortEngine(values)
+    case 'heap-sort':
+      return heapSortEngine(values)
     case 'bst':
       return bstInsertEngine(values)
     case 'bfs':

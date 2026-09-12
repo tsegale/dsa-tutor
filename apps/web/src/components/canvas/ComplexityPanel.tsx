@@ -49,6 +49,34 @@ const COMPLEXITY: Record<string, ComplexityRow> = {
     space: 'O(log n)', spaceNote: 'call stack',
     stable: false,
   },
+  'shell-sort': {
+    best: 'O(n log n)', bestNote: 'nearly sorted',
+    average: 'O(n log² n)', averageNote: 'gap-sequence dependent',
+    worst: 'O(n²)', worstNote: 'poor gap sequence',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'heap-sort': {
+    best: 'O(n log n)', bestNote: 'always',
+    average: 'O(n log n)', averageNote: '',
+    worst: 'O(n log n)', worstNote: 'always',
+    space: 'O(1)', spaceNote: 'in-place',
+    stable: false,
+  },
+  'counting-sort': {
+    best: 'O(n + k)', bestNote: 'always',
+    average: 'O(n + k)', averageNote: '',
+    worst: 'O(n + k)', worstNote: 'always',
+    space: 'O(n + k)', spaceNote: 'count + output arrays',
+    stable: true,
+  },
+  'radix-sort': {
+    best: 'O(nk)', bestNote: 'k = digit count',
+    average: 'O(nk)', averageNote: '',
+    worst: 'O(nk)', worstNote: 'always',
+    space: 'O(n + k)', spaceNote: 'buckets',
+    stable: true,
+  },
   'linear-search': {
     best: 'O(1)', bestNote: 'first element',
     average: 'O(n)', averageNote: '',
@@ -221,7 +249,17 @@ const COMPLEXITY: Record<string, ComplexityRow> = {
 
 // "Stable sort" is only a meaningful notion for sorting algorithms;
 // search and tree/graph traversal algorithms don't reorder anything.
-const SORTING_SLUGS = new Set(['bubble-sort', 'selection-sort', 'insertion-sort', 'merge-sort', 'quick-sort'])
+const SORTING_SLUGS = new Set([
+  'bubble-sort',
+  'selection-sort',
+  'insertion-sort',
+  'merge-sort',
+  'quick-sort',
+  'shell-sort',
+  'heap-sort',
+  'counting-sort',
+  'radix-sort',
+])
 
 function CheckIcon() {
   return (

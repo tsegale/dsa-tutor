@@ -33,6 +33,8 @@ import { jumpSearchEngine } from '@/engine/jumpSearch'
 import { interpolationSearchEngine } from '@/engine/interpolationSearch'
 import { exponentialSearchEngine } from '@/engine/exponentialSearch'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from '@/engine/bst'
+import { countingSortEngine } from '@/engine/countingSort'
+import { radixSortEngine } from '@/engine/radixSort'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 
 const inputClass =
@@ -469,6 +471,112 @@ function BSTControls({ slug }: { slug: string }) {
   )
 }
 
+function CountingSortControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [arrayInput, setArrayInput] = useState('4,2,2,8,3,3,1')
+  const [error, setError] = useState<string | null>(null)
+
+  function run(values: number[]) {
+    apply(slug, countingSortEngine(values))
+  }
+
+  function handleApply() {
+    const values = parseArrayInput(arrayInput)
+    if (!values) {
+      setError('Enter a comma-separated list of numbers, e.g. 4,2,8,3,1')
+      return
+    }
+    if (values.some((v) => v < 0 || v > 9 || !Number.isInteger(v))) {
+      setError('Only whole numbers from 0 to 9 are supported')
+      return
+    }
+    setError(null)
+    run(values)
+  }
+
+  function handleRandom() {
+    const length = Math.floor(Math.random() * 3) + 6 // 6-8
+    const values = Array.from({ length }, () => Math.floor(Math.random() * 10))
+    setArrayInput(values.join(','))
+    setError(null)
+    run(values)
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Input array</h3>
+      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">Integers 0-9 only</p>
+      <input
+        type="text"
+        value={arrayInput}
+        onChange={(e) => setArrayInput(e.target.value)}
+        placeholder="4,2,8,3,1"
+        className={inputClass}
+      />
+      {error && <p className="text-xs text-error">{error}</p>}
+      <Button variant="outline" size="sm" onClick={handleApply}>
+        Apply
+      </Button>
+      <Button variant="outline" size="sm" onClick={handleRandom}>
+        Random
+      </Button>
+    </section>
+  )
+}
+
+function RadixSortControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [arrayInput, setArrayInput] = useState('170,45,75,90,802,24,2,66')
+  const [error, setError] = useState<string | null>(null)
+
+  function run(values: number[]) {
+    apply(slug, radixSortEngine(values))
+  }
+
+  function handleApply() {
+    const values = parseArrayInput(arrayInput)
+    if (!values) {
+      setError('Enter a comma-separated list of numbers, e.g. 170,45,75,90')
+      return
+    }
+    if (values.some((v) => v < 0 || v > 999 || !Number.isInteger(v))) {
+      setError('Only whole numbers from 0 to 999 are supported')
+      return
+    }
+    setError(null)
+    run(values)
+  }
+
+  function handleRandom() {
+    const length = Math.floor(Math.random() * 3) + 6 // 6-8
+    const values = Array.from({ length }, () => Math.floor(Math.random() * 200) + 1)
+    setArrayInput(values.join(','))
+    setError(null)
+    run(values)
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Input array</h3>
+      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">Integers 0-999 only</p>
+      <input
+        type="text"
+        value={arrayInput}
+        onChange={(e) => setArrayInput(e.target.value)}
+        placeholder="170,45,75,90"
+        className={inputClass}
+      />
+      {error && <p className="text-xs text-error">{error}</p>}
+      <Button variant="outline" size="sm" onClick={handleApply}>
+        Apply
+      </Button>
+      <Button variant="outline" size="sm" onClick={handleRandom}>
+        Random
+      </Button>
+    </section>
+  )
+}
+
 function BfsControls() {
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
@@ -501,6 +609,8 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'exponential-search',
   'bfs',
   'bst',
+  'counting-sort',
+  'radix-sort',
 ])
 
 /**
@@ -547,6 +657,10 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
       return <BfsControls />
     case 'bst':
       return <BSTControls slug={slug} />
+    case 'counting-sort':
+      return <CountingSortControls slug={slug} />
+    case 'radix-sort':
+      return <RadixSortControls slug={slug} />
     default:
       return null
   }

@@ -7,6 +7,10 @@ import { selectionSortEngine } from './selectionSort'
 import { insertionSortEngine } from './insertionSort'
 import { mergeSortEngine } from './mergeSort'
 import { quickSortEngine } from './quickSort'
+import { shellSortEngine } from './shellSort'
+import { heapSortEngine } from './heapSort'
+import { countingSortEngine } from './countingSort'
+import { radixSortEngine } from './radixSort'
 import { bstInsertEngine } from './bst'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
@@ -87,6 +91,46 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     description: 'Choose a pivot and partition elements around it, recursively sorting each partition.',
     estimatedMinutes: 12,
     defaultInput: [7, 2, 9, 1, 5, 8, 3],
+  },
+  {
+    algorithmName: 'shell-sort',
+    displayName: 'Shell Sort',
+    engineFunction: (input) => shellSortEngine(input),
+    track: AlgorithmTrack.SORTING,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Sort by comparing elements at a shrinking gap distance, generalising Insertion Sort.',
+    estimatedMinutes: 12,
+    defaultInput: [8, 3, 7, 1, 5, 9, 2, 6],
+  },
+  {
+    algorithmName: 'heap-sort',
+    displayName: 'Heap Sort',
+    engineFunction: (input) => heapSortEngine(input),
+    track: AlgorithmTrack.SORTING,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Build a max-heap then repeatedly extract the maximum element.',
+    estimatedMinutes: 14,
+    defaultInput: [4, 10, 3, 5, 1, 8, 7, 2],
+  },
+  {
+    algorithmName: 'counting-sort',
+    displayName: 'Counting Sort',
+    engineFunction: (input) => countingSortEngine(input),
+    track: AlgorithmTrack.SORTING,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Count element frequencies then reconstruct the sorted array in linear time.',
+    estimatedMinutes: 12,
+    defaultInput: [4, 2, 2, 8, 3, 3, 1],
+  },
+  {
+    algorithmName: 'radix-sort',
+    displayName: 'Radix Sort (LSD)',
+    engineFunction: (input) => radixSortEngine(input),
+    track: AlgorithmTrack.SORTING,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Sort digit by digit from least to most significant using stable bucket passes.',
+    estimatedMinutes: 14,
+    defaultInput: [170, 45, 75, 90, 802, 24, 2, 66],
   },
   {
     algorithmName: 'bst',
