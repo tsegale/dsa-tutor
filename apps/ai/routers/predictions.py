@@ -571,9 +571,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     correct = evaluate_answer(request)
 
     wrapper = request.current_state if isinstance(request.current_state, dict) else {}
-    junction_type = wrapper.get("criticalJunctionType") or (
-        request.junction_type.value if request.junction_type else "SWAP_DECISION"
-    )
+    junction_type = wrapper.get("criticalJunctionType") or request.junction_type or "SWAP_DECISION"
     junction_difficulty = request.junction_difficulty.value if request.junction_difficulty else "PROCEDURAL"
     comparison_context = build_comparison_context(junction_type, wrapper, request.student_answer)
     algorithm_context, pseudocode, junction_guidance_map = get_algorithm_context(request.algorithm_name)
