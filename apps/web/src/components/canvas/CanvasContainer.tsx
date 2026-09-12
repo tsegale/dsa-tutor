@@ -11,6 +11,8 @@ import StackCanvas from './StackCanvas'
 import QueueCanvas from './QueueCanvas'
 import HashTableCanvas from './HashTableCanvas'
 import CallStackCanvas from './CallStackCanvas'
+import CountingSortCanvas from './CountingSortCanvas'
+import RadixSortCanvas from './RadixSortCanvas'
 
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
@@ -104,6 +106,10 @@ export default function CanvasContainer({
         return <TreeCanvas width={size.width} height={size.height} />
       case CanvasType.GRAPH:
         return <GraphCanvas width={size.width} height={size.height} />
+      case CanvasType.COUNTING_SORT:
+        return <CountingSortCanvas width={size.width} height={size.height} />
+      case CanvasType.RADIX_SORT:
+        return <RadixSortCanvas width={size.width} height={size.height} />
       default:
         return (
           <ArrayCanvas
