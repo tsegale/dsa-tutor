@@ -38,6 +38,10 @@ import { selectionSortEngine } from '@/engine/selectionSort'
 import { insertionSortEngine } from '@/engine/insertionSort'
 import { mergeSortEngine } from '@/engine/mergeSort'
 import { quickSortEngine } from '@/engine/quickSort'
+import { shellSortEngine } from '@/engine/shellSort'
+import { heapSortEngine } from '@/engine/heapSort'
+import { countingSortEngine } from '@/engine/countingSort'
+import { radixSortEngine } from '@/engine/radixSort'
 import { bstInsertEngine } from '@/engine/bst'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
@@ -75,6 +79,14 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       return mergeSortEngine(defaultInput)
     case 'quick-sort':
       return quickSortEngine(defaultInput)
+    case 'shell-sort':
+      return shellSortEngine(defaultInput)
+    case 'heap-sort':
+      return heapSortEngine(defaultInput)
+    case 'counting-sort':
+      return countingSortEngine(defaultInput)
+    case 'radix-sort':
+      return radixSortEngine(defaultInput)
     case 'bst':
       return bstInsertEngine(defaultInput)
     case 'bfs':
