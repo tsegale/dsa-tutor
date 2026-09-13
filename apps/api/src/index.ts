@@ -17,6 +17,17 @@ if (process.env.NODE_ENV === 'production') {
   } catch (err) {
     console.error('Migration failed:', err)
   }
+
+  try {
+    // seed.ts upserts every AlgorithmTopic keyed on its unique `name`, so
+    // re-running this on every startup never duplicates rows or touches
+    // student data - it only adds newly-registered algorithms and syncs
+    // metadata (description, order, etc.) for existing ones.
+    execSync('npx prisma db seed', { stdio: 'inherit', cwd: path.resolve(__dirname, '..') })
+    console.log('Seed completed.')
+  } catch (err) {
+    console.error('Seed failed:', err)
+  }
 }
 
 app.listen(PORT, () => {
