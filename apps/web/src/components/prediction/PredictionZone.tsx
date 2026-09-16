@@ -22,6 +22,13 @@ import type { AVLState } from '@/engine/avlTree'
 import type { RBState } from '@/engine/redBlackTree'
 import type { HeapState } from '@/engine/heap'
 import type { TrieState } from '@/engine/trie'
+import type { GraphAlgorithmState, GridAlgorithmState } from '@dsa-tutor/types'
+import type { DijkstraState } from '@/engine/dijkstra'
+import type { BellmanFordState } from '@/engine/bellmanFord'
+import type { MatrixState } from '@/engine/floydWarshall'
+import type { KruskalState } from '@/engine/kruskal'
+import type { PrimState } from '@/engine/prim'
+import type { CycleDetectionState, ConnectedComponentsState } from '@/engine/graphProperties'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -289,13 +296,30 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
     }
 
     case CriticalJunctionType.NEXT_NODE_SELECTION: {
-      const s = snapshot.dataStructureState as { queue: string[]; visited: string[]; graph: Record<string, string[]> }
-      const nextNode = s.queue[0]
-      const distractors = Object.keys(s.graph)
-        .filter((n) => n !== nextNode && !s.visited.includes(n))
-        .slice(0, 3)
+      // Shared by three engines with different state shapes: the legacy
+      // bfsEngine (BFSState: queue + graph), and the newer
+      // bfsNodeGraphEngine/dfsNodeGraphEngine (GraphAlgorithmState:
+      // frontier + nodes/adjacency). BFS's frontier is a FIFO queue (next
+      // = front); DFS's is a LIFO stack (next = top) - discoveryTime only
+      // ever gets populated by DFS, so its presence disambiguates which
+      // end of `frontier` is "next" without a dedicated state field.
+      const s = snapshot.dataStructureState as {
+        queue?: string[]
+        frontier?: string[]
+        visited: string[]
+        graph?: Record<string, string[]>
+        nodes?: { id: string }[]
+        discoveryTime?: Record<string, number>
+      }
+      const isLegacyBFS = s.queue !== undefined
+      const isDFS = s.discoveryTime !== undefined
+      const frontierList = isLegacyBFS ? s.queue! : (s.frontier ?? [])
+      const nextNode = isDFS ? frontierList[frontierList.length - 1] : frontierList[0]
+      const allNodeIds = isLegacyBFS ? Object.keys(s.graph ?? {}) : (s.nodes ?? []).map((n) => n.id)
+      const distractors = allNodeIds.filter((n) => n !== nextNode && !s.visited.includes(n)).slice(0, 3)
+      const reason = isDFS ? 'it is on top of the stack' : 'it was added to the queue first'
       return shuffleArray([
-        { id: nextNode, label: `${nextNode} - it was added to the queue first` },
+        { id: nextNode, label: `${nextNode} - ${reason}` },
         ...distractors.map((d) => ({ id: d, label: d })),
       ])
     }
@@ -365,6 +389,95 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         { id: 'existing', label: `'${s.currentChar}' already exists - no new node needed` },
         { id: 'new', label: `'${s.currentChar}' needs a new node` },
       ])
+    }
+
+    case CriticalJunctionType.EDGE_RELAX: {
+      const s = snapshot.dataStructureState as DijkstraState
+      const currentDist = s.currentDist ?? Infinity
+      const newDist = s.newDist ?? Infinity
+      return shuffleArray([
+        { id: 'relax', label: `Relax - new distance ${newDist} < current ${currentDist === Infinity ? '∞' : currentDist}` },
+        { id: 'skip', label: `Skip - current distance ${currentDist === Infinity ? '∞' : currentDist} is already optimal` },
+      ])
+    }
+
+    case CriticalJunctionType.BELLMAN_PASS_COMPLETE: {
+      const s = snapshot.dataStructureState as BellmanFordState
+      return shuffleArray([
+        { id: 'continue', label: `Distances changed - continue (pass ${s.passNumber} of ${s.totalPasses})` },
+        { id: 'done', label: 'No changes - converged early, algorithm can stop' },
+      ])
+    }
+
+    case CriticalJunctionType.MATRIX_UPDATE: {
+      const s = snapshot.dataStructureState as MatrixState
+      if (s.i === null || s.j === null || s.k === null) return []
+      const throughK = s.dist[s.i][s.k] + s.dist[s.k][s.j]
+      const current = s.dist[s.i][s.j]
+      const kLabel = s.nodeIds[s.k]
+      return shuffleArray([
+        { id: 'update', label: `Update - via ${kLabel}: ${throughK} < current ${current === Infinity ? '∞' : current}` },
+        { id: 'keep', label: `Keep - current ${current === Infinity ? '∞' : current} is already the shortest` },
+      ])
+    }
+
+    case CriticalJunctionType.UNION_FIND_CHECK: {
+      const s = snapshot.dataStructureState as KruskalState
+      return shuffleArray([
+        { id: 'add', label: `Add edge ${s.fromNode}-${s.toNode} (weight ${s.weight}) - different components` },
+        { id: 'skip', label: `Skip - ${s.fromNode} and ${s.toNode} are already connected (cycle!)` },
+      ])
+    }
+
+    case CriticalJunctionType.MST_EDGE_SELECT: {
+      const s = snapshot.dataStructureState as PrimState
+      const candidates = s.candidateEdges ?? []
+      return shuffleArray(candidates.map(([from, to, weight]) => ({ id: `${from}-${to}`, label: `${from}-${to} (weight ${weight})` })))
+    }
+
+    case CriticalJunctionType.CYCLE_FOUND: {
+      const s = snapshot.dataStructureState as CycleDetectionState
+      const target = s.cycleEdge?.[1] ?? ''
+      return shuffleArray([
+        { id: 'cycle', label: `Yes - ${target} is GRAY (an ancestor on the current path) - this is a back-edge` },
+        { id: 'no-cycle', label: `No - ${target} is not a current ancestor - not a back-edge` },
+      ])
+    }
+
+    case CriticalJunctionType.NEW_COMPONENT: {
+      const s = snapshot.dataStructureState as ConnectedComponentsState
+      const correct = s.totalComponents ?? 1
+      const options = Array.from(new Set([correct, Math.max(1, correct - 1), correct + 1]))
+      return shuffleArray(options.map((n) => ({ id: String(n), label: `${n} component${n === 1 ? '' : 's'}` })))
+    }
+
+    case CriticalJunctionType.TOPOLOGICAL_ORDER: {
+      const s = snapshot.dataStructureState as GraphAlgorithmState
+      const correct = s.currentNode
+      if (!correct) return []
+      const already = new Set([...(s.topoOrder ?? []), correct])
+      const distractorPool = s.nodes.map((n) => n.id).filter((id) => !already.has(id))
+      const distractors = shuffleArray(distractorPool).slice(0, 2)
+      return shuffleArray([{ id: correct, label: correct }, ...distractors.map((d) => ({ id: d, label: d }))])
+    }
+
+    case CriticalJunctionType.GRID_NEXT_CELL: {
+      const s = snapshot.dataStructureState as GridAlgorithmState
+      const isAStar = s.algorithmType === 'astar'
+      const scored = s.frontierCells.map(([r, c]) => {
+        const cell = s.grid[r]?.[c]
+        const g = cell?.gScore ?? 0
+        const h = cell?.hScore ?? 0
+        return { r, c, f: isAStar ? g + h : g }
+      })
+      scored.sort((a, b) => a.f - b.f)
+      const shown = scored.slice(0, 3)
+      return shuffleArray(
+        shown.map(({ r, c, f }) => ({
+          id: `${r},${c}`,
+          label: isAStar ? `(${r}, ${c}) - f(n) = ${f}` : `(${r}, ${c}) - g(n) = ${f}`,
+        })),
+      )
     }
 
     // Foundations - array operations
@@ -963,6 +1076,11 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string
     case CriticalJunctionType.RB_ROTATION_RECOLOR: {
       const s = snapshot.dataStructureState as RBState
       return `What fix-up operation resolves the violation at node ${s.currentNode?.value}?`
+    }
+
+    case CriticalJunctionType.BELLMAN_PASS_COMPLETE: {
+      const s = snapshot.dataStructureState as BellmanFordState
+      return `Pass ${s.passNumber} of ${s.totalPasses} complete. Did any distance change, or has the algorithm converged?`
     }
 
     default:

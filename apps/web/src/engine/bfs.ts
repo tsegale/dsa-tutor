@@ -1,5 +1,5 @@
-import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot, GraphAlgorithmState, GraphNode, AdjacencyList as SharedAdjacencyList, WeightedAdjacencyList } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export type AdjacencyList = Record<string, string[]>
 
@@ -195,6 +195,171 @@ export function bfsEngine(graph: AdjacencyList, startNode: string, targetNode: s
     pseudocodeLine: PSEUDOCODE_LINE.LOOP_CONDITION,
     isPredictionRequired: false,
     state: { graph, startNode, targetNode, visited, queue, currentNode: null, found, foundPath: [], level: 0 },
+    isFinalStep: true,
+  })
+
+  return snapshots
+}
+
+function neighborsOf(adjacency: SharedAdjacencyList | WeightedAdjacencyList, id: string): string[] {
+  const entry = adjacency[id] ?? []
+  if (entry.length === 0) return []
+  return typeof entry[0] === 'string' ? (entry as string[]) : (entry as { to: string }[]).map((e) => e.to)
+}
+
+interface NodeGraphSnapshotParams {
+  stepIndex: number
+  description: string
+  pseudocodeLine: number
+  isPredictionRequired: boolean
+  state: GraphAlgorithmState
+  isFinalStep?: boolean
+  criticalJunctionType?: CriticalJunctionType | null
+  junctionDifficulty?: JunctionDifficulty | null
+}
+
+function makeNodeGraphSnapshot(params: NodeGraphSnapshotParams): AlgorithmSnapshot {
+  return {
+    stepIndex: params.stepIndex,
+    description: params.description,
+    pseudocodeLine: params.pseudocodeLine,
+    isPredictionRequired: params.isPredictionRequired,
+    predictionType: PredictionType.TILE_GRID,
+    dataStructureState: {
+      ...params.state,
+      visited: [...params.state.visited],
+      frontier: [...params.state.frontier],
+      pathNodes: [...params.state.pathNodes],
+      pathEdges: [...params.state.pathEdges],
+      distances: { ...params.state.distances },
+    },
+    activeIndices: [],
+    highlightIndices: [],
+    comparedIndices: [],
+    swappedIndices: [],
+    isFinalStep: params.isFinalStep ?? false,
+    criticalJunctionType: params.criticalJunctionType ?? null,
+    junctionDifficulty: params.junctionDifficulty ?? null,
+    canvasType: CanvasType.NODE_GRAPH,
+  }
+}
+
+/**
+ * Pure snapshot engine for BFS over the richer GraphAlgorithmState shape,
+ * rendered on NodeGraphCanvas - bfsEngine/BFSState above stay untouched
+ * for the legacy GraphCanvas until every session referencing them has
+ * naturally expired. Same level-by-level queue algorithm as bfsEngine,
+ * but also records hop-count distances (every edge costs 1), which is
+ * what makes an unweighted BFS a useful bridge into weighted Dijkstra.
+ */
+export function bfsNodeGraphEngine(
+  nodes: GraphNode[],
+  adjacency: SharedAdjacencyList | WeightedAdjacencyList,
+  directed: boolean,
+  startId: string,
+  targetId: string,
+): AlgorithmSnapshot[] {
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+
+  function push(params: Omit<NodeGraphSnapshotParams, 'stepIndex'>) {
+    snapshots.push(makeNodeGraphSnapshot({ ...params, stepIndex: stepIndex++ }))
+  }
+
+  function baseState(overrides: Partial<GraphAlgorithmState>): GraphAlgorithmState {
+    return {
+      nodes,
+      adjacency,
+      directed,
+      visited: [],
+      frontier: [],
+      currentNode: null,
+      pathNodes: [],
+      pathEdges: [],
+      distances: {},
+      parents: {},
+      ...overrides,
+    }
+  }
+
+  const visited: string[] = []
+  const queue: string[] = [startId]
+  const distances: Record<string, number> = { [startId]: 0 }
+  const parents: Record<string, string | null> = { [startId]: null }
+  let dequeueCount = 0
+
+  push({
+    description: `Starting BFS from ${startId}, looking for ${targetId}. BFS explores level by level using a queue.`,
+    pseudocodeLine: PSEUDOCODE_LINE.ENQUEUE_START,
+    isPredictionRequired: false,
+    state: baseState({ frontier: [...queue], distances: { ...distances }, parents: { ...parents } }),
+  })
+
+  function reconstructPath(target: string): { pathNodes: string[]; pathEdges: [string, string][] } {
+    const pathNodes: string[] = []
+    let node: string | null = target
+    while (node !== null) {
+      pathNodes.unshift(node)
+      node = parents[node] ?? null
+    }
+    const pathEdges: [string, string][] = pathNodes.slice(0, -1).map((n, i) => [n, pathNodes[i + 1]])
+    return { pathNodes, pathEdges }
+  }
+
+  while (queue.length > 0) {
+    dequeueCount++
+    if (dequeueCount % PROMPT_EVERY_NTH_DEQUEUE === 0) {
+      push({
+        description: 'Which node gets dequeued next?',
+        pseudocodeLine: PSEUDOCODE_LINE.DEQUEUE,
+        isPredictionRequired: true,
+        state: baseState({ visited, frontier: [...queue], distances: { ...distances }, parents: { ...parents } }),
+        criticalJunctionType: CriticalJunctionType.NEXT_NODE_SELECTION,
+        junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+      })
+    }
+
+    const node = queue.shift()!
+    visited.push(node)
+
+    push({
+      description: `Dequeued ${node} and marked it visited.`,
+      pseudocodeLine: PSEUDOCODE_LINE.MARK_VISITED,
+      isPredictionRequired: false,
+      state: baseState({ visited, currentNode: node, frontier: [...queue], distances: { ...distances }, parents: { ...parents } }),
+    })
+
+    if (node === targetId) {
+      const { pathNodes, pathEdges } = reconstructPath(targetId)
+      push({
+        description: `${targetId} found. Path from ${startId}: [${pathNodes.join(' -> ')}].`,
+        pseudocodeLine: PSEUDOCODE_LINE.CHECK_TARGET,
+        isPredictionRequired: false,
+        state: baseState({ visited, currentNode: node, frontier: [...queue], pathNodes, pathEdges, distances: { ...distances }, parents: { ...parents } }),
+        isFinalStep: true,
+      })
+      return snapshots
+    }
+
+    for (const neighbor of neighborsOf(adjacency, node)) {
+      if (visited.includes(neighbor) || queue.includes(neighbor)) continue
+      queue.push(neighbor)
+      parents[neighbor] = node
+      distances[neighbor] = (distances[node] ?? 0) + 1
+      push({
+        description: `Added ${neighbor} to the queue (discovered via ${node}).`,
+        pseudocodeLine: PSEUDOCODE_LINE.ENQUEUE_NEIGHBOUR,
+        isPredictionRequired: false,
+        state: baseState({ visited, currentNode: node, frontier: [...queue], distances: { ...distances }, parents: { ...parents } }),
+      })
+    }
+  }
+
+  push({
+    description: `Search complete. The entire reachable graph from ${startId} was explored and ${targetId} was not found.`,
+    pseudocodeLine: PSEUDOCODE_LINE.LOOP_CONDITION,
+    isPredictionRequired: false,
+    state: baseState({ visited, distances: { ...distances }, parents: { ...parents } }),
     isFinalStep: true,
   })
 
