@@ -196,6 +196,27 @@ const COMPLEXITY: Record<string, ComplexityRow> = {
     space: 'O(n)', spaceNote: 'the array itself',
     stable: false,
   },
+  'trie-insert': {
+    best: 'O(m)', bestNote: 'm = word length',
+    average: 'O(m)', averageNote: '',
+    worst: 'O(m)', worstNote: 'm = word length, independent of trie size',
+    space: 'O(total characters)', spaceNote: 'across all inserted words',
+    stable: false,
+  },
+  'trie-search': {
+    best: 'O(1)', bestNote: 'first character missing',
+    average: 'O(m)', averageNote: 'm = word length',
+    worst: 'O(m)', worstNote: 'm = word length, independent of trie size',
+    space: 'O(1)', spaceNote: 'no extra structure needed',
+    stable: false,
+  },
+  'trie-delete': {
+    best: 'O(m)', bestNote: 'm = word length',
+    average: 'O(m)', averageNote: '',
+    worst: 'O(m)', worstNote: 'm = word length, independent of trie size',
+    space: 'O(1)', spaceNote: 'no extra structure needed',
+    stable: false,
+  },
   bfs: {
     best: 'O(1)', bestNote: 'start = target',
     average: 'O(V + E)', averageNote: 'V nodes, E edges',

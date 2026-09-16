@@ -14,6 +14,7 @@ import CallStackCanvas from './CallStackCanvas'
 import CountingSortCanvas from './CountingSortCanvas'
 import RadixSortCanvas from './RadixSortCanvas'
 import HeapCanvas from './HeapCanvas'
+import TrieCanvas from './TrieCanvas'
 
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
@@ -122,6 +123,8 @@ export default function CanvasContainer({
         return <RadixSortCanvas width={size.width} height={size.height} />
       case CanvasType.HEAP:
         return <HeapCanvas width={size.width} height={size.height} />
+      case CanvasType.TRIE:
+        return <TrieCanvas width={size.width} height={size.height} />
       default:
         return (
           <ArrayCanvas

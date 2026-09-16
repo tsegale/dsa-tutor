@@ -37,6 +37,7 @@ import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from
 import { avlInsertEngine, avlDeleteEngine, type AVLNode } from '@/engine/avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBNode } from '@/engine/redBlackTree'
 import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from '@/engine/heap'
+import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState, type TrieNode } from '@/engine/trie'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -552,6 +553,11 @@ function RBControls({ slug }: { slug: string }) {
 
 const HEAP_SEED = [15, 3, 17, 10, 84, 19, 6, 22, 9]
 
+function trieRootFor(words: string[]): TrieNode {
+  const snapshots = trieInsertEngine(words)
+  return (snapshots[snapshots.length - 1].dataStructureState as TrieState).root
+}
+
 function HeapControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
@@ -581,6 +587,47 @@ function HeapControls({ slug }: { slug: string }) {
           </Button>
         </>
       )}
+    </section>
+  )
+}
+
+function TrieControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [word, setWord] = useState('apple')
+  const [error, setError] = useState<string | null>(null)
+
+  function run() {
+    if (!/^[a-zA-Z]+$/.test(word)) {
+      setError('Enter a word using letters only, e.g. apple')
+      return
+    }
+    setError(null)
+    if (slug === 'trie-insert') {
+      apply(slug, trieInsertEngine([...DEFAULT_TRIE_WORDS, word]))
+    } else if (slug === 'trie-search') {
+      apply(slug, trieSearchEngine(trieRootFor(DEFAULT_TRIE_WORDS), word))
+    } else {
+      apply(slug, trieDeleteEngine(trieRootFor(DEFAULT_TRIE_WORDS), word))
+    }
+  }
+
+  const label = slug === 'trie-insert' ? 'Insert' : slug === 'trie-search' ? 'Search' : 'Delete'
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Trie operations</h3>
+      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">Enter a word (letters only)</p>
+      <input
+        type="text"
+        value={word}
+        onChange={(e) => setWord(e.target.value)}
+        placeholder="e.g. apple"
+        className={inputClass}
+      />
+      {error && <p className="text-xs text-error">{error}</p>}
+      <Button variant="outline" size="sm" onClick={run}>
+        {label}
+      </Button>
     </section>
   )
 }
@@ -797,6 +844,9 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'max-heap-delete',
   'min-heap-insert',
   'min-heap-delete',
+  'trie-insert',
+  'trie-search',
+  'trie-delete',
   'counting-sort',
   'radix-sort',
 ])
@@ -863,6 +913,10 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'min-heap-insert':
     case 'min-heap-delete':
       return <HeapControls slug={slug} />
+    case 'trie-insert':
+    case 'trie-search':
+    case 'trie-delete':
+      return <TrieControls slug={slug} />
     case 'counting-sort':
       return <CountingSortControls slug={slug} />
     case 'radix-sort':

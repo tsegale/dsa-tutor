@@ -16,6 +16,7 @@ import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from './avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBState } from './redBlackTree'
 import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from './heap'
+import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState } from './trie'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -68,6 +69,16 @@ function avlRootFromInput(input: number[]) {
 function rbRootFromInput(input: number[]) {
   const lastSnapshot = rbInsertEngine(input).at(-1)
   return (lastSnapshot?.dataStructureState as RBState | undefined)?.root ?? null
+}
+
+/** trieSearchEngine/trieDeleteEngine need an existing trie, not a value
+ * array - built from the default word list via trieInsertEngine.
+ * trieInsertEngine always pushes at least one snapshot (even for an
+ * empty word list) and every snapshot always carries a root node, so
+ * this is never actually undefined in practice. */
+function trieRootFromWords(words: string[]) {
+  const lastSnapshot = trieInsertEngine(words).at(-1)!
+  return (lastSnapshot.dataStructureState as TrieState).root
 }
 
 export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
@@ -314,6 +325,38 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     description: 'Remove the minimum (the root), move the last element up, and sift it down.',
     estimatedMinutes: 10,
     defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+  },
+  {
+    algorithmName: 'trie-insert',
+    displayName: 'Trie Insert',
+    // Trie words aren't a number array - like bfs's fixed graph, the
+    // param exists only to satisfy the shared registry signature.
+    engineFunction: () => trieInsertEngine(DEFAULT_TRIE_WORDS),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Insert a word into a Trie, creating a node per new character along the way.',
+    estimatedMinutes: 10,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'trie-search',
+    displayName: 'Trie Search',
+    engineFunction: () => trieSearchEngine(trieRootFromWords(DEFAULT_TRIE_WORDS), 'apple'),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Search a Trie character by character, following child pointers until the word ends.',
+    estimatedMinutes: 10,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'trie-delete',
+    displayName: 'Trie Delete',
+    engineFunction: () => trieDeleteEngine(trieRootFromWords(DEFAULT_TRIE_WORDS), 'apple'),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Delete a word from a Trie, unmarking its ending and pruning now-unneeded nodes.',
+    estimatedMinutes: 10,
+    defaultInput: [],
   },
   {
     algorithmName: 'bfs',

@@ -35,6 +35,9 @@ const TOPICS = [
   { name: 'max-heap-delete', displayName: 'Max-Heap Delete', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Remove the maximum (the root), move the last element up, and sift it down.', estimatedMinutes: 10, isLocked: false, order: 63 },
   { name: 'min-heap-insert', displayName: 'Min-Heap Insert', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Insert into a min-heap by appending then sifting up while a child beats its parent.', estimatedMinutes: 10, isLocked: false, order: 64 },
   { name: 'min-heap-delete', displayName: 'Min-Heap Delete', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Remove the minimum (the root), move the last element up, and sift it down.', estimatedMinutes: 10, isLocked: false, order: 65 },
+  { name: 'trie-insert', displayName: 'Trie Insert', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Insert a word into a Trie, creating a node per new character along the way.', estimatedMinutes: 10, isLocked: false, order: 66 },
+  { name: 'trie-search', displayName: 'Trie Search', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Search a Trie character by character, following child pointers until the word ends.', estimatedMinutes: 10, isLocked: false, order: 67 },
+  { name: 'trie-delete', displayName: 'Trie Delete', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Delete a word from a Trie, unmarking its ending and pruning now-unneeded nodes.', estimatedMinutes: 10, isLocked: false, order: 68 },
   { name: 'bfs', displayName: 'Breadth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph level by level using a queue.', estimatedMinutes: 10, isLocked: false, order: 999 },
   { name: 'dfs', displayName: 'Depth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph by going as deep as possible before backtracking.', estimatedMinutes: 10, isLocked: true, order: 999 },
 

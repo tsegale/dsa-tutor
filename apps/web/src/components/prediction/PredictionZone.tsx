@@ -21,6 +21,7 @@ import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLState } from '@/engine/avlTree'
 import type { RBState } from '@/engine/redBlackTree'
 import type { HeapState } from '@/engine/heap'
+import type { TrieState } from '@/engine/trie'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -348,6 +349,22 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       if (s.leftChildIdx !== null) options.push({ id: 'left', label: `Swap with left child (${s.array[s.leftChildIdx]})` })
       if (s.rightChildIdx !== null) options.push({ id: 'right', label: `Swap with right child (${s.array[s.rightChildIdx]})` })
       return shuffleArray(options)
+    }
+
+    case CriticalJunctionType.TRIE_CHARACTER_MATCH: {
+      const s = snapshot.dataStructureState as TrieState
+      return shuffleArray([
+        { id: 'exists', label: `'${s.currentChar}' exists as a child` },
+        { id: 'missing', label: `'${s.currentChar}' does not exist` },
+      ])
+    }
+
+    case CriticalJunctionType.TRIE_INSERT_NEW: {
+      const s = snapshot.dataStructureState as TrieState
+      return shuffleArray([
+        { id: 'existing', label: `'${s.currentChar}' already exists - no new node needed` },
+        { id: 'new', label: `'${s.currentChar}' needs a new node` },
+      ])
     }
 
     // Foundations - array operations

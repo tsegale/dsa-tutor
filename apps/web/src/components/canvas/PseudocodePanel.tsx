@@ -252,6 +252,28 @@ const PSEUDOCODE: Record<string, string[]> = {
     '    while a child is smaller than arr[i]:',
     '      swap arr[i] with the smaller child; i = that child',
   ],
+  'trie-insert': [
+    'insert(word):',
+    '  current = root',
+    '  for each char in word:',
+    '    if char not in current.children: create new node for char',
+    '    current = current.children[char]',
+  ],
+  'trie-search': [
+    'search(word):',
+    '  current = root',
+    '  for each char in word:',
+    '    if char not in current.children: return NOT FOUND',
+    '    current = current.children[char]',
+    '  return current.isTerminal',
+  ],
+  'trie-delete': [
+    'delete(word):',
+    '  find the node for word (same descent as search)',
+    '  if not found or not current.isTerminal: nothing to delete',
+    '  current.isTerminal = false',
+    '  walk back up: prune any node with no children and not terminal',
+  ],
   bfs: [
     'enqueue startNode',
     'mark startNode visited',

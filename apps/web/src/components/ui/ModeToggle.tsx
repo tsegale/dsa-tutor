@@ -63,6 +63,9 @@ const BUTTONS_ARE_HANDS_ON = new Set([
   'max-heap-delete',
   'min-heap-insert',
   'min-heap-delete',
+  'trie-insert',
+  'trie-search',
+  'trie-delete',
 ])
 
 const HANDS_ON_COMING_SOON = new Set([

@@ -47,6 +47,7 @@ import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from '@/engine/avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBState } from '@/engine/redBlackTree'
 import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from '@/engine/heap'
+import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState } from '@/engine/trie'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
@@ -127,6 +128,16 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       return minHeapInsertEngine(defaultInput)
     case 'min-heap-delete':
       return minHeapDeleteEngine(buildHeapArray('min', defaultInput))
+    case 'trie-insert':
+      return trieInsertEngine(DEFAULT_TRIE_WORDS)
+    case 'trie-search': {
+      const trieRoot = (trieInsertEngine(DEFAULT_TRIE_WORDS).at(-1)?.dataStructureState as TrieState).root
+      return trieSearchEngine(trieRoot, 'apple')
+    }
+    case 'trie-delete': {
+      const trieRoot = (trieInsertEngine(DEFAULT_TRIE_WORDS).at(-1)?.dataStructureState as TrieState).root
+      return trieDeleteEngine(trieRoot, 'apple')
+    }
     case 'bfs':
       return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
 
