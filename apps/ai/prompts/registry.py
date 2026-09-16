@@ -2,7 +2,7 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
     """Returns (context, pseudocode, critical_junction_guidance) for the
     given algorithm name/display-name. Falls back to a generic context
     for anything not yet implemented."""
-    name = algorithm_name.lower().replace(" ", "_").replace("-", "_")
+    name = algorithm_name.lower().replace(" ", "_").replace("-", "_").replace("'", "")
 
     if name == "bubble_sort":
         from prompts.bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
@@ -76,6 +76,58 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         from prompts.bfs import BFS_CONTEXT, BFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
         return BFS_CONTEXT, BFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name == "dfs" or name == "depth_first_search":
+        from prompts.dfs import DFS_CONTEXT, DFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return DFS_CONTEXT, DFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("dijkstra", "dijkstras_algorithm"):
+        from prompts.dijkstra import DIJKSTRA_CONTEXT, DIJKSTRA_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return DIJKSTRA_CONTEXT, DIJKSTRA_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name == "bellman_ford":
+        from prompts.bellman_ford import (
+            BELLMAN_FORD_CONTEXT,
+            BELLMAN_FORD_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return BELLMAN_FORD_CONTEXT, BELLMAN_FORD_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name == "floyd_warshall":
+        from prompts.floyd_warshall import (
+            FLOYD_WARSHALL_CONTEXT,
+            FLOYD_WARSHALL_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return FLOYD_WARSHALL_CONTEXT, FLOYD_WARSHALL_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("kruskal", "kruskals_algorithm", "prim", "prims_algorithm", "kruskals", "prims"):
+        from prompts.mst import MST_CONTEXT, MST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return MST_CONTEXT, MST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("cycle_detection", "connected_components", "topological_sort"):
+        from prompts.graph_properties import (
+            GRAPH_PROPERTIES_CONTEXT,
+            GRAPH_PROPERTIES_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return GRAPH_PROPERTIES_CONTEXT, GRAPH_PROPERTIES_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("grid_bfs", "grid_dfs", "grid_dijkstra", "grid_astar", "grid_a*"):
+        from prompts.grid_pathfinding import (
+            GRID_PATHFINDING_CONTEXT,
+            GRID_PATHFINDING_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return GRID_PATHFINDING_CONTEXT, GRID_PATHFINDING_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("maze_generation", "maze_prim", "maze_kruskal", "maze_via_prims", "maze_via_kruskals"):
+        from prompts.maze_generation import (
+            MAZE_GENERATION_CONTEXT,
+            MAZE_GENERATION_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return MAZE_GENERATION_CONTEXT, MAZE_GENERATION_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
     if name in ("array_access", "array_insert", "array_insertion", "array_delete", "array_deletion"):
         from prompts.array_operations import (

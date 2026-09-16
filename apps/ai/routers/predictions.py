@@ -204,10 +204,18 @@ def _evaluate_bst_direction(ds: dict, student_answer: str | None) -> bool:
 
 
 def _evaluate_next_node_selection(ds: dict, student_answer: str | None) -> bool:
-    queue = ds.get("queue") or []
-    if not queue:
+    # Shared by bfsEngine (queue), bfsNodeGraphEngine, and
+    # dfsNodeGraphEngine (both use frontier) - DFS's frontier is a LIFO
+    # stack (next = top / last), BFS's is FIFO (next = front / first).
+    # discoveryTime is only ever populated by DFS, so its presence is
+    # what tells the two frontier-shaped engines apart.
+    is_dfs = "discoveryTime" in ds
+    frontier = ds.get("queue") if "queue" in ds else ds.get("frontier")
+    frontier = frontier or []
+    if not frontier:
         return False
-    return student_answer == queue[0]
+    correct = frontier[-1] if is_dfs else frontier[0]
+    return student_answer == correct
 
 
 def _evaluate_visit_node(ds: dict, student_answer: str | None) -> bool:
@@ -265,6 +273,120 @@ def _evaluate_trie_character_match(ds: dict, student_answer: str | None) -> bool
 def _evaluate_trie_insert_new(ds: dict, student_answer: str | None) -> bool:
     needs_new_node = ds.get("needsNewNode", False)
     return (student_answer == "new") == needs_new_node
+
+
+# --- Graphs track --------------------------------------------------
+
+
+def _evaluate_edge_relax(ds: dict, student_answer: str | None) -> bool:
+    # currentDist is JS Infinity for an unvisited node, which JSON.stringify
+    # serializes as null - it round-trips here as None, not a missing value.
+    current_dist = ds.get("currentDist")
+    new_dist = ds.get("newDist")
+    if new_dist is None:
+        return False
+    should_relax = current_dist is None or new_dist < current_dist
+    if student_answer == "relax":
+        return should_relax
+    if student_answer == "skip":
+        return not should_relax
+    return False
+
+
+def _evaluate_bellman_pass_complete(ds: dict, student_answer: str | None) -> bool:
+    any_changed = ds.get("anyChanged")
+    if any_changed is None:
+        return False
+    if student_answer == "continue":
+        return any_changed
+    if student_answer == "done":
+        return not any_changed
+    return False
+
+
+def _evaluate_matrix_update(ds: dict, student_answer: str | None) -> bool:
+    i, j, k = ds.get("i"), ds.get("j"), ds.get("k")
+    dist = ds.get("dist")
+    if i is None or j is None or k is None or dist is None:
+        return False
+
+    # Unreachable pairs are JS Infinity, which JSON.stringify serializes as
+    # null - it round-trips here as None.
+    def cell(r: int, c: int) -> float:
+        v = dist[r][c]
+        return float("inf") if v is None else v
+
+    through_k = cell(i, k) + cell(k, j)
+    improves = through_k < cell(i, j)
+    if student_answer == "update":
+        return improves
+    if student_answer == "keep":
+        return not improves
+    return False
+
+
+def _evaluate_union_find_check(ds: dict, student_answer: str | None) -> bool:
+    same_component = ds.get("sameComponent")
+    if same_component is None:
+        return False
+    if student_answer == "add":
+        return not same_component
+    if student_answer == "skip":
+        return same_component
+    return False
+
+
+def _evaluate_mst_edge_select(ds: dict, student_answer: str | None) -> bool:
+    candidates = ds.get("candidateEdges") or []
+    if not candidates:
+        return False
+    # candidateEdges is already sorted ascending by weight (see prim.ts) -
+    # the first entry is always the minimum.
+    from_node, to_node, _weight = candidates[0]
+    return student_answer == f"{from_node}-{to_node}"
+
+
+def _evaluate_cycle_found(ds: dict, student_answer: str | None) -> bool:
+    is_back_edge = ds.get("isBackEdge")
+    if is_back_edge is None:
+        return False
+    if student_answer == "cycle":
+        return is_back_edge
+    if student_answer == "no-cycle":
+        return not is_back_edge
+    return False
+
+
+def _evaluate_new_component(ds: dict, student_answer: str | None) -> bool:
+    total = ds.get("totalComponents")
+    if total is None:
+        return False
+    return student_answer == str(total)
+
+
+def _evaluate_topological_order(ds: dict, student_answer: str | None) -> bool:
+    current_node = ds.get("currentNode")
+    if not current_node:
+        return False
+    return student_answer == current_node
+
+
+def _evaluate_grid_next_cell(ds: dict, student_answer: str | None) -> bool:
+    frontier = ds.get("frontierCells") or []
+    grid = ds.get("grid")
+    if not frontier or not grid:
+        return False
+    is_astar = ds.get("algorithmType") == "astar"
+
+    def priority(cell: list[int]) -> float:
+        r, c = cell
+        info = grid[r][c] if r < len(grid) and c < len(grid[r]) else {}
+        g = info.get("gScore", 0) or 0
+        h = info.get("hScore", 0) or 0
+        return g + h if is_astar else g
+
+    best = min(frontier, key=priority)
+    return student_answer == f"{best[0]},{best[1]}"
 
 
 def _evaluate_heap_sift_down(ds: dict, student_answer: str | None) -> bool:
@@ -589,6 +711,33 @@ def evaluate_answer(request: PredictionRequest) -> bool:
     if junction_type == "TRIE_INSERT_NEW":
         return _evaluate_trie_insert_new(ds if isinstance(ds, dict) else {}, request.student_answer)
 
+    if junction_type == "EDGE_RELAX":
+        return _evaluate_edge_relax(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "BELLMAN_PASS_COMPLETE":
+        return _evaluate_bellman_pass_complete(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "MATRIX_UPDATE":
+        return _evaluate_matrix_update(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "UNION_FIND_CHECK":
+        return _evaluate_union_find_check(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "MST_EDGE_SELECT":
+        return _evaluate_mst_edge_select(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "CYCLE_FOUND":
+        return _evaluate_cycle_found(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "NEW_COMPONENT":
+        return _evaluate_new_component(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "TOPOLOGICAL_ORDER":
+        return _evaluate_topological_order(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "GRID_NEXT_CELL":
+        return _evaluate_grid_next_cell(ds if isinstance(ds, dict) else {}, request.student_answer)
+
     # Foundations track
     ds_dict = ds if isinstance(ds, dict) else {}
     description = wrapper.get("description") or ""
@@ -758,8 +907,10 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
         )
 
     if junction_type == "NEXT_NODE_SELECTION" and isinstance(ds, dict):
-        queue = ds.get("queue") or []
-        return f"The current queue (front first) was {queue}. The student chose: {student_answer}."
+        is_dfs = "discoveryTime" in ds
+        frontier = (ds.get("queue") if "queue" in ds else ds.get("frontier")) or []
+        shape = "stack, top first" if is_dfs else "queue, front first"
+        return f"The current {shape} was {frontier}. The student chose: {student_answer}."
 
     if junction_type == "AVL_BALANCE_CHECK" and isinstance(ds, dict):
         node_value = (ds.get("currentNode") or {}).get("value")
@@ -832,6 +983,74 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
         return (
             f"This is a {traversal_type} traversal. Nodes visited so far: {visited}. "
             f"The correct next value to visit is {next_val}. The student chose: {student_answer}."
+        )
+
+    if junction_type == "EDGE_RELAX" and isinstance(ds, dict):
+        current_dist = ds.get("currentDist")
+        new_dist = ds.get("newDist")
+        current_dist_label = "infinity (unvisited)" if current_dist is None else current_dist
+        return (
+            f"Relaxing edge {ds.get('relaxFrom')} -> {ds.get('relaxTo')} (weight {ds.get('relaxWeight')}). "
+            f"Current known distance to {ds.get('relaxTo')} is {current_dist_label}, the path through "
+            f"{ds.get('relaxFrom')} would give {new_dist}. The student chose: {student_answer}."
+        )
+
+    if junction_type == "BELLMAN_PASS_COMPLETE" and isinstance(ds, dict):
+        return (
+            f"Pass {ds.get('passNumber')} of {ds.get('totalPasses')} finished. "
+            f"{'A distance changed' if ds.get('anyChanged') else 'No distance changed'} during this pass. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "MATRIX_UPDATE" and isinstance(ds, dict):
+        i, j, k = ds.get("i"), ds.get("j"), ds.get("k")
+        dist = ds.get("dist") or []
+        node_ids = ds.get("nodeIds") or []
+        return (
+            f"Checking whether going through {node_ids[k] if k is not None and k < len(node_ids) else k} "
+            f"shortens the path from {node_ids[i] if i is not None and i < len(node_ids) else i} to "
+            f"{node_ids[j] if j is not None and j < len(node_ids) else j}: "
+            f"dist[{i}][{k}] + dist[{k}][{j}] vs dist[{i}][{j}]. The student chose: {student_answer}."
+        )
+
+    if junction_type == "UNION_FIND_CHECK" and isinstance(ds, dict):
+        return (
+            f"Considering edge {ds.get('fromNode')} - {ds.get('toNode')} (weight {ds.get('weight')}). "
+            f"The endpoints are {'in the same component' if ds.get('sameComponent') else 'in different components'}. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "MST_EDGE_SELECT" and isinstance(ds, dict):
+        candidates = ds.get("candidateEdges") or []
+        return (
+            f"Candidate edges from the current frontier: {candidates}. "
+            f"The cheapest one should be added to the MST. The student chose: {student_answer}."
+        )
+
+    if junction_type == "CYCLE_FOUND" and isinstance(ds, dict):
+        return (
+            f"Examining an edge during DFS where the destination is already visited. "
+            f"{'This is a back edge, so a cycle exists' if ds.get('isBackEdge') else 'This is not a back edge, so no cycle here'}. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "NEW_COMPONENT" and isinstance(ds, dict):
+        return (
+            f"Restarting the search from an unvisited node. The graph has "
+            f"{ds.get('totalComponents')} connected components in total. The student chose: {student_answer}."
+        )
+
+    if junction_type == "TOPOLOGICAL_ORDER" and isinstance(ds, dict):
+        return (
+            f"Node {ds.get('currentNode')} has finished processing all its neighbours and is "
+            f"about to be placed at the front of the topological order. The student chose: {student_answer}."
+        )
+
+    if junction_type == "GRID_NEXT_CELL" and isinstance(ds, dict):
+        frontier = ds.get("frontierCells") or []
+        return (
+            f"The current frontier cells are {frontier}. The algorithm ({ds.get('algorithmType')}) "
+            f"picks the one with the lowest priority score next. The student chose: {student_answer}."
         )
 
     return ""
