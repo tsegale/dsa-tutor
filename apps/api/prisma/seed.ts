@@ -20,7 +20,12 @@ const TOPICS = [
   // student session may already reference it, but unlocked so it isn't a
   // dead end, and left off the pedagogical order sequence (defaults to 999).
   { name: 'linked-list', displayName: 'Linked List', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Linear data structure where each node points to the next.', estimatedMinutes: 8, isLocked: false, order: 999 },
-  { name: 'bst', displayName: 'Binary Search Tree', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'A tree where left children are smaller and right children are larger than the parent.', estimatedMinutes: 12, isLocked: false, order: 999 },
+  { name: 'bst', displayName: 'Binary Search Tree', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'A tree where left children are smaller and right children are larger than the parent.', estimatedMinutes: 12, isLocked: false, order: 51 },
+  { name: 'bst-search', displayName: 'BST Search', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Find a value in a Binary Search Tree by comparing at each node and going left or right.', estimatedMinutes: 10, isLocked: false, order: 52 },
+  { name: 'bst-delete', displayName: 'BST Delete', track: 'TREES', difficulty: 'ADVANCED', description: 'Remove a node from a BST, handling three cases: leaf, one child, and two children.', estimatedMinutes: 14, isLocked: false, order: 53 },
+  { name: 'tree-inorder', displayName: 'Inorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Left, Root, Right. Produces sorted order on a BST.', estimatedMinutes: 8, isLocked: false, order: 54 },
+  { name: 'tree-preorder', displayName: 'Preorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Root, Left, Right. Used to copy or serialise a tree.', estimatedMinutes: 8, isLocked: false, order: 55 },
+  { name: 'tree-postorder', displayName: 'Postorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Left, Right, Root. Used to delete a tree or evaluate expressions.', estimatedMinutes: 8, isLocked: false, order: 56 },
   { name: 'bfs', displayName: 'Breadth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph level by level using a queue.', estimatedMinutes: 10, isLocked: false, order: 999 },
   { name: 'dfs', displayName: 'Depth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph by going as deep as possible before backtracking.', estimatedMinutes: 10, isLocked: true, order: 999 },
 
