@@ -13,6 +13,7 @@ import { countingSortEngine } from './countingSort'
 import { radixSortEngine } from './radixSort'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from './bst'
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from './treeTraversal'
+import { avlInsertEngine, avlDeleteEngine, type AVLState } from './avlTree'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -49,6 +50,14 @@ export interface AlgorithmRegistryEntry {
 function rootFromInput(input: number[]) {
   const lastSnapshot = bstInsertEngine(input).at(-1)
   return (lastSnapshot?.dataStructureState as BSTState | undefined)?.root ?? null
+}
+
+/** avlDeleteEngine needs an existing AVL-balanced root, not a plain BST
+ * one - built via avlInsertEngine so heights/balance factors are already
+ * populated correctly, matching AlgorithmControls' own loading logic. */
+function avlRootFromInput(input: number[]) {
+  const lastSnapshot = avlInsertEngine(input).at(-1)
+  return (lastSnapshot?.dataStructureState as AVLState | undefined)?.root ?? null
 }
 
 export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
@@ -213,6 +222,27 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     description: 'Visit all nodes level by level using a queue. Also called Breadth-First Traversal.',
     estimatedMinutes: 8,
     defaultInput: [8, 4, 12, 2, 6, 10, 14],
+  },
+  {
+    algorithmName: 'avl-insert',
+    displayName: 'AVL Insert',
+    engineFunction: (input) => avlInsertEngine(input),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Self-balancing BST. After each insert, balance factors are checked and rotations applied.',
+    estimatedMinutes: 16,
+    defaultInput: [10, 20, 30, 40, 50, 25],
+  },
+  {
+    algorithmName: 'avl-delete',
+    displayName: 'AVL Delete',
+    engineFunction: (input) => avlDeleteEngine(avlRootFromInput(input), 30),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Delete from an AVL tree and rebalance with LL/RR/LR/RL rotations as needed.',
+    estimatedMinutes: 16,
+    defaultInput: [10, 20, 30, 40, 50, 25],
+    defaultTarget: 30,
   },
   {
     algorithmName: 'bfs',

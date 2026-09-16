@@ -104,6 +104,10 @@ export default function CanvasContainer({
         return <CallStackCanvas width={size.width} height={size.height} />
       case CanvasType.TREE:
         return <TreeCanvas width={size.width} height={size.height} />
+      case CanvasType.AVL:
+        // Renders identically to a plain BST - AVLState is a superset of
+        // BSTState - with balance factors labelled under each node.
+        return <TreeCanvas width={size.width} height={size.height} showBalanceFactor />
       case CanvasType.GRAPH:
         return <GraphCanvas width={size.width} height={size.height} />
       case CanvasType.COUNTING_SORT:

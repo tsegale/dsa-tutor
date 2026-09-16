@@ -5,15 +5,22 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import type { BSTNode, BSTState } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
+import type { AVLNode, AVLState } from '@/engine/avlTree'
 
-/** BSTState (insert/search/delete) and TraversalState (inorder/preorder/
- * postorder) share every field this canvas reads and are discriminated by
- * `operation`, so both render here without a second canvas component. */
-type TreeCanvasState = BSTState | TraversalState
+/** BSTState (insert/search/delete), TraversalState (inorder/preorder/
+ * postorder/level-order), and AVLState (insert/delete) share every field
+ * this canvas reads, so all three render here without a second canvas
+ * component. Narrower fields (traversalType, balanceFactor, ...) are read
+ * defensively per-branch since only one member of the union has them. */
+type TreeCanvasState = BSTState | TraversalState | AVLState
 
 interface TreeCanvasProps {
   width?: number
   height?: number
+  /** AVL pages pass true so each node's balance factor renders as a small
+   * label beneath it - meaningless for plain BST/traversal snapshots,
+   * which never populate `balanceFactor`. */
+  showBalanceFactor?: boolean
 }
 
 interface LayoutNode {
@@ -78,7 +85,7 @@ function layoutBST(root: BSTNode | null, containerWidth: number): LayoutNode[] {
   return nodes
 }
 
-export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: TreeCanvasProps) {
+export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400, showBalanceFactor = false }: TreeCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const masteryPercent = useAlgorithmStore(selectProgressPercent)
@@ -220,6 +227,8 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
             const onPath = !isCurrent && !isFound && state.path.includes(node.id)
             const fill = isFound ? FOUND_FILL : isCurrent ? CURRENT_FILL : onPath ? PATH_FILL : DEFAULT_FILL
             const textFill = isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
+            const isUnbalanced = 'unbalancedNodeId' in state && state.unbalancedNodeId === node.id
+            const balanceFactor = showBalanceFactor && 'balanceFactor' in node ? (node as AVLNode).balanceFactor : undefined
 
             return (
               <motion.g
@@ -242,6 +251,8 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
                 <motion.circle
                   r={NODE_RADIUS}
                   animate={{ fill }}
+                  stroke={isUnbalanced ? '#dc2626' : 'none'}
+                  strokeWidth={isUnbalanced ? 3 : 0}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
                 />
                 <text
@@ -251,6 +262,15 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
                 >
                   {node.value}
                 </text>
+                {balanceFactor !== undefined && (
+                  <text
+                    textAnchor="middle"
+                    y={NODE_RADIUS + 14}
+                    style={{ fill: isUnbalanced ? '#dc2626' : '#6b7280', fontSize: 10, fontWeight: isUnbalanced ? 700 : 500 }}
+                  >
+                    {`bf=${balanceFactor}`}
+                  </text>
+                )}
               </motion.g>
             )
           })}
@@ -272,6 +292,9 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
           {pathValues.length > 0 ? pathValues.join(' → ') : '—'}
         </p>
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">Nodes visited: {state.path.length}</p>
+        {'rotationType' in state && state.rotationType && (
+          <p className="text-[11px] font-semibold text-error">Rotation applied: {state.rotationType}</p>
+        )}
       </div>
     </div>
   )

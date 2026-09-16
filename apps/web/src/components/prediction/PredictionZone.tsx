@@ -18,6 +18,7 @@ import { firstSentence } from '@/utils/predictionJunction'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
+import type { AVLState } from '@/engine/avlTree'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -293,6 +294,23 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       return shuffleArray([
         { id: nextNode, label: `${nextNode} - it was added to the queue first` },
         ...distractors.map((d) => ({ id: d, label: d })),
+      ])
+    }
+
+    case CriticalJunctionType.AVL_BALANCE_CHECK: {
+      const bf = (snapshot.dataStructureState as AVLState).balanceFactor ?? 0
+      return shuffleArray([
+        { id: 'balanced', label: `Balanced (BF = ${bf}, within -1 to 1)` },
+        { id: 'unbalanced', label: `Unbalanced (BF = ${bf}, outside -1 to 1)` },
+      ])
+    }
+
+    case CriticalJunctionType.AVL_ROTATION_TYPE: {
+      return shuffleArray([
+        { id: 'LL', label: 'LL rotation (left-heavy, single right rotation)' },
+        { id: 'RR', label: 'RR rotation (right-heavy, single left rotation)' },
+        { id: 'LR', label: 'LR rotation (left-heavy, rotate left then right)' },
+        { id: 'RL', label: 'RL rotation (right-heavy, rotate right then left)' },
       ])
     }
 
@@ -873,6 +891,16 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string
 
     case CriticalJunctionType.NEXT_NODE_SELECTION:
       return 'Which node gets dequeued next?'
+
+    case CriticalJunctionType.AVL_BALANCE_CHECK: {
+      const s = snapshot.dataStructureState as AVLState
+      return `Back at node ${s.currentNode?.value}: height is now ${s.currentNode?.height}. Is this node balanced?`
+    }
+
+    case CriticalJunctionType.AVL_ROTATION_TYPE: {
+      const s = snapshot.dataStructureState as AVLState
+      return `Node ${s.currentNode?.value} is unbalanced (balance factor ${s.balanceFactor}). Which rotation restores balance?`
+    }
 
     default:
       // Every Foundations engine already writes a specific, well-formed

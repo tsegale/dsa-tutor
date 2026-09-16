@@ -27,6 +27,8 @@ const TOPICS = [
   { name: 'tree-preorder', displayName: 'Preorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Root, Left, Right. Used to copy or serialise a tree.', estimatedMinutes: 8, isLocked: false, order: 55 },
   { name: 'tree-postorder', displayName: 'Postorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Left, Right, Root. Used to delete a tree or evaluate expressions.', estimatedMinutes: 8, isLocked: false, order: 56 },
   { name: 'tree-level-order', displayName: 'Level Order Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes level by level using a queue. Also called Breadth-First Traversal.', estimatedMinutes: 8, isLocked: false, order: 57 },
+  { name: 'avl-insert', displayName: 'AVL Insert', track: 'TREES', difficulty: 'ADVANCED', description: 'Self-balancing BST. After each insert, balance factors are checked and rotations applied.', estimatedMinutes: 16, isLocked: false, order: 58 },
+  { name: 'avl-delete', displayName: 'AVL Delete', track: 'TREES', difficulty: 'ADVANCED', description: 'Delete from an AVL tree and rebalance with LL/RR/LR/RL rotations as needed.', estimatedMinutes: 16, isLocked: false, order: 59 },
   { name: 'bfs', displayName: 'Breadth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph level by level using a queue.', estimatedMinutes: 10, isLocked: false, order: 999 },
   { name: 'dfs', displayName: 'Depth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph by going as deep as possible before backtracking.', estimatedMinutes: 10, isLocked: true, order: 999 },
 

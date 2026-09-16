@@ -110,6 +110,16 @@ export const CriticalJunctionType = {
   PREFIX_ACCUMULATE: 'PREFIX_ACCUMULATE',
   PLACE_ELEMENT: 'PLACE_ELEMENT',
   DIGIT_BUCKET: 'DIGIT_BUCKET',
+
+  // Trees track — AVL, Red-Black, Heap (as a data structure), Trie
+  AVL_BALANCE_CHECK: 'AVL_BALANCE_CHECK',
+  AVL_ROTATION_TYPE: 'AVL_ROTATION_TYPE',
+  RB_COLOR_DECISION: 'RB_COLOR_DECISION',
+  RB_ROTATION_RECOLOR: 'RB_ROTATION_RECOLOR',
+  HEAP_SIFT_UP: 'HEAP_SIFT_UP',
+  HEAP_SIFT_DOWN: 'HEAP_SIFT_DOWN',
+  TRIE_CHARACTER_MATCH: 'TRIE_CHARACTER_MATCH',
+  TRIE_INSERT_NEW: 'TRIE_INSERT_NEW',
 } as const
 export type CriticalJunctionType = (typeof CriticalJunctionType)[keyof typeof CriticalJunctionType]
 
@@ -132,6 +142,10 @@ export const CanvasType = {
   TREE: 'TREE',
   COUNTING_SORT: 'COUNTING_SORT',
   RADIX_SORT: 'RADIX_SORT',
+  AVL: 'AVL',
+  RED_BLACK: 'RED_BLACK',
+  HEAP: 'HEAP',
+  TRIE: 'TRIE',
 } as const
 export type CanvasType = (typeof CanvasType)[keyof typeof CanvasType]
 
