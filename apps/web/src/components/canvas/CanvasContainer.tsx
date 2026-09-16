@@ -15,6 +15,9 @@ import CountingSortCanvas from './CountingSortCanvas'
 import RadixSortCanvas from './RadixSortCanvas'
 import HeapCanvas from './HeapCanvas'
 import TrieCanvas from './TrieCanvas'
+import NodeGraphCanvas from './NodeGraphCanvas'
+import GridCanvas from './GridCanvas'
+import MatrixCanvas from './MatrixCanvas'
 
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
@@ -116,7 +119,17 @@ export default function CanvasContainer({
         // the generic current/path/found palette.
         return <TreeCanvas width={size.width} height={size.height} colorByRBColor />
       case CanvasType.GRAPH:
+        // Kept for backward compatibility until BFS migrates to
+        // NODE_GRAPH - no engine still produces plain GRAPH snapshots
+        // once that migration lands below, but old session data replayed
+        // via step-backward could still reference it.
         return <GraphCanvas width={size.width} height={size.height} />
+      case CanvasType.NODE_GRAPH:
+        return <NodeGraphCanvas width={size.width} height={size.height} />
+      case CanvasType.GRID:
+        return <GridCanvas width={size.width} height={size.height} />
+      case CanvasType.MATRIX:
+        return <MatrixCanvas width={size.width} height={size.height} />
       case CanvasType.COUNTING_SORT:
         return <CountingSortCanvas width={size.width} height={size.height} />
       case CanvasType.RADIX_SORT:
