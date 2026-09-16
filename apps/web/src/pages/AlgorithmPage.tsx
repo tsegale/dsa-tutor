@@ -48,7 +48,17 @@ import { avlInsertEngine, avlDeleteEngine, type AVLState } from '@/engine/avlTre
 import { rbInsertEngine, rbDeleteEngine, type RBState } from '@/engine/redBlackTree'
 import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from '@/engine/heap'
 import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState } from '@/engine/trie'
-import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
+import { bfsNodeGraphEngine } from '@/engine/bfs'
+import { dfsNodeGraphEngine } from '@/engine/dfs'
+import { dijkstraEngine } from '@/engine/dijkstra'
+import { bellmanFordEngine, BELLMAN_FORD_DEFAULT } from '@/engine/bellmanFord'
+import { floydWarshallEngine } from '@/engine/floydWarshall'
+import { kruskalEngine } from '@/engine/kruskal'
+import { primEngine } from '@/engine/prim'
+import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from '@/engine/graphProperties'
+import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from '@/engine/gridAlgorithms'
+import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
+import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC } from '@/engine/graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
 import { dllInsertBackEngine } from '@/engine/doublyLinkedList'
@@ -139,7 +149,39 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       return trieDeleteEngine(trieRoot, 'apple')
     }
     case 'bfs':
-      return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
+      return bfsNodeGraphEngine(SMALL_7.nodes, SMALL_7.adjacency, SMALL_7.directed, 'A', 'G')
+    case 'dfs':
+      return dfsNodeGraphEngine(SMALL_7.nodes, SMALL_7.adjacency, SMALL_7.directed, 'A')
+    case 'dijkstra':
+      return dijkstraEngine(MEDIUM_WEIGHTED.nodes, MEDIUM_WEIGHTED.adjacency, MEDIUM_WEIGHTED.directed, 'A', 'H')
+    case 'bellman-ford':
+      return bellmanFordEngine(BELLMAN_FORD_DEFAULT.nodes, BELLMAN_FORD_DEFAULT.adjacency, true, 'A')
+    case 'floyd-warshall':
+      return floydWarshallEngine(MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id), MEDIUM_WEIGHTED.adjacency)
+    case 'kruskal':
+      return kruskalEngine(GRID_LIKE.nodes, GRID_LIKE.adjacency)
+    case 'prim':
+      return primEngine(GRID_LIKE.nodes, GRID_LIKE.adjacency, GRID_LIKE.nodes[0].id)
+    case 'cycle-detection':
+      return cycleDetectionEngine(DIRECTED_CYCLE.nodes, DIRECTED_CYCLE.adjacency, DIRECTED_CYCLE.directed)
+    case 'connected-components':
+      return connectedComponentsEngine(SMALL_7.nodes, SMALL_7.adjacency)
+    case 'topological-sort':
+      return topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency)
+    case 'grid-bfs':
+      return gridBfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+    case 'grid-dfs':
+      return gridDfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+    case 'grid-dijkstra':
+      return gridDijkstraEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+    case 'grid-astar':
+      return gridAStarEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+    case 'maze-generation':
+      return mazeGenerationEngine(20, 35)
+    case 'maze-prim':
+      return mazePrimEngine(20, 35)
+    case 'maze-kruskal':
+      return mazeKruskalEngine(20, 35)
 
     case 'array-access':
       return arrayAccessEngine(defaultInput, 2)

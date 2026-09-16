@@ -30,7 +30,6 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
 const NO_HANDS_ON = new Set([
   'recursion-factorial',
   'recursion-fibonacci',
-  'bfs',
   'binary-search',
   'linear-search',
   'jump-search',
@@ -40,6 +39,13 @@ const NO_HANDS_ON = new Set([
   'two-pointer',
   'sliding-window-fixed',
   'sliding-window-variable',
+  // Matrix view, no spatial manipulation to hand-on.
+  'floyd-warshall',
+  // Generation is automatic (random carving) - no meaningful drag
+  // interaction, unlike the pathfinding grid algorithms below.
+  'maze-generation',
+  'maze-prim',
+  'maze-kruskal',
 ])
 
 const BUTTONS_ARE_HANDS_ON = new Set([
@@ -66,6 +72,18 @@ const BUTTONS_ARE_HANDS_ON = new Set([
   'trie-insert',
   'trie-search',
   'trie-delete',
+  // Node/edge graph algorithms - dragging nodes to reposition them, and
+  // the graph-controls preset/start/target selection, are the hands-on
+  // interaction; there's no separate per-step drag gesture to make.
+  'bfs',
+  'dfs',
+  'dijkstra',
+  'bellman-ford',
+  'kruskal',
+  'prim',
+  'cycle-detection',
+  'connected-components',
+  'topological-sort',
 ])
 
 const HANDS_ON_COMING_SOON = new Set([
@@ -87,6 +105,13 @@ const HANDS_ON_ACTIVE = new Set([
   'quick-sort',
   'shell-sort',
   'heap-sort',
+  // Wall-drawing and start/end-cell dragging directly on the grid is
+  // genuinely implemented (not a placeholder), unlike the sorting
+  // algorithms' shared "coming soon" list above for array-insert/delete.
+  'grid-bfs',
+  'grid-dfs',
+  'grid-dijkstra',
+  'grid-astar',
 ])
 
 export default function ModeToggle() {

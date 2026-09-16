@@ -16,7 +16,8 @@ import { quickSortEngine } from '@/engine/quickSort'
 import { shellSortEngine } from '@/engine/shellSort'
 import { heapSortEngine } from '@/engine/heapSort'
 import { bstInsertEngine } from '@/engine/bst'
-import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
+import { floydWarshallEngine } from '@/engine/floydWarshall'
+import { MEDIUM_WEIGHTED } from '@/engine/graphPresets'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
@@ -48,11 +49,14 @@ function engineForSlug(slug: string | undefined, values: number[], codeEditorMod
       return heapSortEngine(values)
     case 'bst':
       return bstInsertEngine(values)
-    case 'bfs':
-      // BFS operates on a fixed graph, not a numeric array - the typed
-      // custom array has nothing to apply to, so this just reloads the
-      // default graph run instead of silently falling through to Bubble Sort.
-      return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
+    case 'floyd-warshall':
+      // Floyd-Warshall operates on a fixed small graph, not a numeric
+      // array - it's the only graph-track algorithm without its own
+      // AlgorithmControls section (MATRIX canvas, no spatial
+      // manipulation), so this generic box's Apply/Random still route
+      // here and must reload the default run instead of silently
+      // falling through to Bubble Sort.
+      return floydWarshallEngine(MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id), MEDIUM_WEIGHTED.adjacency)
     case 'bubble-sort':
     default:
       return bubbleSortEngine(values, codeEditorMode)

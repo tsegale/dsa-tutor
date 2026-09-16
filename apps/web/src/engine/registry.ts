@@ -17,7 +17,17 @@ import { avlInsertEngine, avlDeleteEngine, type AVLState } from './avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBState } from './redBlackTree'
 import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from './heap'
 import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState } from './trie'
-import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
+import { bfsNodeGraphEngine } from './bfs'
+import { dfsNodeGraphEngine } from './dfs'
+import { dijkstraEngine } from './dijkstra'
+import { bellmanFordEngine, BELLMAN_FORD_DEFAULT } from './bellmanFord'
+import { floydWarshallEngine } from './floydWarshall'
+import { kruskalEngine } from './kruskal'
+import { primEngine } from './prim'
+import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from './graphProperties'
+import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from './gridAlgorithms'
+import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from './mazeGeneration'
+import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC } from './graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
 import { dllInsertBackEngine } from './doublyLinkedList'
@@ -361,13 +371,175 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'bfs',
     displayName: 'Breadth-First Search',
-    // BFS operates on a fixed graph, not the numeric input array - the
-    // param exists only to satisfy the shared registry signature.
-    engineFunction: () => bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G'),
+    // Every graph algorithm operates on a fixed preset graph or grid,
+    // not the numeric input array - the param exists only to satisfy
+    // the shared registry signature, matching bfs's own long-standing
+    // convention before this track existed.
+    engineFunction: () => bfsNodeGraphEngine(SMALL_7.nodes, SMALL_7.adjacency, SMALL_7.directed, 'A', 'G'),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Explore nodes level by level using a queue. Guarantees shortest path in unweighted graphs.',
+    estimatedMinutes: 10,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'dfs',
+    displayName: 'Depth-First Search',
+    engineFunction: () => dfsNodeGraphEngine(SMALL_7.nodes, SMALL_7.adjacency, SMALL_7.directed, 'A'),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.INTERMEDIATE,
-    description: 'Explore a graph level by level using a queue.',
+    description: 'Explore as deep as possible using a stack. Tracks discovery and finish times.',
     estimatedMinutes: 10,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'dijkstra',
+    displayName: 'Dijkstra’s Algorithm',
+    engineFunction: () => dijkstraEngine(MEDIUM_WEIGHTED.nodes, MEDIUM_WEIGHTED.adjacency, MEDIUM_WEIGHTED.directed, 'A', 'H'),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Shortest path in weighted graphs using a priority queue. Greedy edge relaxation.',
+    estimatedMinutes: 12,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'bellman-ford',
+    displayName: 'Bellman-Ford',
+    engineFunction: () => bellmanFordEngine(BELLMAN_FORD_DEFAULT.nodes, BELLMAN_FORD_DEFAULT.adjacency, true, 'A'),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Shortest path handling negative weights. Detects negative cycles after V-1 passes.',
+    estimatedMinutes: 14,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'floyd-warshall',
+    displayName: 'Floyd-Warshall',
+    engineFunction: () => floydWarshallEngine(MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id), MEDIUM_WEIGHTED.adjacency),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.ADVANCED,
+    description: 'All-pairs shortest path using dynamic programming. O(V³) matrix-based computation.',
+    estimatedMinutes: 14,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'kruskal',
+    displayName: 'Kruskal’s Algorithm',
+    engineFunction: () => kruskalEngine(GRID_LIKE.nodes, GRID_LIKE.adjacency),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Minimum spanning tree by sorting edges and using Union-Find to avoid cycles.',
+    estimatedMinutes: 14,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'prim',
+    displayName: 'Prim’s Algorithm',
+    engineFunction: () => primEngine(GRID_LIKE.nodes, GRID_LIKE.adjacency, GRID_LIKE.nodes[0].id),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Minimum spanning tree growing from a single vertex, always adding the cheapest edge.',
+    estimatedMinutes: 14,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'cycle-detection',
+    displayName: 'Cycle Detection',
+    engineFunction: () => cycleDetectionEngine(DIRECTED_CYCLE.nodes, DIRECTED_CYCLE.adjacency, DIRECTED_CYCLE.directed),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Detect cycles in directed/undirected graphs using DFS colouring (white/gray/black).',
+    estimatedMinutes: 10,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'connected-components',
+    displayName: 'Connected Components',
+    engineFunction: () => connectedComponentsEngine(SMALL_7.nodes, SMALL_7.adjacency),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Find all connected components in an undirected graph using BFS or DFS.',
+    estimatedMinutes: 8,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'topological-sort',
+    displayName: 'Topological Sort',
+    engineFunction: () => topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Linear ordering of vertices in a DAG such that every edge goes from earlier to later.',
+    estimatedMinutes: 12,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'grid-bfs',
+    displayName: 'Grid BFS',
+    engineFunction: () => gridBfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'BFS pathfinding on a grid. Finds shortest path. Draw walls and watch the wave spread.',
+    estimatedMinutes: 8,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'grid-dfs',
+    displayName: 'Grid DFS',
+    engineFunction: () => gridDfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'DFS pathfinding on a grid. Not shortest path. Shows how DFS winds through obstacles.',
+    estimatedMinutes: 8,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'grid-dijkstra',
+    displayName: 'Grid Dijkstra',
+    engineFunction: () => gridDijkstraEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Dijkstra on a grid with uniform cost. Bridge between BFS and weighted Dijkstra.',
+    estimatedMinutes: 10,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'grid-astar',
+    displayName: 'Grid A*',
+    engineFunction: () => gridAStarEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.ADVANCED,
+    description: 'A* pathfinding with Manhattan heuristic. Explores far fewer cells than Dijkstra.',
+    estimatedMinutes: 12,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'maze-generation',
+    displayName: 'Maze Generation',
+    engineFunction: () => mazeGenerationEngine(20, 35),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Recursive backtracking maze generation. Watch the DFS carve perfect mazes.',
+    estimatedMinutes: 6,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'maze-prim',
+    displayName: 'Maze via Prim’s',
+    engineFunction: () => mazePrimEngine(20, 35),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Prim’s algorithm adapted for maze generation. Produces mazes with longer corridors.',
+    estimatedMinutes: 6,
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'maze-kruskal',
+    displayName: 'Maze via Kruskal’s',
+    engineFunction: () => mazeKruskalEngine(20, 35),
+    track: AlgorithmTrack.GRAPHS,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Kruskal’s algorithm adapted for maze generation. Produces mazes with more texture.',
+    estimatedMinutes: 6,
     defaultInput: [],
   },
 
