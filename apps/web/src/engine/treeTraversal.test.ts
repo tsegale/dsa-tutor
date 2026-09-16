@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { bstInsertEngine, type BSTNode, type BSTState } from './bst'
-import { inorderEngine, preorderEngine, postorderEngine, type TraversalState } from './treeTraversal'
+import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine, type TraversalState } from './treeTraversal'
 
 function buildTree(values: number[]): BSTNode | null {
   const snapshots = bstInsertEngine(values)
@@ -138,6 +138,46 @@ describe('postorderEngine', () => {
   it('has sequential stepIndex values with no gaps', () => {
     const root = buildTree([8, 4, 12, 2, 6, 10, 14])
     const snapshots = postorderEngine(root)
+    expect(snapshots.map((s) => s.stepIndex)).toEqual(snapshots.map((_, i) => i))
+  })
+})
+
+describe('levelorderEngine', () => {
+  it('visits nodes breadth-first, level by level, left to right', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = levelorderEngine(root)
+    expect(visitOrder(snapshots)).toEqual([8, 4, 12, 2, 6, 10, 14])
+  })
+
+  it('handles an unbalanced tree correctly', () => {
+    const root = buildTree([8, 4, 2, 1])
+    const snapshots = levelorderEngine(root)
+    expect(visitOrder(snapshots)).toEqual([8, 4, 2, 1])
+  })
+
+  it('handles an empty tree', () => {
+    const snapshots = levelorderEngine(null)
+    expect(snapshots[snapshots.length - 1].isFinalStep).toBe(true)
+    expect(visitOrder(snapshots)).toEqual([])
+  })
+
+  it('handles a single node', () => {
+    const root = buildTree([5])
+    expect(visitOrder(levelorderEngine(root))).toEqual([5])
+  })
+
+  it('only prompts VISIT_NODE at the start of each new level', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = levelorderEngine(root)
+    const predictions = snapshots.filter((s) => s.isPredictionRequired)
+    // 3 levels (root, then 2, then 4 leaves) -> exactly 3 prediction steps
+    expect(predictions.length).toBe(3)
+    predictions.forEach((s) => expect(s.criticalJunctionType).toBe('VISIT_NODE'))
+  })
+
+  it('has sequential stepIndex values with no gaps', () => {
+    const root = buildTree([8, 4, 12, 2, 6, 10, 14])
+    const snapshots = levelorderEngine(root)
     expect(snapshots.map((s) => s.stepIndex)).toEqual(snapshots.map((_, i) => i))
   })
 })

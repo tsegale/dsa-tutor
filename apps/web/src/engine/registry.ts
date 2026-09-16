@@ -12,7 +12,7 @@ import { heapSortEngine } from './heapSort'
 import { countingSortEngine } from './countingSort'
 import { radixSortEngine } from './radixSort'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from './bst'
-import { inorderEngine, preorderEngine, postorderEngine } from './treeTraversal'
+import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from './treeTraversal'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -201,6 +201,16 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     track: AlgorithmTrack.TREES,
     difficulty: Difficulty.BEGINNER,
     description: 'Visit all nodes Left, Right, Root. Used to delete a tree or evaluate expressions.',
+    estimatedMinutes: 8,
+    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+  },
+  {
+    algorithmName: 'tree-level-order',
+    displayName: 'Level Order Traversal',
+    engineFunction: (input) => levelorderEngine(rootFromInput(input)),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Visit all nodes level by level using a queue. Also called Breadth-First Traversal.',
     estimatedMinutes: 8,
     defaultInput: [8, 4, 12, 2, 6, 10, 14],
   },

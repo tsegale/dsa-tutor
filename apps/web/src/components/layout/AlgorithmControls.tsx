@@ -33,7 +33,7 @@ import { jumpSearchEngine } from '@/engine/jumpSearch'
 import { interpolationSearchEngine } from '@/engine/interpolationSearch'
 import { exponentialSearchEngine } from '@/engine/exponentialSearch'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from '@/engine/bst'
-import { inorderEngine, preorderEngine, postorderEngine } from '@/engine/treeTraversal'
+import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -490,7 +490,14 @@ function TreeTraversalControls({ slug }: { slug: string }) {
   const [arrayInput, setArrayInput] = useState(BST_SEED.join(','))
   const [error, setError] = useState<string | null>(null)
 
-  const engine = slug === 'tree-preorder' ? preorderEngine : slug === 'tree-postorder' ? postorderEngine : inorderEngine
+  const engine =
+    slug === 'tree-preorder'
+      ? preorderEngine
+      : slug === 'tree-postorder'
+        ? postorderEngine
+        : slug === 'tree-level-order'
+          ? levelorderEngine
+          : inorderEngine
 
   function run(values: number[]) {
     apply(slug, engine(bstRootFor(values)))
@@ -681,6 +688,7 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'tree-inorder',
   'tree-preorder',
   'tree-postorder',
+  'tree-level-order',
   'counting-sort',
   'radix-sort',
 ])
@@ -734,6 +742,7 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'tree-inorder':
     case 'tree-preorder':
     case 'tree-postorder':
+    case 'tree-level-order':
       return <TreeTraversalControls slug={slug} />
     case 'counting-sort':
       return <CountingSortControls slug={slug} />

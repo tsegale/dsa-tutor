@@ -133,6 +133,13 @@ const COMPLEXITY: Record<string, ComplexityRow> = {
     space: 'O(h)', spaceNote: 'call stack, h = tree height',
     stable: false,
   },
+  'tree-level-order': {
+    best: 'O(n)', bestNote: 'every node visited once',
+    average: 'O(n)', averageNote: '',
+    worst: 'O(n)', worstNote: 'every node visited once',
+    space: 'O(w)', spaceNote: 'queue holds one level, w = max width',
+    stable: false,
+  },
   bfs: {
     best: 'O(1)', bestNote: 'start = target',
     average: 'O(V + E)', averageNote: 'V nodes, E edges',

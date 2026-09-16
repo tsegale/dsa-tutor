@@ -26,6 +26,7 @@ const TOPICS = [
   { name: 'tree-inorder', displayName: 'Inorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Left, Root, Right. Produces sorted order on a BST.', estimatedMinutes: 8, isLocked: false, order: 54 },
   { name: 'tree-preorder', displayName: 'Preorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Root, Left, Right. Used to copy or serialise a tree.', estimatedMinutes: 8, isLocked: false, order: 55 },
   { name: 'tree-postorder', displayName: 'Postorder Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes Left, Right, Root. Used to delete a tree or evaluate expressions.', estimatedMinutes: 8, isLocked: false, order: 56 },
+  { name: 'tree-level-order', displayName: 'Level Order Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes level by level using a queue. Also called Breadth-First Traversal.', estimatedMinutes: 8, isLocked: false, order: 57 },
   { name: 'bfs', displayName: 'Breadth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph level by level using a queue.', estimatedMinutes: 10, isLocked: false, order: 999 },
   { name: 'dfs', displayName: 'Depth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph by going as deep as possible before backtracking.', estimatedMinutes: 10, isLocked: true, order: 999 },
 

@@ -43,7 +43,7 @@ import { heapSortEngine } from '@/engine/heapSort'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from '@/engine/bst'
-import { inorderEngine, preorderEngine, postorderEngine } from '@/engine/treeTraversal'
+import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
@@ -94,12 +94,14 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'bst-delete':
     case 'tree-inorder':
     case 'tree-preorder':
-    case 'tree-postorder': {
+    case 'tree-postorder':
+    case 'tree-level-order': {
       const root = (bstInsertEngine(defaultInput).at(-1)?.dataStructureState as BSTState | undefined)?.root ?? null
       if (algorithmName === 'bst-search') return bstSearchEngine(root, defaultTarget)
       if (algorithmName === 'bst-delete') return bstDeleteEngine(root, defaultTarget)
       if (algorithmName === 'tree-preorder') return preorderEngine(root)
       if (algorithmName === 'tree-postorder') return postorderEngine(root)
+      if (algorithmName === 'tree-level-order') return levelorderEngine(root)
       return inorderEngine(root)
     }
     case 'bfs':

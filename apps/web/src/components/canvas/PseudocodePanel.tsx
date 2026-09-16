@@ -170,6 +170,16 @@ const PSEUDOCODE: Record<string, string[]> = {
     '  visit(node)',
     'Result: children before their parent (useful for deleting a tree or evaluating expressions)',
   ],
+  'tree-level-order': [
+    'levelorder(root):',
+    '  if root is null: return',
+    '  queue = [root]',
+    '  while queue is not empty:',
+    '    node = dequeue()',
+    '    visit(node)',
+    '    enqueue node.left, node.right if they exist',
+    'Result: nodes grouped by depth, left to right within each level',
+  ],
   bfs: [
     'enqueue startNode',
     'mark startNode visited',

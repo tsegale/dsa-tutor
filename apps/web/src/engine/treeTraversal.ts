@@ -2,7 +2,7 @@ import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 import type { BSTNode } from './bst'
 
-export type TraversalType = 'inorder' | 'preorder' | 'postorder'
+export type TraversalType = 'inorder' | 'preorder' | 'postorder' | 'levelorder'
 
 export interface TraversalState {
   root: BSTNode | null
@@ -40,6 +40,11 @@ const TRAVERSAL_COPY: Record<TraversalType, { label: string; predict: (visited: 
     label: 'postorder (left, right, root)',
     predict: (visited) =>
       `Postorder visits children before their parent. We've visited [${visited.join(', ')}] so far. Which node is visited next?`,
+  },
+  levelorder: {
+    label: 'level order (breadth-first, level by level)',
+    predict: (visited) =>
+      `Level order visits nodes breadth-first, level by level, left to right. We've visited [${visited.join(', ')}] so far. Which node starts the next level?`,
   },
 }
 
@@ -143,17 +148,57 @@ function postorderNodes(root: BSTNode | null): BSTNode[] {
   return stack2.reverse()
 }
 
+/** BFS via an explicit queue: nodes grouped by depth, left to right
+ * within each level. */
+function levelOrderNodes(root: BSTNode | null): BSTNode[] {
+  if (!root) return []
+  const result: BSTNode[] = []
+  const queue: BSTNode[] = [root]
+  while (queue.length > 0) {
+    const node = queue.shift()!
+    result.push(node)
+    if (node.left) queue.push(node.left)
+    if (node.right) queue.push(node.right)
+  }
+  return result
+}
+
+/** Index (within `levelOrderNodes`' output) of the first node at each
+ * depth - the moments level order should prompt, rather than every
+ * other node like the other three traversals. */
+function levelStartIndices(root: BSTNode | null, orderedNodes: BSTNode[]): Set<number> {
+  const depthById = new Map<string, number>()
+  if (root) depthById.set(root.id, 0)
+  for (const node of orderedNodes) {
+    const depth = depthById.get(node.id) ?? 0
+    if (node.left) depthById.set(node.left.id, depth + 1)
+    if (node.right) depthById.set(node.right.id, depth + 1)
+  }
+  const starts = new Set<number>()
+  let lastDepth = -1
+  orderedNodes.forEach((node, i) => {
+    const depth = depthById.get(node.id) ?? 0
+    if (depth !== lastDepth) {
+      starts.add(i)
+      lastDepth = depth
+    }
+  })
+  return starts
+}
+
 /**
  * Builds the shared snapshot sequence for a traversal, given the tree
  * root and the already-computed visit order for that traversal type.
- * Prediction snapshots (VISIT_NODE) alternate every other visit so the
- * learner is tested without being asked at literally every node.
+ * Prediction snapshots (VISIT_NODE) fire whenever `shouldPredict(index)`
+ * is true - by default every other visit, so the learner is tested
+ * without being asked at literally every node.
  */
 function buildTraversalSnapshots(
   root: BSTNode | null,
   traversalType: TraversalType,
   orderedNodes: BSTNode[],
   lines: PseudocodeLines,
+  shouldPredict: (index: number) => boolean = (i) => i % 2 === 0,
 ): AlgorithmSnapshot[] {
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
@@ -201,10 +246,9 @@ function buildTraversalSnapshots(
   const visitedIds: string[] = []
 
   orderedNodes.forEach((node, i) => {
-    const shouldPredict = visitedOrder.length % 2 === 0
     const callStack = ancestorsOf(root, node).map((n) => `${traversalType}(${n.value})`)
 
-    if (shouldPredict) {
+    if (shouldPredict(i)) {
       push({
         description: copy.predict(visitedOrder),
         pseudocodeLine: lines.VISIT,
@@ -285,4 +329,25 @@ export function preorderEngine(root: BSTNode | null): AlgorithmSnapshot[] {
 //   5: 'Result: children before their parent ...'
 export function postorderEngine(root: BSTNode | null): AlgorithmSnapshot[] {
   return buildTraversalSnapshots(root, 'postorder', postorderNodes(root), { START: 0, NULL_CHECK: 1, VISIT: 4, DONE: 5 })
+}
+
+// Indices match PseudocodePanel's 'tree-level-order' array exactly:
+//   0: 'levelorder(root):'
+//   1: '  if root is null: return'
+//   2: '  queue = [root]'
+//   3: '  while queue is not empty:'
+//   4: '    node = dequeue()'
+//   5: '    visit(node)'
+//   6: '    enqueue node.left, node.right if they exist'
+//   7: 'Result: nodes grouped by depth, left to right within each level'
+export function levelorderEngine(root: BSTNode | null): AlgorithmSnapshot[] {
+  const ordered = levelOrderNodes(root)
+  const starts = levelStartIndices(root, ordered)
+  return buildTraversalSnapshots(
+    root,
+    'levelorder',
+    ordered,
+    { START: 0, NULL_CHECK: 1, VISIT: 5, DONE: 7 },
+    (i) => starts.has(i),
+  )
 }

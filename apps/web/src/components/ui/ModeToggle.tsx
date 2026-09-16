@@ -65,6 +65,7 @@ const HANDS_ON_COMING_SOON = new Set([
   'tree-inorder',
   'tree-preorder',
   'tree-postorder',
+  'tree-level-order',
 ])
 
 const HANDS_ON_ACTIVE = new Set([
