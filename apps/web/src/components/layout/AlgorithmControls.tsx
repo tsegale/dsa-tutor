@@ -36,6 +36,7 @@ import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from 
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLNode } from '@/engine/avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBNode } from '@/engine/redBlackTree'
+import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from '@/engine/heap'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -549,6 +550,41 @@ function RBControls({ slug }: { slug: string }) {
   )
 }
 
+const HEAP_SEED = [15, 3, 17, 10, 84, 19, 6, 22, 9]
+
+function HeapControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [value, setValue] = useState('7')
+  const target = Number(value) || 0
+  const isMax = slug.startsWith('max-heap')
+  const isDelete = slug.endsWith('delete')
+  const insertEngine = isMax ? maxHeapInsertEngine : minHeapInsertEngine
+  const deleteEngine = isMax ? maxHeapDeleteEngine : minHeapDeleteEngine
+  const heapType = isMax ? 'max' : 'min'
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>{isMax ? 'Max-Heap' : 'Min-Heap'} operations</h3>
+      {isDelete ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => apply(slug, deleteEngine(buildHeapArray(heapType, HEAP_SEED)))}
+        >
+          Delete (remove root)
+        </Button>
+      ) : (
+        <>
+          <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+          <Button variant="outline" size="sm" onClick={() => apply(slug, insertEngine([...HEAP_SEED, target]))}>
+            Insert
+          </Button>
+        </>
+      )}
+    </section>
+  )
+}
+
 function TreeTraversalControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [arrayInput, setArrayInput] = useState(BST_SEED.join(','))
@@ -757,6 +793,10 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'avl-delete',
   'rb-insert',
   'rb-delete',
+  'max-heap-insert',
+  'max-heap-delete',
+  'min-heap-insert',
+  'min-heap-delete',
   'counting-sort',
   'radix-sort',
 ])
@@ -818,6 +858,11 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'rb-insert':
     case 'rb-delete':
       return <RBControls slug={slug} />
+    case 'max-heap-insert':
+    case 'max-heap-delete':
+    case 'min-heap-insert':
+    case 'min-heap-delete':
+      return <HeapControls slug={slug} />
     case 'counting-sort':
       return <CountingSortControls slug={slug} />
     case 'radix-sort':

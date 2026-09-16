@@ -46,6 +46,7 @@ import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from '@/engine/avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBState } from '@/engine/redBlackTree'
+import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from '@/engine/heap'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
@@ -118,6 +119,14 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       const rbRoot = (rbInsertEngine(defaultInput).at(-1)?.dataStructureState as RBState | undefined)?.root ?? null
       return rbDeleteEngine(rbRoot, defaultTarget)
     }
+    case 'max-heap-insert':
+      return maxHeapInsertEngine(defaultInput)
+    case 'max-heap-delete':
+      return maxHeapDeleteEngine(buildHeapArray('max', defaultInput))
+    case 'min-heap-insert':
+      return minHeapInsertEngine(defaultInput)
+    case 'min-heap-delete':
+      return minHeapDeleteEngine(buildHeapArray('min', defaultInput))
     case 'bfs':
       return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')
 

@@ -20,6 +20,7 @@ import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLState } from '@/engine/avlTree'
 import type { RBState } from '@/engine/redBlackTree'
+import type { HeapState } from '@/engine/heap'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -328,6 +329,25 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         { id: 'left-rotate', label: 'Left-rotate' },
         { id: 'right-rotate', label: 'Right-rotate' },
       ])
+    }
+
+    case CriticalJunctionType.HEAP_SIFT_UP: {
+      const s = snapshot.dataStructureState as HeapState
+      const curr = s.array[s.currentIdx]
+      const parentVal = s.parentIdx !== null ? s.array[s.parentIdx] : undefined
+      return shuffleArray([
+        { id: 'swap', label: `Swap ${curr} with parent ${parentVal}` },
+        { id: 'stay', label: `Stay - ${curr} satisfies the heap property` },
+      ])
+    }
+
+    case CriticalJunctionType.HEAP_SIFT_DOWN: {
+      const s = snapshot.dataStructureState as HeapState
+      const curr = s.array[s.currentIdx]
+      const options: TileOption[] = [{ id: 'stay', label: `Stay - ${curr} satisfies the heap property` }]
+      if (s.leftChildIdx !== null) options.push({ id: 'left', label: `Swap with left child (${s.array[s.leftChildIdx]})` })
+      if (s.rightChildIdx !== null) options.push({ id: 'right', label: `Swap with right child (${s.array[s.rightChildIdx]})` })
+      return shuffleArray(options)
     }
 
     // Foundations - array operations

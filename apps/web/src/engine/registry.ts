@@ -15,6 +15,7 @@ import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from './treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from './avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBState } from './redBlackTree'
+import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from './heap'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -273,6 +274,46 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     estimatedMinutes: 18,
     defaultInput: [10, 20, 30, 40, 50, 25],
     defaultTarget: 30,
+  },
+  {
+    algorithmName: 'max-heap-insert',
+    displayName: 'Max-Heap Insert',
+    engineFunction: (input) => maxHeapInsertEngine(input),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Insert into a max-heap by appending then sifting up while a child beats its parent.',
+    estimatedMinutes: 10,
+    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+  },
+  {
+    algorithmName: 'max-heap-delete',
+    displayName: 'Max-Heap Delete',
+    engineFunction: (input) => maxHeapDeleteEngine(buildHeapArray('max', input)),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Remove the maximum (the root), move the last element up, and sift it down.',
+    estimatedMinutes: 10,
+    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+  },
+  {
+    algorithmName: 'min-heap-insert',
+    displayName: 'Min-Heap Insert',
+    engineFunction: (input) => minHeapInsertEngine(input),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Insert into a min-heap by appending then sifting up while a child beats its parent.',
+    estimatedMinutes: 10,
+    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+  },
+  {
+    algorithmName: 'min-heap-delete',
+    displayName: 'Min-Heap Delete',
+    engineFunction: (input) => minHeapDeleteEngine(buildHeapArray('min', input)),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Remove the minimum (the root), move the last element up, and sift it down.',
+    estimatedMinutes: 10,
+    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
   },
   {
     algorithmName: 'bfs',

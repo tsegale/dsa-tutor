@@ -59,6 +59,10 @@ const BUTTONS_ARE_HANDS_ON = new Set([
   'avl-delete',
   'rb-insert',
   'rb-delete',
+  'max-heap-insert',
+  'max-heap-delete',
+  'min-heap-insert',
+  'min-heap-delete',
 ])
 
 const HANDS_ON_COMING_SOON = new Set([
