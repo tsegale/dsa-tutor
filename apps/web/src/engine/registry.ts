@@ -11,7 +11,8 @@ import { shellSortEngine } from './shellSort'
 import { heapSortEngine } from './heapSort'
 import { countingSortEngine } from './countingSort'
 import { radixSortEngine } from './radixSort'
-import { bstInsertEngine } from './bst'
+import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from './bst'
+import { inorderEngine, preorderEngine, postorderEngine } from './treeTraversal'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -39,6 +40,15 @@ export interface AlgorithmRegistryEntry {
   defaultInput: number[]
   /** Only meaningful for search algorithms; absent for sorting algorithms. */
   defaultTarget?: number
+}
+
+/** bstSearchEngine/bstDeleteEngine and the traversal engines all operate
+ * on an existing tree root rather than a value array - build one from
+ * `input` via bstInsertEngine's final snapshot, matching AlgorithmPage's
+ * and AlgorithmControls' own loading logic. */
+function rootFromInput(input: number[]) {
+  const lastSnapshot = bstInsertEngine(input).at(-1)
+  return (lastSnapshot?.dataStructureState as BSTState | undefined)?.root ?? null
 }
 
 export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
@@ -140,6 +150,58 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.INTERMEDIATE,
     description: 'A tree where left children are smaller and right children are larger than the parent.',
     estimatedMinutes: 12,
+    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+  },
+  {
+    algorithmName: 'bst-search',
+    displayName: 'BST Search',
+    engineFunction: (input) => bstSearchEngine(rootFromInput(input), 6),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Find a value in a Binary Search Tree by comparing at each node and going left or right.',
+    estimatedMinutes: 10,
+    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultTarget: 6,
+  },
+  {
+    algorithmName: 'bst-delete',
+    displayName: 'BST Delete',
+    engineFunction: (input) => bstDeleteEngine(rootFromInput(input), 4),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Remove a node from a BST, handling three cases: leaf, one child, and two children.',
+    estimatedMinutes: 14,
+    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultTarget: 4,
+  },
+  {
+    algorithmName: 'tree-inorder',
+    displayName: 'Inorder Traversal',
+    engineFunction: (input) => inorderEngine(rootFromInput(input)),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Visit all nodes Left, Root, Right. Produces sorted order on a BST.',
+    estimatedMinutes: 8,
+    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+  },
+  {
+    algorithmName: 'tree-preorder',
+    displayName: 'Preorder Traversal',
+    engineFunction: (input) => preorderEngine(rootFromInput(input)),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Visit all nodes Root, Left, Right. Used to copy or serialise a tree.',
+    estimatedMinutes: 8,
+    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+  },
+  {
+    algorithmName: 'tree-postorder',
+    displayName: 'Postorder Traversal',
+    engineFunction: (input) => postorderEngine(rootFromInput(input)),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Visit all nodes Left, Right, Root. Used to delete a tree or evaluate expressions.',
+    estimatedMinutes: 8,
     defaultInput: [8, 4, 12, 2, 6, 10, 14],
   },
   {

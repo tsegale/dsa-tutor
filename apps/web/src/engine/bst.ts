@@ -1,5 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface BSTNode {
   value: number
@@ -80,6 +80,10 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     isFinalStep: params.isFinalStep ?? false,
     criticalJunctionType: params.criticalJunctionType ?? null,
     junctionDifficulty: params.junctionDifficulty ?? null,
+    // Explicit (rather than relying on CanvasContainer's algorithmSlug ===
+    // 'bst' fallback) so bst-search and bst-delete, which don't match that
+    // slug, still render on TreeCanvas instead of falling back to ARRAY.
+    canvasType: CanvasType.TREE,
   }
 }
 

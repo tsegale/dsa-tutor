@@ -33,6 +33,7 @@ import { jumpSearchEngine } from '@/engine/jumpSearch'
 import { interpolationSearchEngine } from '@/engine/interpolationSearch'
 import { exponentialSearchEngine } from '@/engine/exponentialSearch'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from '@/engine/bst'
+import { inorderEngine, preorderEngine, postorderEngine } from '@/engine/treeTraversal'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -441,31 +442,97 @@ function SearchControls({ slug }: { slug: string }) {
   )
 }
 
+// Each BST page (Insert/Search/Delete are now separate algorithm routes)
+// shows only its own operation, driven by a single "value" field - not
+// all three buttons on every page.
 function BSTControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
   const target = Number(value) || 0
 
+  if (slug === 'bst-search') {
+    return (
+      <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+        <h3 className={labelClass}>BST Search</h3>
+        <NumberField label="Search for value" value={value} onChange={setValue} min={1} max={99} />
+        <Button variant="outline" size="sm" onClick={() => apply(slug, bstSearchEngine(bstRootFor(BST_SEED), target))}>
+          Search
+        </Button>
+      </section>
+    )
+  }
+
+  if (slug === 'bst-delete') {
+    return (
+      <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+        <h3 className={labelClass}>BST Delete</h3>
+        <NumberField label="Delete value" value={value} onChange={setValue} min={1} max={99} />
+        <Button variant="outline" size="sm" onClick={() => apply(slug, bstDeleteEngine(bstRootFor(BST_SEED), target))}>
+          Delete
+        </Button>
+      </section>
+    )
+  }
+
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>BST operations</h3>
+      <h3 className={labelClass}>BST Insert</h3>
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
       <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target]))}>
         Insert
       </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => apply(slug, bstSearchEngine(bstRootFor(BST_SEED), target))}
-      >
-        Search
+    </section>
+  )
+}
+
+function TreeTraversalControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [arrayInput, setArrayInput] = useState(BST_SEED.join(','))
+  const [error, setError] = useState<string | null>(null)
+
+  const engine = slug === 'tree-preorder' ? preorderEngine : slug === 'tree-postorder' ? postorderEngine : inorderEngine
+
+  function run(values: number[]) {
+    apply(slug, engine(bstRootFor(values)))
+  }
+
+  function handleApply() {
+    const values = parseArrayInput(arrayInput)
+    if (!values) {
+      setError('Enter a comma-separated list of numbers, e.g. 8,4,12,2,6,10,14')
+      return
+    }
+    setError(null)
+    run(values)
+  }
+
+  function handleRandom() {
+    const length = Math.floor(Math.random() * 5) + 6 // 6-10
+    const values = Array.from({ length }, () => Math.floor(Math.random() * 20) + 1)
+    setArrayInput(values.join(','))
+    setError(null)
+    run(values)
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Tree values</h3>
+      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
+        Values are inserted into a BST, then traversed.
+      </p>
+      <input
+        type="text"
+        value={arrayInput}
+        onChange={(e) => setArrayInput(e.target.value)}
+        placeholder="8,4,12,2,6,10,14"
+        className={inputClass}
+      />
+      {error && <p className="text-xs text-error">{error}</p>}
+      <Button variant="outline" size="sm" onClick={handleApply}>
+        Apply
       </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => apply(slug, bstDeleteEngine(bstRootFor(BST_SEED), target))}
-      >
-        Delete
+      <Button variant="outline" size="sm" onClick={handleRandom}>
+        Random
       </Button>
     </section>
   )
@@ -609,6 +676,11 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'exponential-search',
   'bfs',
   'bst',
+  'bst-search',
+  'bst-delete',
+  'tree-inorder',
+  'tree-preorder',
+  'tree-postorder',
   'counting-sort',
   'radix-sort',
 ])
@@ -656,7 +728,13 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'bfs':
       return <BfsControls />
     case 'bst':
+    case 'bst-search':
+    case 'bst-delete':
       return <BSTControls slug={slug} />
+    case 'tree-inorder':
+    case 'tree-preorder':
+    case 'tree-postorder':
+      return <TreeTraversalControls slug={slug} />
     case 'counting-sort':
       return <CountingSortControls slug={slug} />
     case 'radix-sort':

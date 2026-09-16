@@ -53,6 +53,8 @@ const BUTTONS_ARE_HANDS_ON = new Set([
   'hash-table-chaining',
   'hash-table-probing',
   'bst',
+  'bst-search',
+  'bst-delete',
 ])
 
 const HANDS_ON_COMING_SOON = new Set([
@@ -60,6 +62,9 @@ const HANDS_ON_COMING_SOON = new Set([
   'array-delete',
   'counting-sort',
   'radix-sort',
+  'tree-inorder',
+  'tree-preorder',
+  'tree-postorder',
 ])
 
 const HANDS_ON_ACTIVE = new Set([

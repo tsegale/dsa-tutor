@@ -4,6 +4,12 @@ import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from 
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import type { BSTNode, BSTState } from '@/engine/bst'
+import type { TraversalState } from '@/engine/treeTraversal'
+
+/** BSTState (insert/search/delete) and TraversalState (inorder/preorder/
+ * postorder) share every field this canvas reads and are discriminated by
+ * `operation`, so both render here without a second canvas component. */
+type TreeCanvasState = BSTState | TraversalState
 
 interface TreeCanvasProps {
   width?: number
@@ -77,7 +83,7 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const masteryPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
-  const state = snapshot?.dataStructureState as BSTState | undefined
+  const state = snapshot?.dataStructureState as TreeCanvasState | undefined
 
   const layout = useMemo(() => layoutBST(state?.root ?? null, width), [state, width])
 
@@ -151,7 +157,18 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
   }
 
   const pathValues = state.path.map((id) => idToValue.get(id)).filter((v): v is number => v !== undefined)
-  const canvasLabel = `${algorithmName}, ${state.operation === 'insert' ? 'inserting' : 'searching for'} ${state.targetValue}: ${snapshot?.description ?? ''}`
+  const operationLabel =
+    state.operation === 'insert'
+      ? 'inserting'
+      : state.operation === 'delete'
+        ? 'deleting'
+        : state.operation === 'traverse'
+          ? 'traversing'
+          : 'searching for'
+  const canvasLabel =
+    state.operation === 'traverse'
+      ? `${algorithmName}, traversing: ${snapshot?.description ?? ''}`
+      : `${algorithmName}, ${operationLabel} ${state.targetValue}: ${snapshot?.description ?? ''}`
 
   return (
     <div className="flex h-full flex-col">
@@ -242,10 +259,17 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400 }: Tree
 
       <div className="shrink-0 border-t border-border px-3 py-2 dark:border-dark-border">
         <p className="text-[12px] text-text-muted dark:text-dark-text-secondary">
-          {state.operation === 'insert' ? `Inserting: ${state.targetValue}` : `Searching for: ${state.targetValue}`}
+          {state.operation === 'insert'
+            ? `Inserting: ${state.targetValue}`
+            : state.operation === 'delete'
+              ? `Deleting: ${state.targetValue}`
+              : state.operation === 'traverse'
+                ? `Traversal: ${state.traversalType}`
+                : `Searching for: ${state.targetValue}`}
         </p>
         <p className="text-[12px] text-primary dark:text-dark-primary">
-          Path taken: {pathValues.length > 0 ? pathValues.join(' → ') : '—'}
+          {state.operation === 'traverse' ? 'Visited so far' : 'Path taken'}:{' '}
+          {pathValues.length > 0 ? pathValues.join(' → ') : '—'}
         </p>
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">Nodes visited: {state.path.length}</p>
       </div>
