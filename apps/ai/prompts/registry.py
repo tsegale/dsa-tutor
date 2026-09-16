@@ -44,7 +44,7 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         from prompts.bst import BST_CONTEXT, BST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
         return BST_CONTEXT, BST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
-    if name in ("inorder_traversal", "preorder_traversal", "postorder_traversal"):
+    if name in ("inorder_traversal", "preorder_traversal", "postorder_traversal", "level_order_traversal"):
         from prompts.tree_traversal import (
             TREE_TRAVERSAL_CONTEXT,
             TREE_TRAVERSAL_PSEUDOCODE,
@@ -52,6 +52,26 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         )
 
         return TREE_TRAVERSAL_CONTEXT, TREE_TRAVERSAL_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("avl_insert", "avl_delete", "avl_tree"):
+        from prompts.avl_tree import AVL_TREE_CONTEXT, AVL_TREE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return AVL_TREE_CONTEXT, AVL_TREE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("rb_insert", "rb_delete", "red_black_insert", "red_black_delete"):
+        from prompts.red_black_tree import (
+            RED_BLACK_TREE_CONTEXT,
+            RED_BLACK_TREE_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return RED_BLACK_TREE_CONTEXT, RED_BLACK_TREE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("max_heap_insert", "max_heap_delete", "min_heap_insert", "min_heap_delete"):
+        from prompts.heap import HEAP_CONTEXT, HEAP_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return HEAP_CONTEXT, HEAP_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("trie_insert", "trie_search", "trie_delete"):
+        from prompts.trie import TRIE_CONTEXT, TRIE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return TRIE_CONTEXT, TRIE_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
     if name == "bfs" or name == "breadth_first_search":
         from prompts.bfs import BFS_CONTEXT, BFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 

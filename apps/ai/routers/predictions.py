@@ -217,6 +217,78 @@ def _evaluate_visit_node(ds: dict, student_answer: str | None) -> bool:
     return student_answer == str(correct)
 
 
+def _evaluate_avl_balance_check(ds: dict, student_answer: str | None) -> bool:
+    bf = ds.get("balanceFactor")
+    if bf is None:
+        return False
+    is_balanced = -1 <= bf <= 1
+    return student_answer == ("balanced" if is_balanced else "unbalanced")
+
+
+def _evaluate_avl_rotation_type(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == ds.get("rotationType")
+
+
+def _evaluate_rb_color_decision(ds: dict, student_answer: str | None) -> bool:
+    uncle_color = ds.get("uncleColor")
+    if uncle_color is None:
+        return False
+    return (student_answer == "recolor") == (uncle_color == "RED")
+
+
+def _evaluate_rb_rotation_recolor(ds: dict, student_answer: str | None) -> bool:
+    return student_answer == ds.get("fixupOperation")
+
+
+def _evaluate_heap_sift_up(ds: dict, student_answer: str | None) -> bool:
+    array = ds.get("array") or []
+    curr = ds.get("currentIdx")
+    parent = ds.get("parentIdx")
+    if curr is None or parent is None or curr >= len(array) or parent >= len(array):
+        return False
+    heap_type = ds.get("heapType")
+    should_swap = array[curr] > array[parent] if heap_type == "max" else array[curr] < array[parent]
+    if student_answer == "swap":
+        return should_swap
+    if student_answer == "stay":
+        return not should_swap
+    return False
+
+
+def _evaluate_trie_character_match(ds: dict, student_answer: str | None) -> bool:
+    char_exists = ds.get("charExists")
+    if char_exists is None:
+        return False
+    return (student_answer == "exists") == char_exists
+
+
+def _evaluate_trie_insert_new(ds: dict, student_answer: str | None) -> bool:
+    needs_new_node = ds.get("needsNewNode", False)
+    return (student_answer == "new") == needs_new_node
+
+
+def _evaluate_heap_sift_down(ds: dict, student_answer: str | None) -> bool:
+    array = ds.get("array") or []
+    curr = ds.get("currentIdx")
+    left = ds.get("leftChildIdx")
+    right = ds.get("rightChildIdx")
+    if curr is None or curr >= len(array):
+        return False
+    heap_type = ds.get("heapType")
+
+    def has_priority(a: int, b: int) -> bool:
+        return array[a] > array[b] if heap_type == "max" else array[a] < array[b]
+
+    target = curr
+    if left is not None and left < len(array) and has_priority(left, target):
+        target = left
+    if right is not None and right < len(array) and has_priority(right, target):
+        target = right
+
+    expected = "stay" if target == curr else ("left" if target == left else "right")
+    return student_answer == expected
+
+
 # --- Foundations track ------------------------------------------------
 # Every helper below mirrors the tile `id` convention the frontend uses
 # in getTilesForSnapshot (apps/web/src/components/prediction/
@@ -493,6 +565,30 @@ def evaluate_answer(request: PredictionRequest) -> bool:
     if junction_type == "VISIT_NODE":
         return _evaluate_visit_node(ds if isinstance(ds, dict) else {}, request.student_answer)
 
+    if junction_type == "AVL_BALANCE_CHECK":
+        return _evaluate_avl_balance_check(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "AVL_ROTATION_TYPE":
+        return _evaluate_avl_rotation_type(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "RB_COLOR_DECISION":
+        return _evaluate_rb_color_decision(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "RB_ROTATION_RECOLOR":
+        return _evaluate_rb_rotation_recolor(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "HEAP_SIFT_UP":
+        return _evaluate_heap_sift_up(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "HEAP_SIFT_DOWN":
+        return _evaluate_heap_sift_down(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "TRIE_CHARACTER_MATCH":
+        return _evaluate_trie_character_match(ds if isinstance(ds, dict) else {}, request.student_answer)
+
+    if junction_type == "TRIE_INSERT_NEW":
+        return _evaluate_trie_insert_new(ds if isinstance(ds, dict) else {}, request.student_answer)
+
     # Foundations track
     ds_dict = ds if isinstance(ds, dict) else {}
     description = wrapper.get("description") or ""
@@ -664,6 +760,70 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
     if junction_type == "NEXT_NODE_SELECTION" and isinstance(ds, dict):
         queue = ds.get("queue") or []
         return f"The current queue (front first) was {queue}. The student chose: {student_answer}."
+
+    if junction_type == "AVL_BALANCE_CHECK" and isinstance(ds, dict):
+        node_value = (ds.get("currentNode") or {}).get("value")
+        return (
+            f"Node {node_value} has balance factor {ds.get('balanceFactor')} "
+            f"(height(left) - height(right)). Balanced means the value is -1, 0, or 1. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "AVL_ROTATION_TYPE" and isinstance(ds, dict):
+        node_value = (ds.get("currentNode") or {}).get("value")
+        return (
+            f"Node {node_value} is unbalanced (balance factor {ds.get('balanceFactor')}); "
+            f"the correct fix is a {ds.get('rotationType')} rotation. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "RB_COLOR_DECISION" and isinstance(ds, dict):
+        node_value = (ds.get("currentNode") or {}).get("value")
+        return (
+            f"Node {node_value} has a Red-Black violation. The relevant uncle/sibling "
+            f"node's colour is {ds.get('uncleColor')}. Uncle RED means Case 1 (recolour "
+            f"only); uncle BLACK means a rotation is needed. The student chose: {student_answer}."
+        )
+
+    if junction_type == "RB_ROTATION_RECOLOR" and isinstance(ds, dict):
+        node_value = (ds.get("currentNode") or {}).get("value")
+        return (
+            f"Node {node_value}'s violation is resolved by: {ds.get('fixupOperation')}. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "HEAP_SIFT_UP" and isinstance(ds, dict):
+        array = ds.get("array") or []
+        curr, parent = ds.get("currentIdx"), ds.get("parentIdx")
+        curr_val = array[curr] if curr is not None and curr < len(array) else None
+        parent_val = array[parent] if parent is not None and parent < len(array) else None
+        return (
+            f"Comparing {curr_val} (index {curr}) with its parent {parent_val} (index {parent}) "
+            f"in a {ds.get('heapType')}-heap. The student chose: {student_answer}."
+        )
+
+    if junction_type == "HEAP_SIFT_DOWN" and isinstance(ds, dict):
+        array = ds.get("array") or []
+        curr = ds.get("currentIdx")
+        curr_val = array[curr] if curr is not None and curr < len(array) else None
+        return (
+            f"At index {curr} (value {curr_val}) in a {ds.get('heapType')}-heap, checking both "
+            f"children for a heap-property violation. The student chose: {student_answer}."
+        )
+
+    if junction_type == "TRIE_CHARACTER_MATCH" and isinstance(ds, dict):
+        return (
+            f"Examining character '{ds.get('currentChar')}' while processing \"{ds.get('currentWord')}\". "
+            f"It {'exists' if ds.get('charExists') else 'does not exist'} as a child of the current node. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "TRIE_INSERT_NEW" and isinstance(ds, dict):
+        return (
+            f"Examining character '{ds.get('currentChar')}' while inserting \"{ds.get('currentWord')}\". "
+            f"A new node {'is' if ds.get('needsNewNode') else 'is not'} needed. "
+            f"The student chose: {student_answer}."
+        )
 
     if junction_type == "VISIT_NODE" and isinstance(ds, dict):
         visited = ds.get("visitedOrder") or []
