@@ -16,6 +16,8 @@ import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { firstSentence } from '@/utils/predictionJunction'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
+import type { BSTNode } from '@/engine/bst'
+import type { TraversalState } from '@/engine/treeTraversal'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -116,6 +118,11 @@ interface SearchAlgorithmState {
 
 function isInsertionSortSwapState(state: unknown): state is { array: number[]; currentKey: number; compareIndex: number } {
   return typeof state === 'object' && state !== null && 'currentKey' in state
+}
+
+function collectTreeValues(node: BSTNode | null): number[] {
+  if (!node) return []
+  return [...collectTreeValues(node.left), node.value, ...collectTreeValues(node.right)]
 }
 
 function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string): TileOption[] {
@@ -261,6 +268,19 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         { id: 'go-left', label: `${targetVal} is less than ${currentVal} - go left` },
         { id: 'go-right', label: `${targetVal} is greater than ${currentVal} - go right` },
         { id: 'insert-here', label: 'This position is empty - insert here' },
+      ])
+    }
+
+    case CriticalJunctionType.VISIT_NODE: {
+      const s = snapshot.dataStructureState as TraversalState
+      const correct = s.nextVisitValue
+      if (correct === null || correct === undefined) return []
+      const visited = new Set(s.visitedOrder)
+      const distractorPool = collectTreeValues(s.root).filter((v) => v !== correct && !visited.has(v))
+      const distractors = shuffleArray(Array.from(new Set(distractorPool))).slice(0, 2)
+      return shuffleArray([
+        { id: String(correct), label: String(correct) },
+        ...distractors.map((d) => ({ id: String(d), label: String(d) })),
       ])
     }
 

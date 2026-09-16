@@ -54,6 +54,7 @@ export const CriticalJunctionType = {
   PARTITION_DECISION: 'PARTITION_DECISION',
   BST_DIRECTION: 'BST_DIRECTION',
   NEXT_NODE_SELECTION: 'NEXT_NODE_SELECTION',
+  VISIT_NODE: 'VISIT_NODE',
 
   // Foundations track — array operations
   INDEX_ACCESS: 'INDEX_ACCESS',
