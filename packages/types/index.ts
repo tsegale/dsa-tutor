@@ -120,6 +120,17 @@ export const CriticalJunctionType = {
   HEAP_SIFT_DOWN: 'HEAP_SIFT_DOWN',
   TRIE_CHARACTER_MATCH: 'TRIE_CHARACTER_MATCH',
   TRIE_INSERT_NEW: 'TRIE_INSERT_NEW',
+
+  // Graphs track — shortest path, MST, graph properties, grid pathfinding
+  EDGE_RELAX: 'EDGE_RELAX',
+  BELLMAN_PASS_COMPLETE: 'BELLMAN_PASS_COMPLETE',
+  MATRIX_UPDATE: 'MATRIX_UPDATE',
+  UNION_FIND_CHECK: 'UNION_FIND_CHECK',
+  MST_EDGE_SELECT: 'MST_EDGE_SELECT',
+  CYCLE_FOUND: 'CYCLE_FOUND',
+  NEW_COMPONENT: 'NEW_COMPONENT',
+  TOPOLOGICAL_ORDER: 'TOPOLOGICAL_ORDER',
+  GRID_NEXT_CELL: 'GRID_NEXT_CELL',
 } as const
 export type CriticalJunctionType = (typeof CriticalJunctionType)[keyof typeof CriticalJunctionType]
 
@@ -146,8 +157,106 @@ export const CanvasType = {
   RED_BLACK: 'RED_BLACK',
   HEAP: 'HEAP',
   TRIE: 'TRIE',
+  NODE_GRAPH: 'NODE_GRAPH',
+  GRID: 'GRID',
+  MATRIX: 'MATRIX',
 } as const
 export type CanvasType = (typeof CanvasType)[keyof typeof CanvasType]
+
+/**
+ * Shared graph/grid data model, used by every node-graph and grid
+ * pathfinding engine (bfs, dfs, dijkstra, bellman-ford, floyd-warshall,
+ * kruskal, prim, cycle/component/topo-sort, grid-*, maze-*). Kept here
+ * (rather than duplicated per engine, the way bfs.ts's own AdjacencyList
+ * predates this) so NodeGraphCanvas/GridCanvas/MatrixCanvas can share
+ * one rendering contract across every algorithm that uses them.
+ */
+export type AdjacencyList = Record<string, string[]>
+
+export interface WeightedEdge {
+  to: string
+  weight: number
+}
+export type WeightedAdjacencyList = Record<string, WeightedEdge[]>
+
+/** A node's canvas position. x/y are normalised 0-1 (multiplied by the
+ * canvas's actual pixel width/height at render time), so a graph's
+ * layout survives the canvas being resized or measured at 0 on first
+ * render - the same reason TreeCanvas computes its own layout instead
+ * of baking pixel coordinates into engine state. */
+export interface GraphNode {
+  id: string
+  label: string
+  x: number
+  y: number
+}
+
+export type CellState = 'empty' | 'wall' | 'start' | 'end' | 'visited' | 'frontier' | 'path'
+
+export interface GridCell {
+  row: number
+  col: number
+  state: CellState
+  /** BFS / Dijkstra distance from the start cell. */
+  distance?: number
+  /** A* total score: gScore + hScore. */
+  fScore?: number
+  /** A* cost so far from the start cell. */
+  gScore?: number
+  /** A* heuristic estimate to the end cell. */
+  hScore?: number
+  /** `'row,col'` of the parent cell, for path reconstruction. */
+  parent?: string
+}
+
+/** Snapshot state shared by every node-graph algorithm rendered on
+ * NodeGraphCanvas. Optional fields are populated only by the engines
+ * that produce them (e.g. `distances` by Dijkstra/Bellman-Ford, never
+ * by BFS) - NodeGraphCanvas reads each defensively. */
+export interface GraphAlgorithmState {
+  nodes: GraphNode[]
+  adjacency: AdjacencyList | WeightedAdjacencyList
+  directed: boolean
+  /** Node ids fully processed. */
+  visited: string[]
+  /** Node ids currently in the queue / stack / priority queue. */
+  frontier: string[]
+  currentNode: string | null
+  /** Final path node ids, populated once the algorithm has one to show. */
+  pathNodes: string[]
+  /** Final path edges as [from, to] pairs. */
+  pathEdges: [string, string][]
+  distances?: Record<string, number>
+  parents?: Record<string, string | null>
+  /** Node id -> component index, for connected-components. */
+  components?: Record<string, number>
+  topoOrder?: string[]
+  discoveryTime?: Record<string, number>
+  finishTime?: Record<string, number>
+  /** MST edges as [from, to, weight] triples, in the order they were added. */
+  mstEdges?: [string, string, number][]
+  mstCost?: number
+}
+
+export type GridAlgorithmType = 'bfs' | 'dfs' | 'dijkstra' | 'astar'
+
+/** Snapshot state shared by every grid pathfinding algorithm rendered on
+ * GridCanvas. The full grid is included in every snapshot (not just a
+ * diff) so step-backward stays a pure array index change rather than a
+ * recomputation, matching every other engine's immutable-snapshot-array
+ * contract. */
+export interface GridAlgorithmState {
+  grid: GridCell[][]
+  rows: number
+  cols: number
+  startCell: [number, number]
+  endCell: [number, number]
+  currentCell: [number, number] | null
+  frontierCells: [number, number][]
+  visitedCount: number
+  pathLength?: number
+  algorithmType: GridAlgorithmType
+}
 
 // CONCEPTUAL junctions test understanding of WHY (PASS_COMPLETE,
 // EARLY_TERMINATION, ALGORITHM_COMPLETE); PROCEDURAL junctions test
