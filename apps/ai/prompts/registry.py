@@ -40,10 +40,18 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         from prompts.quick_sort import QUICK_SORT_CONTEXT, QUICK_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
         return QUICK_SORT_CONTEXT, QUICK_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
-    if name == "bst" or name == "binary_search_tree":
+    if name in ("bst", "binary_search_tree", "bst_search", "bst_delete"):
         from prompts.bst import BST_CONTEXT, BST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
         return BST_CONTEXT, BST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("inorder_traversal", "preorder_traversal", "postorder_traversal"):
+        from prompts.tree_traversal import (
+            TREE_TRAVERSAL_CONTEXT,
+            TREE_TRAVERSAL_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return TREE_TRAVERSAL_CONTEXT, TREE_TRAVERSAL_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
     if name == "bfs" or name == "breadth_first_search":
         from prompts.bfs import BFS_CONTEXT, BFS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 

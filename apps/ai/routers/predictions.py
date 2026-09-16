@@ -210,6 +210,13 @@ def _evaluate_next_node_selection(ds: dict, student_answer: str | None) -> bool:
     return student_answer == queue[0]
 
 
+def _evaluate_visit_node(ds: dict, student_answer: str | None) -> bool:
+    correct = ds.get("nextVisitValue")
+    if correct is None:
+        return False
+    return student_answer == str(correct)
+
+
 # --- Foundations track ------------------------------------------------
 # Every helper below mirrors the tile `id` convention the frontend uses
 # in getTilesForSnapshot (apps/web/src/components/prediction/
@@ -483,6 +490,9 @@ def evaluate_answer(request: PredictionRequest) -> bool:
     if junction_type == "NEXT_NODE_SELECTION":
         return _evaluate_next_node_selection(ds if isinstance(ds, dict) else {}, request.student_answer)
 
+    if junction_type == "VISIT_NODE":
+        return _evaluate_visit_node(ds if isinstance(ds, dict) else {}, request.student_answer)
+
     # Foundations track
     ds_dict = ds if isinstance(ds, dict) else {}
     description = wrapper.get("description") or ""
@@ -654,6 +664,15 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
     if junction_type == "NEXT_NODE_SELECTION" and isinstance(ds, dict):
         queue = ds.get("queue") or []
         return f"The current queue (front first) was {queue}. The student chose: {student_answer}."
+
+    if junction_type == "VISIT_NODE" and isinstance(ds, dict):
+        visited = ds.get("visitedOrder") or []
+        traversal_type = ds.get("traversalType")
+        next_val = ds.get("nextVisitValue")
+        return (
+            f"This is a {traversal_type} traversal. Nodes visited so far: {visited}. "
+            f"The correct next value to visit is {next_val}. The student chose: {student_answer}."
+        )
 
     return ""
 
