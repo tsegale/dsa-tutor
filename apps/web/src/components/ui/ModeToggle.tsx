@@ -57,6 +57,8 @@ const BUTTONS_ARE_HANDS_ON = new Set([
   'bst-delete',
   'avl-insert',
   'avl-delete',
+  'rb-insert',
+  'rb-delete',
 ])
 
 const HANDS_ON_COMING_SOON = new Set([

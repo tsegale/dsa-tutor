@@ -6,13 +6,15 @@ import { cn } from '@/lib/utils'
 import type { BSTNode, BSTState } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLNode, AVLState } from '@/engine/avlTree'
+import type { RBNode, RBState } from '@/engine/redBlackTree'
 
 /** BSTState (insert/search/delete), TraversalState (inorder/preorder/
- * postorder/level-order), and AVLState (insert/delete) share every field
- * this canvas reads, so all three render here without a second canvas
- * component. Narrower fields (traversalType, balanceFactor, ...) are read
- * defensively per-branch since only one member of the union has them. */
-type TreeCanvasState = BSTState | TraversalState | AVLState
+ * postorder/level-order), AVLState (insert/delete), and RBState (insert/
+ * delete) share every field this canvas reads, so all four render here
+ * without a second canvas component. Narrower fields (traversalType,
+ * balanceFactor, ...) are read defensively per-branch since only one
+ * member of the union has them. */
+type TreeCanvasState = BSTState | TraversalState | AVLState | RBState
 
 interface TreeCanvasProps {
   width?: number
@@ -21,6 +23,9 @@ interface TreeCanvasProps {
    * label beneath it - meaningless for plain BST/traversal snapshots,
    * which never populate `balanceFactor`. */
   showBalanceFactor?: boolean
+  /** Red-Black pages pass true so each node fills with its own RED/BLACK
+   * colour instead of the generic current/path/found palette. */
+  colorByRBColor?: boolean
 }
 
 interface LayoutNode {
@@ -46,6 +51,8 @@ const DEFAULT_TEXT = '#4a4d8a'
 const DEFAULT_EDGE = '#c7c9e8'
 const CURRENT_FILL = '#f59e0b'
 const CURRENT_TEXT = '#78350f'
+const RB_RED_FILL = '#dc2626'
+const RB_BLACK_FILL = '#1f2937'
 const FOUND_FILL = '#16a34a'
 const FOUND_TEXT = '#ffffff'
 const PATH_FILL = 'rgba(55, 48, 163, 0.6)'
@@ -57,6 +64,12 @@ const LEGEND: { label: string; colour: string }[] = [
   { label: 'Path taken', colour: '#3730a3' },
   { label: 'Found node', colour: FOUND_FILL },
   { label: 'Unvisited', colour: DEFAULT_FILL },
+]
+
+const RB_LEGEND: { label: string; colour: string }[] = [
+  { label: 'Red node', colour: RB_RED_FILL },
+  { label: 'Black node', colour: RB_BLACK_FILL },
+  { label: 'Current (ring)', colour: CURRENT_FILL },
 ]
 
 /**
@@ -85,7 +98,12 @@ function layoutBST(root: BSTNode | null, containerWidth: number): LayoutNode[] {
   return nodes
 }
 
-export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400, showBalanceFactor = false }: TreeCanvasProps) {
+export default function TreeCanvas({
+  width = DEFAULT_WIDTH,
+  height = 400,
+  showBalanceFactor = false,
+  colorByRBColor = false,
+}: TreeCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const masteryPercent = useAlgorithmStore(selectProgressPercent)
@@ -190,7 +208,7 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400, showBa
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {LEGEND.map((item) => (
+          {(colorByRBColor ? RB_LEGEND : LEGEND).map((item) => (
             <div key={item.label} className="flex items-center gap-1">
               <span className="size-2 rounded-sm" style={{ backgroundColor: item.colour }} aria-hidden="true" />
               <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{item.label}</span>
@@ -225,8 +243,14 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400, showBa
             const isCurrent = state.currentNode?.id === node.id
             const isFound = state.foundNode?.id === node.id
             const onPath = !isCurrent && !isFound && state.path.includes(node.id)
-            const fill = isFound ? FOUND_FILL : isCurrent ? CURRENT_FILL : onPath ? PATH_FILL : DEFAULT_FILL
-            const textFill = isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
+            const rbColor = colorByRBColor && 'color' in node ? (node as RBNode).color : undefined
+            // RB colouring takes priority over the generic palette - the
+            // node's own RED/BLACK is the entire point of this canvas
+            // mode - but current/found still show through as a ring so
+            // the active node stays identifiable against same-coloured
+            // siblings.
+            const fill = rbColor ? (rbColor === 'RED' ? RB_RED_FILL : RB_BLACK_FILL) : isFound ? FOUND_FILL : isCurrent ? CURRENT_FILL : onPath ? PATH_FILL : DEFAULT_FILL
+            const textFill = rbColor ? '#ffffff' : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
             const isUnbalanced = 'unbalancedNodeId' in state && state.unbalancedNodeId === node.id
             const balanceFactor = showBalanceFactor && 'balanceFactor' in node ? (node as AVLNode).balanceFactor : undefined
 
@@ -251,8 +275,8 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400, showBa
                 <motion.circle
                   r={NODE_RADIUS}
                   animate={{ fill }}
-                  stroke={isUnbalanced ? '#dc2626' : 'none'}
-                  strokeWidth={isUnbalanced ? 3 : 0}
+                  stroke={isUnbalanced ? '#dc2626' : rbColor && isCurrent ? '#f59e0b' : 'none'}
+                  strokeWidth={isUnbalanced || (rbColor && isCurrent) ? 3 : 0}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
                 />
                 <text
@@ -294,6 +318,9 @@ export default function TreeCanvas({ width = DEFAULT_WIDTH, height = 400, showBa
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">Nodes visited: {state.path.length}</p>
         {'rotationType' in state && state.rotationType && (
           <p className="text-[11px] font-semibold text-error">Rotation applied: {state.rotationType}</p>
+        )}
+        {'fixupOperation' in state && state.fixupOperation && (
+          <p className="text-[11px] font-semibold text-error">Fix-up applied: {state.fixupOperation}</p>
         )}
       </div>
     </div>

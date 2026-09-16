@@ -14,6 +14,7 @@ import { radixSortEngine } from './radixSort'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from './bst'
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from './treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from './avlTree'
+import { rbInsertEngine, rbDeleteEngine, type RBState } from './redBlackTree'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from './bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -58,6 +59,14 @@ function rootFromInput(input: number[]) {
 function avlRootFromInput(input: number[]) {
   const lastSnapshot = avlInsertEngine(input).at(-1)
   return (lastSnapshot?.dataStructureState as AVLState | undefined)?.root ?? null
+}
+
+/** rbDeleteEngine needs an existing Red-Black-valid root, built via
+ * rbInsertEngine so colours are already correct - matching
+ * AlgorithmControls' own loading logic. */
+function rbRootFromInput(input: number[]) {
+  const lastSnapshot = rbInsertEngine(input).at(-1)
+  return (lastSnapshot?.dataStructureState as RBState | undefined)?.root ?? null
 }
 
 export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
@@ -241,6 +250,27 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.ADVANCED,
     description: 'Delete from an AVL tree and rebalance with LL/RR/LR/RL rotations as needed.',
     estimatedMinutes: 16,
+    defaultInput: [10, 20, 30, 40, 50, 25],
+    defaultTarget: 30,
+  },
+  {
+    algorithmName: 'rb-insert',
+    displayName: 'Red-Black Insert',
+    engineFunction: (input) => rbInsertEngine(input),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Self-balancing BST using red/black colouring. Fixes violations via recolouring and rotations.',
+    estimatedMinutes: 18,
+    defaultInput: [10, 20, 30, 40, 50, 25],
+  },
+  {
+    algorithmName: 'rb-delete',
+    displayName: 'Red-Black Delete',
+    engineFunction: (input) => rbDeleteEngine(rbRootFromInput(input), 30),
+    track: AlgorithmTrack.TREES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Delete from a Red-Black tree and restore its colour properties via recolouring and rotations.',
+    estimatedMinutes: 18,
     defaultInput: [10, 20, 30, 40, 50, 25],
     defaultTarget: 30,
   },

@@ -154,6 +154,20 @@ const COMPLEXITY: Record<string, ComplexityRow> = {
     space: 'O(log n)', spaceNote: 'call stack, height is always O(log n)',
     stable: false,
   },
+  'rb-insert': {
+    best: 'O(log n)', bestNote: 'guaranteed by self-balancing',
+    average: 'O(log n)', averageNote: '',
+    worst: 'O(log n)', worstNote: 'guaranteed by self-balancing',
+    space: 'O(log n)', spaceNote: 'call stack, height is always O(log n)',
+    stable: false,
+  },
+  'rb-delete': {
+    best: 'O(log n)', bestNote: 'guaranteed by self-balancing',
+    average: 'O(log n)', averageNote: '',
+    worst: 'O(log n)', worstNote: 'guaranteed by self-balancing',
+    space: 'O(log n)', spaceNote: 'call stack, height is always O(log n)',
+    stable: false,
+  },
   bfs: {
     best: 'O(1)', bestNote: 'start = target',
     average: 'O(V + E)', averageNote: 'V nodes, E edges',

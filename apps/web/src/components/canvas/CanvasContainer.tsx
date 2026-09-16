@@ -108,6 +108,11 @@ export default function CanvasContainer({
         // Renders identically to a plain BST - AVLState is a superset of
         // BSTState - with balance factors labelled under each node.
         return <TreeCanvas width={size.width} height={size.height} showBalanceFactor />
+      case CanvasType.RED_BLACK:
+        // Also renders on TreeCanvas - RBState is a superset of BSTState -
+        // with each node filled by its own RED/BLACK colour instead of
+        // the generic current/path/found palette.
+        return <TreeCanvas width={size.width} height={size.height} colorByRBColor />
       case CanvasType.GRAPH:
         return <GraphCanvas width={size.width} height={size.height} />
       case CanvasType.COUNTING_SORT:

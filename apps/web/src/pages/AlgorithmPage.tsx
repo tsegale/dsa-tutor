@@ -45,6 +45,7 @@ import { radixSortEngine } from '@/engine/radixSort'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from '@/engine/bst'
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from '@/engine/avlTree'
+import { rbInsertEngine, rbDeleteEngine, type RBState } from '@/engine/redBlackTree'
 import { bfsEngine, DEFAULT_BFS_GRAPH } from '@/engine/bfs'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
@@ -110,6 +111,12 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'avl-delete': {
       const avlRoot = (avlInsertEngine(defaultInput).at(-1)?.dataStructureState as AVLState | undefined)?.root ?? null
       return avlDeleteEngine(avlRoot, defaultTarget)
+    }
+    case 'rb-insert':
+      return rbInsertEngine(defaultInput)
+    case 'rb-delete': {
+      const rbRoot = (rbInsertEngine(defaultInput).at(-1)?.dataStructureState as RBState | undefined)?.root ?? null
+      return rbDeleteEngine(rbRoot, defaultTarget)
     }
     case 'bfs':
       return bfsEngine(DEFAULT_BFS_GRAPH, 'A', 'G')

@@ -29,6 +29,8 @@ const TOPICS = [
   { name: 'tree-level-order', displayName: 'Level Order Traversal', track: 'TREES', difficulty: 'BEGINNER', description: 'Visit all nodes level by level using a queue. Also called Breadth-First Traversal.', estimatedMinutes: 8, isLocked: false, order: 57 },
   { name: 'avl-insert', displayName: 'AVL Insert', track: 'TREES', difficulty: 'ADVANCED', description: 'Self-balancing BST. After each insert, balance factors are checked and rotations applied.', estimatedMinutes: 16, isLocked: false, order: 58 },
   { name: 'avl-delete', displayName: 'AVL Delete', track: 'TREES', difficulty: 'ADVANCED', description: 'Delete from an AVL tree and rebalance with LL/RR/LR/RL rotations as needed.', estimatedMinutes: 16, isLocked: false, order: 59 },
+  { name: 'rb-insert', displayName: 'Red-Black Insert', track: 'TREES', difficulty: 'ADVANCED', description: 'Self-balancing BST using red/black colouring. Fixes violations via recolouring and rotations.', estimatedMinutes: 18, isLocked: false, order: 60 },
+  { name: 'rb-delete', displayName: 'Red-Black Delete', track: 'TREES', difficulty: 'ADVANCED', description: 'Delete from a Red-Black tree and restore its colour properties via recolouring and rotations.', estimatedMinutes: 18, isLocked: false, order: 61 },
   { name: 'bfs', displayName: 'Breadth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph level by level using a queue.', estimatedMinutes: 10, isLocked: false, order: 999 },
   { name: 'dfs', displayName: 'Depth-First Search', track: 'GRAPHS', difficulty: 'INTERMEDIATE', description: 'Explore a graph by going as deep as possible before backtracking.', estimatedMinutes: 10, isLocked: true, order: 999 },
 

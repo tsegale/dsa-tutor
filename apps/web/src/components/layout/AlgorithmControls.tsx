@@ -35,6 +35,7 @@ import { exponentialSearchEngine } from '@/engine/exponentialSearch'
 import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from '@/engine/bst'
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLNode } from '@/engine/avlTree'
+import { rbInsertEngine, rbDeleteEngine, type RBNode } from '@/engine/redBlackTree'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -89,6 +90,14 @@ function avlRootFor(values: number[]): AVLNode | null {
   const snapshots = avlInsertEngine(values)
   const last = snapshots[snapshots.length - 1]
   return (last?.dataStructureState as { root: AVLNode | null } | undefined)?.root ?? null
+}
+
+const RB_SEED = [10, 20, 30, 40, 50, 25]
+
+function rbRootFor(values: number[]): RBNode | null {
+  const snapshots = rbInsertEngine(values)
+  const last = snapshots[snapshots.length - 1]
+  return (last?.dataStructureState as { root: RBNode | null } | undefined)?.root ?? null
 }
 
 function NumberField({
@@ -517,6 +526,29 @@ function AVLControls({ slug }: { slug: string }) {
   )
 }
 
+function RBControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [value, setValue] = useState('7')
+  const target = Number(value) || 0
+  const isDelete = slug === 'rb-delete'
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Red-Black Tree operations</h3>
+      <NumberField label={isDelete ? 'Delete value' : 'Value'} value={value} onChange={setValue} min={1} max={99} />
+      {isDelete ? (
+        <Button variant="outline" size="sm" onClick={() => apply(slug, rbDeleteEngine(rbRootFor(RB_SEED), target))}>
+          Delete
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" onClick={() => apply(slug, rbInsertEngine([...RB_SEED, target]))}>
+          Insert
+        </Button>
+      )}
+    </section>
+  )
+}
+
 function TreeTraversalControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [arrayInput, setArrayInput] = useState(BST_SEED.join(','))
@@ -723,6 +755,8 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'tree-level-order',
   'avl-insert',
   'avl-delete',
+  'rb-insert',
+  'rb-delete',
   'counting-sort',
   'radix-sort',
 ])
@@ -781,6 +815,9 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'avl-insert':
     case 'avl-delete':
       return <AVLControls slug={slug} />
+    case 'rb-insert':
+    case 'rb-delete':
+      return <RBControls slug={slug} />
     case 'counting-sort':
       return <CountingSortControls slug={slug} />
     case 'radix-sort':

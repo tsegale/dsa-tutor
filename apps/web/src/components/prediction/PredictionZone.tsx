@@ -19,6 +19,7 @@ import { bubbleSortEngine } from '@/engine/bubbleSort'
 import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLState } from '@/engine/avlTree'
+import type { RBState } from '@/engine/redBlackTree'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
@@ -311,6 +312,21 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         { id: 'RR', label: 'RR rotation (right-heavy, single left rotation)' },
         { id: 'LR', label: 'LR rotation (left-heavy, rotate left then right)' },
         { id: 'RL', label: 'RL rotation (right-heavy, rotate right then left)' },
+      ])
+    }
+
+    case CriticalJunctionType.RB_COLOR_DECISION: {
+      return shuffleArray([
+        { id: 'recolor', label: 'Uncle is RED - recolour only (Case 1)' },
+        { id: 'rotate', label: 'Uncle is BLACK - rotation needed (Case 2 or 3)' },
+      ])
+    }
+
+    case CriticalJunctionType.RB_ROTATION_RECOLOR: {
+      return shuffleArray([
+        { id: 'recolor', label: 'Recolour only - push the violation up two levels' },
+        { id: 'left-rotate', label: 'Left-rotate' },
+        { id: 'right-rotate', label: 'Right-rotate' },
       ])
     }
 
@@ -900,6 +916,16 @@ function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string
     case CriticalJunctionType.AVL_ROTATION_TYPE: {
       const s = snapshot.dataStructureState as AVLState
       return `Node ${s.currentNode?.value} is unbalanced (balance factor ${s.balanceFactor}). Which rotation restores balance?`
+    }
+
+    case CriticalJunctionType.RB_COLOR_DECISION: {
+      const s = snapshot.dataStructureState as RBState
+      return `Node ${s.currentNode?.value} has a violation nearby. Is the relevant uncle/sibling node RED or BLACK?`
+    }
+
+    case CriticalJunctionType.RB_ROTATION_RECOLOR: {
+      const s = snapshot.dataStructureState as RBState
+      return `What fix-up operation resolves the violation at node ${s.currentNode?.value}?`
     }
 
     default:
