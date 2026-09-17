@@ -27,7 +27,7 @@ import { primEngine } from './prim'
 import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from './graphProperties'
 import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from './gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from './mazeGeneration'
-import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC } from './graphPresets'
+import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from './graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
 import { dllInsertBackEngine } from './doublyLinkedList'
@@ -455,7 +455,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'connected-components',
     displayName: 'Connected Components',
-    engineFunction: () => connectedComponentsEngine(SMALL_7.nodes, SMALL_7.adjacency),
+    engineFunction: () => connectedComponentsEngine(TWO_COMPONENTS.nodes, TWO_COMPONENTS.adjacency),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.BEGINNER,
     description: 'Find all connected components in an undirected graph using BFS or DFS.',

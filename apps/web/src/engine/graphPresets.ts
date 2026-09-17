@@ -1,6 +1,6 @@
 import type { AdjacencyList, GraphNode, WeightedAdjacencyList } from '@dsa-tutor/types'
 
-export type GraphPresetName = 'small-7' | 'medium-weighted' | 'grid-like' | 'directed-cycle'
+export type GraphPresetName = 'small-7' | 'medium-weighted' | 'grid-like' | 'directed-cycle' | 'two-components'
 
 export interface UnweightedPreset {
   nodes: GraphNode[]
@@ -136,9 +136,38 @@ export const DIRECTED_ACYCLIC: UnweightedPreset = {
   },
 }
 
+/** 8 nodes split into two disjoint undirected components (A-B-C-D and
+ * E-F-G-H, no edges between them) - the only preset that actually
+ * demonstrates a graph with more than one connected component, since
+ * every other preset is built fully reachable for BFS/DFS/MST demos. */
+export const TWO_COMPONENTS: UnweightedPreset = {
+  directed: false,
+  nodes: [
+    { id: 'A', label: 'A', x: 0.15, y: 0.25 },
+    { id: 'B', label: 'B', x: 0.35, y: 0.1 },
+    { id: 'C', label: 'C', x: 0.35, y: 0.4 },
+    { id: 'D', label: 'D', x: 0.15, y: 0.6 },
+    { id: 'E', label: 'E', x: 0.65, y: 0.25 },
+    { id: 'F', label: 'F', x: 0.85, y: 0.1 },
+    { id: 'G', label: 'G', x: 0.85, y: 0.4 },
+    { id: 'H', label: 'H', x: 0.65, y: 0.6 },
+  ],
+  adjacency: {
+    A: ['B', 'C'],
+    B: ['A'],
+    C: ['A', 'D'],
+    D: ['C'],
+    E: ['F', 'G'],
+    F: ['E'],
+    G: ['E', 'H'],
+    H: ['G'],
+  },
+}
+
 export const GRAPH_PRESETS: Record<GraphPresetName, UnweightedPreset | WeightedPreset> = {
   'small-7': SMALL_7,
   'medium-weighted': MEDIUM_WEIGHTED,
   'grid-like': GRID_LIKE,
   'directed-cycle': DIRECTED_CYCLE,
+  'two-components': TWO_COMPONENTS,
 }

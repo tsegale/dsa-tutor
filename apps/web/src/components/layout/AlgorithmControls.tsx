@@ -827,7 +827,7 @@ const HAS_DIRECTED_TOGGLE = new Set(['bfs', 'dfs', 'connected-components', 'cycl
 const GRAPH_DEFAULT_PRESET: Record<string, GraphPresetName> = {
   bfs: 'small-7',
   dfs: 'small-7',
-  'connected-components': 'small-7',
+  'connected-components': 'two-components',
   'cycle-detection': 'directed-cycle',
   dijkstra: 'medium-weighted',
   'bellman-ford': 'medium-weighted',
@@ -840,6 +840,7 @@ const GRAPH_DISPLAY_NAME: Record<string, string> = {
   'medium-weighted': 'Medium, weighted (8 nodes)',
   'grid-like': 'Grid-like mesh (9 nodes)',
   'directed-cycle': 'Directed, has a cycle (6 nodes)',
+  'two-components': 'Two disconnected groups (8 nodes)',
 }
 
 // `preset.adjacency as never` below: `preset` is typed as the union of
@@ -890,7 +891,11 @@ function GraphControls({ slug }: { slug: string }) {
   const [startId, setStartId] = useState(nodeIds[0])
   const [targetId, setTargetId] = useState(nodeIds[nodeIds.length - 1])
 
-  const presetOptions: GraphPresetName[] = WEIGHTED_GRAPH_ALGOS.has(slug) ? ['medium-weighted', 'grid-like'] : ['small-7', 'directed-cycle']
+  const presetOptions: GraphPresetName[] = WEIGHTED_GRAPH_ALGOS.has(slug)
+    ? ['medium-weighted', 'grid-like']
+    : slug === 'connected-components'
+      ? ['two-components', 'small-7', 'directed-cycle']
+      : ['small-7', 'directed-cycle']
 
   function changePreset(name: GraphPresetName) {
     setPresetName(name)

@@ -58,7 +58,7 @@ import { primEngine } from '@/engine/prim'
 import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from '@/engine/graphProperties'
 import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
-import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC } from '@/engine/graphPresets'
+import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from '@/engine/graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
 import { dllInsertBackEngine } from '@/engine/doublyLinkedList'
@@ -165,7 +165,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'cycle-detection':
       return cycleDetectionEngine(DIRECTED_CYCLE.nodes, DIRECTED_CYCLE.adjacency, DIRECTED_CYCLE.directed)
     case 'connected-components':
-      return connectedComponentsEngine(SMALL_7.nodes, SMALL_7.adjacency)
+      return connectedComponentsEngine(TWO_COMPONENTS.nodes, TWO_COMPONENTS.adjacency)
     case 'topological-sort':
       return topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency)
     case 'grid-bfs':
