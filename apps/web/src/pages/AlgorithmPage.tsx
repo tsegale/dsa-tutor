@@ -801,9 +801,13 @@ export default function AlgorithmPage() {
       {showFeynman && sessionId && (
         <FeynmanModal
           algorithmName={algorithmName}
-          completionContext={`You just completed a full ${algorithmName} sort on the array [${
-            (snapshotArray[0]?.dataStructureState as number[] | undefined)?.join(', ') ?? ''
-          }]`}
+          completionContext={
+            Array.isArray(snapshotArray[0]?.dataStructureState)
+              ? `You just completed a full ${algorithmName} sort on the array [${(
+                  snapshotArray[0]?.dataStructureState as number[]
+                ).join(', ')}]`
+              : `You just completed a full run of ${algorithmName}.`
+          }
           sessionId={sessionId}
           onClose={() => setShowFeynman(false)}
         />
