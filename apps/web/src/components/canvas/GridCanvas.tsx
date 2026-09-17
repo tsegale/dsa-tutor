@@ -44,6 +44,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   const isPainting = useRef(false)
   const paintMode = useRef<'wall' | 'erase'>('wall')
   const [error, setError] = useState<string | null>(null)
+  const [showScores, setShowScores] = useState(false)
 
   // Only editable before the algorithm has taken any step - once it's
   // running, the wall layout is fixed for that run (matching every other
@@ -138,6 +139,12 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
               <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{item.label}</span>
             </div>
           ))}
+          {(state.algorithmType === 'astar' || state.algorithmType === 'dijkstra') && (
+            <label className="flex items-center gap-1 text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+              <input type="checkbox" checked={showScores} onChange={(e) => setShowScores(e.target.checked)} className="size-3" />
+              Show f/g/h
+            </label>
+          )}
           {isEditable && (
             <button
               type="button"
@@ -187,6 +194,27 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
               )
             }),
           )}
+          {showScores &&
+            cellSize >= 14 &&
+            state.grid.map((row, r) =>
+              row.map((cell, c) => {
+                if (cell.fScore === undefined || (cell.state !== 'frontier' && cell.state !== 'visited')) return null
+                return (
+                  <text
+                    key={`score-${r}-${c}`}
+                    x={c * cellSize + cellSize / 2}
+                    y={r * cellSize + cellSize / 2}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={Math.min(8, cellSize / 3)}
+                    fill="#1e293b"
+                    pointerEvents="none"
+                  >
+                    {cell.fScore}
+                  </text>
+                )
+              }),
+            )}
         </svg>
       </div>
 
