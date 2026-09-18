@@ -166,12 +166,11 @@ export default function FeynmanModal({ algorithmName, completionContext, session
   }
 
   return (
-    <Dialog open onOpenChange={() => {}}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        showCloseButton={false}
+        showCloseButton
         onPointerDownOutside={(event) => event.preventDefault()}
-        onEscapeKeyDown={(event) => event.preventDefault()}
-        className="sm:max-w-md"
+        className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-md"
       >
         {phase === 'prompt' && (
           <div className="flex flex-col gap-4">
@@ -224,6 +223,13 @@ export default function FeynmanModal({ algorithmName, completionContext, session
             <DialogTitle className="sr-only">Evaluating your explanation</DialogTitle>
             <p className="text-sm text-text-secondary dark:text-dark-text-secondary">Reading your explanation...</p>
             <TypingIndicator />
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs text-text-muted underline dark:text-dark-text-secondary"
+            >
+              Skip for now
+            </button>
           </div>
         )}
 
@@ -288,6 +294,13 @@ export default function FeynmanModal({ algorithmName, completionContext, session
                   className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Submit Answer
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="self-center text-xs text-text-muted underline dark:text-dark-text-secondary"
+                >
+                  Skip for now
                 </button>
               </div>
             )}
