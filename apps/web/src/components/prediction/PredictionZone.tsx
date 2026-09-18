@@ -1166,6 +1166,10 @@ export default function PredictionZone({
   const [currentAnswer, setCurrentAnswer] = useState<string | null>(null)
   const [currentTiles, setCurrentTiles] = useState<TileOption[]>([])
   const [submissionState, setSubmissionState] = useState<'idle' | 'correct' | 'incorrect'>('idle')
+  // True only once the attempt cap is reached or the learner explicitly
+  // asks to see the answer - an incorrect submission alone must never
+  // reveal it, or the retry that follows has nothing left to attempt.
+  const [revealAnswer, setRevealAnswer] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hintLoading, setHintLoading] = useState(false)
   // Only true when the current hint came from a manual H-key / avatar
@@ -1203,6 +1207,7 @@ export default function PredictionZone({
     }
     setCurrentAnswer(null)
     setSubmissionState('idle')
+    setRevealAnswer(false)
     setMistakeAnalysis(null)
     setMistakeHint(null)
     setMistakeCounterfactual(null)
@@ -1326,6 +1331,20 @@ export default function PredictionZone({
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
+  function handleShowAnswer() {
+    setRevealAnswer(true)
+  }
+
+  function handleContinueAfterReveal() {
+    setSubmissionState('idle')
+    setCurrentAnswer(null)
+    setMistakeAnalysis(null)
+    setMistakeHint(null)
+    setMistakeCounterfactual(null)
+    window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
+    stepForward()
+  }
+
   async function handleSubmit(explicitAnswer?: string) {
     const answer = explicitAnswer ?? currentAnswer
     if (answer === null || isSubmitting || !snapshot) return
@@ -1395,6 +1414,10 @@ export default function PredictionZone({
     setShakeToken((token) => token + 1)
     attemptCountRef.current += 1
     const attempt = attemptCountRef.current
+
+    if (attempt >= MAX_ATTEMPTS_BEFORE_ADVANCE) {
+      setRevealAnswer(true)
+    }
 
     if (scaffoldingLevel === ScaffoldingLevel.NONE) {
       // No elaboration from Claude at all, per the NONE scaffolding contract.
@@ -1630,6 +1653,7 @@ export default function PredictionZone({
                           selectedId={currentAnswer}
                           submissionState={submissionState}
                           snapshot={snapshot}
+                          revealAnswer={revealAnswer}
                         />
                       )}
                     </div>
@@ -1661,15 +1685,34 @@ export default function PredictionZone({
                       <div className="flex flex-col items-center gap-1 text-error">
                         <XIcon />
                         {scaffoldingLevel === ScaffoldingLevel.HIGH ? (
-                          <button
-                            type="button"
-                            onClick={handleTryAgain}
-                            className="text-xs font-medium underline underline-offset-2"
-                          >
-                            Try again
-                          </button>
+                          revealAnswer ? (
+                            <button
+                              type="button"
+                              onClick={handleContinueAfterReveal}
+                              className="text-xs font-medium underline underline-offset-2"
+                            >
+                              Continue
+                            </button>
+                          ) : (
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={handleTryAgain}
+                                className="text-xs font-medium underline underline-offset-2"
+                              >
+                                Try again
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleShowAnswer}
+                                className="text-[11px] text-text-muted underline underline-offset-2 dark:text-dark-text-secondary"
+                              >
+                                Show me the answer
+                              </button>
+                            </div>
+                          )
                         ) : (
-                          <span className="text-xs font-medium">Try again</span>
+                          <span className="text-xs font-medium">{revealAnswer ? 'Answer revealed' : 'Try again'}</span>
                         )}
                       </div>
                     )}

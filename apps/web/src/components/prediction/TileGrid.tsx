@@ -16,6 +16,10 @@ interface TileGridProps {
   selectedId: string | null
   submissionState: 'idle' | 'correct' | 'incorrect'
   snapshot: AlgorithmSnapshot
+  /** True only once the attempt cap is reached or the learner explicitly
+   * asked to see the answer - an incorrect submission alone must never
+   * reveal it, or the retry that follows has nothing left to attempt. */
+  revealAnswer: boolean
 }
 
 function CheckIcon() {
@@ -35,17 +39,20 @@ function XIcon() {
 }
 
 /**
- * Which tile is the correct answer, used only to reveal it after a wrong
- * submission - never before. For SWAP_DECISION the correct tile depends on
- * the current array values; for conceptual junctions the shuffled display
- * order never changes the id, so the correct tile is always id 'correct'.
+ * Which tile is the correct answer, used only to reveal it once the caller
+ * has decided the answer should be shown (attempt cap reached, or the
+ * learner explicitly asked) - never merely because the submission was
+ * wrong. For SWAP_DECISION the correct tile depends on the current array
+ * values; for conceptual junctions the shuffled display order never
+ * changes the id, so the correct tile is always id 'correct'.
  */
 function isCorrectTile(
   tileId: string,
   snapshot: AlgorithmSnapshot,
   submissionState: 'idle' | 'correct' | 'incorrect',
+  revealAnswer: boolean,
 ): boolean {
-  if (submissionState !== 'incorrect') return false
+  if (submissionState !== 'incorrect' || !revealAnswer) return false
 
   if (snapshot.criticalJunctionType === CriticalJunctionType.SWAP_DECISION) {
     const arr = snapshot.dataStructureState as number[]
@@ -57,7 +64,7 @@ function isCorrectTile(
   return tileId === 'correct'
 }
 
-export default function TileGrid({ prompt, options, onSelect, selectedId, submissionState, snapshot }: TileGridProps) {
+export default function TileGrid({ prompt, options, onSelect, selectedId, submissionState, snapshot, revealAnswer }: TileGridProps) {
   const prefersReducedMotion = useReducedMotion()
   const isHorizontal = options.length === 2
   const locked = submissionState !== 'idle'
@@ -72,7 +79,7 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
           const isSelectedIncorrect = isSelected && submissionState === 'incorrect'
           // Revealed only when this tile is the correct one and the
           // learner picked something else - never before submission.
-          const isRevealedCorrect = !isSelected && isCorrectTile(option.id, snapshot, submissionState)
+          const isRevealedCorrect = !isSelected && isCorrectTile(option.id, snapshot, submissionState, revealAnswer)
 
           return (
             <motion.button
