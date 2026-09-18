@@ -89,7 +89,7 @@ export default function TrackSection({ track, topics, onStart }: TrackSectionPro
 
         <div className="flex flex-1 items-center gap-2">
           <div className="w-full max-w-[220px]">
-            <ProgressBar percent={meanMastery} colorCoded />
+            <ProgressBar percent={meanMastery} colorCoded animate={false} />
           </div>
           <span className="text-xs font-medium text-text-muted">{meanMastery}%</span>
         </div>
