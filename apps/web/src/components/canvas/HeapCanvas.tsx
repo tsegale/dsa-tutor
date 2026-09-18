@@ -53,7 +53,7 @@ function layoutHeapTree(size: number, containerWidth: number): TreeSlot[] {
 export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: HeapCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
-  const masteryPercent = useAlgorithmStore(selectProgressPercent)
+  const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as HeapState | undefined
 
@@ -70,7 +70,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
     return result
   }, [treeSlots])
 
-  const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
   if (!state) {
     return (
@@ -107,9 +107,9 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold text-text-primary dark:text-dark-text-primary">{heapLabel}</span>
           <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
-            <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
+            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{masteryPercent}%</span>
+          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">

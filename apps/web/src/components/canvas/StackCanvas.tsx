@@ -32,12 +32,12 @@ function fillForDepth(depthFromTop: number): string {
 
 export default function StackCanvas({ width = 400, height = 400 }: StackCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
-  const masteryPercent = useAlgorithmStore(selectProgressPercent)
+  const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as StackState | undefined
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
   // the stack grows upward from a floor near the bottom of the svg, which
   // sits below the fold of this overflow-auto wrapper as soon as the svg
@@ -51,9 +51,9 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
     return (
       <div className="flex h-full flex-col">
         <div className="absolute top-2 right-3 left-3 z-10 flex items-center gap-2">
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Mastery</span>
+          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
           <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-            <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
+            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
         <div className="flex flex-1 items-center justify-center">
@@ -72,12 +72,12 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
   return (
     <div className="flex h-full flex-col">
       <div className="absolute top-2 right-3 left-3 z-10 flex items-center gap-2">
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Mastery</span>
+        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
         <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-          <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
+          <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
         </div>
         <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-          {masteryPercent}%
+          {progressPercent}%
         </span>
       </div>
 

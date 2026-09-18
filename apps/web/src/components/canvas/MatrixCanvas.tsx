@@ -14,11 +14,11 @@ const CELL_SIZE = 44
 export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
-  const masteryPercent = useAlgorithmStore(selectProgressPercent)
+  const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as MatrixState | undefined
 
-  const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
   if (!state) {
     return (
@@ -37,11 +37,11 @@ export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvas
   return (
     <div className="flex h-full flex-col">
       <div className="absolute top-2 right-3 left-3 z-10 flex items-center gap-2">
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Mastery</span>
+        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
         <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
-          <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
+          <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
         </div>
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{masteryPercent}%</span>
+        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center overflow-auto pt-9">
