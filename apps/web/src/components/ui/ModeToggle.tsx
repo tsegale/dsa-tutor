@@ -23,7 +23,8 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
 //    the same interaction as dragging a bar to swap it.
 // 2. BUTTONS_ARE_HANDS_ON - the left panel's operation buttons (push,
 //    enqueue, insert, search...) already ARE the hands-on interaction
-//    for these data structures - tab isn't shown.
+//    for these data structures - tab is shown, disabled, with a tooltip
+//    naming that reason rather than just vanishing with no explanation.
 // 3. array-insert/array-delete DO have the same drag-based interaction
 //    model in mind, just not built yet - tab is shown, disabled, with
 //    a "coming soon" tooltip instead of a dead end.
@@ -119,7 +120,8 @@ export default function ModeToggle() {
   const setMode = useAlgorithmStore((state) => state.setMode)
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const slug = algorithmSlug ?? ''
-  const handsOnHidden = NO_HANDS_ON.has(slug) || BUTTONS_ARE_HANDS_ON.has(slug)
+  const handsOnHidden = NO_HANDS_ON.has(slug)
+  const handsOnUsesButtons = BUTTONS_ARE_HANDS_ON.has(slug)
   const handsOnComingSoon = HANDS_ON_COMING_SOON.has(slug)
   const handsOnAvailable = HANDS_ON_ACTIVE.has(slug)
 
@@ -136,6 +138,7 @@ export default function ModeToggle() {
             key={option.value}
             type="button"
             disabled={isDisabled}
+            aria-pressed={isActive}
             onClick={() => !isDisabled && setMode(option.value)}
             className={`relative z-10 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               isDisabled
@@ -161,7 +164,13 @@ export default function ModeToggle() {
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent>{handsOnComingSoon ? 'Drag interaction coming soon' : 'Not available for this algorithm'}</TooltipContent>
+            <TooltipContent>
+              {handsOnComingSoon
+                ? 'Drag interaction coming soon'
+                : handsOnUsesButtons
+                  ? "This structure's own buttons (insert, search, delete...) are the hands-on interaction"
+                  : 'Not available for this algorithm'}
+            </TooltipContent>
           </Tooltip>
         )
       })}

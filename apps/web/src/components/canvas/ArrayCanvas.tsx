@@ -112,8 +112,6 @@ const MISTAKE_WASH_COLOR = 'rgba(220, 38, 38, 0.12)'
 const MISTAKE_STEP_INTERVAL_MS = 1600
 const MISTAKE_PAUSE_MS = 1000
 
-const HANDS_ON_TOOLTIP_STORAGE_KEY = 'dsa-tutor-hands-on-tooltip-shown'
-const HANDS_ON_TOOLTIP_DURATION_MS = 5000
 
 // Bubble Sort's dataStructureState is a plain number[]; the Phase 16
 // algorithms (Linear/Binary Search, Selection/Insertion Sort) use a
@@ -314,7 +312,6 @@ export default function ArrayCanvas({
   // valid pick, so this needs to remember which one.
   const [handsOnPicked, setHandsOnPicked] = useState<number | null>(null)
   const [handsOnLocked, setHandsOnLocked] = useState(false)
-  const [handsOnTooltipVisible, setHandsOnTooltipVisible] = useState(false)
   const [draggingBarIndex, setDraggingBarIndex] = useState<number | null>(null)
 
   // The drag gesture's own transform is a separate offset layered on top
@@ -352,37 +349,6 @@ export default function ArrayCanvas({
     return () => window.removeEventListener(CLEAR_CANVAS_SELECTION_EVENT, handleClear)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    if (!isHandsOnSwapStep) return
-    if (localStorage.getItem(HANDS_ON_TOOLTIP_STORAGE_KEY) === 'true') return
-
-    setHandsOnTooltipVisible(true)
-    const timer = setTimeout(() => {
-      setHandsOnTooltipVisible(false)
-      localStorage.setItem(HANDS_ON_TOOLTIP_STORAGE_KEY, 'true')
-    }, HANDS_ON_TOOLTIP_DURATION_MS)
-    return () => clearTimeout(timer)
-  }, [isHandsOnSwapStep])
-
-  function dismissHandsOnTooltip() {
-    if (!handsOnTooltipVisible) return
-    setHandsOnTooltipVisible(false)
-    localStorage.setItem(HANDS_ON_TOOLTIP_STORAGE_KEY, 'true')
-  }
-
-  const handsOnInstructionText =
-    handsOnDragTarget?.kind === 'pick-one'
-      ? 'Drag whichever bar is smaller down into the merged result.'
-      : snapshot?.criticalJunctionType === CriticalJunctionType.NEW_MINIMUM
-        ? 'Drag the compared bar onto the current minimum if it is smaller, or leave it in place if not.'
-        : snapshot?.criticalJunctionType === CriticalJunctionType.PARTITION_DECISION
-          ? 'Drag the bar past the pivot if it belongs on the pivot’s side, or leave it if it belongs left of the pivot.'
-          : snapshot?.criticalJunctionType === CriticalJunctionType.GAP_COMPARISON
-            ? 'Drag the key bar across the gap if it should shift left, or leave it in place if not.'
-            : snapshot?.criticalJunctionType === CriticalJunctionType.HEAP_COMPARE
-              ? 'Drag the larger child onto the parent if it should sift down, or leave it in place if not.'
-              : 'Drag the bars to swap them, or leave them in place if no swap is needed.'
 
   const bars = useMemo(() => {
     const values = extractDisplayValues(snapshot?.dataStructureState)
@@ -529,11 +495,6 @@ export default function ArrayCanvas({
         ))}
       </div>
     </div>
-    {handsOnTooltipVisible && (
-      <div className="absolute top-2 left-1/2 z-30 w-[280px] max-w-[80%] -translate-x-1/2 rounded-md border-l-4 border-secondary bg-secondary-light p-3 text-center shadow-md">
-        <p className="text-[13px] text-secondary">{handsOnInstructionText}</p>
-      </div>
-    )}
     <svg width={width} height={height} role="img" aria-label={canvasLabel}>
       <style>{`
         @keyframes pulse-ring {
@@ -644,7 +605,6 @@ export default function ArrayCanvas({
                   dragElastic: 0.15,
                   dragMomentum: false,
                   onDragStart: () => {
-                    dismissHandsOnTooltip()
                     setDraggingBarIndex(bar.index)
                   },
                   onDragEnd: (_event: unknown, info: PanInfo) => handleHandsOnDragEnd(bar.index, info.offset.x),

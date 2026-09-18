@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { firstSentence } from '@/utils/predictionJunction'
+import { getHandsOnInstructionText } from '@/utils/handsOnInstructions'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
@@ -1312,7 +1313,18 @@ export default function PredictionZone({
     const request: HintRequest = {
       algorithmName,
       stepIndex: snapshot.stepIndex,
-      currentPredictionPrompt: snapshot.description,
+      // The engine's own snapshot.description is an audit-trail string that
+      // states whether the junction's answer is correct (e.g. "a swap is
+      // needed") - sending that to the hint model would leak the answer and
+      // gives it a denser string to misparse index/value pairs out of.
+      // getPromptForSnapshot is the same answer-safe question already shown
+      // to the student.
+      currentPredictionPrompt: getPromptForSnapshot(snapshot, algorithmName),
+      currentState: {
+        dataStructureState: snapshot.dataStructureState,
+        activeIndices: snapshot.activeIndices,
+        criticalJunctionType: snapshot.criticalJunctionType,
+      },
       errorHistory: [],
       scaffoldingLevel,
     }
@@ -1548,7 +1560,10 @@ export default function PredictionZone({
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
             className={cn(
-              'absolute bottom-0 left-0 z-20 flex w-full items-start gap-3 rounded-t-lg border-t-2 bg-white px-[14px] py-[10px] shadow-lg dark:bg-dark-surface',
+              // A real flex item (not an absolute overlay) so the canvas
+              // area above shrinks to make room instead of this panel
+              // covering whatever canvas content sits under it.
+              'relative z-20 flex w-full shrink-0 items-start gap-3 rounded-t-lg border-t-2 bg-white px-[14px] py-[10px] shadow-lg dark:bg-dark-surface',
               // Code Editor Mode needs real room for a multi-line textarea,
               // language tabs and its own submit button - the 35% budget
               // that fits a single tile prompt comfortably clips it.
@@ -1633,7 +1648,7 @@ export default function PredictionZone({
                     <div className="flex flex-1 flex-col justify-center">
                       {isHandsOnSwapDecision && (
                         <p className="text-xs text-text-muted dark:text-dark-text-secondary">
-                          ↑ Drag the bars in the canvas above to answer
+                          ↑ {getHandsOnInstructionText(snapshot.criticalJunctionType)}
                         </p>
                       )}
                       {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
