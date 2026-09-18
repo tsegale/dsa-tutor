@@ -414,6 +414,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               type="button"
               onClick={toggleCodeEditorMode}
               aria-pressed={codeEditorMode}
+              aria-label="Toggle Code Mode"
               className={cn(
                 'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors',
                 codeEditorMode
