@@ -399,10 +399,17 @@ function GraphStateStrip({ state, algorithmName }: { state: GraphAlgorithmState;
   } else if (state.topoOrder !== undefined) {
     content = <span>Order so far: {state.topoOrder.length > 0 ? state.topoOrder.join(' → ') : '—'}</span>
   } else if (lower.includes('dijkstra') || lower.includes('bellman')) {
+    const shown = 3
     const top = state.frontier
-      .slice(0, 3)
+      .slice(0, shown)
       .map((id) => `(${id}, ${state.distances?.[id] === Infinity ? '∞' : (state.distances?.[id] ?? '?')})`)
-    content = <span>Priority queue: [{top.join(', ')}]</span>
+    const remaining = state.frontier.length - shown
+    content = (
+      <span>
+        Priority queue: [{top.join(', ')}
+        {remaining > 0 ? `, +${remaining} more` : ''}]
+      </span>
+    )
   } else {
     content = <span>{lower.includes('dfs') ? 'Stack' : 'Queue'}: [{state.frontier.join(', ')}]</span>
   }
