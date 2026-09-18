@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 
@@ -7,11 +8,12 @@ from models.request_models import PredictionRequest
 from models.response_models import PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_TEMPLATE
-from services.claude_service import call_claude_for_feedback
+from services.claude_service import call_claude_for_feedback, is_field_valid
 from services.fallback_service import get_fallback_prediction_response
 from services.misconception_classifier import classify_bubble_sort_misconception
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _evaluate_swap_decision(wrapper: dict, student_answer: str | None) -> bool:
@@ -1056,6 +1058,34 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
     return ""
 
 
+def _feedback_is_valid(feedback: dict[str, Any], correct: bool) -> bool:
+    """Matches each field's own prompt contract in FEEDBACK_TEMPLATE:
+    consequence_explanation and counterfactual_trace are capped at two
+    sentences, socratic_hint at twenty words, and counterfactual_trace is
+    only allowed to be empty when the answer was correct."""
+    if not is_field_valid(feedback.get("consequence_explanation"), max_sentences=2):
+        return False
+    if not is_field_valid(feedback.get("socratic_hint"), max_words=20):
+        return False
+    if not is_field_valid(feedback.get("counterfactual_trace"), max_sentences=2, allow_empty=correct):
+        return False
+    return True
+
+
+async def _get_validated_feedback(prompt: str, correct: bool) -> dict[str, Any] | None:
+    feedback = await call_claude_for_feedback(prompt)
+    if _feedback_is_valid(feedback, correct):
+        return feedback
+
+    logger.warning("AI prediction feedback failed validation, retrying once")
+    feedback = await call_claude_for_feedback(prompt)
+    if _feedback_is_valid(feedback, correct):
+        return feedback
+
+    logger.warning("AI prediction feedback failed validation again, falling back")
+    return None
+
+
 @router.post("/", response_model=PredictionResponse)
 async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     correct = evaluate_answer(request)
@@ -1082,7 +1112,9 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     )
 
     try:
-        feedback: dict[str, Any] = await call_claude_for_feedback(prompt)
+        feedback = await _get_validated_feedback(prompt, correct)
+        if feedback is None:
+            return get_fallback_prediction_response(correct)
         misconception = classify_bubble_sort_misconception(
             request.student_answer,
             request.current_state,

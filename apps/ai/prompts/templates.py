@@ -105,6 +105,7 @@ HINT_TEMPLATE = PromptTemplate(
         "pseudocode",
         "step_index",
         "current_prediction_prompt",
+        "comparison_values",
         "error_history",
         "scaffolding_level",
     ],
@@ -121,8 +122,13 @@ Pseudocode:
 
 Current step index: {step_index}
 What the student is being asked to predict: {current_prediction_prompt}
+Exact index/value pairs for this step: {comparison_values}
 Student's prior errors on this step: {error_history}
 Scaffolding level: {scaffolding_level}
+
+Any index or value you reference MUST match "Exact index/value pairs for
+this step" exactly - never attribute two different values to the same
+index, and never reference an index or value not given there.
 
 Write a single question addressed directly to the student. Use second
 person. Maximum 20 words. Start with a question word. Do not repeat the

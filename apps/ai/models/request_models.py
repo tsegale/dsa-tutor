@@ -48,5 +48,11 @@ class HintRequest(BaseModel):
     algorithm_name: str
     step_index: int
     current_prediction_prompt: str
+    # Same wrapper shape as PredictionRequest.current_state
+    # (dataStructureState/activeIndices/criticalJunctionType), optional
+    # since older callers may not send it. Lets the hint prompt ground
+    # index/value references in the actual state instead of leaving the
+    # model to read them out of current_prediction_prompt's prose.
+    current_state: Any = None
     error_history: list[str] = []
     scaffolding_level: ScaffoldingLevel

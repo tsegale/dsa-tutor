@@ -369,6 +369,11 @@ export interface HintRequest {
   currentPredictionPrompt: string
   errorHistory: string[]
   scaffoldingLevel: ScaffoldingLevel
+  /** Same wrapper shape as PredictionRequest.currentState (dataStructureState/
+   * activeIndices/criticalJunctionType) - lets the AI service ground a hint's
+   * index/value references in the actual state instead of only the rendered
+   * prompt text. */
+  currentState?: unknown
 }
 
 export interface HintResponse {
