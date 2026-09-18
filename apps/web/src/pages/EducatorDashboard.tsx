@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import { getAnalytics } from '../api/analytics'
 import { useAuth } from '../context/AuthContext'
@@ -38,7 +38,21 @@ export default function EducatorDashboard() {
   }
 
   if (user && user.role !== 'EDUCATOR') {
-    return <Navigate to="/" replace />
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface px-6 text-center dark:bg-dark-background">
+        <div>
+          <p className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
+            This area is for educators
+          </p>
+          <p className="mt-1 text-sm text-text-muted dark:text-dark-text-secondary">
+            Your account doesn't have educator access, so there's nothing here to show you.
+          </p>
+          <Link to="/" className="mt-4 inline-block text-sm text-primary underline">
+            Back to dashboard
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   if (isLoading) return <EducatorDashboardSkeleton />
