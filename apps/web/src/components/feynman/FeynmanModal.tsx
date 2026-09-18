@@ -15,12 +15,16 @@ interface FeynmanModalProps {
   completionContext: string
   sessionId: string
   onClose: () => void
+  /** True only when the run actually reached its final step. The Feynman
+   * button in the left panel can also open this modal mid-run (after just
+   * one prediction), so the copy must not claim a completion that hasn't
+   * happened. */
+  isFullCompletion: boolean
 }
 
 type Phase = 'prompt' | 'loading' | 'feedback'
 
 const MIN_CHARS_TO_SUBMIT = 100
-const DISPLAYED_MIN_CHARS = 500
 const BASE_XP = 30
 const COMPLETE_BONUS_XP = 20
 
@@ -66,7 +70,13 @@ function TypingIndicator() {
   )
 }
 
-export default function FeynmanModal({ algorithmName, completionContext, sessionId, onClose }: FeynmanModalProps) {
+export default function FeynmanModal({
+  algorithmName,
+  completionContext,
+  sessionId,
+  onClose,
+  isFullCompletion,
+}: FeynmanModalProps) {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const addXP = useAlgorithmStore((state) => state.addXP)
@@ -179,8 +189,9 @@ export default function FeynmanModal({ algorithmName, completionContext, session
               <div className="flex flex-col gap-1 pt-1">
                 <DialogTitle className="text-xl font-bold">Explain it to me!</DialogTitle>
                 <p className="text-sm text-text-secondary dark:text-dark-text-secondary">
-                  You just completed {algorithmName}. Explain to me how it works in plain English, like I have never
-                  heard of it before. The more detail the better.
+                  {isFullCompletion
+                    ? `You just completed ${algorithmName}. Explain to me how it works in plain English, like I have never heard of it before. The more detail the better.`
+                    : `Let's check your understanding of ${algorithmName} so far. Explain what you've learned about it in plain English, like I have never heard of it before. The more detail the better.`}
                 </p>
               </div>
             </div>
@@ -193,7 +204,7 @@ export default function FeynmanModal({ algorithmName, completionContext, session
             />
             <div className="flex items-center justify-between">
               <span className="text-xs text-text-muted dark:text-dark-text-secondary">
-                {explanation.length} / {DISPLAYED_MIN_CHARS} characters minimum
+                {explanation.length} / {MIN_CHARS_TO_SUBMIT} characters minimum
               </span>
             </div>
 

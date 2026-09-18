@@ -25,13 +25,21 @@ class FeynmanResponse(BaseModel):
     is_complete: bool  # true if explanation is sufficient, no follow-up needed
 
 
+# Grading criteria for the model (internal) alongside a short, plain-English
+# label for the same concept (shown to the student verbatim in "Concepts to
+# review" if the model doesn't explicitly restate it - see FEYNMAN_PROMPT's
+# missing_concepts instruction). Keep both in sync: the label must name the
+# same idea as the criterion, just phrased for a student, not a rubric.
 FEYNMAN_RUBRIC = {
     "bubble_sort": [
-        "mentions comparison of adjacent elements",
-        "explains the swap condition (left greater than right)",
-        "describes the pass structure (multiple passes)",
-        "mentions that the largest unsorted element reaches its final position after each pass",
-        "explains the early termination optimisation",
+        ("mentions comparison of adjacent elements", "Comparing adjacent elements"),
+        ("explains the swap condition (left greater than right)", "When a swap happens (left bigger than right)"),
+        ("describes the pass structure (multiple passes)", "Making multiple passes over the array"),
+        (
+            "mentions that the largest unsorted element reaches its final position after each pass",
+            "Why the largest unsorted value settles into place each pass",
+        ),
+        ("explains the early termination optimisation", "Stopping early once a pass makes no swaps"),
     ]
 }
 
@@ -57,16 +65,25 @@ Respond ONLY with a valid JSON object matching this exact schema:
 The feedback_summary and follow_up_question must sound like a real confused student, not a teacher or AI.
 Example feedback_summary: "Ok that mostly made sense! I get that you swap them if the left one is bigger. But I am confused, do you always have to go through the whole list every time? What happens if it is already sorted?"
 Example follow_up_question: "So after one full pass, does that mean the entire list is sorted or just part of it?"
+
+For "missing_concepts", use ONLY the exact concept label given in parentheses
+next to each rubric line above - never invent your own phrasing and never
+copy the grading criterion text itself. These labels are shown directly to
+the student, so they must read like a short topic, not an evaluator's
+internal note.
 """
+
+DEFAULT_RUBRIC = [
+    ("explains the core algorithm logic", "The core algorithm logic"),
+    ("describes the step sequence", "The step-by-step sequence"),
+    ("mentions the termination condition", "When the algorithm stops"),
+]
 
 
 @router.post("/", response_model=FeynmanResponse)
 async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
-    rubric = FEYNMAN_RUBRIC.get(
-        request.algorithm_name.lower().replace(" ", "_"),
-        ["explains the core algorithm logic", "describes the step sequence", "mentions the termination condition"],
-    )
-    rubric_text = "\n".join(f"- {item}" for item in rubric)
+    rubric = FEYNMAN_RUBRIC.get(request.algorithm_name.lower().replace(" ", "_"), DEFAULT_RUBRIC)
+    rubric_text = "\n".join(f'- {criterion} (concept label: "{label}")' for criterion, label in rubric)
 
     prompt = FEYNMAN_PROMPT.format(
         algorithm_name=request.algorithm_name,
