@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
-import { logout } from '@/api/auth'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { StudentAvatar } from '@/components/brand'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
 import SoundToggle from '@/components/ui/SoundToggle'
@@ -69,18 +71,18 @@ function RefreshIcon() {
   )
 }
 
-function LogoutIcon() {
+function BackToDashboardIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M19 12H5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
 export default function TopBar() {
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
@@ -195,21 +197,36 @@ export default function TopBar() {
           ?
         </button>
 
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label="Account menu" className="flex shrink-0 items-center justify-center rounded-full">
+              <StudentAvatar initials={user?.name?.[0]?.toUpperCase() ?? '?'} size={28} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => {
+                logout()
+                navigate('/auth')
+              }}
+            >
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={() => {
-                logout()
-                navigate('/auth')
-              }}
-              aria-label="Log out"
+              onClick={() => navigate('/')}
+              aria-label="Back to dashboard"
               className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
             >
-              <LogoutIcon />
+              <BackToDashboardIcon />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Log out</TooltipContent>
+          <TooltipContent>Back to dashboard</TooltipContent>
         </Tooltip>
       </div>
       <div
