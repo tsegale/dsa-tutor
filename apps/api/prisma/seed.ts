@@ -12,9 +12,6 @@ const TOPICS = [
   { name: 'heap-sort', displayName: 'Heap Sort', track: 'SORTING', difficulty: 'INTERMEDIATE', description: 'Build a max-heap then repeatedly extract the maximum element.', estimatedMinutes: 14, isLocked: false, order: 37 },
   { name: 'counting-sort', displayName: 'Counting Sort', track: 'SORTING', difficulty: 'INTERMEDIATE', description: 'Count element frequencies then reconstruct the sorted array in linear time.', estimatedMinutes: 12, isLocked: false, order: 38 },
   { name: 'radix-sort', displayName: 'Radix Sort (LSD)', track: 'SORTING', difficulty: 'ADVANCED', description: 'Sort digit by digit from least to most significant using stable bucket passes.', estimatedMinutes: 14, isLocked: false, order: 39 },
-  { name: 'binary-search', displayName: 'Binary Search', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Search a sorted array by repeatedly halving the search space.', estimatedMinutes: 6, isLocked: false, order: 999 },
-  { name: 'linear-search', displayName: 'Linear Search', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Check each element one by one until the target is found.', estimatedMinutes: 4, isLocked: false, order: 999 },
-  { name: 'stack', displayName: 'Stack', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Last-in first-out data structure with push and pop operations.', estimatedMinutes: 6, isLocked: false, order: 999 },
   // Superseded by singly/doubly/circular-linked-list below once the
   // Foundations track was built out - kept (rather than deleted) since a
   // student session may already reference it, but unlocked so it isn't a
