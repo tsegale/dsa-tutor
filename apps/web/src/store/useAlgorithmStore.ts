@@ -125,8 +125,11 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   },
 
   setMode: (mode) => {
+    // Preserves stepIndex: a student mid-run who switches modes (e.g.
+    // Demo to Practice) keeps their place instead of silently losing
+    // progress back to step 1 with no warning.
     clearPlaybackInterval()
-    set({ mode, stepIndex: 0, isPlaying: false })
+    set({ mode, isPlaying: false })
   },
 
   setAlgorithm: (name, snapshots) => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -29,6 +29,7 @@ import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
 import { calculateMastery, gateScaffoldingReduction, type MasteryMetrics } from '@/utils/masteryScore'
 import { computeMistakePath } from '@/engine/mistakePath'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
@@ -303,6 +304,7 @@ export default function AlgorithmPage() {
   const mode = useAlgorithmStore((state) => state.mode)
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
   const sessionId = useAlgorithmStore((state) => state.sessionId)
+  const sessionTotalPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
   const setScaffoldingLevel = useAlgorithmStore((state) => state.setScaffoldingLevel)
   const setScaffoldingReasoning = useAlgorithmStore((state) => state.setScaffoldingReasoning)
   const { user, refreshUser } = useAuth()
@@ -317,7 +319,19 @@ export default function AlgorithmPage() {
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
+  const { isTooSmall, isCompact } = useLayoutBreakpoint()
+  const [compactTab, setCompactTab] = useState<'canvas' | 'controls' | 'tutor'>('canvas')
   const [activeTab, setActiveTab] = useState(1)
+
+  // Entering Practice or Hands-On forces the AI Tutor tab (1) - a student
+  // who left Complexity or Pseudocode open in Demo mode should not have
+  // Socratic feedback and hints land on a tab they can't see.
+  useEffect(() => {
+    if (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) {
+      setActiveTab(1)
+    }
+  }, [mode])
+
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
   const [pendingBadge, setPendingBadge] = useState<string | null>(null)
   const [streakToastVisible, setStreakToastVisible] = useState(false)
@@ -575,8 +589,14 @@ export default function AlgorithmPage() {
 
   // Seed the starting mode from the URL once, on mount. ModeToggle owns
   // in-page switching after this; it never touches the URL, so there's
-  // no risk of this effect fighting a manual toggle.
-  useEffect(() => {
+  // no risk of this effect fighting a manual toggle - EXCEPT that a plain
+  // useEffect only fires after the browser paints, leaving a real window
+  // where the mode buttons are already visible and clickable before this
+  // runs. A student's first click landing in that window got silently
+  // overwritten back to the URL's mode a moment later (looked like the
+  // first click "did nothing"). useLayoutEffect fires before paint, so
+  // there's nothing on screen yet for a click to race against.
+  useLayoutEffect(() => {
     const modeParam = searchParams.get('mode')
     setMode(modeParam === 'PRACTICE' ? AlgorithmMode.PRACTICE : AlgorithmMode.DEMO)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -670,6 +690,197 @@ export default function AlgorithmPage() {
     void answer
   }
 
+  const canvasAreaChildren = isImplemented ? (
+    <div className="flex h-full w-full flex-col">
+      {/* Its own shrinking viewport, separate from PredictionZone below -
+          PredictionZone used to be an absolute overlay on top of this whole
+          area, hiding whatever canvas content sat under its bottom 35%
+          (e.g. bar value labels). Making it a real flex sibling instead
+          reserves it real space, so the canvas above shrinks to fit and
+          nothing ends up occluded. */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <motion.div
+          animate={{ scale: focusModeActive ? 1.02 : 1 }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className="flex h-full w-full items-center justify-center p-4"
+        >
+          <div
+            className={cn(
+              'h-full w-full rounded-[12px]',
+              isPlaying && mode === AlgorithmMode.DEMO && !prefersReducedMotion && 'canvas-pulse-border',
+            )}
+          >
+            <CanvasContainer
+              mistakePath={mistakePath}
+              onMistakePathComplete={() => setMistakePath(null)}
+              mistakeLabel={mistakeLabel}
+            />
+          </div>
+        </motion.div>
+
+        <ChallengeHintBanner />
+
+        {focusModeActive && (
+          <div className="absolute right-4 bottom-4 z-20 rounded-full bg-active px-3 py-1.5 text-xs font-medium text-white shadow-md">
+            Focus Mode
+          </div>
+        )}
+
+        {explanationLinkVisible && (
+          <button
+            type="button"
+            onClick={openExplanationTab}
+            className="absolute bottom-4 left-4 z-20 rounded-full border border-primary bg-white px-3 py-1.5 text-xs font-medium text-primary shadow-md dark:bg-dark-surface"
+          >
+            Explanation available
+          </button>
+        )}
+      </div>
+
+      <PredictionZone
+        onSubmit={handlePredictionSubmit}
+        onHintRequested={handleHintRequested}
+        onPredictionResult={handlePredictionResult}
+        setMistakeAnalysis={setMistakeAnalysis}
+        setMistakeHint={setMistakeHint}
+        setMistakeCounterfactual={setMistakeCounterfactual}
+        hint={hint}
+        setHint={setHint}
+      />
+    </div>
+  ) : (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+      <span className="text-lg font-semibold text-text-primary">
+        {currentTopic?.displayName ?? algorithmNameParam} coming soon
+      </span>
+      <span className="text-sm text-text-muted">
+        This algorithm hasn't been built yet. Bubble Sort is the only one available right now.
+      </span>
+    </div>
+  )
+
+  const feynmanIsFullCompletion = snapshotArray[stepIndex]?.isFinalStep ?? false
+
+  const overlaysAndModals = (
+    <>
+      <FocusModeOverlay />
+      <KeyboardShortcutsModal open={shortcutsModalOpen} onClose={() => setShortcutsModalOpen(false)} />
+      <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
+      <StreakToast
+        streakCount={streakCountForToast}
+        visible={streakToastVisible}
+        onDismiss={() => setStreakToastVisible(false)}
+      />
+      <ScaffoldingTransitionToast
+        message={scaffoldingTransitionMessage}
+        onDismiss={() => setScaffoldingTransitionMessage(null)}
+      />
+      {showFeynman && sessionId && (
+        <FeynmanModal
+          algorithmName={algorithmName}
+          isFullCompletion={feynmanIsFullCompletion}
+          completionContext={
+            feynmanIsFullCompletion
+              ? Array.isArray(snapshotArray[0]?.dataStructureState)
+                ? `You just completed a full ${algorithmName} sort on the array [${(
+                    snapshotArray[0]?.dataStructureState as number[]
+                  ).join(', ')}]`
+                : `You just completed a full run of ${algorithmName}.`
+              : `Reviewing ${algorithmName} at step ${stepIndex + 1} of ${snapshotArray.length}, after ${sessionTotalPredictions} prediction${sessionTotalPredictions === 1 ? '' : 's'} so far this run.`
+          }
+          sessionId={sessionId}
+          onClose={() => setShowFeynman(false)}
+        />
+      )}
+    </>
+  )
+
+  if (isTooSmall) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-3 bg-white px-6 text-center dark:bg-dark-background">
+        <span className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
+          DSA Tutor needs a larger screen
+        </span>
+        <p className="max-w-xs text-sm text-text-muted dark:text-dark-text-secondary">
+          The algorithm canvas, controls, and AI tutor panel need more room than this screen provides. Please switch
+          to a tablet, laptop, or desktop to continue.
+        </p>
+      </div>
+    )
+  }
+
+  if (isCompact) {
+    return (
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-white dark:bg-dark-background">
+        <TopBar />
+        <div className="relative flex-1 overflow-hidden">
+          {compactTab === 'canvas' && (
+            <div className="relative h-full w-full overflow-hidden" data-canvas-area>
+              {canvasAreaChildren}
+            </div>
+          )}
+          {compactTab === 'controls' && (
+            <div className="h-full overflow-y-auto bg-white dark:bg-dark-surface">
+              <LeftPanel
+                collapsed={false}
+                onToggle={() => {}}
+                difficulty={currentTopic?.difficulty ?? 'BEGINNER'}
+                fullWidth
+              />
+            </div>
+          )}
+          {compactTab === 'tutor' && (
+            <div className="h-full overflow-y-auto bg-white dark:bg-dark-surface">
+              <RightPanel
+                collapsed={false}
+                onToggle={() => {}}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                mistakeAnalysis={mistakeAnalysis}
+                mistakeHint={mistakeHint}
+                mistakeCounterfactual={mistakeCounterfactual}
+                onDismissMistake={() => {
+                  setMistakeAnalysis(null)
+                  setMistakeHint(null)
+                  setMistakeCounterfactual(null)
+                }}
+                hint={hint}
+                fullWidth
+              />
+            </div>
+          )}
+        </div>
+
+        <nav className="grid shrink-0 grid-cols-3 border-t border-border bg-white text-xs font-medium dark:border-dark-border dark:bg-dark-surface">
+          {(
+            [
+              ['canvas', 'Canvas'],
+              ['controls', 'Controls'],
+              ['tutor', 'AI Tutor'],
+            ] as const
+          ).map(([tab, label]) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setCompactTab(tab)}
+              aria-pressed={compactTab === tab}
+              className={cn(
+                'py-3',
+                compactTab === tab
+                  ? 'border-t-2 border-primary text-primary'
+                  : 'border-t-2 border-transparent text-text-muted dark:text-dark-text-secondary',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {overlaysAndModals}
+      </div>
+    )
+  }
+
   return (
     <div
       style={{
@@ -702,66 +913,7 @@ export default function AlgorithmPage() {
       </motion.div>
 
       <div style={{ gridArea: 'canvas', overflow: 'hidden', position: 'relative' }} data-canvas-area>
-        {isImplemented ? (
-          <>
-            <motion.div
-              animate={{ scale: focusModeActive ? 1.02 : 1 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="flex h-full w-full items-center justify-center p-4"
-            >
-              <div
-                className={cn(
-                  'h-full w-full rounded-[12px]',
-                  isPlaying && mode === AlgorithmMode.DEMO && !prefersReducedMotion && 'canvas-pulse-border',
-                )}
-              >
-                <CanvasContainer
-                  mistakePath={mistakePath}
-                  onMistakePathComplete={() => setMistakePath(null)}
-                  mistakeLabel={mistakeLabel}
-                />
-              </div>
-            </motion.div>
-
-            <PredictionZone
-              onSubmit={handlePredictionSubmit}
-              onHintRequested={handleHintRequested}
-              onPredictionResult={handlePredictionResult}
-              setMistakeAnalysis={setMistakeAnalysis}
-              setMistakeHint={setMistakeHint}
-              setMistakeCounterfactual={setMistakeCounterfactual}
-              hint={hint}
-              setHint={setHint}
-            />
-
-            <ChallengeHintBanner />
-
-            {focusModeActive && (
-              <div className="absolute right-4 bottom-4 z-20 rounded-full bg-active px-3 py-1.5 text-xs font-medium text-white shadow-md">
-                Focus Mode
-              </div>
-            )}
-
-            {explanationLinkVisible && (
-              <button
-                type="button"
-                onClick={openExplanationTab}
-                className="absolute bottom-4 left-4 z-20 rounded-full border border-primary bg-white px-3 py-1.5 text-xs font-medium text-primary shadow-md dark:bg-dark-surface"
-              >
-                Explanation available
-              </button>
-            )}
-          </>
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
-            <span className="text-lg font-semibold text-text-primary">
-              {currentTopic?.displayName ?? algorithmNameParam} coming soon
-            </span>
-            <span className="text-sm text-text-muted">
-              This algorithm hasn't been built yet. Bubble Sort is the only one available right now.
-            </span>
-          </div>
-        )}
+        {canvasAreaChildren}
       </div>
 
       <motion.div
@@ -786,32 +938,7 @@ export default function AlgorithmPage() {
         />
       </motion.div>
 
-      <FocusModeOverlay />
-      <KeyboardShortcutsModal open={shortcutsModalOpen} onClose={() => setShortcutsModalOpen(false)} />
-      <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
-      <StreakToast
-        streakCount={streakCountForToast}
-        visible={streakToastVisible}
-        onDismiss={() => setStreakToastVisible(false)}
-      />
-      <ScaffoldingTransitionToast
-        message={scaffoldingTransitionMessage}
-        onDismiss={() => setScaffoldingTransitionMessage(null)}
-      />
-      {showFeynman && sessionId && (
-        <FeynmanModal
-          algorithmName={algorithmName}
-          completionContext={
-            Array.isArray(snapshotArray[0]?.dataStructureState)
-              ? `You just completed a full ${algorithmName} sort on the array [${(
-                  snapshotArray[0]?.dataStructureState as number[]
-                ).join(', ')}]`
-              : `You just completed a full run of ${algorithmName}.`
-          }
-          sessionId={sessionId}
-          onClose={() => setShowFeynman(false)}
-        />
-      )}
+      {overlaysAndModals}
     </div>
   )
 }

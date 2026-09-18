@@ -55,12 +55,19 @@ describe('useAlgorithmStore', () => {
     expect(useAlgorithmStore.getState().isPlaying).toBe(false)
   })
 
-  it('setMode changes mode and resets stepIndex to 0', () => {
+  it('setMode changes mode and preserves stepIndex', () => {
     useAlgorithmStore.setState({ stepIndex: 2 })
     useAlgorithmStore.getState().setMode(AlgorithmMode.PRACTICE)
 
     expect(useAlgorithmStore.getState().mode).toBe(AlgorithmMode.PRACTICE)
-    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(2)
+  })
+
+  it('setMode stops playback in progress', () => {
+    useAlgorithmStore.setState({ isPlaying: true })
+    useAlgorithmStore.getState().setMode(AlgorithmMode.PRACTICE)
+
+    expect(useAlgorithmStore.getState().isPlaying).toBe(false)
   })
 
   it('addXP accumulates across calls and ignores negative values', () => {
