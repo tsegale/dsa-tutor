@@ -294,3 +294,14 @@ export function buildHeapArray(heapType: HeapType, values: number[]): number[] {
   const last = snapshots[snapshots.length - 1]
   return last ? [...(last.dataStructureState as HeapState).array] : []
 }
+
+/**
+ * Single source of truth for every heap page's starting array and the
+ * Insert sidebar control's default value, so the registry's defaultInput,
+ * the sidebar's seeded base, and the value shown in the input can never
+ * drift apart. Not present in HEAP_DEFAULT_SEED and larger than every
+ * value in it, so it always reads as "a new value to add", never as the
+ * value the seeded demo sequence is currently narrating.
+ */
+export const HEAP_DEFAULT_SEED = [15, 3, 17, 10, 84, 19, 6, 22, 9]
+export const HEAP_DEFAULT_INSERT_VALUE = 90

@@ -32,11 +32,28 @@ import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { jumpSearchEngine } from '@/engine/jumpSearch'
 import { interpolationSearchEngine } from '@/engine/interpolationSearch'
 import { exponentialSearchEngine } from '@/engine/exponentialSearch'
-import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTNode } from '@/engine/bst'
+import {
+  bstInsertEngine,
+  bstSearchEngine,
+  bstDeleteEngine,
+  BST_DEFAULT_SEED,
+  BST_DEFAULT_SEARCH_TARGET,
+  BST_DEFAULT_DELETE_TARGET,
+  BST_DEFAULT_INSERT_VALUE,
+  type BSTNode,
+} from '@/engine/bst'
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from '@/engine/treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLNode } from '@/engine/avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBNode } from '@/engine/redBlackTree'
-import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from '@/engine/heap'
+import {
+  maxHeapInsertEngine,
+  maxHeapDeleteEngine,
+  minHeapInsertEngine,
+  minHeapDeleteEngine,
+  buildHeapArray,
+  HEAP_DEFAULT_SEED,
+  HEAP_DEFAULT_INSERT_VALUE,
+} from '@/engine/heap'
 import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState, type TrieNode } from '@/engine/trie'
 import { countingSortEngine } from '@/engine/countingSort'
 import { radixSortEngine } from '@/engine/radixSort'
@@ -89,7 +106,7 @@ const DQ_SEED: Array<{ op: 'pushFront' | 'pushBack'; value: number }> = [
   { op: 'pushBack', value: 8 },
 ]
 const LL_SEED = [3, 7, 1]
-const BST_SEED = [8, 4, 12, 2, 6, 10, 14]
+const BST_SEED = BST_DEFAULT_SEED
 
 function bstRootFor(values: number[]): BSTNode | null {
   const snapshots = bstInsertEngine(values)
@@ -478,7 +495,13 @@ function SearchControls({ slug }: { slug: string }) {
 // all three buttons on every page.
 function BSTControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [value, setValue] = useState('7')
+  const defaultValue =
+    slug === 'bst-search'
+      ? String(BST_DEFAULT_SEARCH_TARGET)
+      : slug === 'bst-delete'
+        ? String(BST_DEFAULT_DELETE_TARGET)
+        : String(BST_DEFAULT_INSERT_VALUE)
+  const [value, setValue] = useState(defaultValue)
   const target = Number(value) || 0
 
   if (slug === 'bst-search') {
@@ -562,7 +585,7 @@ function RBControls({ slug }: { slug: string }) {
   )
 }
 
-const HEAP_SEED = [15, 3, 17, 10, 84, 19, 6, 22, 9]
+const HEAP_SEED = HEAP_DEFAULT_SEED
 
 function trieRootFor(words: string[]): TrieNode {
   const snapshots = trieInsertEngine(words)
@@ -571,7 +594,7 @@ function trieRootFor(words: string[]): TrieNode {
 
 function HeapControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [value, setValue] = useState('7')
+  const [value, setValue] = useState(String(HEAP_DEFAULT_INSERT_VALUE))
   const target = Number(value) || 0
   const isMax = slug.startsWith('max-heap')
   const isDelete = slug.endsWith('delete')
@@ -1238,7 +1261,7 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'bst':
     case 'bst-search':
     case 'bst-delete':
-      return <BSTControls slug={slug} />
+      return <BSTControls key={slug} slug={slug} />
     case 'tree-inorder':
     case 'tree-preorder':
     case 'tree-postorder':

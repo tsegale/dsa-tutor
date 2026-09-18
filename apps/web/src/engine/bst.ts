@@ -88,6 +88,21 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
 }
 
 /**
+ * Single source of truth for every BST page's starting tree and default
+ * operation target - the registry's defaultInput/defaultTarget, the
+ * sidebar's seeded search/delete base, and each control's own input
+ * default all read from these so the guidance text, the seeded tree, and
+ * the value shown in the input can never drift apart again.
+ */
+export const BST_DEFAULT_SEED = [8, 4, 12, 2, 6, 10, 14]
+export const BST_DEFAULT_SEARCH_TARGET = 6
+export const BST_DEFAULT_DELETE_TARGET = 4
+// Not present in BST_DEFAULT_SEED, and larger than every value in it - an
+// unambiguous "new value" default for the Insert control, never mistaken
+// for a value the seeded demo sequence is currently narrating.
+export const BST_DEFAULT_INSERT_VALUE = 20
+
+/**
  * Pure snapshot engine for BST insertion. Inserts each value in
  * `values` one at a time, producing a BST_DIRECTION snapshot for every
  * node compared along the way (including the empty slot the value is

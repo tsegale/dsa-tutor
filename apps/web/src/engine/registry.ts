@@ -11,11 +11,26 @@ import { shellSortEngine } from './shellSort'
 import { heapSortEngine } from './heapSort'
 import { countingSortEngine } from './countingSort'
 import { radixSortEngine } from './radixSort'
-import { bstInsertEngine, bstSearchEngine, bstDeleteEngine, type BSTState } from './bst'
+import {
+  bstInsertEngine,
+  bstSearchEngine,
+  bstDeleteEngine,
+  BST_DEFAULT_SEED,
+  BST_DEFAULT_SEARCH_TARGET,
+  BST_DEFAULT_DELETE_TARGET,
+  type BSTState,
+} from './bst'
 import { inorderEngine, preorderEngine, postorderEngine, levelorderEngine } from './treeTraversal'
 import { avlInsertEngine, avlDeleteEngine, type AVLState } from './avlTree'
 import { rbInsertEngine, rbDeleteEngine, type RBState } from './redBlackTree'
-import { maxHeapInsertEngine, maxHeapDeleteEngine, minHeapInsertEngine, minHeapDeleteEngine, buildHeapArray } from './heap'
+import {
+  maxHeapInsertEngine,
+  maxHeapDeleteEngine,
+  minHeapInsertEngine,
+  minHeapDeleteEngine,
+  buildHeapArray,
+  HEAP_DEFAULT_SEED,
+} from './heap'
 import { trieInsertEngine, trieSearchEngine, trieDeleteEngine, DEFAULT_TRIE_WORDS, type TrieState } from './trie'
 import { bfsNodeGraphEngine } from './bfs'
 import { dfsNodeGraphEngine } from './dfs'
@@ -190,29 +205,29 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.INTERMEDIATE,
     description: 'A tree where left children are smaller and right children are larger than the parent.',
     estimatedMinutes: 12,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultInput: BST_DEFAULT_SEED,
   },
   {
     algorithmName: 'bst-search',
     displayName: 'BST Search',
-    engineFunction: (input) => bstSearchEngine(rootFromInput(input), 6),
+    engineFunction: (input) => bstSearchEngine(rootFromInput(input), BST_DEFAULT_SEARCH_TARGET),
     track: AlgorithmTrack.TREES,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Find a value in a Binary Search Tree by comparing at each node and going left or right.',
     estimatedMinutes: 10,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
-    defaultTarget: 6,
+    defaultInput: BST_DEFAULT_SEED,
+    defaultTarget: BST_DEFAULT_SEARCH_TARGET,
   },
   {
     algorithmName: 'bst-delete',
     displayName: 'BST Delete',
-    engineFunction: (input) => bstDeleteEngine(rootFromInput(input), 4),
+    engineFunction: (input) => bstDeleteEngine(rootFromInput(input), BST_DEFAULT_DELETE_TARGET),
     track: AlgorithmTrack.TREES,
     difficulty: Difficulty.ADVANCED,
     description: 'Remove a node from a BST, handling three cases: leaf, one child, and two children.',
     estimatedMinutes: 14,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
-    defaultTarget: 4,
+    defaultInput: BST_DEFAULT_SEED,
+    defaultTarget: BST_DEFAULT_DELETE_TARGET,
   },
   {
     algorithmName: 'tree-inorder',
@@ -222,7 +237,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.BEGINNER,
     description: 'Visit all nodes Left, Root, Right. Produces sorted order on a BST.',
     estimatedMinutes: 8,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultInput: BST_DEFAULT_SEED,
   },
   {
     algorithmName: 'tree-preorder',
@@ -232,7 +247,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.BEGINNER,
     description: 'Visit all nodes Root, Left, Right. Used to copy or serialise a tree.',
     estimatedMinutes: 8,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultInput: BST_DEFAULT_SEED,
   },
   {
     algorithmName: 'tree-postorder',
@@ -242,7 +257,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.BEGINNER,
     description: 'Visit all nodes Left, Right, Root. Used to delete a tree or evaluate expressions.',
     estimatedMinutes: 8,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultInput: BST_DEFAULT_SEED,
   },
   {
     algorithmName: 'tree-level-order',
@@ -252,7 +267,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.BEGINNER,
     description: 'Visit all nodes level by level using a queue. Also called Breadth-First Traversal.',
     estimatedMinutes: 8,
-    defaultInput: [8, 4, 12, 2, 6, 10, 14],
+    defaultInput: BST_DEFAULT_SEED,
   },
   {
     algorithmName: 'avl-insert',
@@ -304,7 +319,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Insert into a max-heap by appending then sifting up while a child beats its parent.',
     estimatedMinutes: 10,
-    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+    defaultInput: HEAP_DEFAULT_SEED,
   },
   {
     algorithmName: 'max-heap-delete',
@@ -314,7 +329,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Remove the maximum (the root), move the last element up, and sift it down.',
     estimatedMinutes: 10,
-    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+    defaultInput: HEAP_DEFAULT_SEED,
   },
   {
     algorithmName: 'min-heap-insert',
@@ -324,7 +339,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Insert into a min-heap by appending then sifting up while a child beats its parent.',
     estimatedMinutes: 10,
-    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+    defaultInput: HEAP_DEFAULT_SEED,
   },
   {
     algorithmName: 'min-heap-delete',
@@ -334,7 +349,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Remove the minimum (the root), move the last element up, and sift it down.',
     estimatedMinutes: 10,
-    defaultInput: [15, 3, 17, 10, 84, 19, 6, 22, 9],
+    defaultInput: HEAP_DEFAULT_SEED,
   },
   {
     algorithmName: 'trie-insert',
