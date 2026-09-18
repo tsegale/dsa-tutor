@@ -35,20 +35,23 @@ interface LayoutNode {
   depth: number
 }
 
-const NODE_RADIUS = 22
-const LEVEL_HEIGHT = 90
-const MIN_GAP = 48
-const TOP_PADDING = 50
+const BASE_NODE_RADIUS = 22
+const MIN_NODE_RADIUS = 13
+const LEVEL_HEIGHT = 80
+const NODE_GAP = 16
+const VIEWBOX_PADDING = 28
 const DEFAULT_WIDTH = 600
 
 // Fixed hex palette (not Tailwind dark: classes) for the same reason
 // ArrayCanvas's bar states are fixed hex: these values are animated via
 // Framer's `animate={{ fill }}`, which needs a literal colour to
-// interpolate toward, not a class name - and this exact palette was
-// already verified legible in dark mode during Phase 16b.
-const DEFAULT_FILL = '#c7c9e8'
-const DEFAULT_TEXT = '#4a4d8a'
-const DEFAULT_EDGE = '#c7c9e8'
+// interpolate toward, not a class name. Default node contrast matches
+// GraphCanvas's unvisited-node treatment (white fill, near-black text,
+// light stroke) rather than the low-contrast lavender this used before.
+const DEFAULT_FILL = '#ffffff'
+const DEFAULT_TEXT = '#0f172a'
+const DEFAULT_STROKE = '#cbd5e1'
+const DEFAULT_EDGE = '#94a3b8'
 const CURRENT_FILL = '#f59e0b'
 const CURRENT_TEXT = '#78350f'
 const RB_RED_FILL = '#dc2626'
@@ -72,30 +75,59 @@ const RB_LEGEND: { label: string; colour: string }[] = [
   { label: 'Current (ring)', colour: CURRENT_FILL },
 ]
 
+interface TreeLayout {
+  nodes: LayoutNode[]
+  nodeRadius: number
+  fontSize: number
+  minX: number
+  maxX: number
+  maxDepth: number
+}
+
+const EMPTY_LAYOUT: TreeLayout = { nodes: [], nodeRadius: BASE_NODE_RADIUS, fontSize: 13, minX: 0, maxX: 0, maxDepth: 0 }
+
 /**
- * Reingold-Tilford-style layout simplified for binary trees: each
- * node's x is the midpoint of its children's x values (or its slot's
- * midpoint if it has none), computed bottom-up so no two subtrees can
- * overlap. Post-order (children pushed before their parent) so a
- * parent's x can be computed from already-placed children.
+ * In-order layout: each node's x is its rank in an in-order traversal,
+ * which guarantees no two nodes ever share a column regardless of shape,
+ * and y is purely a function of depth. The bounding box this produces is
+ * exactly the size of the tree's content (node count x depth), never the
+ * size of the container, so a 2-node tree in a wide canvas doesn't get
+ * stretched across it - the viewBox fit (see render) handles scaling
+ * that content box up or down to the available space.
  */
-function layoutBST(root: BSTNode | null, containerWidth: number): LayoutNode[] {
-  if (!root) return []
+function layoutBST(root: BSTNode | null): TreeLayout {
+  if (!root) return EMPTY_LAYOUT
+
+  let nodeCount = 0
+  let maxDepth = 0
+  ;(function measure(node: BSTNode | null, depth: number) {
+    if (!node) return
+    nodeCount++
+    maxDepth = Math.max(maxDepth, depth)
+    measure(node.left, depth + 1)
+    measure(node.right, depth + 1)
+  })(root, 0)
+
+  // Deeper or busier trees get smaller nodes so every level still fits
+  // legibly; shallow trees keep the full base radius.
+  const nodeRadius = Math.max(MIN_NODE_RADIUS, BASE_NODE_RADIUS - Math.max(0, maxDepth - 2) * 2)
+  const fontSize = Math.max(10, Math.round(nodeRadius * 0.6))
+  const spacing = nodeRadius * 2 + NODE_GAP
+
   const nodes: LayoutNode[] = []
-  const width = containerWidth > 0 ? containerWidth : DEFAULT_WIDTH
-
-  function assignPositions(node: BSTNode | null, depth: number, left: number, right: number): number {
-    if (!node) return (left + right) / 2
-    const mid = (left + right) / 2
-    const leftX = node.left ? assignPositions(node.left, depth + 1, left, mid - MIN_GAP / 2) : mid
-    const rightX = node.right ? assignPositions(node.right, depth + 1, mid + MIN_GAP / 2, right) : mid
-    const x = node.left && node.right ? (leftX + rightX) / 2 : mid
-    nodes.push({ node, x, y: depth * LEVEL_HEIGHT + TOP_PADDING, depth })
-    return x
+  let rank = 0
+  function assign(node: BSTNode | null, depth: number) {
+    if (!node) return
+    assign(node.left, depth + 1)
+    nodes.push({ node, x: rank * spacing, y: depth * LEVEL_HEIGHT, depth })
+    rank++
+    assign(node.right, depth + 1)
   }
+  assign(root, 0)
 
-  assignPositions(root, 0, 0, width)
-  return nodes
+  const minX = 0
+  const maxX = (nodeCount - 1) * spacing
+  return { nodes, nodeRadius, fontSize, minX, maxX, maxDepth }
 }
 
 export default function TreeCanvas({
@@ -106,11 +138,14 @@ export default function TreeCanvas({
 }: TreeCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
-  const masteryPercent = useAlgorithmStore(selectProgressPercent)
+  const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as TreeCanvasState | undefined
 
-  const layout = useMemo(() => layoutBST(state?.root ?? null, width), [state, width])
+  const { nodes: layout, nodeRadius, fontSize, minX, maxX, maxDepth } = useMemo(
+    () => layoutBST(state?.root ?? null),
+    [state],
+  )
 
   const idToValue = useMemo(() => new Map(layout.map((l) => [l.node.id, l.node.value])), [layout])
 
@@ -134,10 +169,17 @@ export default function TreeCanvas({
     return result
   }, [layout])
 
-  const maxDepth = layout.reduce((max, l) => Math.max(max, l.depth), 0)
-  const svgHeight = Math.max(height, maxDepth * LEVEL_HEIGHT + TOP_PADDING + NODE_RADIUS + 24)
+  // Content-fitted viewBox: origin and extent come from the tree's own
+  // bounding box (padded), not the container. preserveAspectRatio scales
+  // that box up or down to whatever space the canvas has, and centres it,
+  // so a 2-node tree in a wide panel isn't stretched edge to edge and a
+  // deep tree isn't clipped.
+  const viewBoxX = minX - nodeRadius - VIEWBOX_PADDING
+  const viewBoxY = -nodeRadius - VIEWBOX_PADDING
+  const viewBoxWidth = maxX - minX + 2 * (nodeRadius + VIEWBOX_PADDING)
+  const viewBoxHeight = maxDepth * LEVEL_HEIGHT + 2 * (nodeRadius + VIEWBOX_PADDING)
 
-  const masteryColorClass = masteryPercent >= 80 ? 'bg-success' : masteryPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
   if (!state) {
     return (
@@ -157,13 +199,13 @@ export default function TreeCanvas({
 
   if (!state.root) {
     const cx = width / 2
-    const cy = TOP_PADDING + NODE_RADIUS
+    const cy = BASE_NODE_RADIUS + VIEWBOX_PADDING
     return (
       <svg width={width} height={height} role="img" aria-label="Empty binary search tree">
         <circle
           cx={cx}
           cy={cy}
-          r={NODE_RADIUS}
+          r={BASE_NODE_RADIUS}
           fill="none"
           stroke="#c7c9e8"
           strokeWidth={2}
@@ -171,7 +213,7 @@ export default function TreeCanvas({
         />
         <text
           x={cx}
-          y={cy + NODE_RADIUS + 24}
+          y={cy + BASE_NODE_RADIUS + 24}
           textAnchor="middle"
           className="fill-text-muted text-sm dark:fill-dark-text-secondary"
         >
@@ -199,12 +241,12 @@ export default function TreeCanvas({
     <div className="flex h-full flex-col">
       <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Mastery</span>
+          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
           <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-            <div className={cn('h-full rounded-full', masteryColorClass)} style={{ width: `${masteryPercent}%` }} />
+            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
           <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-            {masteryPercent}%
+            {progressPercent}%
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -217,8 +259,15 @@ export default function TreeCanvas({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pt-8">
-        <svg width={width} height={svgHeight} role="img" aria-label={canvasLabel}>
+      <div className="flex-1 overflow-hidden pt-8">
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label={canvasLabel}
+        >
           {edges.map((edge) => {
             const onPath = state.path.includes(edge.parentId) && state.path.includes(edge.childId)
             return (
@@ -273,24 +322,26 @@ export default function TreeCanvas({
                 }
               >
                 <motion.circle
-                  r={NODE_RADIUS}
+                  r={nodeRadius}
                   animate={{ fill }}
-                  stroke={isUnbalanced ? '#dc2626' : rbColor && isCurrent ? '#f59e0b' : 'none'}
-                  strokeWidth={isUnbalanced || (rbColor && isCurrent) ? 3 : 0}
+                  stroke={
+                    isUnbalanced ? '#dc2626' : rbColor && isCurrent ? '#f59e0b' : fill === DEFAULT_FILL ? DEFAULT_STROKE : 'none'
+                  }
+                  strokeWidth={isUnbalanced || (rbColor && isCurrent) ? 3 : fill === DEFAULT_FILL ? 1.5 : 0}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
                 />
                 <text
                   textAnchor="middle"
                   dominantBaseline="central"
-                  style={{ fill: textFill, fontSize: 13, fontWeight: 500 }}
+                  style={{ fill: textFill, fontSize, fontWeight: 500 }}
                 >
                   {node.value}
                 </text>
                 {balanceFactor !== undefined && (
                   <text
                     textAnchor="middle"
-                    y={NODE_RADIUS + 14}
-                    style={{ fill: isUnbalanced ? '#dc2626' : '#6b7280', fontSize: 10, fontWeight: isUnbalanced ? 700 : 500 }}
+                    y={nodeRadius + 14}
+                    style={{ fill: isUnbalanced ? '#dc2626' : '#6b7280', fontSize: Math.max(9, fontSize - 3), fontWeight: isUnbalanced ? 700 : 500 }}
                   >
                     {`bf=${balanceFactor}`}
                   </text>
