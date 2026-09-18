@@ -67,6 +67,10 @@ interface LeftPanelProps {
   collapsed: boolean
   onToggle: () => void
   difficulty: string
+  /** Compact-layout tab mode (<1024px): renders full width, always expanded,
+   * with no rail/collapse toggle - there's no room for a docked rail once
+   * the panel is a full-screen tab instead of a sidebar. */
+  fullWidth?: boolean
 }
 
 const EXPANDED_WIDTH = 200
@@ -170,7 +174,7 @@ function generateRandomArray(): number[] {
   return Array.from({ length }, () => Math.floor(Math.random() * 20) + 1)
 }
 
-export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanelProps) {
+export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth = false }: LeftPanelProps) {
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
@@ -219,11 +223,14 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
   return (
     <motion.div
       id="left-panel"
-      animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
+      animate={fullWidth ? undefined : { width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="flex h-full flex-col overflow-hidden border-r border-border bg-white dark:bg-dark-surface"
+      className={cn(
+        'flex h-full flex-col overflow-hidden border-r border-border bg-white dark:bg-dark-surface',
+        fullWidth && 'w-full',
+      )}
     >
-      {collapsed ? (
+      {!fullWidth && collapsed ? (
         <div className="flex h-full flex-col items-center gap-2 py-3">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -291,7 +298,8 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
           </button>
         </div>
       ) : (
-        <div className="flex h-full flex-col gap-2 overflow-y-auto px-3 pt-3 pb-1">
+        <div className="flex h-full flex-col overflow-hidden pt-3">
+          <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-1">
           <section className="flex flex-col gap-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
               Playback
@@ -387,8 +395,13 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
               </Button>
             </section>
           )}
+        </div>
 
-          <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+        {/* Pinned outside the scroll container above so a tall Playback/
+            Controls section (e.g. Dijkstra's contextual controls) can never
+            push AI Tools out of view. */}
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
+          <section className="flex flex-col gap-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
               AI Tools
             </h3>
@@ -423,14 +436,17 @@ export default function LeftPanel({ collapsed, onToggle, difficulty }: LeftPanel
             </button>
           </section>
 
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Collapse panel"
-            className="flex items-center justify-center gap-1 self-start text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
-          >
-            <ChevronIcon pointRight={false} />
-          </button>
+          {!fullWidth && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Collapse panel"
+              className="flex items-center justify-center gap-1 self-start text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+            >
+              <ChevronIcon pointRight={false} />
+            </button>
+          )}
+        </div>
         </div>
       )}
     </motion.div>

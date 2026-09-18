@@ -6,6 +6,7 @@ import PseudocodePanel from '@/components/canvas/PseudocodePanel'
 import ComplexityPanel from '@/components/canvas/ComplexityPanel'
 import ScaffoldingFader from './ScaffoldingFader'
 import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
+import { cn } from '@/lib/utils'
 
 interface RightPanelProps {
   collapsed: boolean
@@ -17,6 +18,10 @@ interface RightPanelProps {
   mistakeCounterfactual: string | null
   onDismissMistake: () => void
   hint: string | null
+  /** Compact-layout tab mode (<1024px): renders full width, always expanded,
+   * with no rail/collapse toggle - there's no room for a docked rail once
+   * the panel is a full-screen tab instead of a sidebar. */
+  fullWidth?: boolean
 }
 
 const EXPANDED_WIDTH = 280
@@ -104,6 +109,7 @@ export default function RightPanel({
   mistakeCounterfactual,
   onDismissMistake,
   hint,
+  fullWidth = false,
 }: RightPanelProps) {
   const pseudocodeLine = useAlgorithmStore((state) => selectCurrentSnapshot(state)?.pseudocodeLine ?? null)
 
@@ -114,12 +120,15 @@ export default function RightPanel({
 
   return (
     <motion.div
-      animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
+      animate={fullWidth ? undefined : { width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="flex h-full flex-col overflow-hidden border-l border-border bg-white dark:bg-dark-surface"
+      className={cn(
+        'flex h-full flex-col overflow-hidden border-l border-border bg-white dark:bg-dark-surface',
+        fullWidth && 'w-full',
+      )}
       style={{ overflowX: 'hidden' }}
     >
-      {collapsed ? (
+      {!fullWidth && collapsed ? (
         <div className="flex h-full flex-col items-center gap-2 py-3">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -208,14 +217,16 @@ export default function RightPanel({
               <ComplexityPanel />
             </TabsContent>
           </Tabs>
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Collapse panel"
-            className="mt-2 flex items-center justify-center self-end text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
-          >
-            <ChevronIcon pointRight />
-          </button>
+          {!fullWidth && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Collapse panel"
+              className="mt-2 flex items-center justify-center self-end text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+            >
+              <ChevronIcon pointRight />
+            </button>
+          )}
         </div>
       )}
     </motion.div>
