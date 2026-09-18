@@ -57,11 +57,11 @@ const PADDING = 32
 
 type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted'
 
-const BAR_COLOURS: Record<BarState, { fill: string; value: string; opacity: number; glow?: string }> = {
-  neutral: { fill: '#c7c9e8', value: '#4a4d8a', opacity: 0.4 },
-  comparing: { fill: '#f59e0b', value: '#78350f', opacity: 1.0, glow: 'rgba(245,158,11,0.3)' },
-  swapping: { fill: '#7c3aed', value: '#ffffff', opacity: 1.0, glow: 'rgba(124,58,237,0.3)' },
-  sorted: { fill: '#16a34a', value: '#ffffff', opacity: 1.0 },
+const BAR_COLOURS: Record<BarState, { fill: string; opacity: number; glow?: string }> = {
+  neutral: { fill: '#c7c9e8', opacity: 0.4 },
+  comparing: { fill: '#f59e0b', opacity: 1.0, glow: 'rgba(245,158,11,0.3)' },
+  swapping: { fill: '#7c3aed', opacity: 1.0, glow: 'rgba(124,58,237,0.3)' },
+  sorted: { fill: '#16a34a', opacity: 1.0 },
 }
 
 // The four colours (neutral/comparing/swapping/sorted) are reused across
@@ -591,7 +591,7 @@ export default function ArrayCanvas({
             key={bar.index}
             layout
             transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: 'easeInOut' }}
-            style={isDraggableBar ? { opacity: displayOpacity, x: barDragX } : { opacity: displayOpacity }}
+            style={isDraggableBar ? { x: barDragX } : undefined}
             className={cn(
               'bar-group group',
               isActive && !prefersReducedMotion && 'animate-pulse-ring',
@@ -624,12 +624,17 @@ export default function ArrayCanvas({
                 opacity={0.5}
               />
             )}
+            {/* Opacity lives on the bar body only (the CLAUDE.md "inactive
+                elements: 40% opacity" rule), not the whole group - the
+                value/index labels below stay fully legible regardless of
+                whether this bar is the active one this step. */}
             <rect
               x={displayX}
               y={bar.y}
               width={bar.width}
               height={bar.height}
               rx={4}
+              opacity={displayOpacity}
               className="bar-group"
               style={{ fill: colours.fill }}
             />
@@ -663,12 +668,15 @@ export default function ArrayCanvas({
             >
               ⠿
             </text>
+            {/* On or just above the bar, horizontal, at readable size and
+                AA contrast - clamped so a tall (max-value) bar's label
+                never clips past the canvas's own top edge. */}
             <text
               x={displayX + bar.width / 2}
-              y={height - PADDING + 16}
+              y={Math.max(bar.y - 10, 16)}
               textAnchor="middle"
-              className="text-xs font-medium"
-              style={{ fill: colours.value }}
+              className="fill-text-primary text-[13px] font-semibold dark:fill-dark-text-primary"
+              style={{ pointerEvents: 'none' }}
             >
               {bar.value}
             </text>
