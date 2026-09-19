@@ -48,6 +48,10 @@ export default function Dashboard() {
   const { data: topics = [], isLoading } = useQuery({
     queryKey: ['topics'],
     queryFn: () => apiFetch<TopicDto[]>('/api/v1/topics'),
+    // Topics are seeded curriculum data, not per-user state - they only
+    // change on a deploy/reseed, so there is no reason to refetch on every
+    // mount or window focus.
+    staleTime: 10 * 60 * 1000,
   })
 
   function handleStart(topicName: string, mode: 'DEMO' | 'PRACTICE') {
