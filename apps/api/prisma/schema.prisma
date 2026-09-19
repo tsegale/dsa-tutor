@@ -67,6 +67,14 @@ model User {
   consentAt       DateTime?
   withdrawnAt     DateTime?
 
+  // SUS (System Usability Scale) - one submission per participant, taken
+  // once at the very end of the study (after the post-test), not per
+  // session. susResponses keeps the raw 1-5 answers for audit/reanalysis;
+  // susScore is the standard 0-100 score computed from them.
+  susResponses   Json?
+  susScore       Int?
+  susSubmittedAt DateTime?
+
   sessions           Session[]
   userBadges         UserBadge[]
   topicMasteries     TopicMastery[]

@@ -12,3 +12,10 @@ export function recordConsent() {
 export function withdrawFromStudy() {
   return apiFetch<{ withdrawn: boolean }>('/api/v1/study/withdraw', { method: 'POST' })
 }
+
+export function submitSus(responses: number[]) {
+  return apiFetch<{ score: number }>('/api/v1/study/sus', {
+    method: 'POST',
+    body: JSON.stringify({ responses }),
+  })
+}

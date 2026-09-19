@@ -39,7 +39,9 @@ export default function AssessmentPage() {
 
   const completeMutation = useMutation({
     mutationFn: () => completeAssessment(attempt!.id),
-    onSuccess: () => navigate('/', { replace: true }),
+    // The post-test is the last thing before the study's usability survey;
+    // the pre-test just returns to the dashboard to start practice sessions.
+    onSuccess: () => navigate(phase === 'post' ? '/sus' : '/', { replace: true }),
   })
 
   if (!code) {

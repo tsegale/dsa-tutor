@@ -87,3 +87,40 @@ export async function withdrawParticipant(userId: string): Promise<void> {
 
   await prisma.user.update({ where: { id: userId }, data: { withdrawnAt: new Date() } })
 }
+
+// Odd items (1-indexed) are worded positively, even items negatively -
+// the standard System Usability Scale scoring rule. Deterministic
+// arithmetic only, no LLM or statistics library involved.
+export function computeSusScore(responses: number[]): number {
+  if (responses.length !== 10 || responses.some((r) => !Number.isInteger(r) || r < 1 || r > 5)) {
+    throw new Error('INVALID_SUS_RESPONSES')
+  }
+
+  const contributions = responses.map((response, index) => {
+    const isOdd = index % 2 === 0 // index 0 = item 1
+    return isOdd ? response - 1 : 5 - response
+  })
+  const rawTotal = contributions.reduce((sum, c) => sum + c, 0)
+  return Math.round(rawTotal * 2.5)
+}
+
+/** One submission per participant, at the very end of the study - not per
+ * session. Idempotent: resubmitting after an existing score is stored is
+ * rejected rather than silently overwritten, since a changed answer this
+ * late would be a different data point, not a correction of the same one. */
+export async function submitSus(userId: string, responses: number[]): Promise<{ score: number }> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true, susScore: true } })
+  if (!user?.participantCode) {
+    throw new Error('NOT_A_PARTICIPANT')
+  }
+  if (user.susScore !== null) {
+    throw new Error('ALREADY_SUBMITTED')
+  }
+
+  const score = computeSusScore(responses)
+  await prisma.user.update({
+    where: { id: userId },
+    data: { susResponses: responses, susScore: score, susSubmittedAt: new Date() },
+  })
+  return { score }
+}

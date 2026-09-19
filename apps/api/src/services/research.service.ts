@@ -146,13 +146,13 @@ export async function exportSessionsCsv(): Promise<string> {
   const sessions = await prisma.session.findMany({
     where: { user: ACTIVE_PARTICIPANT_FILTER },
     include: {
-      user: { select: { participantCode: true } },
+      user: { select: { participantCode: true, susScore: true } },
       algorithmTopic: { select: { displayName: true } },
     },
     orderBy: { startTime: 'asc' },
   })
 
-  const header = ['participantCode', 'algorithm', 'mode', 'durationSeconds', 'mentalEffort', 'confidence']
+  const header = ['participantCode', 'algorithm', 'mode', 'durationSeconds', 'mentalEffort', 'confidence', 'susScore']
 
   const rows = sessions.map((session) => {
     const durationSeconds = session.endTime
@@ -165,6 +165,11 @@ export async function exportSessionsCsv(): Promise<string> {
       durationSeconds !== null ? String(durationSeconds) : '',
       session.mentalEffort !== null ? String(session.mentalEffort) : '',
       session.confidence !== null ? String(session.confidence) : '',
+      // SUS is one-per-participant (taken once, after the whole study),
+      // not per-session - repeated on every row for that participant since
+      // the spec calls for it in sessions.csv specifically, which has no
+      // separate per-participant row to hold it instead.
+      session.user.susScore !== null ? String(session.user.susScore) : '',
     ]
   })
 

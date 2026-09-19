@@ -18,6 +18,7 @@ const AlgorithmPage = lazy(() => import('@/pages/AlgorithmPage'))
 const EducatorDashboard = lazy(() => import('@/pages/EducatorDashboard'))
 const AssessmentPage = lazy(() => import('@/pages/AssessmentPage'))
 const ConsentPage = lazy(() => import('@/pages/ConsentPage'))
+const SusPage = lazy(() => import('@/pages/SusPage'))
 const Showcase = lazy(() => import('@/pages/Showcase'))
 const CanvasTest = lazy(() => import('@/pages/CanvasTest'))
 // Was a static import even though GlobalOnboarding only ever renders it for
@@ -136,6 +137,14 @@ export default function App() {
                   element={
                     <RequireAuth>
                       <ConsentPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/sus"
+                  element={
+                    <RequireAuth>
+                      <SusPage />
                     </RequireAuth>
                   }
                 />
