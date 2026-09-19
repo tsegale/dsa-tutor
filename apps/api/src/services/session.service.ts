@@ -50,6 +50,35 @@ export async function updateSession(
     },
     include: { algorithmTopic: true },
   })
+
+  // Written at session end only, and only when the caller actually sent a
+  // mastery snapshot to write - completing a session with no predictions
+  // (e.g. immediately navigating away) must not overwrite a real prior
+  // TopicMastery row with zeros.
+  if (dto.completed && dto.overallScore !== undefined && dto.totalPredictions) {
+    await prisma.topicMastery.upsert({
+      where: { userId_algorithmTopicId: { userId, algorithmTopicId: session.algorithmTopicId } },
+      update: {
+        overallScore: dto.overallScore,
+        conceptualScore: dto.conceptualScore ?? 0,
+        proceduralScore: dto.proceduralScore ?? 0,
+        totalPredictions: dto.totalPredictions,
+        correctPredictions: dto.correctPredictions ?? 0,
+        lastPracticedAt: new Date(),
+      },
+      create: {
+        userId,
+        algorithmTopicId: session.algorithmTopicId,
+        overallScore: dto.overallScore,
+        conceptualScore: dto.conceptualScore ?? 0,
+        proceduralScore: dto.proceduralScore ?? 0,
+        totalPredictions: dto.totalPredictions,
+        correctPredictions: dto.correctPredictions ?? 0,
+        lastPracticedAt: new Date(),
+      },
+    })
+  }
+
   return toSessionDto(session)
 }
 

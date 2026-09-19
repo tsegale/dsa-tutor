@@ -1,5 +1,6 @@
+import { useQuery } from '@tanstack/react-query'
 import { BADGE_DEFINITIONS, type BadgeTier } from '@/data/badges'
-import { getAwardedBadgeIds } from '@/services/badgeService'
+import { fetchAwardedBadgeIds, getCachedAwardedBadgeIds } from '@/services/badgeService'
 import BadgeIcon from '@/components/ui/BadgeIcon'
 
 const TIER_BORDER: Record<BadgeTier, string> = {
@@ -19,7 +20,15 @@ function LockIcon() {
 }
 
 export default function BadgesSection() {
-  const awardedIds = new Set(getAwardedBadgeIds())
+  // The server (UserBadge table) is authoritative; the cached ids give an
+  // instant first paint (and a fallback if the fetch fails) instead of
+  // showing every badge as locked while the request is in flight.
+  const { data: serverAwardedIds } = useQuery({
+    queryKey: ['badges', 'mine'],
+    queryFn: fetchAwardedBadgeIds,
+    placeholderData: getCachedAwardedBadgeIds,
+  })
+  const awardedIds = new Set(serverAwardedIds ?? [])
   const awardedCount = BADGE_DEFINITIONS.filter((b) => awardedIds.has(b.id)).length
 
   return (

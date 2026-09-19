@@ -64,6 +64,15 @@ export interface PredictionOutcomeDetail {
    * array state the student's buggy code actually produces, so the page
    * level can play it on the canvas via the Phase 15 mistake path. */
   codeEvalBuggyState?: { resultingState: number[]; activeIndices: number[] } | null
+  // What the student actually saw from the feedback mechanism, for
+  // research data capture (remediation doc Phase 8.1) - false/null for
+  // Code Editor submissions, which don't call the AI prediction endpoint.
+  aiGenerated: boolean
+  feedbackText: string | null
+  hintText: string | null
+  counterfactualText: string | null
+  aiMisconceptionCategory: MisconceptionCategory | null
+  hintIndexAtResolve: number
 }
 
 const CODE_EVAL_XP = 5
@@ -1755,6 +1764,12 @@ export default function PredictionZone({
       junctionType,
       junctionDifficulty,
       bottomedOut: isBottomedOut,
+      aiGenerated: response.aiGenerated,
+      feedbackText: response.consequenceExplanation || null,
+      hintText: response.correct ? null : response.socraticHint || null,
+      counterfactualText: response.correct ? null : response.counterfactualTrace || null,
+      aiMisconceptionCategory: response.correct ? null : response.aiMisconceptionCategory,
+      hintIndexAtResolve: attempt,
     })
 
     if (response.correct) {
@@ -1868,6 +1883,15 @@ export default function PredictionZone({
       junctionType,
       junctionDifficulty,
       bottomedOut: false,
+      // Code Editor submissions never call the AI prediction endpoint -
+      // corrective_hint/bug_type come from a different (code-eval) prompt
+      // that this DTO shape doesn't have a slot for yet.
+      aiGenerated: false,
+      feedbackText: null,
+      hintText: result.correctiveHint || null,
+      counterfactualText: null,
+      aiMisconceptionCategory: null,
+      hintIndexAtResolve: 0,
       isCodeEval: true,
       codeEvalBuggyState:
         !result.isLogicallyCorrect && !result.hasSyntaxError && result.executeVisually && result.resultingState

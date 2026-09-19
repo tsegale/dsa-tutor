@@ -121,6 +121,9 @@ export default function FeynmanModal({
           interactionType: 'FEYNMAN',
           scaffoldingLevelAtTime: scaffoldingLevel,
           masteryScoreAtTime: finalResult.score,
+          aiGenerated: true,
+          feedbackText: finalResult.feedbackSummary || null,
+          hintText: finalResult.followUpQuestion,
         }),
       }).catch(() => {
         // Interaction logging is best-effort; must never block the flow.

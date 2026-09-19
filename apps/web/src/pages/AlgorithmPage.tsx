@@ -345,6 +345,14 @@ export default function AlgorithmPage() {
   const [streakToastVisible, setStreakToastVisible] = useState(false)
   const [streakCountForToast, setStreakCountForToast] = useState(0)
   const [masteryMetrics, setMasteryMetrics] = useState<MasteryMetrics>(INITIAL_MASTERY_METRICS)
+  // Mirrors masteryMetrics for the session-end cleanup effect below, whose
+  // dependency array doesn't include masteryMetrics - without this it
+  // would close over the value from whenever the effect last re-ran, not
+  // the latest one, and write a stale mastery snapshot at session end.
+  const masteryMetricsRef = useRef(masteryMetrics)
+  useEffect(() => {
+    masteryMetricsRef.current = masteryMetrics
+  }, [masteryMetrics])
   const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
   const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
   const [mistakePath, setMistakePath] = useState<AlgorithmSnapshot[] | null>(null)
@@ -493,6 +501,13 @@ export default function AlgorithmPage() {
           junctionDifficulty: detail.junctionDifficulty,
           scaffoldingLevelAtTime: currentLevel,
           masteryScoreAtTime: assessment.overallScore,
+          bottomedOut: detail.bottomedOut,
+          aiGenerated: detail.aiGenerated,
+          feedbackText: detail.feedbackText,
+          hintText: detail.hintText,
+          counterfactualText: detail.counterfactualText,
+          aiMisconceptionCategory: detail.aiMisconceptionCategory,
+          hintIndexAtResolve: detail.hintIndexAtResolve,
         }),
       }).catch(() => {
         // Interaction logging is best-effort; it must never block the
@@ -702,9 +717,18 @@ export default function AlgorithmPage() {
       cancelled = true
       const activeSessionId = useAlgorithmStore.getState().sessionId
       if (activeSessionId) {
+        const finalAssessment = calculateMastery(masteryMetricsRef.current)
         apiFetch(`/api/v1/sessions/${activeSessionId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ endTime: new Date().toISOString(), completed: true }),
+          body: JSON.stringify({
+            endTime: new Date().toISOString(),
+            completed: true,
+            overallScore: finalAssessment.overallScore,
+            conceptualScore: finalAssessment.conceptualScore,
+            proceduralScore: finalAssessment.proceduralScore,
+            totalPredictions: masteryMetricsRef.current.totalPredictions,
+            correctPredictions: masteryMetricsRef.current.correctPredictions,
+          }),
         }).catch(() => {})
       }
     }

@@ -16,8 +16,47 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       ...(dto.scaffoldingLevelAtTime && { scaffoldingLevelAtTime: dto.scaffoldingLevelAtTime }),
       ...(dto.masteryScoreAtTime !== undefined && { masteryScoreAtTime: dto.masteryScoreAtTime }),
       ...(dto.interactionType && { interactionType: dto.interactionType }),
+      aiGenerated: dto.aiGenerated ?? false,
+      feedbackText: dto.feedbackText ?? null,
+      hintText: dto.hintText ?? null,
+      counterfactualText: dto.counterfactualText ?? null,
+      aiMisconceptionCategory: dto.aiMisconceptionCategory ?? null,
+      bottomedOut: dto.bottomedOut ?? false,
+      hintIndexAtResolve: dto.hintIndexAtResolve ?? 0,
+      aiLatencyMs: dto.aiLatencyMs ?? null,
+      aiModel: dto.aiModel ?? null,
+      promptVersion: dto.promptVersion ?? null,
     },
   })
+  return toInteractionDto(interaction)
+}
+
+function toInteractionDto(interaction: {
+  id: string
+  sessionId: string
+  stepIndex: number
+  predictionSubmitted: string | null
+  predictionCorrect: boolean | null
+  misconceptionCategory: string | null
+  hintsRequested: number
+  timeSpentSeconds: number
+  criticalJunctionType: string | null
+  junctionDifficulty: string | null
+  scaffoldingLevelAtTime: string
+  masteryScoreAtTime: number
+  interactionType: string
+  createdAt: Date
+  aiGenerated: boolean
+  feedbackText: string | null
+  hintText: string | null
+  counterfactualText: string | null
+  aiMisconceptionCategory: string | null
+  bottomedOut: boolean
+  hintIndexAtResolve: number
+  aiLatencyMs: number | null
+  aiModel: string | null
+  promptVersion: string | null
+}): InteractionDto {
   return {
     id: interaction.id,
     sessionId: interaction.sessionId,
@@ -33,6 +72,16 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
     masteryScoreAtTime: interaction.masteryScoreAtTime,
     interactionType: interaction.interactionType,
     createdAt: interaction.createdAt.toISOString(),
+    aiGenerated: interaction.aiGenerated,
+    feedbackText: interaction.feedbackText,
+    hintText: interaction.hintText,
+    counterfactualText: interaction.counterfactualText,
+    aiMisconceptionCategory: interaction.aiMisconceptionCategory,
+    bottomedOut: interaction.bottomedOut,
+    hintIndexAtResolve: interaction.hintIndexAtResolve,
+    aiLatencyMs: interaction.aiLatencyMs,
+    aiModel: interaction.aiModel,
+    promptVersion: interaction.promptVersion,
   }
 }
 
@@ -41,20 +90,5 @@ export async function getSessionInteractions(sessionId: string): Promise<Interac
     where: { sessionId },
     orderBy: { createdAt: 'asc' },
   })
-  return interactions.map((i) => ({
-    id: i.id,
-    sessionId: i.sessionId,
-    stepIndex: i.stepIndex,
-    predictionSubmitted: i.predictionSubmitted ?? '',
-    predictionCorrect: i.predictionCorrect ?? false,
-    misconceptionCategory: i.misconceptionCategory,
-    hintsRequested: i.hintsRequested,
-    timeSpentSeconds: i.timeSpentSeconds,
-    criticalJunctionType: i.criticalJunctionType,
-    junctionDifficulty: i.junctionDifficulty,
-    scaffoldingLevelAtTime: i.scaffoldingLevelAtTime,
-    masteryScoreAtTime: i.masteryScoreAtTime,
-    interactionType: i.interactionType,
-    createdAt: i.createdAt.toISOString(),
-  }))
+  return interactions.map(toInteractionDto)
 }

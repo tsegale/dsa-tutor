@@ -93,6 +93,21 @@ const TOPICS = [
   { name: 'sliding-window-variable', displayName: 'Sliding Window (Variable)', track: 'FOUNDATIONS', difficulty: 'INTERMEDIATE', description: 'Expand and shrink a window to satisfy a constraint in O(n).', estimatedMinutes: 10, isLocked: false, order: 22 },
 ] as const
 
+// Mirrors apps/web/src/data/badges.ts's BADGE_DEFINITIONS - the client's
+// checkCondition functions aren't representable here, so awardCondition
+// is a human-readable description only, not executable logic. The
+// server is the source of truth for which badges a user HAS (see
+// apps/api/src/services/badge.service.ts); the client still decides
+// WHEN to award one and calls POST /api/v1/badges/award.
+const BADGES = [
+  { name: 'first-step', description: 'Submit your first prediction', iconName: 'footsteps', awardCondition: 'totalPredictions >= 1' },
+  { name: 'sorting-guru', description: 'Complete the entire Sorting track', iconName: 'bars', awardCondition: 'completedSortingTrack' },
+  { name: 'graph-explorer', description: 'Complete the entire Graphs track', iconName: 'node', awardCondition: 'completedGraphsTrack' },
+  { name: 'self-corrector', description: 'Get a junction right on the next attempt after a miss, five times', iconName: 'lightbulb-off', awardCondition: 'selfCorrections >= 5' },
+  { name: 'week-warrior', description: 'Keep a 7 day practice streak alive', iconName: 'flame', awardCondition: 'streakCount >= 7' },
+  { name: 'dsa-champion', description: 'Reach 80% mastery in 4 or more topics', iconName: 'trophy', awardCondition: 'masteredTopics >= 4' },
+] as const
+
 async function main() {
   // upsert (not createMany + skipDuplicates) so re-running the seed
   // after flipping a topic's isLocked/description/etc. actually applies
@@ -113,6 +128,19 @@ async function main() {
       create: topic,
     })
   }
+
+  for (const badge of BADGES) {
+    await prisma.badge.upsert({
+      where: { name: badge.name },
+      update: {
+        description: badge.description,
+        iconName: badge.iconName,
+        awardCondition: badge.awardCondition,
+      },
+      create: badge,
+    })
+  }
+
   console.log('Seed complete.')
 }
 

@@ -7,6 +7,7 @@ import interactionsRouter from './routers/interactions.router'
 import analyticsRouter from './routers/analytics.router'
 import topicsRouter from './routers/topics.router'
 import aiRouter from './routers/ai.router'
+import badgesRouter from './routers/badges.router'
 
 const app = express()
 
@@ -29,6 +30,7 @@ app.use('/api/v1/interactions', interactionsRouter)
 app.use('/api/v1/analytics', analyticsRouter)
 app.use('/api/v1/topics', topicsRouter)
 app.use('/api/v1/ai', aiRouter)
+app.use('/api/v1/badges', badgesRouter)
 
 app.use(errorHandler)
 

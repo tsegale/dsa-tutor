@@ -30,6 +30,14 @@ enum Mode {
   DEMO
   PRACTICE
   HANDS_ON
+  FEYNMAN
+  CODE
+  CHALLENGE
+}
+
+enum Condition {
+  CONTROL
+  TREATMENT
 }
 
 enum ScaffoldingLevel {
@@ -50,8 +58,17 @@ model User {
   lastActiveDate DateTime?
   createdAt      DateTime  @default(now())
 
-  sessions   Session[]
-  userBadges UserBadge[]
+  // Study protocol fields - null for a normal account, populated only for
+  // an account enrolled as a research participant.
+  participantCode String?    @unique
+  condition       Condition?
+  consentAt       DateTime?
+  withdrawnAt     DateTime?
+
+  sessions            Session[]
+  userBadges          UserBadge[]
+  topicMasteries      TopicMastery[]
+  assessmentResponses AssessmentResponse[]
 }
 
 model AlgorithmTopic {
@@ -66,7 +83,8 @@ model AlgorithmTopic {
   order            Int        @default(999)
   createdAt        DateTime   @default(now())
 
-  sessions Session[]
+  sessions       Session[]
+  topicMasteries TopicMastery[]
 }
 
 model Session {
@@ -104,6 +122,20 @@ model Interaction {
   interactionType        String   @default("PREDICTION")
   createdAt              DateTime @default(now())
 
+  // What the student actually saw from the feedback mechanism - without
+  // these the platform's core contribution (AI-generated, scaffolding-
+  // calibrated feedback) leaves no trace for the study to evaluate.
+  aiGenerated             Boolean @default(false)
+  feedbackText            String?
+  hintText                String?
+  counterfactualText      String?
+  aiMisconceptionCategory String?
+  bottomedOut             Boolean @default(false)
+  hintIndexAtResolve      Int     @default(0)
+  aiLatencyMs             Int?
+  aiModel                 String?
+  promptVersion           String?
+
   session Session @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId])
@@ -129,4 +161,62 @@ model UserBadge {
   badge Badge @relation(fields: [badgeId], references: [id])
 
   @@unique([userId, badgeId])
+}
+
+// Per-topic mastery, written at session end. This is what the dashboard's
+// mastery rings and any retention analysis read - Interaction rows alone
+// require re-deriving it from scratch every time it's needed.
+model TopicMastery {
+  id                 String   @id @default(cuid())
+  userId             String
+  algorithmTopicId   String
+  overallScore       Int
+  conceptualScore    Int
+  proceduralScore    Int
+  totalPredictions   Int
+  correctPredictions Int
+  lastPracticedAt    DateTime
+  updatedAt          DateTime @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id])
+  algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
+
+  @@unique([userId, algorithmTopicId])
+}
+
+enum AssessmentType {
+  PRE_TEST
+  POST_TEST
+}
+
+// Pre-test/post-test items, so the comparison against passive visualisers
+// (the study's control condition) can be run inside the platform instead
+// of joined by hand from a separate form.
+model Assessment {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  type      AssessmentType
+  createdAt DateTime       @default(now())
+
+  responses AssessmentResponse[]
+}
+
+model AssessmentResponse {
+  id            String   @id @default(cuid())
+  userId        String
+  assessmentId  String
+  // Identifies which item within the assessment this answers - the
+  // assessment's own item bank/ordering lives outside the database (the
+  // same way Interaction.criticalJunctionType references a client-side
+  // concept rather than a normalised table).
+  itemId        String
+  responseValue String
+  isCorrect     Boolean?
+  submittedAt   DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([userId])
+  @@index([assessmentId])
 }
