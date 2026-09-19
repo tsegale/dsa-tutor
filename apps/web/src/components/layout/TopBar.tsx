@@ -15,6 +15,10 @@ import ZPDScaffoldingPill from '@/components/ui/ZPDScaffoldingPill'
 
 const THEME_STORAGE_KEY = 'dsa-tutor-theme'
 export const OPEN_SHORTCUTS_MODAL_EVENT = 'dsa-tutor:open-shortcuts-modal'
+// AlgorithmPage owns whether leaving now should show the session-end
+// survey first (it knows the active DB session id); this button only
+// signals the intent to leave, it never navigates directly.
+export const REQUEST_SESSION_EXIT_EVENT = 'dsa-tutor:request-session-exit'
 
 const TRACK_DISPLAY_NAMES: Record<AlgorithmTrack, string> = {
   [AlgorithmTrack.FOUNDATIONS]: 'Foundations',
@@ -221,7 +225,7 @@ export default function TopBar() {
           <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => window.dispatchEvent(new CustomEvent(REQUEST_SESSION_EXIT_EVENT))}
               aria-label="Back to dashboard"
               className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
             >

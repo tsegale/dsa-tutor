@@ -100,6 +100,12 @@ model Session {
   completed            Boolean          @default(false)
   challengeExplanation String?
 
+  // Self-report cognitive load/confidence measures, taken once at session
+  // end (see SessionEndSurvey.tsx) - a Paas-style 1-9 mental effort item
+  // and a 1-5 confidence item. Both null if the student skipped it.
+  mentalEffort Int?
+  confidence   Int?
+
   user           User           @relation(fields: [userId], references: [id])
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
   interactions   Interaction[]

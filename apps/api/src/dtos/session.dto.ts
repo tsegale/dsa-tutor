@@ -18,6 +18,10 @@ export interface UpdateSessionDto {
   proceduralScore?: number
   totalPredictions?: number
   correctPredictions?: number
+  // Self-report cognitive load/confidence, taken once at session end.
+  // Omitted entirely if the student skipped the survey.
+  mentalEffort?: number
+  confidence?: number
 }
 
 export interface SessionDto {

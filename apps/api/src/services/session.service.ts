@@ -47,6 +47,8 @@ export async function updateSession(
       ...(dto.completed !== undefined && { completed: dto.completed }),
       ...(dto.scaffoldingLevel && { scaffoldingLevel: dto.scaffoldingLevel }),
       ...(dto.challengeExplanation !== undefined && { challengeExplanation: dto.challengeExplanation }),
+      ...(dto.mentalEffort !== undefined && { mentalEffort: dto.mentalEffort }),
+      ...(dto.confidence !== undefined && { confidence: dto.confidence }),
     },
     include: { algorithmTopic: true },
   })

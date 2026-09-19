@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
@@ -8,7 +8,8 @@ import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/stor
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
-import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
+import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT, REQUEST_SESSION_EXIT_EVENT } from '@/components/layout/TopBar'
+import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
 import FocusModeOverlay from '@/components/layout/FocusModeOverlay'
@@ -297,6 +298,7 @@ const INITIAL_MASTERY_METRICS: MasteryMetrics = {
 export default function AlgorithmPage() {
   const { algorithmName: algorithmNameParam } = useParams<{ algorithmName: string }>()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   // Five algorithms have real snapshot engines as of Phase 16; every
   // other seeded topic (not yet in the registry) renders a "coming
   // soon" canvas.
@@ -353,6 +355,11 @@ export default function AlgorithmPage() {
   useEffect(() => {
     masteryMetricsRef.current = masteryMetrics
   }, [masteryMetrics])
+  const [showSessionEndSurvey, setShowSessionEndSurvey] = useState(false)
+  // Set just before navigating away, so the unmount cleanup's session PATCH
+  // below can include them - the survey's answers exist for only a moment
+  // between "submit" and the resulting unmount, so a ref outlives that.
+  const sessionEndAnswersRef = useRef<{ mentalEffort: number; confidence: number } | null>(null)
   const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
   const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
   const [mistakePath, setMistakePath] = useState<AlgorithmSnapshot[] | null>(null)
@@ -549,6 +556,33 @@ export default function AlgorithmPage() {
     return () => window.removeEventListener(OPEN_SHORTCUTS_MODAL_EVENT, handleOpen)
   }, [])
 
+  // Only a session actually being logged to the backend is worth asking
+  // about - without one there is nothing for mentalEffort/confidence to
+  // attach to, so leaving goes straight back to the dashboard.
+  useEffect(() => {
+    function handleRequestExit() {
+      if (useAlgorithmStore.getState().sessionId) {
+        setShowSessionEndSurvey(true)
+      } else {
+        navigate('/')
+      }
+    }
+    window.addEventListener(REQUEST_SESSION_EXIT_EVENT, handleRequestExit)
+    return () => window.removeEventListener(REQUEST_SESSION_EXIT_EVENT, handleRequestExit)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleSessionEndSubmit(mentalEffort: number, confidence: number) {
+    sessionEndAnswersRef.current = { mentalEffort, confidence }
+    setShowSessionEndSurvey(false)
+    navigate('/')
+  }
+
+  function handleSessionEndSkip() {
+    setShowSessionEndSurvey(false)
+    navigate('/')
+  }
+
   useEffect(() => {
     function handleSwitchTab() {
       setActiveTab(2)
@@ -727,6 +761,7 @@ export default function AlgorithmPage() {
       const activeSessionId = useAlgorithmStore.getState().sessionId
       if (activeSessionId) {
         const finalAssessment = calculateMastery(masteryMetricsRef.current)
+        const sessionEndAnswers = sessionEndAnswersRef.current
         apiFetch(`/api/v1/sessions/${activeSessionId}`, {
           method: 'PATCH',
           body: JSON.stringify({
@@ -737,6 +772,10 @@ export default function AlgorithmPage() {
             proceduralScore: finalAssessment.proceduralScore,
             totalPredictions: masteryMetricsRef.current.totalPredictions,
             correctPredictions: masteryMetricsRef.current.correctPredictions,
+            ...(sessionEndAnswers && {
+              mentalEffort: sessionEndAnswers.mentalEffort,
+              confidence: sessionEndAnswers.confidence,
+            }),
           }),
         }).catch(() => {})
       }
@@ -832,6 +871,9 @@ export default function AlgorithmPage() {
       <FocusModeOverlay />
       <KeyboardShortcutsModal open={shortcutsModalOpen} onClose={() => setShortcutsModalOpen(false)} />
       <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
+      {showSessionEndSurvey && (
+        <SessionEndSurvey onSubmit={handleSessionEndSubmit} onSkip={handleSessionEndSkip} />
+      )}
       <StreakToast
         streakCount={streakCountForToast}
         visible={streakToastVisible}
