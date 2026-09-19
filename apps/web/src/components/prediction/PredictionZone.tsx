@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlgorithmMode, CriticalJunctionType, JunctionDifficulty, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
+import { AlgorithmMode, CriticalJunctionType, JunctionDifficulty, MisconceptionCategory, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
 import type {
   AlgorithmSnapshot,
   CodeEvalResponse,
   HintRequest,
-  MisconceptionCategory,
   PredictionRequest,
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
@@ -145,78 +144,194 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const state = snapshot.dataStructureState
       if (isInsertionSortSwapState(state)) {
         return shuffleArray([
-          { id: 'shift', label: 'Shift right - the key is smaller, move it left' },
-          { id: 'stop', label: 'Stop - the key is in its correct position' },
+          {
+            id: 'shift',
+            label: 'Shift right - the key is smaller, move it left',
+            misconception: MisconceptionCategory.ORDER_OF_OPERATIONS,
+          },
+          {
+            id: 'stop',
+            label: 'Stop - the key is in its correct position',
+            misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+          },
         ])
       }
       return shuffleArray([
-        { id: 'swap', label: 'Swap them' },
-        { id: 'no-swap', label: 'Leave them' },
+        { id: 'swap', label: 'Swap them', misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+        { id: 'no-swap', label: 'Leave them', misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
       ])
     }
 
     case CriticalJunctionType.PASS_COMPLETE:
       if (algorithmName === 'Merge Sort') {
         return shuffleArray([
-          { id: 'correct', label: 'Each merged segment is sorted within itself' },
-          { id: 'wrong-1', label: 'The entire array is now sorted' },
-          { id: 'wrong-2', label: 'Left halves are sorted but right halves are not yet' },
-          { id: 'wrong-3', label: 'Only adjacent pairs are guaranteed to be in order' },
+          { id: 'correct', label: 'Each merged segment is sorted within itself', misconception: null },
+          { id: 'wrong-1', label: 'The entire array is now sorted', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
+          {
+            id: 'wrong-2',
+            label: 'Left halves are sorted but right halves are not yet',
+            misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+          },
+          {
+            id: 'wrong-3',
+            label: 'Only adjacent pairs are guaranteed to be in order',
+            misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+          },
         ])
       }
       return shuffleArray([
-        { id: 'correct', label: 'The largest remaining unsorted element is now in its correct position' },
-        { id: 'wrong-1', label: 'The entire array is now sorted' },
-        { id: 'wrong-2', label: 'The smallest element moved to the front' },
-        { id: 'wrong-3', label: 'Every element was compared exactly once' },
+        {
+          id: 'correct',
+          label: 'The largest remaining unsorted element is now in its correct position',
+          misconception: null,
+        },
+        { id: 'wrong-1', label: 'The entire array is now sorted', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
+        {
+          id: 'wrong-2',
+          label: 'The smallest element moved to the front',
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'wrong-3',
+          label: 'Every element was compared exactly once',
+          misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+        },
       ])
 
     case CriticalJunctionType.EARLY_TERMINATION:
       return shuffleArray([
-        { id: 'correct', label: 'No swaps were needed - the array was already in order' },
-        { id: 'wrong-1', label: 'The algorithm completed the maximum number of passes' },
-        { id: 'wrong-2', label: 'Equal elements caused the loop to stop' },
-        { id: 'wrong-3', label: 'The first element reached its correct position' },
+        { id: 'correct', label: 'No swaps were needed - the array was already in order', misconception: null },
+        {
+          id: 'wrong-1',
+          label: 'The algorithm completed the maximum number of passes',
+          misconception: MisconceptionCategory.PREMATURE_TERMINATION,
+        },
+        {
+          id: 'wrong-2',
+          label: 'Equal elements caused the loop to stop',
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        {
+          id: 'wrong-3',
+          label: 'The first element reached its correct position',
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
       ])
 
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
       if (algorithmName === 'Counting Sort') {
         return shuffleArray([
-          { id: 'correct', label: 'Every element was placed using its count-derived index, exactly once' },
-          { id: 'wrong-1', label: 'Adjacent elements were compared and swapped' },
-          { id: 'wrong-2', label: 'The array was recursively divided in half' },
-          { id: 'wrong-3', label: 'A pivot was chosen and elements partitioned around it' },
+          {
+            id: 'correct',
+            label: 'Every element was placed using its count-derived index, exactly once',
+            misconception: null,
+          },
+          {
+            id: 'wrong-1',
+            label: 'Adjacent elements were compared and swapped',
+            misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+          },
+          {
+            id: 'wrong-2',
+            label: 'The array was recursively divided in half',
+            misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+          },
+          {
+            id: 'wrong-3',
+            label: 'A pivot was chosen and elements partitioned around it',
+            misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+          },
         ])
       }
       if (algorithmName === 'Radix Sort (LSD)') {
         return shuffleArray([
-          { id: 'correct', label: 'Every digit position was sorted (stably) from least to most significant' },
-          { id: 'wrong-1', label: 'Elements were compared directly against each other' },
-          { id: 'wrong-2', label: 'Only the most significant digit needed sorting' },
-          { id: 'wrong-3', label: 'The buckets were collected in a different order each pass' },
+          {
+            id: 'correct',
+            label: 'Every digit position was sorted (stably) from least to most significant',
+            misconception: null,
+          },
+          {
+            id: 'wrong-1',
+            label: 'Elements were compared directly against each other',
+            misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+          },
+          {
+            id: 'wrong-2',
+            label: 'Only the most significant digit needed sorting',
+            misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+          },
+          {
+            id: 'wrong-3',
+            label: 'The buckets were collected in a different order each pass',
+            misconception: MisconceptionCategory.STABILITY_CONFUSION,
+          },
         ])
       }
       if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
         const state = snapshot.dataStructureState as SearchAlgorithmState
         return state.found
           ? shuffleArray([
-              { id: 'correct', label: `The element at index ${state.foundIndex} was confirmed equal to the target` },
-              { id: 'wrong-1', label: 'Every element in the array was visited' },
-              { id: 'wrong-2', label: 'The array became sorted during the search' },
-              { id: 'wrong-3', label: 'The target must appear at every index checked' },
+              {
+                id: 'correct',
+                label: `The element at index ${state.foundIndex} was confirmed equal to the target`,
+                misconception: null,
+              },
+              {
+                id: 'wrong-1',
+                label: 'Every element in the array was visited',
+                misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+              },
+              {
+                id: 'wrong-2',
+                label: 'The array became sorted during the search',
+                misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+              },
+              {
+                id: 'wrong-3',
+                label: 'The target must appear at every index checked',
+                misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+              },
             ])
           : shuffleArray([
-              { id: 'correct', label: 'The entire valid search space was eliminated without a match' },
-              { id: 'wrong-1', label: 'The array must be unsorted for the target to be missing' },
-              { id: 'wrong-2', label: 'The target could still be found by starting over' },
-              { id: 'wrong-3', label: 'One comparison is enough to prove absence' },
+              {
+                id: 'correct',
+                label: 'The entire valid search space was eliminated without a match',
+                misconception: null,
+              },
+              {
+                id: 'wrong-1',
+                label: 'The array must be unsorted for the target to be missing',
+                misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+              },
+              {
+                id: 'wrong-2',
+                label: 'The target could still be found by starting over',
+                misconception: MisconceptionCategory.PREMATURE_TERMINATION,
+              },
+              {
+                id: 'wrong-3',
+                label: 'One comparison is enough to prove absence',
+                misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+              },
             ])
       }
       return shuffleArray([
-        { id: 'correct', label: 'No adjacent pair is out of order anywhere in the array' },
-        { id: 'wrong-1', label: 'Every element was visited the same number of times' },
-        { id: 'wrong-2', label: 'The first and last elements are in their correct positions' },
-        { id: 'wrong-3', label: 'The total number of swaps equals the array length' },
+        { id: 'correct', label: 'No adjacent pair is out of order anywhere in the array', misconception: null },
+        {
+          id: 'wrong-1',
+          label: 'Every element was visited the same number of times',
+          misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+        },
+        {
+          id: 'wrong-2',
+          label: 'The first and last elements are in their correct positions',
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        {
+          id: 'wrong-3',
+          label: 'The total number of swaps equals the array length',
+          misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+        },
       ])
     }
 
@@ -225,8 +340,12 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const val = s.array[s.currentIndex]
       const target = s.target
       return shuffleArray([
-        { id: 'match', label: `${val} equals ${target} - target found` },
-        { id: 'no-match', label: `${val} does not equal ${target} - keep searching` },
+        { id: 'match', label: `${val} equals ${target} - target found`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        {
+          id: 'no-match',
+          label: `${val} does not equal ${target} - keep searching`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
       ])
     }
 
@@ -235,9 +354,17 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const midVal = s.mid !== null ? s.array[s.mid] : undefined
       const target = s.target
       return shuffleArray([
-        { id: 'search-left', label: `${target} is smaller - search the left half` },
-        { id: 'search-right', label: `${target} is larger - search the right half` },
-        { id: 'found', label: `${midVal} equals ${target} - target found` },
+        {
+          id: 'search-left',
+          label: `${target} is smaller - search the left half`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'search-right',
+          label: `${target} is larger - search the right half`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        { id: 'found', label: `${midVal} equals ${target} - target found`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
       ])
     }
 
@@ -246,8 +373,16 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const scanVal = s.array[s.scanIndex]
       const minVal = s.array[s.currentMin]
       return shuffleArray([
-        { id: 'update', label: `${scanVal} is smaller than ${minVal} - update minimum` },
-        { id: 'keep', label: `${scanVal} is not smaller - keep current minimum` },
+        {
+          id: 'update',
+          label: `${scanVal} is smaller than ${minVal} - update minimum`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'keep',
+          label: `${scanVal} is not smaller - keep current minimum`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
       ])
     }
 
@@ -259,8 +394,16 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       // MIDPOINT_DECISION and TARGET_CHECK: the wrong tile states a
       // false comparison, and the student's job is to recognise it.
       return shuffleArray([
-        { id: 'take-left', label: `Take ${leftVal} from the left half - it is smaller` },
-        { id: 'take-right', label: `Take ${rightVal} from the right half - it is smaller` },
+        {
+          id: 'take-left',
+          label: `Take ${leftVal} from the left half - it is smaller`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'take-right',
+          label: `Take ${rightVal} from the right half - it is smaller`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
       ])
     }
 
@@ -269,8 +412,16 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const leftVal = s.array[s.leftPointer]
       const pivotVal = s.pivotValue
       return shuffleArray([
-        { id: 'swap', label: `${leftVal} is less than pivot ${pivotVal} - swap it leftward` },
-        { id: 'skip', label: `${leftVal} is greater than or equal to pivot - leave it` },
+        {
+          id: 'swap',
+          label: `${leftVal} is less than pivot ${pivotVal} - swap it leftward`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'skip',
+          label: `${leftVal} is greater than or equal to pivot - leave it`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
       ])
     }
 
@@ -279,9 +430,17 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const currentVal = s.currentNode?.value
       const targetVal = s.targetValue
       return shuffleArray([
-        { id: 'go-left', label: `${targetVal} is less than ${currentVal} - go left` },
-        { id: 'go-right', label: `${targetVal} is greater than ${currentVal} - go right` },
-        { id: 'insert-here', label: 'This position is empty - insert here' },
+        { id: 'go-left', label: `${targetVal} is less than ${currentVal} - go left`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        {
+          id: 'go-right',
+          label: `${targetVal} is greater than ${currentVal} - go right`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'insert-here',
+          label: 'This position is empty - insert here',
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
       ])
     }
 
@@ -293,8 +452,8 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const distractorPool = collectTreeValues(s.root).filter((v) => v !== correct && !visited.has(v))
       const distractors = shuffleArray(Array.from(new Set(distractorPool))).slice(0, 2)
       return shuffleArray([
-        { id: String(correct), label: String(correct) },
-        ...distractors.map((d) => ({ id: String(d), label: String(d) })),
+        { id: String(correct), label: String(correct), misconception: null },
+        ...distractors.map((d) => ({ id: String(d), label: String(d), misconception: MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION })),
       ])
     }
 
@@ -322,40 +481,52 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const distractors = allNodeIds.filter((n) => n !== nextNode && !s.visited.includes(n)).slice(0, 3)
       const reason = isDFS ? 'it is on top of the stack' : 'it was added to the queue first'
       return shuffleArray([
-        { id: nextNode, label: `${nextNode} - ${reason}` },
-        ...distractors.map((d) => ({ id: d, label: d })),
+        { id: nextNode, label: `${nextNode} - ${reason}`, misconception: null },
+        ...distractors.map((d) => ({ id: d, label: d, misconception: MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION })),
       ])
     }
 
     case CriticalJunctionType.AVL_BALANCE_CHECK: {
       const bf = (snapshot.dataStructureState as AVLState).balanceFactor ?? 0
       return shuffleArray([
-        { id: 'balanced', label: `Balanced (BF = ${bf}, within -1 to 1)` },
-        { id: 'unbalanced', label: `Unbalanced (BF = ${bf}, outside -1 to 1)` },
+        { id: 'balanced', label: `Balanced (BF = ${bf}, within -1 to 1)`, misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        {
+          id: 'unbalanced',
+          label: `Unbalanced (BF = ${bf}, outside -1 to 1)`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
       ])
     }
 
     case CriticalJunctionType.AVL_ROTATION_TYPE: {
       return shuffleArray([
-        { id: 'LL', label: 'LL rotation (left-heavy, single right rotation)' },
-        { id: 'RR', label: 'RR rotation (right-heavy, single left rotation)' },
-        { id: 'LR', label: 'LR rotation (left-heavy, rotate left then right)' },
-        { id: 'RL', label: 'RL rotation (right-heavy, rotate right then left)' },
+        { id: 'LL', label: 'LL rotation (left-heavy, single right rotation)', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        { id: 'RR', label: 'RR rotation (right-heavy, single left rotation)', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        { id: 'LR', label: 'LR rotation (left-heavy, rotate left then right)', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        { id: 'RL', label: 'RL rotation (right-heavy, rotate right then left)', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
       ])
     }
 
     case CriticalJunctionType.RB_COLOR_DECISION: {
       return shuffleArray([
-        { id: 'recolor', label: 'Uncle is RED - recolour only (Case 1)' },
-        { id: 'rotate', label: 'Uncle is BLACK - rotation needed (Case 2 or 3)' },
+        { id: 'recolor', label: 'Uncle is RED - recolour only (Case 1)', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        {
+          id: 'rotate',
+          label: 'Uncle is BLACK - rotation needed (Case 2 or 3)',
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
       ])
     }
 
     case CriticalJunctionType.RB_ROTATION_RECOLOR: {
       return shuffleArray([
-        { id: 'recolor', label: 'Recolour only - push the violation up two levels' },
-        { id: 'left-rotate', label: 'Left-rotate' },
-        { id: 'right-rotate', label: 'Right-rotate' },
+        {
+          id: 'recolor',
+          label: 'Recolour only - push the violation up two levels',
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        { id: 'left-rotate', label: 'Left-rotate', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        { id: 'right-rotate', label: 'Right-rotate', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
       ])
     }
 
@@ -364,33 +535,61 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const curr = s.array[s.currentIdx]
       const parentVal = s.parentIdx !== null ? s.array[s.parentIdx] : undefined
       return shuffleArray([
-        { id: 'swap', label: `Swap ${curr} with parent ${parentVal}` },
-        { id: 'stay', label: `Stay - ${curr} satisfies the heap property` },
+        { id: 'swap', label: `Swap ${curr} with parent ${parentVal}`, misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        {
+          id: 'stay',
+          label: `Stay - ${curr} satisfies the heap property`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
       ])
     }
 
     case CriticalJunctionType.HEAP_SIFT_DOWN: {
       const s = snapshot.dataStructureState as HeapState
       const curr = s.array[s.currentIdx]
-      const options: TileOption[] = [{ id: 'stay', label: `Stay - ${curr} satisfies the heap property` }]
-      if (s.leftChildIdx !== null) options.push({ id: 'left', label: `Swap with left child (${s.array[s.leftChildIdx]})` })
-      if (s.rightChildIdx !== null) options.push({ id: 'right', label: `Swap with right child (${s.array[s.rightChildIdx]})` })
+      const options: TileOption[] = [
+        { id: 'stay', label: `Stay - ${curr} satisfies the heap property`, misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+      ]
+      if (s.leftChildIdx !== null)
+        options.push({
+          id: 'left',
+          label: `Swap with left child (${s.array[s.leftChildIdx]})`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        })
+      if (s.rightChildIdx !== null)
+        options.push({
+          id: 'right',
+          label: `Swap with right child (${s.array[s.rightChildIdx]})`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        })
       return shuffleArray(options)
     }
 
     case CriticalJunctionType.TRIE_CHARACTER_MATCH: {
       const s = snapshot.dataStructureState as TrieState
       return shuffleArray([
-        { id: 'exists', label: `'${s.currentChar}' exists as a child` },
-        { id: 'missing', label: `'${s.currentChar}' does not exist` },
+        { id: 'exists', label: `'${s.currentChar}' exists as a child`, misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
+        {
+          id: 'missing',
+          label: `'${s.currentChar}' does not exist`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
       ])
     }
 
     case CriticalJunctionType.TRIE_INSERT_NEW: {
       const s = snapshot.dataStructureState as TrieState
       return shuffleArray([
-        { id: 'existing', label: `'${s.currentChar}' already exists - no new node needed` },
-        { id: 'new', label: `'${s.currentChar}' needs a new node` },
+        {
+          id: 'existing',
+          label: `'${s.currentChar}' already exists - no new node needed`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+        {
+          id: 'new',
+          label: `'${s.currentChar}' needs a new node`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
       ])
     }
 
@@ -399,16 +598,32 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const currentDist = s.currentDist ?? Infinity
       const newDist = s.newDist ?? Infinity
       return shuffleArray([
-        { id: 'relax', label: `Relax - new distance ${newDist} < current ${currentDist === Infinity ? '∞' : currentDist}` },
-        { id: 'skip', label: `Skip - current distance ${currentDist === Infinity ? '∞' : currentDist} is already optimal` },
+        {
+          id: 'relax',
+          label: `Relax - new distance ${newDist} < current ${currentDist === Infinity ? '∞' : currentDist}`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        {
+          id: 'skip',
+          label: `Skip - current distance ${currentDist === Infinity ? '∞' : currentDist} is already optimal`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
       ])
     }
 
     case CriticalJunctionType.BELLMAN_PASS_COMPLETE: {
       const s = snapshot.dataStructureState as BellmanFordState
       return shuffleArray([
-        { id: 'continue', label: `Distances changed - continue (pass ${s.passNumber} of ${s.totalPasses})` },
-        { id: 'done', label: 'No changes - converged early, algorithm can stop' },
+        {
+          id: 'continue',
+          label: `Distances changed - continue (pass ${s.passNumber} of ${s.totalPasses})`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        {
+          id: 'done',
+          label: 'No changes - converged early, algorithm can stop',
+          misconception: MisconceptionCategory.PREMATURE_TERMINATION,
+        },
       ])
     }
 
@@ -419,31 +634,62 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const current = s.dist[s.i][s.j]
       const kLabel = s.nodeIds[s.k]
       return shuffleArray([
-        { id: 'update', label: `Update - via ${kLabel}: ${throughK} < current ${current === Infinity ? '∞' : current}` },
-        { id: 'keep', label: `Keep - current ${current === Infinity ? '∞' : current} is already the shortest` },
+        {
+          id: 'update',
+          label: `Update - via ${kLabel}: ${throughK} < current ${current === Infinity ? '∞' : current}`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
+        {
+          id: 'keep',
+          label: `Keep - current ${current === Infinity ? '∞' : current} is already the shortest`,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+        },
       ])
     }
 
     case CriticalJunctionType.UNION_FIND_CHECK: {
       const s = snapshot.dataStructureState as KruskalState
       return shuffleArray([
-        { id: 'add', label: `Add edge ${s.fromNode}-${s.toNode} (weight ${s.weight}) - different components` },
-        { id: 'skip', label: `Skip - ${s.fromNode} and ${s.toNode} are already connected (cycle!)` },
+        {
+          id: 'add',
+          label: `Add edge ${s.fromNode}-${s.toNode} (weight ${s.weight}) - different components`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+        {
+          id: 'skip',
+          label: `Skip - ${s.fromNode} and ${s.toNode} are already connected (cycle!)`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
       ])
     }
 
     case CriticalJunctionType.MST_EDGE_SELECT: {
       const s = snapshot.dataStructureState as PrimState
       const candidates = s.candidateEdges ?? []
-      return shuffleArray(candidates.map(([from, to, weight]) => ({ id: `${from}-${to}`, label: `${from}-${to} (weight ${weight})` })))
+      const minWeight = candidates.length > 0 ? Math.min(...candidates.map(([, , weight]) => weight)) : null
+      return shuffleArray(
+        candidates.map(([from, to, weight]) => ({
+          id: `${from}-${to}`,
+          label: `${from}-${to} (weight ${weight})`,
+          misconception: weight === minWeight ? null : MisconceptionCategory.COMPARISON_DIRECTION,
+        })),
+      )
     }
 
     case CriticalJunctionType.CYCLE_FOUND: {
       const s = snapshot.dataStructureState as CycleDetectionState
       const target = s.cycleEdge?.[1] ?? ''
       return shuffleArray([
-        { id: 'cycle', label: `Yes - ${target} is GRAY (an ancestor on the current path) - this is a back-edge` },
-        { id: 'no-cycle', label: `No - ${target} is not a current ancestor - not a back-edge` },
+        {
+          id: 'cycle',
+          label: `Yes - ${target} is GRAY (an ancestor on the current path) - this is a back-edge`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+        {
+          id: 'no-cycle',
+          label: `No - ${target} is not a current ancestor - not a back-edge`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
       ])
     }
 
@@ -451,7 +697,13 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const s = snapshot.dataStructureState as ConnectedComponentsState
       const correct = s.totalComponents ?? 1
       const options = Array.from(new Set([correct, Math.max(1, correct - 1), correct + 1]))
-      return shuffleArray(options.map((n) => ({ id: String(n), label: `${n} component${n === 1 ? '' : 's'}` })))
+      return shuffleArray(
+        options.map((n) => ({
+          id: String(n),
+          label: `${n} component${n === 1 ? '' : 's'}`,
+          misconception: n === correct ? null : MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        })),
+      )
     }
 
     case CriticalJunctionType.TOPOLOGICAL_ORDER: {
@@ -461,7 +713,10 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const already = new Set([...(s.topoOrder ?? []), correct])
       const distractorPool = s.nodes.map((n) => n.id).filter((id) => !already.has(id))
       const distractors = shuffleArray(distractorPool).slice(0, 2)
-      return shuffleArray([{ id: correct, label: correct }, ...distractors.map((d) => ({ id: d, label: d }))])
+      return shuffleArray([
+        { id: correct, label: correct, misconception: null },
+        ...distractors.map((d) => ({ id: d, label: d, misconception: MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION })),
+      ])
     }
 
     case CriticalJunctionType.GRID_NEXT_CELL: {
@@ -475,10 +730,12 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       })
       scored.sort((a, b) => a.f - b.f)
       const shown = scored.slice(0, 3)
+      const bestF = shown[0]?.f
       return shuffleArray(
         shown.map(({ r, c, f }) => ({
           id: `${r},${c}`,
           label: isAStar ? `(${r}, ${c}) - f(n) = ${f}` : `(${r}, ${c}) - g(n) = ${f}`,
+          misconception: f === bestF ? null : MisconceptionCategory.COMPARISON_DIRECTION,
         })),
       )
     }
@@ -489,16 +746,29 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const candidates = [s.targetIndex, s.targetIndex - 1, s.targetIndex + 1, s.targetIndex - 2].filter(
         (i, idx, arr) => i >= 0 && i < s.array.length && arr.indexOf(i) === idx,
       )
-      return shuffleArray(candidates.slice(0, 4).map((i) => ({ id: `idx-${i}`, label: `${s.array[i]}` })))
+      return shuffleArray(
+        candidates.slice(0, 4).map((i) => ({
+          id: `idx-${i}`,
+          label: `${s.array[i]}`,
+          misconception: i === s.targetIndex ? null : MisconceptionCategory.OFF_BY_ONE,
+        })),
+      )
     }
 
     case CriticalJunctionType.INSERT_POSITION: {
       const s = snapshot.dataStructureState as { array: number[]; targetIndex: number }
       const pos = s.targetIndex
-      const candidates = Array.from(new Set([pos + 2, pos - 1, pos, pos + 1])).filter(
+      const correctIdx = pos + 2
+      const candidates = Array.from(new Set([correctIdx, pos - 1, pos, pos + 1])).filter(
         (i) => i >= 0 && i < s.array.length,
       )
-      return shuffleArray(candidates.map((i) => ({ id: `idx-${i}`, label: `${s.array[i]}` })))
+      return shuffleArray(
+        candidates.map((i) => ({
+          id: `idx-${i}`,
+          label: `${s.array[i]}`,
+          misconception: i === correctIdx ? null : MisconceptionCategory.OFF_BY_ONE,
+        })),
+      )
     }
 
     case CriticalJunctionType.DELETE_SHIFT: {
@@ -507,12 +777,19 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const options: TileOption[] = []
       options.push(
         pos < s.array.length
-          ? { id: `idx-${pos}`, label: `${s.array[pos]}` }
-          : { id: 'end-of-array', label: 'Nothing - the array is now shorter' },
+          ? { id: `idx-${pos}`, label: `${s.array[pos]}`, misconception: null }
+          : { id: 'end-of-array', label: 'Nothing - the array is now shorter', misconception: null },
       )
-      if (s.operationValue !== null) options.push({ id: 'deleted-value', label: `${s.operationValue} (the deleted value)` })
-      if (pos + 1 < s.array.length) options.push({ id: `idx-${pos + 1}`, label: `${s.array[pos + 1]}` })
-      if (pos - 1 >= 0) options.push({ id: `idx-${pos - 1}`, label: `${s.array[pos - 1]}` })
+      if (s.operationValue !== null)
+        options.push({
+          id: 'deleted-value',
+          label: `${s.operationValue} (the deleted value)`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        })
+      if (pos + 1 < s.array.length)
+        options.push({ id: `idx-${pos + 1}`, label: `${s.array[pos + 1]}`, misconception: MisconceptionCategory.OFF_BY_ONE })
+      if (pos - 1 >= 0)
+        options.push({ id: `idx-${pos - 1}`, label: `${s.array[pos - 1]}`, misconception: MisconceptionCategory.OFF_BY_ONE })
       return shuffleArray(options)
     }
 
@@ -525,24 +802,32 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       }
       if (s.operation === 'traverse') {
         return shuffleArray([
-          { id: 'when-null', label: 'When next is null' },
-          { id: 'when-head-again', label: 'When we reach the head again' },
-          { id: 'when-n-visited', label: 'When we visit n nodes' },
-          { id: 'when-value-match', label: 'When value equals head value' },
+          { id: 'when-null', label: 'When next is null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'when-head-again', label: 'When we reach the head again', misconception: null },
+          { id: 'when-n-visited', label: 'When we visit n nodes', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+          {
+            id: 'when-value-match',
+            label: 'When value equals head value',
+            misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+          },
         ])
       }
       const current = s.nodes.find((n) => n.id === s.currentId)
       if (current) {
         return shuffleArray([
-          { id: 'yes-last', label: 'Yes - next is null' },
-          { id: 'no-more', label: 'No - there is another node after this' },
+          { id: 'yes-last', label: 'Yes - next is null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          {
+            id: 'no-more',
+            label: 'No - there is another node after this',
+            misconception: MisconceptionCategory.POINTER_CONFUSION,
+          },
         ])
       }
       return shuffleArray([
-        { id: 'null', label: 'null' },
-        { id: 'current-head', label: 'the current head' },
-        { id: 'tail', label: 'the tail' },
-        { id: 'itself', label: 'the new node itself' },
+        { id: 'null', label: 'null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'current-head', label: 'the current head', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'tail', label: 'the tail', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'itself', label: 'the new node itself', misconception: MisconceptionCategory.POINTER_CONFUSION },
       ])
     }
 
@@ -554,17 +839,25 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const isDLL = s.nodes.some((n) => n.prev !== undefined)
       if (isDLL) {
         return shuffleArray([
-          { id: 'next-prev-only', label: 'new.next = B and new.prev = A only' },
-          { id: 'all-four', label: 'new.next = B, new.prev = A, B.prev = new, A.next = new' },
-          { id: 'a-b-only', label: 'A.next = new and B.prev = new only' },
-          { id: 'reversed', label: 'new.next = A and new.prev = B' },
+          {
+            id: 'next-prev-only',
+            label: 'new.next = B and new.prev = A only',
+            misconception: MisconceptionCategory.POINTER_CONFUSION,
+          },
+          { id: 'all-four', label: 'new.next = B, new.prev = A, B.prev = new, A.next = new', misconception: null },
+          { id: 'a-b-only', label: 'A.next = new and B.prev = new only', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'reversed', label: 'new.next = A and new.prev = B', misconception: MisconceptionCategory.POINTER_CONFUSION },
         ])
       }
       return shuffleArray([
-        { id: 'new-then-prev', label: 'New node.next = B, then A.next = new node' },
-        { id: 'prev-only', label: 'A.next = new node only' },
-        { id: 'wrong-order', label: 'B.next = new node, then A.next = new node' },
-        { id: 'swapped', label: 'New node.next = A, then B.next = new node' },
+        { id: 'new-then-prev', label: 'New node.next = B, then A.next = new node', misconception: null },
+        { id: 'prev-only', label: 'A.next = new node only', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        {
+          id: 'wrong-order',
+          label: 'B.next = new node, then A.next = new node',
+          misconception: MisconceptionCategory.ORDER_OF_OPERATIONS,
+        },
+        { id: 'swapped', label: 'New node.next = A, then B.next = new node', misconception: MisconceptionCategory.POINTER_CONFUSION },
       ])
     }
 
@@ -575,17 +868,17 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const isDLL = s.nodes.some((n) => n.prev !== undefined)
       if (isDLL) {
         return shuffleArray([
-          { id: 'one', label: '1' },
-          { id: 'two', label: '2' },
-          { id: 'three', label: '3' },
-          { id: 'four', label: '4' },
+          { id: 'one', label: '1', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'two', label: '2', misconception: null },
+          { id: 'three', label: '3', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'four', label: '4', misconception: MisconceptionCategory.POINTER_CONFUSION },
         ])
       }
       return shuffleArray([
-        { id: 'prev-next-eq-x-next', label: 'prev.next = X.next' },
-        { id: 'prev-next-null', label: 'prev.next = null' },
-        { id: 'x-next-eq-prev', label: 'X.next = prev' },
-        { id: 'x-null', label: 'X = null' },
+        { id: 'prev-next-eq-x-next', label: 'prev.next = X.next', misconception: null },
+        { id: 'prev-next-null', label: 'prev.next = null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'x-next-eq-prev', label: 'X.next = prev', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'x-null', label: 'X = null', misconception: MisconceptionCategory.POINTER_CONFUSION },
       ])
     }
 
@@ -603,17 +896,23 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       // descriptions rather than neighbouring node values.
       if (s.operation === 'reverse') {
         return shuffleArray([
-          { id: 'the-previous-node', label: 'the previous node' },
-          { id: 'the-next-node', label: 'the next node' },
-          { id: 'null', label: 'null' },
-          { id: 'the-head', label: 'the head' },
+          { id: 'the-previous-node', label: 'the previous node', misconception: null },
+          { id: 'the-next-node', label: 'the next node', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'null', label: 'null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'the-head', label: 'the head', misconception: MisconceptionCategory.POINTER_CONFUSION },
         ])
       }
       const targetId = s.activePointer === 'prev' ? current.prev : current.next
       const others = s.nodes.filter((n) => n.id !== current.id).slice(0, 3)
-      const options = [{ id: targetId ?? 'null', label: targetId ? `${s.nodes.find((n) => n.id === targetId)?.value}` : 'null' }]
+      const options: TileOption[] = [
+        {
+          id: targetId ?? 'null',
+          label: targetId ? `${s.nodes.find((n) => n.id === targetId)?.value}` : 'null',
+          misconception: null,
+        },
+      ]
       for (const n of others) {
-        if (n.id !== targetId) options.push({ id: n.id, label: `${n.value}` })
+        if (n.id !== targetId) options.push({ id: n.id, label: `${n.value}`, misconception: MisconceptionCategory.POINTER_CONFUSION })
       }
       return shuffleArray(options.slice(0, 4))
     }
@@ -629,27 +928,33 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       if (!current) return []
       if (s.operation === 'reverse') {
         return shuffleArray([
-          { id: 'the-previous-node', label: 'the previous node' },
-          { id: 'the-next-node', label: 'the next node' },
-          { id: 'null', label: 'null' },
-          { id: 'the-head', label: 'the head' },
+          { id: 'the-previous-node', label: 'the previous node', misconception: null },
+          { id: 'the-next-node', label: 'the next node', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'null', label: 'null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+          { id: 'the-head', label: 'the head', misconception: MisconceptionCategory.POINTER_CONFUSION },
         ])
       }
       const targetId = s.activePointer === 'prev' ? current.prev : current.next
       const others = s.nodes.filter((n) => n.id !== current.id).slice(0, 3)
-      const options = [{ id: targetId ?? 'null', label: targetId ? `${s.nodes.find((n) => n.id === targetId)?.value}` : 'null' }]
+      const options: TileOption[] = [
+        {
+          id: targetId ?? 'null',
+          label: targetId ? `${s.nodes.find((n) => n.id === targetId)?.value}` : 'null',
+          misconception: null,
+        },
+      ]
       for (const n of others) {
-        if (n.id !== targetId) options.push({ id: n.id, label: `${n.value}` })
+        if (n.id !== targetId) options.push({ id: n.id, label: `${n.value}`, misconception: MisconceptionCategory.POINTER_CONFUSION })
       }
       return shuffleArray(options.slice(0, 4))
     }
 
     case CriticalJunctionType.WRAP_CHECK:
       return shuffleArray([
-        { id: 'null', label: 'null' },
-        { id: 'the-head-node', label: 'the head node' },
-        { id: 'itself', label: 'itself' },
-        { id: 'the-tail', label: 'the tail' },
+        { id: 'null', label: 'null', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'the-head-node', label: 'the head node', misconception: null },
+        { id: 'itself', label: 'itself', misconception: MisconceptionCategory.POINTER_CONFUSION },
+        { id: 'the-tail', label: 'the tail', misconception: MisconceptionCategory.POINTER_CONFUSION },
       ])
 
     // Foundations - stack
@@ -657,35 +962,54 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const s = snapshot.dataStructureState as { items: Array<{ value: number | string }>; lastOperationValue: number | string | null }
       const pushed = s.lastOperationValue
       const prevTop = s.items.length >= 2 ? s.items[s.items.length - 2].value : null
-      const options: TileOption[] = [{ id: 'pushed-value', label: `${pushed}` }]
-      if (prevTop !== null) options.push({ id: 'prev-top', label: `${prevTop}` })
-      if (s.items.length >= 3) options.push({ id: 'middle-value', label: `${s.items[0].value}` })
-      options.push({ id: 'random-value', label: `${Number(pushed) + 100}` })
+      const options: TileOption[] = [{ id: 'pushed-value', label: `${pushed}`, misconception: null }]
+      if (prevTop !== null)
+        options.push({ id: 'prev-top', label: `${prevTop}`, misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION })
+      if (s.items.length >= 3)
+        options.push({
+          id: 'middle-value',
+          label: `${s.items[0].value}`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        })
+      options.push({
+        id: 'random-value',
+        label: `${Number(pushed) + 100}`,
+        misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+      })
       return shuffleArray(options)
     }
 
     case CriticalJunctionType.STACK_POP_RESULT: {
       const s = snapshot.dataStructureState as { items: Array<{ value: number | string }>; lastOperationValue: number | string | null }
       const popped = s.lastOperationValue
-      const options: TileOption[] = [{ id: 'top-value', label: `${popped}` }]
-      if (s.items.length >= 1) options.push({ id: 'second-value', label: `${s.items[s.items.length - 1].value}` })
-      options.push({ id: 'random-value', label: `${Number(popped) + 50}` })
-      options.push({ id: 'null', label: 'null' })
+      const options: TileOption[] = [{ id: 'top-value', label: `${popped}`, misconception: null }]
+      if (s.items.length >= 1)
+        options.push({
+          id: 'second-value',
+          label: `${s.items[s.items.length - 1].value}`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        })
+      options.push({
+        id: 'random-value',
+        label: `${Number(popped) + 50}`,
+        misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+      })
+      options.push({ id: 'null', label: 'null', misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION })
       return shuffleArray(options)
     }
 
     case CriticalJunctionType.OVERFLOW_CHECK:
       return shuffleArray([
-        { id: 'yes-succeeds', label: 'Yes - push succeeds' },
-        { id: 'no-overflow', label: 'No - stack overflow' },
+        { id: 'yes-succeeds', label: 'Yes - push succeeds', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        { id: 'no-overflow', label: 'No - stack overflow', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
       ])
 
     case CriticalJunctionType.UNDERFLOW_CHECK:
       return shuffleArray([
-        { id: 'zero', label: '0' },
-        { id: 'null', label: 'null' },
-        { id: 'error-underflow', label: 'Error - stack underflow' },
-        { id: 'neg-one', label: '-1' },
+        { id: 'zero', label: '0', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        { id: 'null', label: 'null', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        { id: 'error-underflow', label: 'Error - stack underflow', misconception: null },
+        { id: 'neg-one', label: '-1', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
       ])
 
     // Foundations - queue
@@ -694,32 +1018,51 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const options = Array.from(
         new Set([s.rearIndex, s.rearIndex - 1, s.frontIndex, s.capacity - 1].filter((i) => i >= 0)),
       )
-      return shuffleArray(options.map((i) => ({ id: `idx-${i}`, label: `${i}` })))
+      return shuffleArray(
+        options.map((i) => ({
+          id: `idx-${i}`,
+          label: `${i}`,
+          misconception: i === s.rearIndex ? null : MisconceptionCategory.OFF_BY_ONE,
+        })),
+      )
     }
 
     case CriticalJunctionType.QUEUE_FRONT: {
       const s = snapshot.dataStructureState as { items: Array<{ value: number | string }>; lastOperationValue: number | string | null }
-      const options: TileOption[] = [{ id: 'front-value', label: `${s.lastOperationValue}` }]
-      if (s.items.length >= 1) options.push({ id: 'next-value', label: `${s.items[0].value}` })
-      options.push({ id: 'random-value', label: `${Number(s.lastOperationValue) + 50}` })
-      options.push({ id: 'undefined', label: 'undefined' })
+      const options: TileOption[] = [{ id: 'front-value', label: `${s.lastOperationValue}`, misconception: null }]
+      if (s.items.length >= 1)
+        options.push({
+          id: 'next-value',
+          label: `${s.items[0].value}`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        })
+      options.push({
+        id: 'random-value',
+        label: `${Number(s.lastOperationValue) + 50}`,
+        misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+      })
+      options.push({ id: 'undefined', label: 'undefined', misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION })
       return shuffleArray(options)
     }
 
     case CriticalJunctionType.CIRCULAR_WRAP: {
       const s = snapshot.dataStructureState as { capacity: number }
       return shuffleArray([
-        { id: 'idx-0', label: '0' },
-        { id: `idx-${s.capacity}`, label: `${s.capacity}` },
-        { id: `idx-${s.capacity + 1}`, label: `${s.capacity + 1}` },
-        { id: `idx-${s.capacity - 1}`, label: `${s.capacity - 1} (same index)` },
+        { id: 'idx-0', label: '0', misconception: null },
+        { id: `idx-${s.capacity}`, label: `${s.capacity}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        { id: `idx-${s.capacity + 1}`, label: `${s.capacity + 1}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        {
+          id: `idx-${s.capacity - 1}`,
+          label: `${s.capacity - 1} (same index)`,
+          misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+        },
       ])
     }
 
     case CriticalJunctionType.DEQUE_END:
       return shuffleArray([
-        { id: 'front', label: 'Front (index 0)' },
-        { id: 'back', label: 'Back (last index)' },
+        { id: 'front', label: 'Front (index 0)', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        { id: 'back', label: 'Back (last index)', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
       ])
 
     case CriticalJunctionType.LOAD_FACTOR: {
@@ -732,15 +1075,15 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         // Linear queue: wasted-space question.
         const wasted = s.frontIndex
         return shuffleArray([
-          { id: `wasted-${wasted}`, label: `${wasted}` },
-          { id: 'wasted-0', label: '0' },
-          { id: `wasted-half`, label: `${Math.floor(s.capacity / 2)}` },
-          { id: `wasted-full`, label: `${s.capacity}` },
+          { id: `wasted-${wasted}`, label: `${wasted}`, misconception: null },
+          { id: 'wasted-0', label: '0', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+          { id: `wasted-half`, label: `${Math.floor(s.capacity / 2)}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+          { id: `wasted-full`, label: `${s.capacity}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
         ])
       }
       return shuffleArray([
-        { id: 'yes-too-high', label: 'Yes - load factor too high' },
-        { id: 'no-acceptable', label: 'No - still acceptable' },
+        { id: 'yes-too-high', label: 'Yes - load factor too high', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        { id: 'no-acceptable', label: 'No - still acceptable', misconception: MisconceptionCategory.BOUNDARY_CONDITION },
       ])
     }
 
@@ -751,23 +1094,29 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const options = Array.from(
         new Set([correct, (correct + 1) % s.capacity, (correct - 1 + s.capacity) % s.capacity, (correct + 2) % s.capacity]),
       )
-      return shuffleArray(options.map((i) => ({ id: `bucket-${i}`, label: `${i}` })))
+      return shuffleArray(
+        options.map((i) => ({ id: `bucket-${i}`, label: `${i}`, misconception: i === correct ? null : MisconceptionCategory.OFF_BY_ONE })),
+      )
     }
 
     case CriticalJunctionType.COLLISION_RESOLVE:
       return shuffleArray([
-        { id: 'front-of-chain', label: 'At the front of the chain' },
-        { id: 'back-of-chain', label: 'At the back of the chain' },
-        { id: 'new-bucket', label: 'In a new bucket' },
-        { id: 'insert-fails', label: 'The insert fails' },
+        {
+          id: 'front-of-chain',
+          label: 'At the front of the chain',
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+        { id: 'back-of-chain', label: 'At the back of the chain', misconception: null },
+        { id: 'new-bucket', label: 'In a new bucket', misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
+        { id: 'insert-fails', label: 'The insert fails', misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
       ])
 
     case CriticalJunctionType.PROBE_NEXT:
       return shuffleArray([
-        { id: 'i-plus-1-mod', label: '(i + 1) % capacity' },
-        { id: 'i-plus-2-mod', label: '(i + 2) % capacity' },
-        { id: 'i-minus-1', label: 'i - 1' },
-        { id: 'i-times-2-mod', label: 'i * 2 % capacity' },
+        { id: 'i-plus-1-mod', label: '(i + 1) % capacity', misconception: null },
+        { id: 'i-plus-2-mod', label: '(i + 2) % capacity', misconception: MisconceptionCategory.OFF_BY_ONE },
+        { id: 'i-minus-1', label: 'i - 1', misconception: MisconceptionCategory.OFF_BY_ONE },
+        { id: 'i-times-2-mod', label: 'i * 2 % capacity', misconception: MisconceptionCategory.OFF_BY_ONE },
       ])
 
     // Foundations - advanced search
@@ -776,10 +1125,10 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const n = s.array.length
       const correct = Math.max(1, Math.round(Math.sqrt(n)))
       return shuffleArray([
-        { id: `size-${correct}`, label: `${correct}` },
-        { id: `size-half`, label: `${Math.floor(n / 2)}` },
-        { id: `size-quarter`, label: `${Math.floor(n / 4)}` },
-        { id: 'size-1', label: '1' },
+        { id: `size-${correct}`, label: `${correct}`, misconception: null },
+        { id: `size-half`, label: `${Math.floor(n / 2)}`, misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
+        { id: `size-quarter`, label: `${Math.floor(n / 4)}`, misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
+        { id: 'size-1', label: '1', misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
       ])
     }
 
@@ -788,13 +1137,23 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const correct = s.probedIndex ?? s.low
       const mid = Math.floor((s.low + s.high) / 2)
       const options = Array.from(new Set([correct, mid, s.low + 1, s.high - 1].filter((i) => i >= s.low && i <= s.high)))
-      return shuffleArray(options.map((i) => ({ id: `idx-${i}`, label: `${i}` })))
+      return shuffleArray(
+        options.map((i) => ({ id: `idx-${i}`, label: `${i}`, misconception: i === correct ? null : MisconceptionCategory.OFF_BY_ONE })),
+      )
     }
 
     case CriticalJunctionType.RANGE_DOUBLE:
       return shuffleArray([
-        { id: 'yes-too-small', label: 'Yes - the value is smaller than the target, range is too small' },
-        { id: 'no-large-enough', label: 'No - the value is at least the target, binary search here' },
+        {
+          id: 'yes-too-small',
+          label: 'Yes - the value is smaller than the target, range is too small',
+          misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+        },
+        {
+          id: 'no-large-enough',
+          label: 'No - the value is at least the target, binary search here',
+          misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+        },
       ])
 
     // Foundations - recursion
@@ -802,10 +1161,14 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const s = snapshot.dataStructureState as { baseCase: number }
       // factorial(0) = 1; fib(1) = 1 - both engines' base cases return 1.
       return shuffleArray([
-        { id: 'zero', label: '0' },
-        { id: 'one', label: '1' },
-        { id: s.baseCase === 1 ? 'two' : 'undefined-alt', label: s.baseCase === 1 ? '2' : 'undefined' },
-        { id: 'undefined', label: 'undefined' },
+        { id: 'zero', label: '0', misconception: MisconceptionCategory.BASE_CASE_OMISSION },
+        { id: 'one', label: '1', misconception: null },
+        {
+          id: s.baseCase === 1 ? 'two' : 'undefined-alt',
+          label: s.baseCase === 1 ? '2' : 'undefined',
+          misconception: MisconceptionCategory.BASE_CASE_OMISSION,
+        },
+        { id: 'undefined', label: 'undefined', misconception: MisconceptionCategory.BASE_CASE_OMISSION },
       ])
     }
 
@@ -818,10 +1181,10 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const prev = Number(snapshot.description.match(/returned (\d+)/)?.[1])
       if (!Number.isFinite(n) || !Number.isFinite(prev)) return []
       return shuffleArray([
-        { id: `mult-${n * prev}`, label: `${n * prev}` },
-        { id: `add-${n + prev}`, label: `${n + prev}` },
-        { id: `mult-minus-${n * (prev - 1)}`, label: `${n * (prev - 1)}` },
-        { id: `prev-${prev}`, label: `${prev}` },
+        { id: `mult-${n * prev}`, label: `${n * prev}`, misconception: null },
+        { id: `add-${n + prev}`, label: `${n + prev}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+        { id: `mult-minus-${n * (prev - 1)}`, label: `${n * (prev - 1)}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+        { id: `prev-${prev}`, label: `${prev}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
       ])
     }
 
@@ -832,19 +1195,27 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         const n = Math.max(...s.frames.map((f) => f.argument), 1)
         const exponential = 2 ** n
         return shuffleArray([
-          { id: `exp-${exponential}`, label: `Roughly 2^${n} (exponential)` },
-          { id: 'linear', label: `Roughly ${n} (linear)` },
-          { id: 'quadratic', label: `Roughly ${n * n} (n squared)` },
-          { id: 'n-only', label: `Exactly ${n}` },
+          { id: `exp-${exponential}`, label: `Roughly 2^${n} (exponential)`, misconception: null },
+          { id: 'linear', label: `Roughly ${n} (linear)`, misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
+          { id: 'quadratic', label: `Roughly ${n * n} (n squared)`, misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
+          { id: 'n-only', label: `Exactly ${n}`, misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
         ])
       }
       // Factorial: how many more calls remain.
       const remaining = s.frames.length > 0 ? Math.min(...s.frames.map((f) => f.argument)) : 0
       return shuffleArray([
-        { id: `remaining-${remaining}`, label: `${remaining}` },
-        { id: `remaining-minus-${Math.max(0, remaining - 1)}`, label: `${Math.max(0, remaining - 1)}` },
-        { id: `remaining-plus-${remaining + 1}`, label: `${remaining + 1}` },
-        { id: 'remaining-0', label: '0' },
+        { id: `remaining-${remaining}`, label: `${remaining}`, misconception: null },
+        {
+          id: `remaining-minus-${Math.max(0, remaining - 1)}`,
+          label: `${Math.max(0, remaining - 1)}`,
+          misconception: MisconceptionCategory.OFF_BY_ONE,
+        },
+        {
+          id: `remaining-plus-${remaining + 1}`,
+          label: `${remaining + 1}`,
+          misconception: MisconceptionCategory.OFF_BY_ONE,
+        },
+        { id: 'remaining-0', label: '0', misconception: MisconceptionCategory.OFF_BY_ONE },
       ])
     }
 
@@ -858,15 +1229,15 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       }
       if (s.target !== null) {
         return shuffleArray([
-          { id: 'move-left', label: 'Move L right - sum is too small' },
-          { id: 'move-right', label: 'Move R left - sum is too large' },
-          { id: 'found', label: 'Both pointers found the pair' },
-          { id: 'no-solution', label: 'Neither - no solution' },
+          { id: 'move-left', label: 'Move L right - sum is too small', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+          { id: 'move-right', label: 'Move R left - sum is too large', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+          { id: 'found', label: 'Both pointers found the pair', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+          { id: 'no-solution', label: 'Neither - no solution', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
         ])
       }
       return shuffleArray([
-        { id: 'match-inward', label: 'Yes - move both pointers inward' },
-        { id: 'no-match', label: 'No - not a palindrome' },
+        { id: 'match-inward', label: 'Yes - move both pointers inward', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        { id: 'no-match', label: 'No - not a palindrome', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
       ])
     }
 
@@ -874,10 +1245,18 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const s = snapshot.dataStructureState as { array: number[]; windowStart: number; windowEnd: number; windowSum: number }
       const correct = s.windowSum
       return shuffleArray([
-        { id: `sum-${correct}`, label: `${correct}` },
-        { id: `sum-plus`, label: `${correct + (s.array[s.windowEnd + 1] ?? 1)}` },
-        { id: `sum-minus`, label: `${correct - (s.array[s.windowStart] ?? 1)}` },
-        { id: `sum-random`, label: `${correct + 7}` },
+        { id: `sum-${correct}`, label: `${correct}`, misconception: null },
+        {
+          id: `sum-plus`,
+          label: `${correct + (s.array[s.windowEnd + 1] ?? 1)}`,
+          misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+        },
+        {
+          id: `sum-minus`,
+          label: `${correct - (s.array[s.windowStart] ?? 1)}`,
+          misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+        },
+        { id: `sum-random`, label: `${correct + 7}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
       ])
     }
 
@@ -891,9 +1270,17 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       }
       if (s.targetSum !== null) {
         return shuffleArray([
-          { id: 'expand', label: 'Expand - sum < target, add right element' },
-          { id: 'shrink', label: 'Shrink - sum >= target, try to reduce window size' },
-          { id: 'stop', label: 'Stop - found minimum window' },
+          {
+            id: 'expand',
+            label: 'Expand - sum < target, add right element',
+            misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+          },
+          {
+            id: 'shrink',
+            label: 'Shrink - sum >= target, try to reduce window size',
+            misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+          },
+          { id: 'stop', label: 'Stop - found minimum window', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
         ])
       }
       // Fixed window: incremental new-sum question. This snapshot still
@@ -904,10 +1291,14 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const rightVal = s.array[s.windowEnd + 1]
       const newSum = s.windowSum - leftVal + rightVal
       return shuffleArray([
-        { id: `sum-${newSum}`, label: `${newSum}` },
-        { id: 'sum-forgot-subtract', label: `${s.windowSum + rightVal}` },
-        { id: 'sum-forgot-add', label: `${s.windowSum - leftVal}` },
-        { id: 'sum-recompute-wrong', label: `${s.windowSum + rightVal - leftVal + 1}` },
+        { id: `sum-${newSum}`, label: `${newSum}`, misconception: null },
+        { id: 'sum-forgot-subtract', label: `${s.windowSum + rightVal}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        { id: 'sum-forgot-add', label: `${s.windowSum - leftVal}`, misconception: MisconceptionCategory.BOUNDARY_CONDITION },
+        {
+          id: 'sum-recompute-wrong',
+          label: `${s.windowSum + rightVal - leftVal + 1}`,
+          misconception: MisconceptionCategory.BOUNDARY_CONDITION,
+        },
       ])
     }
 
@@ -916,8 +1307,12 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const s = snapshot.dataStructureState as { array: number[]; keyIndex: number }
       const keyVal = s.array[s.keyIndex]
       return shuffleArray([
-        { id: 'shift', label: `${keyVal} is smaller - shift it left` },
-        { id: 'no-shift', label: `${keyVal} is not smaller - leave it in place` },
+        { id: 'shift', label: `${keyVal} is smaller - shift it left`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+        {
+          id: 'no-shift',
+          label: `${keyVal} is not smaller - leave it in place`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
       ])
     }
 
@@ -926,14 +1321,22 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const s = snapshot.dataStructureState as { array: number[] }
       const [parent, child] = snapshot.activeIndices
       return shuffleArray([
-        { id: 'sift', label: `Sift down ${s.array[parent]} - child ${s.array[child]} is larger` },
-        { id: 'stay', label: `Stay - ${s.array[parent]} is already at least as large` },
+        {
+          id: 'sift',
+          label: `Sift down ${s.array[parent]} - child ${s.array[child]} is larger`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        {
+          id: 'stay',
+          label: `Stay - ${s.array[parent]} is already at least as large`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
       ])
     }
 
     case CriticalJunctionType.HEAP_EXTRACT: {
       const s = snapshot.dataStructureState as { array: number[] }
-      return [{ id: 'extract', label: `Extract ${s.array[0]} - it's the current maximum` }]
+      return [{ id: 'extract', label: `Extract ${s.array[0]} - it's the current maximum`, misconception: null }]
     }
 
     // Counting Sort
@@ -942,8 +1345,8 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const val = s.input[s.currentInputIndex]
       const distractors = Array.from(new Set([val + 1, Math.max(0, val - 1)])).filter((d) => d !== val)
       return shuffleArray([
-        { id: String(val), label: `Bucket ${val}` },
-        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: `Bucket ${d}` })),
+        { id: String(val), label: `Bucket ${val}`, misconception: null },
+        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: `Bucket ${d}`, misconception: MisconceptionCategory.OFF_BY_ONE })),
       ])
     }
 
@@ -953,8 +1356,8 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const newVal = s.count[i] + s.count[i - 1]
       const distractors = Array.from(new Set([newVal + 1, Math.max(0, newVal - 1)])).filter((d) => d !== newVal)
       return shuffleArray([
-        { id: String(newVal), label: String(newVal) },
-        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: String(d) })),
+        { id: String(newVal), label: String(newVal), misconception: null },
+        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: String(d), misconception: MisconceptionCategory.OFF_BY_ONE })),
       ])
     }
 
@@ -964,8 +1367,10 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
       const correctIdx = s.count[val] - 1
       const distractors = Array.from(new Set([correctIdx + 1, Math.max(0, correctIdx - 1)])).filter((d) => d !== correctIdx)
       return shuffleArray([
-        { id: String(correctIdx), label: `Output index ${correctIdx}` },
-        ...distractors.slice(0, 2).map((d) => ({ id: String(d), label: `Output index ${d}` })),
+        { id: String(correctIdx), label: `Output index ${correctIdx}`, misconception: null },
+        ...distractors
+          .slice(0, 2)
+          .map((d) => ({ id: String(d), label: `Output index ${d}`, misconception: MisconceptionCategory.OFF_BY_ONE })),
       ])
     }
 
@@ -980,7 +1385,9 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         if (!options.includes(d)) options.push(d)
         offset++
       }
-      return shuffleArray(options.map((d) => ({ id: String(d), label: `Bucket ${d}` })))
+      return shuffleArray(
+        options.map((d) => ({ id: String(d), label: `Bucket ${d}`, misconception: d === correct ? null : MisconceptionCategory.OFF_BY_ONE })),
+      )
     }
 
     default:
@@ -1297,6 +1704,12 @@ export default function PredictionZone({
     const junctionType = snapshot.criticalJunctionType ?? CriticalJunctionType.SWAP_DECISION
     const junctionDifficulty = snapshot.junctionDifficulty ?? JunctionDifficulty.PROCEDURAL
 
+    // The tile the student picked carries its own authored ground-truth
+    // misconception (see getTilesForSnapshot above) - free-text/code
+    // answers never populate currentTiles, so this is null there and the
+    // backend's rule-based classifier takes over instead.
+    const selectedTile = currentTiles.find((tile) => tile.id === answer)
+
     const request: PredictionRequest = {
       algorithmName,
       stepIndex: snapshot.stepIndex,
@@ -1311,6 +1724,7 @@ export default function PredictionZone({
       sessionId: sessionId ?? 'local-session',
       junctionType,
       junctionDifficulty,
+      groundTruthMisconception: selectedTile?.misconception ?? null,
     }
 
     const response = await submitPrediction(request)

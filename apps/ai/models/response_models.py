@@ -10,7 +10,13 @@ class CamelModel(BaseModel):
 
 class PredictionResponse(CamelModel):
     correct: bool
+    # The stored, authoritative label: the tile-derived ground truth echoed
+    # back when wrong, or the rule-based classifier's guess when there was
+    # no tile. Never the model's own guess - see ai_misconception_category.
     misconception_category: MisconceptionCategory | None = None
+    # The AI's own guess, reported separately so agreement between the two
+    # can be measured rather than assumed - see remediation doc 4.3.
+    ai_misconception_category: MisconceptionCategory | None = None
     consequence_explanation: str
     socratic_hint: str
     xp_awarded: int

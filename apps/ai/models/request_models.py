@@ -18,6 +18,15 @@ class MisconceptionCategory(str, Enum):
     POINTER_CONFUSION = "POINTER_CONFUSION"
     BASE_CASE_OMISSION = "BASE_CASE_OMISSION"
     COMPLEXITY_MISATTRIBUTION = "COMPLEXITY_MISATTRIBUTION"
+    # Added in Phase 4 to fit errors the original six didn't cover - see
+    # remediation doc 4.1. Keep in sync with packages/types/index.ts's
+    # MisconceptionCategory.
+    COMPARISON_DIRECTION = "COMPARISON_DIRECTION"
+    INVARIANT_MISAPPLICATION = "INVARIANT_MISAPPLICATION"
+    PREMATURE_TERMINATION = "PREMATURE_TERMINATION"
+    STABILITY_CONFUSION = "STABILITY_CONFUSION"
+    TRAVERSAL_ORDER_CONFUSION = "TRAVERSAL_ORDER_CONFUSION"
+    BOUNDARY_CONDITION = "BOUNDARY_CONDITION"
 
 
 # Mirrors JunctionDifficulty in packages/types/index.ts. Keep in sync.
@@ -42,6 +51,13 @@ class PredictionRequest(BaseModel):
     # so this widening changes nothing about how requests get graded.
     junction_type: str | None = None
     junction_difficulty: JunctionDifficulty | None = None
+    # The misconception authored onto the selected tile on the frontend
+    # (see TileOption in apps/web/src/components/prediction/TileGrid.tsx),
+    # None for a correct tile or a free-text/code answer with no tile.
+    # This is the ground truth label for the study's misconception-detection
+    # research question - the AI's own guess is never trusted as fact (see
+    # services/misconception_classifier.py and routers/predictions.py).
+    ground_truth_misconception: MisconceptionCategory | None = None
 
 
 class HintRequest(BaseModel):

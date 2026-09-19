@@ -1,4 +1,4 @@
-from models.request_models import ScaffoldingLevel
+from models.request_models import MisconceptionCategory, ScaffoldingLevel
 from models.response_models import HintResponse, PredictionResponse
 
 # Junction types that ask about an invariant or property of the whole
@@ -45,10 +45,16 @@ def get_fallback_prediction_response(
     scaffolding_level: ScaffoldingLevel,
     algorithm_name: str = "the algorithm",
     junction_type: str | None = None,
+    ground_truth_misconception: MisconceptionCategory | None = None,
 ) -> PredictionResponse:
     return PredictionResponse(
         correct=correct,
-        misconception_category=None,
+        # The tile-derived (or rule-classified) ground truth still applies
+        # even when the AI call itself failed - it never depended on the
+        # model's response. ai_misconception_category is left null since no
+        # usable AI guess exists for this submission.
+        misconception_category=ground_truth_misconception,
+        ai_misconception_category=None,
         consequence_explanation=FALLBACK_EXPLANATION_TEMPLATE.format(algorithm_name=algorithm_name),
         socratic_hint=_neutral_hint(scaffolding_level, algorithm_name, junction_type),
         xp_awarded=10 if correct else 0,

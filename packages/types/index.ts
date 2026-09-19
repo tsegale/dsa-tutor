@@ -37,6 +37,15 @@ export const MisconceptionCategory = {
   POINTER_CONFUSION: 'POINTER_CONFUSION',
   BASE_CASE_OMISSION: 'BASE_CASE_OMISSION',
   COMPLEXITY_MISATTRIBUTION: 'COMPLEXITY_MISATTRIBUTION',
+  // Added in Phase 4 to fit errors the original six taxonomy entries
+  // didn't cover - see remediation doc 4.1. Keep in sync with
+  // apps/ai/models/request_models.py's MisconceptionCategory.
+  COMPARISON_DIRECTION: 'COMPARISON_DIRECTION',
+  INVARIANT_MISAPPLICATION: 'INVARIANT_MISAPPLICATION',
+  PREMATURE_TERMINATION: 'PREMATURE_TERMINATION',
+  STABILITY_CONFUSION: 'STABILITY_CONFUSION',
+  TRAVERSAL_ORDER_CONFUSION: 'TRAVERSAL_ORDER_CONFUSION',
+  BOUNDARY_CONDITION: 'BOUNDARY_CONDITION',
 } as const
 export type MisconceptionCategory =
   (typeof MisconceptionCategory)[keyof typeof MisconceptionCategory]
@@ -346,6 +355,12 @@ export interface PredictionRequest {
   sessionId: string
   junctionType?: CriticalJunctionType | null
   junctionDifficulty?: JunctionDifficulty | null
+  /** The misconception authored onto the selected tile (see TileOption in
+   * apps/web/src/components/prediction/TileGrid.tsx), null for a correct
+   * tile or a free-text/code answer with no tile. This is the ground truth
+   * label - the AI's own guess is reported separately as
+   * PredictionResponse.aiMisconceptionCategory, never stored as fact. */
+  groundTruthMisconception?: MisconceptionCategory | null
 }
 
 /**
@@ -355,7 +370,15 @@ export interface PredictionRequest {
  */
 export interface PredictionResponse {
   correct: boolean
+  /** The stored, authoritative label: the tile-derived groundTruthMisconception
+   * echoed back when the answer was wrong, or the rule-based classifier's
+   * guess when there was no tile. Never the model's own guess - that is
+   * aiMisconceptionCategory below. */
   misconceptionCategory: MisconceptionCategory | null
+  /** The AI's own guess at the misconception, reported separately so
+   * agreement between the two can be measured rather than assumed. Null
+   * when the answer was correct or the AI call fell back. */
+  aiMisconceptionCategory: MisconceptionCategory | null
   consequenceExplanation: string
   socraticHint: string
   xpAwarded: number

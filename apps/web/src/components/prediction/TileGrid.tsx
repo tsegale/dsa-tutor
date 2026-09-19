@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot, MisconceptionCategory } from '@dsa-tutor/types'
 import { CriticalJunctionType } from '@dsa-tutor/types'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils'
 export interface TileOption {
   id: string
   label: string
+  /** The misconception this tile represents if picked when it's wrong -
+   * the ground truth for the study's misconception-detection research
+   * question (see remediation doc 4.2). Null for a tile that is always
+   * the correct answer regardless of runtime state. */
+  misconception?: MisconceptionCategory | null
 }
 
 interface TileGridProps {

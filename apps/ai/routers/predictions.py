@@ -4,14 +4,14 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from models.request_models import PredictionRequest, ScaffoldingLevel
+from models.request_models import MisconceptionCategory, PredictionRequest, ScaffoldingLevel
 from models.response_models import PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
 from services.claude_service import call_claude_for_feedback, is_field_valid
 from services.fallback_service import get_fallback_prediction_response
 from services.feedback_cache import CACHE_ENABLED, feedback_cache, make_cache_key
-from services.misconception_classifier import classify_bubble_sort_misconception
+from services.misconception_classifier import classify_misconception
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1113,6 +1113,34 @@ async def _get_validated_feedback(
     return None
 
 
+def resolve_ground_truth_misconception(
+    correct: bool, request: PredictionRequest
+) -> MisconceptionCategory | None:
+    """The stored, authoritative label. Ground truth comes from the tile
+    the student picked (authored on the frontend - see
+    TileOption.misconception in PredictionZone.tsx), never from the model.
+    Only falls back to the rule-based classifier for free-text/code answers
+    where no tile exists to supply one. Always None for a correct answer."""
+    if correct:
+        return None
+    return request.ground_truth_misconception or classify_misconception(
+        request.student_answer, request.current_state
+    )
+
+
+def resolve_ai_misconception(correct: bool, feedback: dict[str, Any]) -> MisconceptionCategory | None:
+    """The AI's own guess, reported separately so agreement between the
+    two can be measured rather than the model's guess being trusted as
+    fact (see remediation doc 4.3). None for a correct answer or a guess
+    that doesn't match a known category."""
+    if correct:
+        return None
+    try:
+        return MisconceptionCategory(feedback.get("misconception_category"))
+    except (ValueError, TypeError):
+        return None
+
+
 @router.post("/", response_model=PredictionResponse)
 async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     correct = evaluate_answer(request)
@@ -1148,6 +1176,8 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
         comparison_context=comparison_context,
     )
 
+    ground_truth_misconception = resolve_ground_truth_misconception(correct, request)
+
     try:
         if cached_feedback is not None:
             feedback = cached_feedback
@@ -1155,18 +1185,16 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
             feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level)
             if feedback is None:
                 return get_fallback_prediction_response(
-                    correct, request.scaffolding_level, request.algorithm_name, junction_type
+                    correct, request.scaffolding_level, request.algorithm_name, junction_type,
+                    ground_truth_misconception,
                 )
             if CACHE_ENABLED:
                 feedback_cache.set(cache_key, feedback)
-        misconception = classify_bubble_sort_misconception(
-            request.student_answer,
-            request.current_state,
-            feedback.get("misconception_category"),
-        )
+        ai_misconception = resolve_ai_misconception(correct, feedback)
         return PredictionResponse(
             correct=correct,
-            misconception_category=misconception,
+            misconception_category=ground_truth_misconception,
+            ai_misconception_category=ai_misconception,
             consequence_explanation=feedback["consequence_explanation"],
             socratic_hint=feedback["socratic_hint"],
             xp_awarded=feedback.get("xp_awarded", 10 if correct else 0),
@@ -1181,5 +1209,6 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
             exc_info=True,
         )
         return get_fallback_prediction_response(
-            correct, request.scaffolding_level, request.algorithm_name, junction_type
+            correct, request.scaffolding_level, request.algorithm_name, junction_type,
+            ground_truth_misconception,
         )

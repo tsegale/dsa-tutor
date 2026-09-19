@@ -36,6 +36,7 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
       session_id: request.sessionId,
       junction_type: request.junctionType ?? null,
       junction_difficulty: request.junctionDifficulty ?? null,
+      ground_truth_misconception: request.groundTruthMisconception ?? null,
     }),
   })
   if (!response.ok) throw new Error(`AI service error: ${response.status}`)
@@ -43,6 +44,7 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
   return {
     correct: data.correct,
     misconceptionCategory: data.misconceptionCategory,
+    aiMisconceptionCategory: data.aiMisconceptionCategory ?? null,
     consequenceExplanation: data.consequenceExplanation,
     socraticHint: data.socraticHint,
     xpAwarded: data.xpAwarded,
