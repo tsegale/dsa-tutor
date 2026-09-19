@@ -99,11 +99,10 @@ export function factorialEngine(n: number): AlgorithmSnapshot[] {
     )
 
     if (arg === Math.ceil(clamped / 2) && clamped > 2) {
-      const remaining = arg
       snapshots.push(
         makeSnapshot({
           stepIndex: stepIndex++,
-          description: `${remaining} more recursive call${remaining === 1 ? '' : 's'} will be made before the base case is reached. How many more calls will there be?`,
+          description: 'How many more recursive calls will there be before the base case is reached?',
           pseudocodeLine: LINE.CALL,
           isPredictionRequired: true,
           state: baseState({ currentFrameId: id }),

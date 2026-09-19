@@ -172,7 +172,7 @@ export function dllInsertFrontEngine(values: number[]): AlgorithmSnapshot[] {
   snapshots.push(
     makeSnapshot({
       stepIndex: stepRef.current++,
-      description: `Inserting ${newValue} at the front. After inserting, which TWO pointers must be updated?`,
+      description: `Inserting ${newValue} at the front. After inserting, which TWO pointers change?`,
       pseudocodeLine: LINE.NEW_LINKS,
       isPredictionRequired: true,
       state: baseState(nodes, { currentId: newId }),
@@ -242,7 +242,7 @@ export function dllInsertBackEngine(values: number[]): AlgorithmSnapshot[] {
   snapshots.push(
     makeSnapshot({
       stepIndex: stepRef.current++,
-      description: `The tail pointer already gives direct access to the last node (${nodes.find((n) => n.id === tailId)!.value}) - no traversal needed with a maintained tail pointer. After appending ${newValue}, which TWO pointers must be updated?`,
+      description: `The tail pointer already gives direct access to the last node (${nodes.find((n) => n.id === tailId)!.value}) - no traversal needed with a maintained tail pointer. After appending ${newValue}, which TWO pointers change?`,
       pseudocodeLine: LINE.NEW_LINKS,
       isPredictionRequired: true,
       state: baseState(nodes, { currentId: tailId }),
@@ -301,12 +301,21 @@ export function dllInsertAtEngine(values: number[], position: number): Algorithm
     snapshots.push(
       makeSnapshot({
         stepIndex: stepRef.current++,
-        description: `Inserting ${newValue} at position 0 makes it the new head - both its .next and the old head's .prev must be updated.`,
+        description: `Inserting ${newValue} at position 0 makes it the new head. After inserting, which TWO pointers change?`,
         pseudocodeLine: LINE.RELINK_BOTH,
         isPredictionRequired: true,
-        state: baseState(finalNodes, { headId: id, highlightedId: id }),
+        state: baseState(nodes, { currentId: id }),
         criticalJunctionType: CriticalJunctionType.INSERT_BETWEEN,
         junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+      }),
+    )
+    snapshots.push(
+      makeSnapshot({
+        stepIndex: stepRef.current++,
+        description: `${newValue} inserted. Its .next points to the old head, and the old head's .prev now points back to it.`,
+        pseudocodeLine: LINE.RELINK_BOTH,
+        isPredictionRequired: false,
+        state: baseState(finalNodes, { headId: id, highlightedId: id }),
         isFinalStep: true,
       }),
     )
@@ -339,7 +348,7 @@ export function dllInsertAtEngine(values: number[], position: number): Algorithm
   snapshots.push(
     makeSnapshot({
       stepIndex: stepRef.current++,
-      description: `Inserting ${newValue} between ${prevNode.value} and ${nextNode ? nextNode.value : 'the end'}. After inserting between A and B, which TWO pointers must be updated?`,
+      description: `Inserting ${newValue} between ${prevNode.value} and ${nextNode ? nextNode.value : 'the end'}. After inserting between A and B, which TWO pointers change?`,
       pseudocodeLine: LINE.NEW_LINKS,
       isPredictionRequired: true,
       state: baseState(nodes, { currentId: prevId }),

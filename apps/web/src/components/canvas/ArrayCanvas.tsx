@@ -8,6 +8,7 @@ import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from 
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
+import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 
 interface ArrayCanvasProps {
   width?: number
@@ -469,7 +470,13 @@ export default function ArrayCanvas({
     )
   }
 
-  const canvasLabel = `${algorithmName}, step ${snapshot.stepIndex + 1} of ${totalSteps}: ${snapshot.description}`
+  // Never read the outcome-revealing description while a prediction is
+  // pending - a screen reader user must not hear the answer to the
+  // question the prediction zone is asking.
+  const canvasNarration = snapshot.isPredictionRequired
+    ? getPromptForSnapshot(snapshot, algorithmName)
+    : snapshot.description
+  const canvasLabel = `${algorithmName}, step ${snapshot.stepIndex + 1} of ${totalSteps}: ${canvasNarration}`
 
   const progressColorClass =
     progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'

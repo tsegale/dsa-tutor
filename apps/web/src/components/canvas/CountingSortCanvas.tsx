@@ -3,6 +3,7 @@ import * as d3 from 'd3'
 import { motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import type { CountingSortState } from '@/engine/countingSort'
+import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 
 interface CountingSortCanvasProps {
   width?: number
@@ -107,6 +108,7 @@ function Row({
  */
 export default function CountingSortCanvas({ width = 600, height = 300 }: CountingSortCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  const algorithmName = useAlgorithmStore((s) => s.algorithmName)
 
   const state = useMemo(() => {
     const raw = snapshot?.dataStructureState
@@ -129,12 +131,18 @@ export default function CountingSortCanvas({ width = 600, height = 300 }: Counti
   const countRowY = inputRowY + rowHeight + ROW_GAP
   const outputRowY = countRowY + rowHeight + ROW_GAP
 
+  // Never read the outcome-revealing description while a prediction is
+  // pending - a screen reader user must not hear the answer.
+  const narration = snapshot.isPredictionRequired
+    ? getPromptForSnapshot(snapshot, algorithmName)
+    : snapshot.description
+
   return (
     <svg
       width={width}
       height={height}
       role="img"
-      aria-label={`Counting Sort, step ${snapshot.stepIndex + 1}: ${snapshot.description}`}
+      aria-label={`Counting Sort, step ${snapshot.stepIndex + 1}: ${narration}`}
     >
       <Row
         label="Input →"

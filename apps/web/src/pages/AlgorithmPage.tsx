@@ -350,6 +350,7 @@ export default function AlgorithmPage() {
   const [mistakeHint, setMistakeHint] = useState<string | null>(null)
   const [mistakeCounterfactual, setMistakeCounterfactual] = useState<string | null>(null)
   const [hint, setHint] = useState<string | null>(null)
+  const [predictionResolved, setPredictionResolved] = useState(false)
 
   // Guards against re-triggering the modal every time the learner steps
   // back to the final step and forward again within the same practice
@@ -746,6 +747,7 @@ export default function AlgorithmPage() {
         setMistakeCounterfactual={setMistakeCounterfactual}
         hint={hint}
         setHint={setHint}
+        setPredictionResolved={setPredictionResolved}
       />
     </div>
   ) : (
@@ -845,6 +847,7 @@ export default function AlgorithmPage() {
                   setMistakeCounterfactual(null)
                 }}
                 hint={hint}
+                predictionResolved={predictionResolved}
                 fullWidth
               />
             </div>
@@ -935,6 +938,7 @@ export default function AlgorithmPage() {
             setMistakeCounterfactual(null)
           }}
           hint={hint}
+          predictionResolved={predictionResolved}
         />
       </motion.div>
 

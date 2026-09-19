@@ -130,9 +130,11 @@ export function bubbleSortEngine(input: number[], codeEditorMode = false): Algor
       snapshots.push(
         makeSnapshot({
           stepIndex: stepIndex++,
-          description: needsSwap
-            ? `Comparing index ${i} (value ${left}) and index ${i + 1} (value ${right}). Since ${left} > ${right}, a swap is needed.`
-            : `Comparing index ${i} (value ${left}) and index ${i + 1} (value ${right}). Since ${left} <= ${right}, no swap is needed.`,
+          // Observable facts only - the outcome (whether a swap is needed)
+          // is exactly what the prediction below asks the student, so it
+          // must not appear here. See the SWAP and INNER_LOOP_END snapshots
+          // for where that reasoning is narrated, after the student answers.
+          description: `Comparing index ${i} (value ${left}) and index ${i + 1} (value ${right}).`,
           pseudocodeLine: PSEUDOCODE_LINE.COMPARISON,
           isPredictionRequired: isSwapJunction,
           dataStructureState: working,
@@ -153,7 +155,7 @@ export function bubbleSortEngine(input: number[], codeEditorMode = false): Algor
         snapshots.push(
           makeSnapshot({
             stepIndex: stepIndex++,
-            description: `Swapped index ${i} and index ${i + 1}. The array is now [${working.join(', ')}].`,
+            description: `Since ${left} > ${right}, a swap is needed. Swapped index ${i} and index ${i + 1}. The array is now [${working.join(', ')}].`,
             pseudocodeLine: PSEUDOCODE_LINE.SWAP,
             isPredictionRequired: false,
             dataStructureState: working,
@@ -166,7 +168,9 @@ export function bubbleSortEngine(input: number[], codeEditorMode = false): Algor
       snapshots.push(
         makeSnapshot({
           stepIndex: stepIndex++,
-          description: `Finished checking index ${i} and index ${i + 1}.`,
+          description: needsSwap
+            ? `Finished checking index ${i} and index ${i + 1}.`
+            : `Since ${left} <= ${right}, no swap is needed. Finished checking index ${i} and index ${i + 1}.`,
           pseudocodeLine: PSEUDOCODE_LINE.INNER_LOOP_END,
           isPredictionRequired: false,
           dataStructureState: working,

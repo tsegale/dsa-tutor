@@ -7,6 +7,7 @@ import ComplexityPanel from '@/components/canvas/ComplexityPanel'
 import ScaffoldingFader from './ScaffoldingFader'
 import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
 import { cn } from '@/lib/utils'
+import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 
 interface RightPanelProps {
   collapsed: boolean
@@ -18,6 +19,11 @@ interface RightPanelProps {
   mistakeCounterfactual: string | null
   onDismissMistake: () => void
   hint: string | null
+  /** False while the current step's prediction is still pending (or has
+   * been answered wrong but not yet revealed) - the Socratic guidance box
+   * must show the answer-safe junction prompt, not the snapshot's own
+   * narration description, until this is true. */
+  predictionResolved: boolean
   /** Compact-layout tab mode (<1024px): renders full width, always expanded,
    * with no rail/collapse toggle - there's no room for a docked rail once
    * the panel is a full-screen tab instead of a sidebar. */
@@ -68,18 +74,27 @@ function ChevronIcon({ pointRight }: { pointRight: boolean }) {
   )
 }
 
-function SocraticGuidanceBox({ hint }: { hint: string | null }) {
+function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null; predictionResolved: boolean }) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const correct = useAlgorithmStore((state) => state.sessionCorrectPredictions)
   const total = useAlgorithmStore((state) => state.sessionTotalPredictions)
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
 
+  // Never show the snapshot's own narration description while a prediction
+  // is pending - several engines' descriptions state the outcome of the
+  // junction, which would hand the student the answer to the question
+  // they're being asked. getPromptForSnapshot is answer-safe.
+  const guidanceText = !snapshot
+    ? 'Load an algorithm to begin.'
+    : snapshot.isPredictionRequired && !predictionResolved
+      ? getPromptForSnapshot(snapshot, algorithmName)
+      : snapshot.description
+
   return (
     <div className="rounded-md border border-border bg-white p-3 dark:bg-dark-surface">
       <p className="text-xs font-bold text-primary">Socratic guidance</p>
-      <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">
-        {snapshot?.description ?? 'Load an algorithm to begin.'}
-      </p>
+      <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">{guidanceText}</p>
 
       <div className="mt-3 flex items-center gap-2">
         <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">
@@ -109,6 +124,7 @@ export default function RightPanel({
   mistakeCounterfactual,
   onDismissMistake,
   hint,
+  predictionResolved,
   fullWidth = false,
 }: RightPanelProps) {
   const pseudocodeLine = useAlgorithmStore((state) => selectCurrentSnapshot(state)?.pseudocodeLine ?? null)
@@ -208,7 +224,7 @@ export default function RightPanel({
                 pseudocodeLine={pseudocodeLine}
                 onDismiss={onDismissMistake}
               />
-              <SocraticGuidanceBox hint={hint} />
+              <SocraticGuidanceBox hint={hint} predictionResolved={predictionResolved} />
             </TabsContent>
             <TabsContent value="2" className="flex-1 overflow-y-auto">
               <PseudocodePanel />

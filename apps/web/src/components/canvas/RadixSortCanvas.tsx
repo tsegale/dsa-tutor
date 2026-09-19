@@ -3,6 +3,7 @@ import * as d3 from 'd3'
 import { motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import type { RadixSortState } from '@/engine/radixSort'
+import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 
 interface RadixSortCanvasProps {
   width?: number
@@ -37,6 +38,7 @@ function digitLabel(digitPosition: number): string {
  */
 export default function RadixSortCanvas({ width = 600, height = 300 }: RadixSortCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  const algorithmName = useAlgorithmStore((s) => s.algorithmName)
 
   const state = useMemo(() => {
     const raw = snapshot?.dataStructureState
@@ -71,12 +73,18 @@ export default function RadixSortCanvas({ width = 600, height = 300 }: RadixSort
   const bucketWidth = bucketXScale.bandwidth()
   const maxChipsVisible = Math.max(1, Math.floor((bucketAreaHeight - 20) / (CHIP_HEIGHT + CHIP_GAP)))
 
+  // Never read the outcome-revealing description while a prediction is
+  // pending - a screen reader user must not hear the answer.
+  const narration = snapshot.isPredictionRequired
+    ? getPromptForSnapshot(snapshot, algorithmName)
+    : snapshot.description
+
   return (
     <svg
       width={width}
       height={height}
       role="img"
-      aria-label={`Radix Sort, step ${snapshot.stepIndex + 1}: ${snapshot.description}`}
+      aria-label={`Radix Sort, step ${snapshot.stepIndex + 1}: ${narration}`}
     >
       <text x={PADDING} y={16} className="fill-text-secondary text-[11px] font-semibold dark:fill-dark-text-secondary">
         {state.passNumber > 0 ? `Pass ${state.passNumber} of ${state.maxDigits} - sorting by: ${digitLabel(state.digitPosition)}` : 'Preparing to sort'}
