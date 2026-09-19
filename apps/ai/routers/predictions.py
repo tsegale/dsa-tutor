@@ -7,9 +7,10 @@ from fastapi import APIRouter
 from models.request_models import PredictionRequest
 from models.response_models import PredictionResponse
 from prompts.registry import get_algorithm_context
-from prompts.templates import FEEDBACK_TEMPLATE
+from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
 from services.claude_service import call_claude_for_feedback, is_field_valid
 from services.fallback_service import get_fallback_prediction_response
+from services.feedback_cache import CACHE_ENABLED, feedback_cache, make_cache_key
 from services.misconception_classifier import classify_bubble_sort_misconception
 
 router = APIRouter()
@@ -1059,7 +1060,7 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
 
 
 def _feedback_is_valid(feedback: dict[str, Any], correct: bool) -> bool:
-    """Matches each field's own prompt contract in FEEDBACK_TEMPLATE:
+    """Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
     consequence_explanation and counterfactual_trace are capped at two
     sentences, socratic_hint at twenty words, and counterfactual_trace is
     only allowed to be empty when the answer was correct."""
@@ -1073,12 +1074,24 @@ def _feedback_is_valid(feedback: dict[str, Any], correct: bool) -> bool:
 
 
 async def _get_validated_feedback(prompt: str, correct: bool) -> dict[str, Any] | None:
-    feedback = await call_claude_for_feedback(prompt)
+    feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
+    logger.info(
+        "AI prediction call: latency_ms=%s input_tokens=%s output_tokens=%s",
+        metadata.latency_ms,
+        metadata.input_tokens,
+        metadata.output_tokens,
+    )
     if _feedback_is_valid(feedback, correct):
         return feedback
 
     logger.warning("AI prediction feedback failed validation, retrying once")
-    feedback = await call_claude_for_feedback(prompt)
+    feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
+    logger.info(
+        "AI prediction retry call: latency_ms=%s input_tokens=%s output_tokens=%s",
+        metadata.latency_ms,
+        metadata.input_tokens,
+        metadata.output_tokens,
+    )
     if _feedback_is_valid(feedback, correct):
         return feedback
 
@@ -1096,7 +1109,17 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     comparison_context = build_comparison_context(junction_type, wrapper, request.student_answer)
     algorithm_context, pseudocode, junction_guidance_map = get_algorithm_context(request.algorithm_name)
 
-    prompt = FEEDBACK_TEMPLATE.format(
+    cache_key = make_cache_key(
+        request.algorithm_name,
+        junction_type,
+        request.current_state,
+        request.student_answer,
+        request.scaffolding_level.value,
+        correct,
+    )
+    cached_feedback = feedback_cache.get(cache_key) if CACHE_ENABLED else None
+
+    prompt = FEEDBACK_USER_TEMPLATE.format(
         algorithm_context=algorithm_context,
         pseudocode=pseudocode,
         step_index=request.step_index,
@@ -1112,9 +1135,16 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     )
 
     try:
-        feedback = await _get_validated_feedback(prompt, correct)
-        if feedback is None:
-            return get_fallback_prediction_response(correct)
+        if cached_feedback is not None:
+            feedback = cached_feedback
+        else:
+            feedback = await _get_validated_feedback(prompt, correct)
+            if feedback is None:
+                return get_fallback_prediction_response(
+                    correct, request.scaffolding_level, request.algorithm_name, junction_type
+                )
+            if CACHE_ENABLED:
+                feedback_cache.set(cache_key, feedback)
         misconception = classify_bubble_sort_misconception(
             request.student_answer,
             request.current_state,
@@ -1129,4 +1159,13 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
             counterfactual_trace="" if correct else feedback.get("counterfactual_trace", ""),
         )
     except Exception:
-        return get_fallback_prediction_response(correct)
+        logger.warning(
+            "AI prediction call failed for algorithm=%s junction_type=%s step_index=%s, falling back",
+            request.algorithm_name,
+            junction_type,
+            request.step_index,
+            exc_info=True,
+        )
+        return get_fallback_prediction_response(
+            correct, request.scaffolding_level, request.algorithm_name, junction_type
+        )

@@ -93,7 +93,7 @@ async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
     )
 
     try:
-        data = await call_claude_for_feedback(prompt)
+        data, _metadata = await call_claude_for_feedback(prompt)
         return FeynmanResponse(
             score=data.get("score", 0),
             feedback_summary=data.get("feedback_summary", ""),

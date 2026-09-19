@@ -2,70 +2,18 @@ from langchain.prompts import PromptTemplate
 
 from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 
-PREDICTION_PROMPT_TEMPLATE = PromptTemplate(
-    input_variables=[
-        "algorithm_context",
-        "pseudocode",
-        "step_index",
-        "current_state",
-        "student_answer",
-        "error_history",
-    ],
-    template="""You are a Socratic tutor helping a student learn algorithms through
-guided prediction, not direct explanation.
-
-Algorithm context:
-{algorithm_context}
-
-Pseudocode:
-{pseudocode}
-
-Current step index: {step_index}
-Current data structure state: {current_state}
-Student's answer: {student_answer}
-Student's prior errors on this step: {error_history}
-
-Analyze the student's answer.""",
-)
-
-FEEDBACK_TEMPLATE = PromptTemplate(
-    input_variables=[
-        "algorithm_context",
-        "pseudocode",
-        "step_index",
-        "current_state",
-        "student_answer",
-        "correct",
-        "error_history",
-        "scaffolding_level",
-        "junction_type",
-        "junction_difficulty",
-        "junction_guidance",
-        "comparison_context",
-    ],
-    template="""You are a Socratic tutor helping a student learn algorithms through
+# Stable across every call regardless of algorithm, student or step - the
+# tutor persona and the JSON contract belong in the system prompt, not
+# repeated in every user turn. Anthropic also caches a stable system
+# prompt across requests, which a prompt that changes per-call cannot
+# benefit from.
+FEEDBACK_SYSTEM_PROMPT = """You are a Socratic tutor helping a student learn algorithms through
 guided prediction, not direct explanation. Never state the correct answer
 outright. Ask a question that leads the student to discover it themselves.
 
-Algorithm context:
-{algorithm_context}
-
-Pseudocode:
-{pseudocode}
-
-Current step index: {step_index}
-Current data structure state: {current_state}
-Critical Junction type: {junction_type} ({junction_difficulty})
-What this junction is testing: {junction_guidance}
-Comparison context: {comparison_context}
-Student's answer: {student_answer}
-This answer was: {correct}
-Student's prior errors on this step: {error_history}
-Scaffolding level: {scaffolding_level}
-
 Respond with ONLY valid JSON, no markdown code fences, matching exactly this
 schema:
-{{
+{
   "misconception_category": one of "OFF_BY_ONE", "ORDER_OF_OPERATIONS",
     "STRUCTURAL_PROPERTY_VIOLATION", "POINTER_CONFUSION",
     "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION", or null if the
@@ -96,35 +44,44 @@ schema:
     larger, and where should the larger value end up by the time
     sorting is complete?,
   "xp_awarded": an integer, 10 if correct, 0 if incorrect
-}}""",
-)
+}"""
 
-HINT_TEMPLATE = PromptTemplate(
+FEEDBACK_USER_TEMPLATE = PromptTemplate(
     input_variables=[
         "algorithm_context",
         "pseudocode",
         "step_index",
-        "current_prediction_prompt",
-        "comparison_values",
+        "current_state",
+        "student_answer",
+        "correct",
         "error_history",
         "scaffolding_level",
+        "junction_type",
+        "junction_difficulty",
+        "junction_guidance",
+        "comparison_context",
     ],
-    template="""You are a Socratic tutor. A student is stuck and has requested a hint.
-Never state the correct answer outright. Ask a guiding question or point
-at what to look at, calibrated to the requested scaffolding level (HIGH
-scaffolding = more direct guidance, NONE = only the faintest nudge).
-
-Algorithm context:
+    template="""Algorithm context:
 {algorithm_context}
 
 Pseudocode:
 {pseudocode}
 
 Current step index: {step_index}
-What the student is being asked to predict: {current_prediction_prompt}
-Exact index/value pairs for this step: {comparison_values}
+Current data structure state: {current_state}
+Critical Junction type: {junction_type} ({junction_difficulty})
+What this junction is testing: {junction_guidance}
+Comparison context: {comparison_context}
+Student's answer: {student_answer}
+This answer was: {correct}
 Student's prior errors on this step: {error_history}
-Scaffolding level: {scaffolding_level}
+Scaffolding level: {scaffolding_level}""",
+)
+
+HINT_SYSTEM_PROMPT = """You are a Socratic tutor. A student is stuck and has requested a hint.
+Never state the correct answer outright. Ask a guiding question or point
+at what to look at, calibrated to the requested scaffolding level (HIGH
+scaffolding = more direct guidance, NONE = only the faintest nudge).
 
 Any index or value you reference MUST match "Exact index/value pairs for
 this step" exactly - never attribute two different values to the same
@@ -136,13 +93,36 @@ original question. Do not say things like "as a hint" or "to guide you".
 Just ask the question naturally as a tutor would. Example: What does
 Bubble Sort do when the left element is larger than the right one?
 
-Respond with plain text only, no markdown, no JSON.""",
+Respond with plain text only, no markdown, no JSON."""
+
+HINT_USER_TEMPLATE = PromptTemplate(
+    input_variables=[
+        "algorithm_context",
+        "pseudocode",
+        "step_index",
+        "current_prediction_prompt",
+        "comparison_values",
+        "error_history",
+        "scaffolding_level",
+    ],
+    template="""Algorithm context:
+{algorithm_context}
+
+Pseudocode:
+{pseudocode}
+
+Current step index: {step_index}
+What the student is being asked to predict: {current_prediction_prompt}
+Exact index/value pairs for this step: {comparison_values}
+Student's prior errors on this step: {error_history}
+Scaffolding level: {scaffolding_level}""",
 )
 
 __all__ = [
-    "PREDICTION_PROMPT_TEMPLATE",
-    "FEEDBACK_TEMPLATE",
-    "HINT_TEMPLATE",
+    "FEEDBACK_SYSTEM_PROMPT",
+    "FEEDBACK_USER_TEMPLATE",
+    "HINT_SYSTEM_PROMPT",
+    "HINT_USER_TEMPLATE",
     "BUBBLE_SORT_CONTEXT",
     "BUBBLE_SORT_PSEUDOCODE",
 ]

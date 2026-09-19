@@ -69,7 +69,7 @@ async def evaluate_code(request: CodeEvalRequest) -> CodeEvalResponse:
         student_code=request.student_code,
     )
     try:
-        data = await call_claude_for_feedback(prompt)
+        data, _metadata = await call_claude_for_feedback(prompt)
         resulting = data.get("resulting_state")
         if resulting is not None:
             if not isinstance(resulting, list) or not all(isinstance(x, int) for x in resulting):

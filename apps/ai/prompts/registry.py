@@ -40,11 +40,36 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         from prompts.quick_sort import QUICK_SORT_CONTEXT, QUICK_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
         return QUICK_SORT_CONTEXT, QUICK_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name == "shell_sort":
+        from prompts.shell_sort import SHELL_SORT_CONTEXT, SHELL_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return SHELL_SORT_CONTEXT, SHELL_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name == "heap_sort":
+        from prompts.heap_sort import HEAP_SORT_CONTEXT, HEAP_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return HEAP_SORT_CONTEXT, HEAP_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name == "counting_sort":
+        from prompts.counting_sort import COUNTING_SORT_CONTEXT, COUNTING_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return COUNTING_SORT_CONTEXT, COUNTING_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in ("radix_sort", "radix_sort_(lsd)"):
+        from prompts.radix_sort import RADIX_SORT_CONTEXT, RADIX_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+
+        return RADIX_SORT_CONTEXT, RADIX_SORT_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
     if name in ("bst", "binary_search_tree", "bst_search", "bst_delete"):
         from prompts.bst import BST_CONTEXT, BST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
         return BST_CONTEXT, BST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
-    if name in ("inorder_traversal", "preorder_traversal", "postorder_traversal", "level_order_traversal"):
+    if name in (
+        "inorder_traversal",
+        "preorder_traversal",
+        "postorder_traversal",
+        "level_order_traversal",
+        "tree_inorder",
+        "tree_preorder",
+        "tree_postorder",
+        "tree_level_order",
+    ):
         from prompts.tree_traversal import (
             TREE_TRAVERSAL_CONTEXT,
             TREE_TRAVERSAL_PSEUDOCODE,
@@ -142,6 +167,10 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         "singly_linked_list",
         "doubly_linked_list",
         "circular_linked_list",
+        # Legacy topic superseded by the three above, but still unlocked
+        # and reachable for a session created before that split - see
+        # apps/api/prisma/seed.ts.
+        "linked_list",
     ):
         from prompts.linked_list import LINKED_LIST_CONTEXT, LINKED_LIST_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 

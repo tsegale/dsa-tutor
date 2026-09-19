@@ -112,7 +112,7 @@ async def generate_student_summary(request: StudentSummaryRequest) -> StudentSum
         average_time_per_step=round(request.average_time_per_step, 1),
     )
     try:
-        data = await call_claude_for_feedback(prompt)
+        data, _metadata = await call_claude_for_feedback(prompt)
         return StudentSummaryResponse(
             narrative_summary=data.get("narrative_summary", ""),
             strength_areas=data.get("strength_areas", []),
@@ -142,7 +142,7 @@ async def generate_class_summary(request: ClassSummaryRequest) -> ClassSummaryRe
         scaffolding_distribution=request.scaffolding_distribution,
     )
     try:
-        data = await call_claude_for_feedback(prompt)
+        data, _metadata = await call_claude_for_feedback(prompt)
         return ClassSummaryResponse(
             narrative_summary=data.get("narrative_summary", ""),
             key_findings=data.get("key_findings", []),

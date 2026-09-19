@@ -65,7 +65,7 @@ async def generate_challenge(request: ChallengeRequest) -> ChallengeResponse:
         array_size=request.array_size,
     )
     try:
-        data = await call_claude_for_feedback(prompt)
+        data, _metadata = await call_claude_for_feedback(prompt)
         arr = data.get("array", [])
         # Validate: must be exactly the right size, all integers 1-20
         if len(arr) != request.array_size or not all(isinstance(x, int) and 1 <= x <= 20 for x in arr):

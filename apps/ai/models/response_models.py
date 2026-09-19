@@ -15,11 +15,16 @@ class PredictionResponse(CamelModel):
     socratic_hint: str
     xp_awarded: int
     counterfactual_trace: str = ""
+    # True for a real model response, false for the rule-based fallback -
+    # lets the student (and the research data) distinguish AI-generated
+    # feedback from a degraded response.
+    ai_generated: bool = True
 
 
 class HintResponse(CamelModel):
     hint: str
     scaffolding_level: ScaffoldingLevel
+    ai_generated: bool = True
 
 
 class HealthResponse(BaseModel):

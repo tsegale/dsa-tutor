@@ -47,6 +47,7 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     socraticHint: data.socraticHint,
     xpAwarded: data.xpAwarded,
     counterfactualTrace: data.counterfactualTrace ?? '',
+    aiGenerated: data.aiGenerated ?? true,
   }
 }
 
@@ -201,5 +202,5 @@ export async function proxyHint(request: HintRequest): Promise<HintResponse> {
   })
   if (!response.ok) throw new Error(`AI hint error: ${response.status}`)
   const data = (await response.json()) as any
-  return { hint: data.hint, scaffoldingLevel: data.scaffoldingLevel }
+  return { hint: data.hint, scaffoldingLevel: data.scaffoldingLevel, aiGenerated: data.aiGenerated ?? true }
 }

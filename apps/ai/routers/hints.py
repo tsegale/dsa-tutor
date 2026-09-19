@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from models.request_models import HintRequest
 from models.response_models import HintResponse
 from prompts.registry import get_algorithm_context
-from prompts.templates import HINT_TEMPLATE
+from prompts.templates import HINT_SYSTEM_PROMPT, HINT_USER_TEMPLATE
 from services.claude_service import call_claude_for_text, is_field_valid
 from services.fallback_service import get_fallback_hint
 
@@ -38,6 +38,9 @@ def _extract_comparison_pair(current_state: Any) -> tuple[int, Any, int, Any] | 
 @router.post("/", response_model=HintResponse)
 async def request_hint(request: HintRequest) -> HintResponse:
     algorithm_context, pseudocode, _ = get_algorithm_context(request.algorithm_name)
+    junction_type = (
+        request.current_state.get("criticalJunctionType") if isinstance(request.current_state, dict) else None
+    )
 
     comparison_pair = _extract_comparison_pair(request.current_state)
     if comparison_pair:
@@ -49,7 +52,7 @@ async def request_hint(request: HintRequest) -> HintResponse:
     else:
         comparison_values = "Not applicable for this step - rely on the prediction prompt above instead."
 
-    prompt = HINT_TEMPLATE.format(
+    prompt = HINT_USER_TEMPLATE.format(
         algorithm_context=algorithm_context,
         pseudocode=pseudocode,
         step_index=request.step_index,
@@ -60,13 +63,32 @@ async def request_hint(request: HintRequest) -> HintResponse:
     )
 
     try:
-        hint_text = await call_claude_for_text(prompt)
+        hint_text, metadata = await call_claude_for_text(prompt, system=HINT_SYSTEM_PROMPT)
+        logger.info(
+            "AI hint call: latency_ms=%s input_tokens=%s output_tokens=%s",
+            metadata.latency_ms,
+            metadata.input_tokens,
+            metadata.output_tokens,
+        )
         if not is_field_valid(hint_text, max_words=20):
             logger.warning("AI hint failed validation, retrying once")
-            hint_text = await call_claude_for_text(prompt)
+            hint_text, metadata = await call_claude_for_text(prompt, system=HINT_SYSTEM_PROMPT)
+            logger.info(
+                "AI hint retry call: latency_ms=%s input_tokens=%s output_tokens=%s",
+                metadata.latency_ms,
+                metadata.input_tokens,
+                metadata.output_tokens,
+            )
             if not is_field_valid(hint_text, max_words=20):
                 logger.warning("AI hint failed validation again, falling back")
-                return get_fallback_hint(request.scaffolding_level)
+                return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
         return HintResponse(hint=hint_text, scaffolding_level=request.scaffolding_level)
     except Exception:
-        return get_fallback_hint(request.scaffolding_level)
+        logger.warning(
+            "AI hint call failed for algorithm=%s junction_type=%s step_index=%s, falling back",
+            request.algorithm_name,
+            junction_type,
+            request.step_index,
+            exc_info=True,
+        )
+        return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
