@@ -1,14 +1,23 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import {
   useAlgorithmStore,
   selectCurrentSnapshot,
   selectProgressPercent,
   selectIsPredictionStep,
+  __clearAutoAdvanceTimerForTests,
 } from './useAlgorithmStore'
 
 beforeEach(() => {
   useAlgorithmStore.setState(useAlgorithmStore.getInitialState(), true)
+})
+
+// The narration auto-advance timer (see scheduleNarrationAutoAdvance) is
+// module-global, not store state, so setMode/stepForward/etc. in Practice
+// mode can leave a real pending timeout that outlives its test and fires
+// during a later one unless every test cleans it up.
+afterEach(() => {
+  __clearAutoAdvanceTimerForTests()
 })
 
 describe('useAlgorithmStore', () => {
@@ -150,5 +159,76 @@ describe('useAlgorithmStore', () => {
     store.stopPlayback()
     // Should have advanced well past step 0
     expect(useAlgorithmStore.getState().stepIndex).toBeGreaterThan(2)
+  })
+})
+
+describe('Practice mode narration auto-advance', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('auto-advances through narration steps until the next Critical Junction', () => {
+    const store = useAlgorithmStore.getState()
+    const firstJunctionIndex = store.snapshotArray.findIndex((s) => s.isPredictionRequired)
+    expect(firstJunctionIndex).toBeGreaterThan(0)
+
+    useAlgorithmStore.setState({ stepIndex: 0 })
+    store.setMode(AlgorithmMode.PRACTICE)
+
+    vi.advanceTimersByTime(350 * (firstJunctionIndex + 1))
+
+    expect(useAlgorithmStore.getState().stepIndex).toBe(firstJunctionIndex)
+  })
+
+  it('does not advance past a Critical Junction on its own', () => {
+    const store = useAlgorithmStore.getState()
+    const firstJunctionIndex = store.snapshotArray.findIndex((s) => s.isPredictionRequired)
+
+    useAlgorithmStore.setState({ stepIndex: firstJunctionIndex })
+    store.setMode(AlgorithmMode.PRACTICE)
+
+    vi.advanceTimersByTime(5000)
+
+    expect(useAlgorithmStore.getState().stepIndex).toBe(firstJunctionIndex)
+  })
+
+  it('does not auto-advance in DEMO mode', () => {
+    useAlgorithmStore.setState({ stepIndex: 0 })
+    useAlgorithmStore.getState().setMode(AlgorithmMode.DEMO)
+
+    vi.advanceTimersByTime(5000)
+
+    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
+  })
+
+  it('stepping backward cancels a pending auto-advance instead of it firing later', () => {
+    const store = useAlgorithmStore.getState()
+    useAlgorithmStore.setState({ stepIndex: 1 })
+    store.setMode(AlgorithmMode.PRACTICE)
+    // An auto-advance from step 1 is now pending.
+    store.stepBackward()
+    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
+
+    // Reviewing a step is deliberate - it must not auto-advance again on
+    // its own until the learner interacts (e.g. steps forward manually).
+    vi.advanceTimersByTime(5000)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
+  })
+
+  it('does not double-advance while playback is driving steps', () => {
+    const store = useAlgorithmStore.getState()
+    useAlgorithmStore.setState({ stepIndex: 0, mode: AlgorithmMode.PRACTICE, playbackSpeed: 1.0 })
+    store.startPlayback()
+
+    // Well past the 350ms auto-advance delay but short of playback's own
+    // 1000ms tick - if the narration timer had also fired here independently
+    // of playback, stepIndex would already be ahead of where a single
+    // 1000ms-interval tick could have taken it.
+    vi.advanceTimersByTime(500)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
   })
 })

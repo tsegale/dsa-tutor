@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
+import type { ScaffoldingLevel } from '@dsa-tutor/types'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -16,6 +17,7 @@ import { quickSortEngine } from '@/engine/quickSort'
 import { shellSortEngine } from '@/engine/shellSort'
 import { heapSortEngine } from '@/engine/heapSort'
 import { bstInsertEngine } from '@/engine/bst'
+import { topMisconceptionOf } from '@/utils/junctionTargeting'
 import { floydWarshallEngine } from '@/engine/floydWarshall'
 import { MEDIUM_WEIGHTED } from '@/engine/graphPresets'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
@@ -28,7 +30,13 @@ import { cn } from '@/lib/utils'
 // the page, not always Bubble Sort - otherwise applying a custom array
 // while viewing e.g. Binary Search would silently swap the canvas back
 // to Bubble Sort while the rest of the page still says Binary Search.
-function engineForSlug(slug: string | undefined, values: number[], codeEditorMode: boolean): AlgorithmSnapshot[] {
+function engineForSlug(
+  slug: string | undefined,
+  values: number[],
+  codeEditorMode: boolean,
+  scaffoldingLevel: ScaffoldingLevel,
+  topMisconception: string | null,
+): AlgorithmSnapshot[] {
   const target = getAlgorithmRegistryEntry(slug ?? '')?.defaultTarget ?? 9
   switch (slug) {
     case 'selection-sort':
@@ -59,7 +67,11 @@ function engineForSlug(slug: string | undefined, values: number[], codeEditorMod
       return floydWarshallEngine(MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id), MEDIUM_WEIGHTED.adjacency)
     case 'bubble-sort':
     default:
-      return bubbleSortEngine(values, codeEditorMode)
+      return bubbleSortEngine(values, {
+        codeEditorMode,
+        junctionDensity: getJunctionDensityForScaffoldingLevel(scaffoldingLevel),
+        topMisconception,
+      })
   }
 }
 
@@ -189,6 +201,8 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   const codeEditorMode = useAlgorithmStore((state) => state.codeEditorMode)
   const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
+  const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
+  const recentMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions)
 
   const [arrayInput, setArrayInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
@@ -209,7 +223,10 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     }
     setInputError(null)
     const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
-    setAlgorithm(displayName, engineForSlug(algorithmSlug, parsed, codeEditorMode))
+    setAlgorithm(
+      displayName,
+      engineForSlug(algorithmSlug, parsed, codeEditorMode, scaffoldingLevel, topMisconceptionOf(recentMisconceptions)),
+    )
   }
 
   function handleRandom() {
@@ -217,7 +234,10 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     setInputError(null)
     setArrayInput(values.join(','))
     const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
-    setAlgorithm(displayName, engineForSlug(algorithmSlug, values, codeEditorMode))
+    setAlgorithm(
+      displayName,
+      engineForSlug(algorithmSlug, values, codeEditorMode, scaffoldingLevel, topMisconceptionOf(recentMisconceptions)),
+    )
   }
 
   return (

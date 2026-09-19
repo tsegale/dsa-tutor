@@ -4,7 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
@@ -33,6 +33,7 @@ import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
 import { calculateMastery, gateScaffoldingReduction, RECENT_HINT_WINDOW, type MasteryMetrics } from '@/utils/masteryScore'
 import { computeMistakePath } from '@/engine/mistakePath'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
+import { topMisconceptionOf } from '@/utils/junctionTargeting'
 import { linearSearchEngine } from '@/engine/linearSearch'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import { selectionSortEngine } from '@/engine/selectionSort'
@@ -244,8 +245,13 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
       return variableWindowEngine(defaultInput, defaultTarget)
 
     case 'bubble-sort':
-    default:
-      return bubbleSortEngine(defaultInput)
+    default: {
+      const { scaffoldingLevel, recentMisconceptions } = useAlgorithmStore.getState()
+      return bubbleSortEngine(defaultInput, {
+        junctionDensity: getJunctionDensityForScaffoldingLevel(scaffoldingLevel),
+        topMisconception: topMisconceptionOf(recentMisconceptions),
+      })
+    }
   }
 }
 

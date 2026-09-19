@@ -1,5 +1,6 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
+import { shouldForceJunction } from '../utils/junctionTargeting'
 
 // Matches the pseudocode panel's line numbers, so a snapshot's
 // pseudocodeLine tells the UI exactly which line to highlight.
@@ -18,7 +19,49 @@ const PSEUDOCODE_LINE = {
 // tests attention span rather than understanding. Critical Junctions
 // only interrupt at comparisons where the decision is non-obvious, or
 // at the first comparison of a pass (to teach the pass structure).
-const OBVIOUS_DIFFERENCE_THRESHOLD = 3
+//
+// The threshold scales with the array's own value range rather than
+// using a fixed number: a fixed threshold of 3 flags every comparison
+// in a tightly-clustered array like [1,2,3,4,5] as "ambiguous" (adjacent
+// gaps are always 1), causing a prediction on every single comparison,
+// while the same threshold almost never fires on a widely-spread array
+// like [100,97,3,1] even when two values are proportionally very close.
+// A tenth of the array's own spread judges "close" relative to that
+// array instead of against an arbitrary absolute number.
+const AMBIGUITY_RANGE_RATIO = 0.1
+
+function computeAmbiguityThreshold(array: number[]): number {
+  if (array.length === 0) return 0
+  const range = Math.max(...array) - Math.min(...array)
+  return Math.round(range * AMBIGUITY_RANGE_RATIO)
+}
+
+/**
+ * How often procedural (non-conceptual) junctions pause for a prediction,
+ * independent of how much support is shown once they do. Conceptual
+ * junctions (PASS_COMPLETE, EARLY_TERMINATION, ALGORITHM_COMPLETE) always
+ * fire regardless of density - fading applies only to the repeated,
+ * potentially fatiguing per-comparison decisions.
+ * - ALL: every comparison is a junction.
+ * - STANDARD (default): the first comparison of each pass, plus any
+ *   comparison whose values are genuinely close (see computeAmbiguityThreshold).
+ *   This is the pre-existing behaviour, kept as the default so callers that
+ *   don't pass an option see no change.
+ * - SPARSE: only the first comparison of each pass - enough to keep teaching
+ *   the pass structure without pausing on every close-but-not-ambiguous gap.
+ */
+export type JunctionDensity = 'ALL' | 'STANDARD' | 'SPARSE'
+
+export interface BubbleSortOptions {
+  codeEditorMode?: boolean
+  junctionDensity?: JunctionDensity
+  /** The learner's most frequent recent misconception category (see
+   * utils/junctionTargeting.ts's topMisconceptionOf). When it targets
+   * SWAP_DECISION, that junction fires even if density gating would
+   * have skipped it - fading should never skip past the learner's
+   * actual weak spot. */
+  topMisconception?: string | null
+}
 
 interface SnapshotParams {
   stepIndex: number
@@ -70,9 +113,11 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
  * EARLY_TERMINATION, ALGORITHM_COMPLETE) always stay TILE_GRID, since
  * Code Editor Mode only applies to the swap execution step.
  */
-export function bubbleSortEngine(input: number[], codeEditorMode = false): AlgorithmSnapshot[] {
+export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {}): AlgorithmSnapshot[] {
+  const { codeEditorMode = false, junctionDensity = 'STANDARD', topMisconception = null } = options
   const working = [...input]
   const n = working.length
+  const ambiguityThreshold = computeAmbiguityThreshold(working)
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
   let finalized: number[] = []
@@ -122,10 +167,19 @@ export function bubbleSortEngine(input: number[], codeEditorMode = false): Algor
       // Critical Junction gating: only pause for a prediction when the
       // decision is genuinely ambiguous (close values) or it's the
       // pass's first comparison (teaches the pass structure). A large,
-      // obvious gap skips the prediction and just narrates.
+      // obvious gap skips the prediction and just narrates. junctionDensity
+      // scales how readily that gate opens - see the JunctionDensity doc
+      // comment above for what each level means.
       const isFirstComparisonOfPass = i === 0
-      const isAmbiguous = Math.abs(left - right) <= OBVIOUS_DIFFERENCE_THRESHOLD
-      const isSwapJunction = isFirstComparisonOfPass || isAmbiguous
+      const isAmbiguous = Math.abs(left - right) <= ambiguityThreshold
+      const densityWantsJunction =
+        junctionDensity === 'ALL'
+          ? true
+          : junctionDensity === 'SPARSE'
+            ? isFirstComparisonOfPass
+            : isFirstComparisonOfPass || isAmbiguous
+      const isSwapJunction =
+        densityWantsJunction || shouldForceJunction(topMisconception, CriticalJunctionType.SWAP_DECISION)
 
       snapshots.push(
         makeSnapshot({

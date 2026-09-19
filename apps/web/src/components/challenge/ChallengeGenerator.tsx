@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { generateChallenge } from '@/api/challenges'
 import { apiFetch } from '@/api/client'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
+import { topMisconceptionOf } from '@/utils/junctionTargeting'
 
 interface ChallengeGeneratorProps {
   difficulty: string
@@ -30,15 +31,6 @@ function SpinnerIcon() {
   )
 }
 
-function topMisconceptionOf(recent: string[]): string | null {
-  if (recent.length === 0) return null
-  const counts: Record<string, number> = {}
-  recent.forEach((category) => {
-    counts[category] = (counts[category] ?? 0) + 1
-  })
-  return Object.entries(counts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
-}
-
 export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +47,7 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
         sessionHintsRequested,
         sessionId,
         codeEditorMode,
+        scaffoldingLevel,
       } = useAlgorithmStore.getState()
 
       const correctRate =
@@ -73,7 +66,14 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
 
       const { setAlgorithm, setActiveChallengeType, setChallengeExplanation, setChallengeHint } =
         useAlgorithmStore.getState()
-      setAlgorithm('Bubble Sort', bubbleSortEngine(response.array, codeEditorMode))
+      setAlgorithm(
+        'Bubble Sort',
+        bubbleSortEngine(response.array, {
+          codeEditorMode,
+          junctionDensity: getJunctionDensityForScaffoldingLevel(scaffoldingLevel),
+          topMisconception: topMisconceptionOf(recentMisconceptions),
+        }),
+      )
       setActiveChallengeType(response.challengeType)
       setChallengeExplanation(response.explanation)
       setChallengeHint(response.hintForStudent)

@@ -1,7 +1,26 @@
 import { create } from 'zustand'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
-import { bubbleSortEngine } from '../engine/bubbleSort'
+import { bubbleSortEngine, type JunctionDensity } from '../engine/bubbleSort'
+
+/** How often procedural junctions pause for a prediction, derived from the
+ * learner's current scaffolding level - more support also means more
+ * frequent checks for understanding, less means fewer interruptions.
+ * Conceptual junctions always fire regardless (see JunctionDensity in
+ * engine/bubbleSort.ts). Every array-sorting engine call site that reads
+ * scaffoldingLevel from this store should derive density through here,
+ * not duplicate the mapping. */
+export function getJunctionDensityForScaffoldingLevel(level: ScaffoldingLevel): JunctionDensity {
+  switch (level) {
+    case ScaffoldingLevel.HIGH:
+      return 'ALL'
+    case ScaffoldingLevel.MEDIUM:
+      return 'STANDARD'
+    case ScaffoldingLevel.LOW:
+    case ScaffoldingLevel.NONE:
+      return 'SPARSE'
+  }
+}
 
 export interface AlgorithmStoreState {
   algorithmName: string
@@ -77,9 +96,56 @@ function clearPlaybackInterval() {
   }
 }
 
+// A 5-element Bubble Sort's narration alone used to take 52 manual clicks
+// to get through in Practice mode - most of them added nothing, since
+// only Critical Junctions actually need the learner's input. This timer
+// (module-level for the same reason as playbackInterval above) lets
+// narration-only steps advance on their own, landing the learner on the
+// next junction instead of making them click there one step at a time.
+let autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null
+const PRACTICE_AUTO_ADVANCE_DELAY_MS = 350
+
+function clearAutoAdvanceTimer() {
+  if (autoAdvanceTimer !== null) {
+    clearTimeout(autoAdvanceTimer)
+    autoAdvanceTimer = null
+  }
+}
+
+/** Test-only escape hatch: this module's auto-advance timer is process-
+ * global (see the comment above autoAdvanceTimer), so a test that puts the
+ * store in Practice mode on a narration step schedules a real pending
+ * timeout that outlives the test itself unless something cancels it.
+ * Tests must call this in an afterEach. */
+export function __clearAutoAdvanceTimerForTests() {
+  clearAutoAdvanceTimer()
+}
+
+/** Schedules the next narration-only step to advance itself. Only in
+ * Practice mode, only while playback isn't already driving steps (that
+ * interval has its own pause-at-junction logic), never past a Critical
+ * Junction (isPredictionRequired) or the final step - those need the
+ * learner, not a timer. stepForward calls this again for the step it
+ * lands on, so a run of narration steps chains forward on its own until
+ * the next junction. */
+function scheduleNarrationAutoAdvance(get: () => AlgorithmStoreState) {
+  clearAutoAdvanceTimer()
+  const { mode, isPlaying, stepIndex, snapshotArray } = get()
+  if (mode !== AlgorithmMode.PRACTICE || isPlaying) return
+  if (stepIndex >= snapshotArray.length - 1) return
+  if (snapshotArray[stepIndex]?.isPredictionRequired) return
+
+  autoAdvanceTimer = setTimeout(() => {
+    autoAdvanceTimer = null
+    get().stepForward()
+  }, PRACTICE_AUTO_ADVANCE_DELAY_MS)
+}
+
 export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   algorithmName: 'Bubble Sort',
-  snapshotArray: bubbleSortEngine([5, 3, 1, 4, 2]),
+  snapshotArray: bubbleSortEngine([5, 3, 1, 4, 2], {
+    junctionDensity: getJunctionDensityForScaffoldingLevel(ScaffoldingLevel.HIGH),
+  }),
   stepIndex: 0,
   mode: AlgorithmMode.DEMO,
   scaffoldingLevel: ScaffoldingLevel.HIGH,
@@ -105,23 +171,32 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   // stepping (arrow key, Step Forward button) must always advance
   // regardless of mode. The prediction zone appears because the new
   // snapshot has isPredictionRequired: true and mode is PRACTICE, not
-  // because stepForward blocked anything.
+  // because stepForward blocked anything. Scheduling narration auto-advance
+  // here (rather than only where the button/key handler lives) is what
+  // makes a single manual step past a junction chain forward through the
+  // narration that follows, instead of requiring one click per step.
   stepForward: () => {
     const { stepIndex, snapshotArray } = get()
     if (stepIndex < snapshotArray.length - 1) {
       set({ stepIndex: stepIndex + 1 })
+      scheduleNarrationAutoAdvance(get)
     }
   },
 
   stepBackward: () => {
     const { stepIndex } = get()
     if (stepIndex <= 0) return
+    // Reviewing a past step is a deliberate choice - a pending
+    // auto-advance must not immediately undo it by jumping forward again.
+    clearAutoAdvanceTimer()
     set({ stepIndex: stepIndex - 1 })
   },
 
   resetAlgorithm: () => {
     clearPlaybackInterval()
+    clearAutoAdvanceTimer()
     set({ stepIndex: 0, isPlaying: false })
+    scheduleNarrationAutoAdvance(get)
   },
 
   setMode: (mode) => {
@@ -129,11 +204,14 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     // Demo to Practice) keeps their place instead of silently losing
     // progress back to step 1 with no warning.
     clearPlaybackInterval()
+    clearAutoAdvanceTimer()
     set({ mode, isPlaying: false })
+    scheduleNarrationAutoAdvance(get)
   },
 
   setAlgorithm: (name, snapshots) => {
     clearPlaybackInterval()
+    clearAutoAdvanceTimer()
     set({
       algorithmName: name,
       snapshotArray: snapshots,
@@ -143,6 +221,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       // opts back in via setActiveChallengeType right after this call.
       activeChallengeType: null,
     })
+    scheduleNarrationAutoAdvance(get)
   },
 
   toggleFocusMode: () => set((state) => ({ focusModeActive: !state.focusModeActive })),
@@ -167,6 +246,10 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   startPlayback: () => {
     clearPlaybackInterval()
+    // Playback's own interval drives stepping at the chosen speed - a
+    // narration auto-advance left pending from manual stepping just
+    // before Play was pressed must not also fire and cause a double-step.
+    clearAutoAdvanceTimer()
     set({ isPlaying: true })
 
     const { playbackSpeed } = get()
@@ -200,6 +283,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   stopPlayback: () => {
     clearPlaybackInterval()
     set({ isPlaying: false })
+    scheduleNarrationAutoAdvance(get)
   },
 
   addMisconception: (category) => {

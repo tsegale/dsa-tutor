@@ -7,7 +7,7 @@ import type {
   HintRequest,
   PredictionRequest,
 } from '@dsa-tutor/types'
-import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { submitPrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,7 @@ import {
   type SearchAlgorithmState,
 } from '@/utils/junctionPrompt'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
+import { topMisconceptionOf } from '@/utils/junctionTargeting'
 import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLState } from '@/engine/avlTree'
@@ -1896,9 +1897,22 @@ export default function PredictionZone({
 
       if (result.executeVisually && result.resultingState) {
         await wait(500)
-        const { codeEditorMode, activeChallengeType, setAlgorithm: setAlg, setActiveChallengeType } =
-          useAlgorithmStore.getState()
-        setAlg('Bubble Sort', bubbleSortEngine(result.resultingState, codeEditorMode))
+        const {
+          codeEditorMode,
+          scaffoldingLevel: currentScaffoldingLevel,
+          recentMisconceptions,
+          activeChallengeType,
+          setAlgorithm: setAlg,
+          setActiveChallengeType,
+        } = useAlgorithmStore.getState()
+        setAlg(
+          'Bubble Sort',
+          bubbleSortEngine(result.resultingState, {
+            codeEditorMode,
+            junctionDensity: getJunctionDensityForScaffoldingLevel(currentScaffoldingLevel),
+            topMisconception: topMisconceptionOf(recentMisconceptions),
+          }),
+        )
         // setAlgorithm always clears activeChallengeType for a fresh load;
         // restore it so an in-progress AI Challenge run's completion bonus
         // (Feature 2) still fires when this run eventually finishes.

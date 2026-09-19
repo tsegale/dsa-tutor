@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { MisconceptionCategory } from '@dsa-tutor/types'
 import { bubbleSortEngine } from './bubbleSort'
 
 const PSEUDOCODE_COMPARISON = 2
@@ -159,5 +160,100 @@ describe('bubbleSortEngine', () => {
     expect(snapshots[snapshots.length - 2].criticalJunctionType).toBe('ALGORITHM_COMPLETE')
     expect(snapshots[snapshots.length - 2].isPredictionRequired).toBe(true)
     expect(snapshots[snapshots.length - 1].criticalJunctionType).toBeNull()
+  })
+
+  describe('junctionDensity', () => {
+    function comparisons(snapshots: ReturnType<typeof bubbleSortEngine>) {
+      return snapshots.filter((s) => s.pseudocodeLine === PSEUDOCODE_COMPARISON)
+    }
+
+    it('ALL makes every comparison a SWAP_DECISION junction', () => {
+      const snapshots = bubbleSortEngine([1, 2, 3, 4, 5], { junctionDensity: 'ALL' })
+      const steps = comparisons(snapshots)
+      expect(steps.length).toBeGreaterThan(0)
+      expect(steps.every((s) => s.isPredictionRequired)).toBe(true)
+    })
+
+    it('SPARSE only fires on the first comparison of each pass', () => {
+      const snapshots = bubbleSortEngine([5, 4, 3, 2, 1], { junctionDensity: 'SPARSE' })
+      const steps = comparisons(snapshots)
+      const junctions = steps.filter((s) => s.isPredictionRequired)
+      const nonJunctions = steps.filter((s) => !s.isPredictionRequired)
+
+      expect(junctions.length).toBeGreaterThan(0)
+      expect(nonJunctions.length).toBeGreaterThan(0)
+      // Every fired junction must be a pass's first comparison (index 0
+      // of that pass), identified here by its description.
+      for (const step of junctions) {
+        expect(step.description).toContain('index 0')
+      }
+    })
+
+    it('SPARSE fires no more junctions than STANDARD on the same array', () => {
+      const sparse = comparisons(bubbleSortEngine([5, 4, 3, 2, 1], { junctionDensity: 'SPARSE' }))
+      const standard = comparisons(bubbleSortEngine([5, 4, 3, 2, 1], { junctionDensity: 'STANDARD' }))
+      const all = comparisons(bubbleSortEngine([5, 4, 3, 2, 1], { junctionDensity: 'ALL' }))
+
+      const sparseCount = sparse.filter((s) => s.isPredictionRequired).length
+      const standardCount = standard.filter((s) => s.isPredictionRequired).length
+      const allCount = all.filter((s) => s.isPredictionRequired).length
+
+      expect(sparseCount).toBeLessThanOrEqual(standardCount)
+      expect(standardCount).toBeLessThanOrEqual(allCount)
+    })
+
+    it('defaults to STANDARD when no option is passed', () => {
+      const withDefault = comparisons(bubbleSortEngine([5, 4, 3, 2, 1]))
+      const explicitStandard = comparisons(bubbleSortEngine([5, 4, 3, 2, 1], { junctionDensity: 'STANDARD' }))
+
+      expect(withDefault.map((s) => s.isPredictionRequired)).toEqual(explicitStandard.map((s) => s.isPredictionRequired))
+    })
+
+    it('scales the ambiguity threshold to the array range instead of a fixed number', () => {
+      // A tightly-clustered, strictly increasing array: every adjacent gap
+      // is 1, which used to fall under the old fixed threshold of 3 and
+      // fire on every single comparison (the fatigue problem this phase
+      // fixes). With a range-relative threshold, only the pass-first
+      // comparison should still fire.
+      const snapshots = bubbleSortEngine([1, 2, 3, 4, 5], { junctionDensity: 'STANDARD' })
+      const steps = comparisons(snapshots)
+      const junctions = steps.filter((s) => s.isPredictionRequired)
+      const nonJunctions = steps.filter((s) => !s.isPredictionRequired)
+
+      expect(nonJunctions.length).toBeGreaterThan(0)
+      for (const step of junctions) {
+        expect(step.description).toContain('index 0')
+      }
+    })
+  })
+
+  describe('topMisconception targeting', () => {
+    function comparisons(snapshots: ReturnType<typeof bubbleSortEngine>) {
+      return snapshots.filter((s) => s.pseudocodeLine === PSEUDOCODE_COMPARISON)
+    }
+
+    it('forces a SWAP_DECISION junction that density would have skipped', () => {
+      const sparse = bubbleSortEngine([1, 2, 3, 4, 5], { junctionDensity: 'SPARSE' })
+      const sparseJunctionCount = comparisons(sparse).filter((s) => s.isPredictionRequired).length
+
+      const targeted = bubbleSortEngine([1, 2, 3, 4, 5], {
+        junctionDensity: 'SPARSE',
+        topMisconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+      })
+      const targetedJunctionCount = comparisons(targeted).filter((s) => s.isPredictionRequired).length
+
+      expect(targetedJunctionCount).toBeGreaterThan(sparseJunctionCount)
+    })
+
+    it('an unrelated misconception does not change junction firing', () => {
+      const sparse = comparisons(bubbleSortEngine([1, 2, 3, 4, 5], { junctionDensity: 'SPARSE' }))
+      const withUnrelated = comparisons(
+        bubbleSortEngine([1, 2, 3, 4, 5], {
+          junctionDensity: 'SPARSE',
+          topMisconception: MisconceptionCategory.BASE_CASE_OMISSION,
+        }),
+      )
+      expect(withUnrelated.map((s) => s.isPredictionRequired)).toEqual(sparse.map((s) => s.isPredictionRequired))
+    })
   })
 })
