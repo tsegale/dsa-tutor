@@ -58,6 +58,19 @@ function AlertTriangleIcon() {
   )
 }
 
+// Neutral (not a warning) icon for the misconceptions card when nothing
+// has been detected yet - a red triangle on "0 misconceptions resolved"
+// implies a problem before the student has done anything (see
+// remediation doc 9.10).
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function FlameIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -124,7 +137,11 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
     unlockedTopics.length > 0
       ? Math.round(unlockedTopics.reduce((sum, t) => sum + t.masteryPercent, 0) / unlockedTopics.length)
       : 0
-  const mostEngagedTopic = [...unlockedTopics].sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
+  // On a fresh account every topic ties at 0% mastery, and sort() is
+  // stable - without this guard the "most engaged" topic was just
+  // whichever one happened to be listed first (Array Access), silently
+  // implying progress that was never made (see remediation doc 9.1).
+  const mostEngagedTopic = [...unlockedTopics].filter((t) => t.masteryPercent > 0).sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
 
   const misconceptionCounts: Record<string, number> = {}
   let misconceptionsResolved = 0
@@ -159,11 +176,11 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
       />
 
       <StatCard
-        icon={<AlertTriangleIcon />}
-        iconBg="#fcebeb"
-        iconColor="#a32d2d"
+        icon={misconceptionsResolved > 0 ? <AlertTriangleIcon /> : <SearchIcon />}
+        iconBg={misconceptionsResolved > 0 ? '#fcebeb' : '#f1f5f9'}
+        iconColor={misconceptionsResolved > 0 ? '#a32d2d' : '#64748b'}
         value={misconceptionsResolved}
-        valueColor="#a32d2d"
+        valueColor={misconceptionsResolved > 0 ? '#a32d2d' : '#64748b'}
         label="Misconceptions resolved"
         sublabel={topMisconception ? formatCategory(topMisconception) : 'None yet'}
       />

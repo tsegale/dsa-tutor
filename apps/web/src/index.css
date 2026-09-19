@@ -104,7 +104,13 @@
   --color-streak: #ea580c;
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  /* Was #94a3b8 (~2.6:1 on white) - an axe-core "serious" color-contrast
+     violation on 237 nodes across the dashboard alone, since this token
+     is the default for every secondary/muted label in the app. #64748b
+     (~4.76:1 on white) clears WCAG AA's 4.5:1 for normal text while
+     staying visibly more muted than --color-text-secondary (see
+     remediation doc 9's Verify block: axe check, serious or above). */
+  --color-text-muted: #64748b;
   --color-text-accent: #378add;
   --color-dark-background: #0f172a;
   --color-dark-surface: #1e293b;

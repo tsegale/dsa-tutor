@@ -12,11 +12,6 @@ const TOPICS = [
   { name: 'heap-sort', displayName: 'Heap Sort', track: 'SORTING', difficulty: 'INTERMEDIATE', description: 'Build a max-heap then repeatedly extract the maximum element.', estimatedMinutes: 14, isLocked: false, order: 37 },
   { name: 'counting-sort', displayName: 'Counting Sort', track: 'SORTING', difficulty: 'INTERMEDIATE', description: 'Count element frequencies then reconstruct the sorted array in linear time.', estimatedMinutes: 12, isLocked: false, order: 38 },
   { name: 'radix-sort', displayName: 'Radix Sort (LSD)', track: 'SORTING', difficulty: 'ADVANCED', description: 'Sort digit by digit from least to most significant using stable bucket passes.', estimatedMinutes: 14, isLocked: false, order: 39 },
-  // Superseded by singly/doubly/circular-linked-list below once the
-  // Foundations track was built out - kept (rather than deleted) since a
-  // student session may already reference it, but unlocked so it isn't a
-  // dead end, and left off the pedagogical order sequence (defaults to 999).
-  { name: 'linked-list', displayName: 'Linked List', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Linear data structure where each node points to the next.', estimatedMinutes: 8, isLocked: false, order: 999 },
   { name: 'bst', displayName: 'Binary Search Tree', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'A tree where left children are smaller and right children are larger than the parent.', estimatedMinutes: 12, isLocked: false, order: 51 },
   { name: 'bst-search', displayName: 'BST Search', track: 'TREES', difficulty: 'INTERMEDIATE', description: 'Find a value in a Binary Search Tree by comparing at each node and going left or right.', estimatedMinutes: 10, isLocked: false, order: 52 },
   { name: 'bst-delete', displayName: 'BST Delete', track: 'TREES', difficulty: 'ADVANCED', description: 'Remove a node from a BST, handling three cases: leaf, one child, and two children.', estimatedMinutes: 14, isLocked: false, order: 53 },
@@ -81,16 +76,16 @@ const TOPICS = [
   { name: 'recursion-fibonacci', displayName: 'Recursion: Fibonacci', track: 'FOUNDATIONS', difficulty: 'INTERMEDIATE', description: 'Naive recursive Fibonacci exposes the overlapping subproblems problem.', estimatedMinutes: 10, isLocked: false, order: 14 },
 
   // Search algorithms
-  { name: 'linear-search', displayName: 'Linear Search', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Check each element one by one until the target is found.', estimatedMinutes: 4, isLocked: false, order: 15 },
-  { name: 'binary-search', displayName: 'Binary Search', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Search a sorted array by repeatedly halving the search space.', estimatedMinutes: 6, isLocked: false, order: 16 },
-  { name: 'jump-search', displayName: 'Jump Search', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Jump ahead by √n steps then search linearly within the block.', estimatedMinutes: 6, isLocked: false, order: 17 },
-  { name: 'interpolation-search', displayName: 'Interpolation Search', track: 'FOUNDATIONS', difficulty: 'INTERMEDIATE', description: 'Estimate the probe position using the value distribution.', estimatedMinutes: 8, isLocked: false, order: 18 },
-  { name: 'exponential-search', displayName: 'Exponential Search', track: 'FOUNDATIONS', difficulty: 'INTERMEDIATE', description: 'Double the search bound then apply binary search.', estimatedMinutes: 6, isLocked: false, order: 19 },
+  { name: 'linear-search', displayName: 'Linear Search', track: 'SEARCHING', difficulty: 'BEGINNER', description: 'Check each element one by one until the target is found.', estimatedMinutes: 4, isLocked: false, order: 1 },
+  { name: 'binary-search', displayName: 'Binary Search', track: 'SEARCHING', difficulty: 'BEGINNER', description: 'Search a sorted array by repeatedly halving the search space.', estimatedMinutes: 6, isLocked: false, order: 2 },
+  { name: 'jump-search', displayName: 'Jump Search', track: 'SEARCHING', difficulty: 'BEGINNER', description: 'Jump ahead by √n steps then search linearly within the block.', estimatedMinutes: 6, isLocked: false, order: 3 },
+  { name: 'interpolation-search', displayName: 'Interpolation Search', track: 'SEARCHING', difficulty: 'INTERMEDIATE', description: 'Estimate the probe position using the value distribution.', estimatedMinutes: 8, isLocked: false, order: 4 },
+  { name: 'exponential-search', displayName: 'Exponential Search', track: 'SEARCHING', difficulty: 'INTERMEDIATE', description: 'Double the search bound then apply binary search.', estimatedMinutes: 6, isLocked: false, order: 5 },
 
   // Two pointer and sliding window
-  { name: 'two-pointer', displayName: 'Two Pointer Technique', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Solve array problems in O(n) using two moving pointers.', estimatedMinutes: 8, isLocked: false, order: 20 },
-  { name: 'sliding-window-fixed', displayName: 'Sliding Window (Fixed)', track: 'FOUNDATIONS', difficulty: 'BEGINNER', description: 'Maintain a fixed-size window to compute range properties in O(n).', estimatedMinutes: 8, isLocked: false, order: 21 },
-  { name: 'sliding-window-variable', displayName: 'Sliding Window (Variable)', track: 'FOUNDATIONS', difficulty: 'INTERMEDIATE', description: 'Expand and shrink a window to satisfy a constraint in O(n).', estimatedMinutes: 10, isLocked: false, order: 22 },
+  { name: 'two-pointer', displayName: 'Two Pointer Technique', track: 'TECHNIQUES', difficulty: 'BEGINNER', description: 'Solve array problems in O(n) using two moving pointers.', estimatedMinutes: 8, isLocked: false, order: 1 },
+  { name: 'sliding-window-fixed', displayName: 'Sliding Window (Fixed)', track: 'TECHNIQUES', difficulty: 'BEGINNER', description: 'Maintain a fixed-size window to compute range properties in O(n).', estimatedMinutes: 8, isLocked: false, order: 2 },
+  { name: 'sliding-window-variable', displayName: 'Sliding Window (Variable)', track: 'TECHNIQUES', difficulty: 'INTERMEDIATE', description: 'Expand and shrink a window to satisfy a constraint in O(n).', estimatedMinutes: 10, isLocked: false, order: 3 },
 ] as const
 
 // Mirrors apps/web/src/data/badges.ts's BADGE_DEFINITIONS - the client's

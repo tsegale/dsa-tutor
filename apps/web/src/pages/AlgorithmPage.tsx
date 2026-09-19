@@ -643,8 +643,12 @@ export default function AlgorithmPage() {
   // first click "did nothing"). useLayoutEffect fires before paint, so
   // there's nothing on screen yet for a click to race against.
   useLayoutEffect(() => {
+    // Practice (predicting, not just watching) is the default the study
+    // argues for - Demo is one explicit click away via the mode toggle or
+    // an explicit ?mode=DEMO link, never the silent fallback (see
+    // remediation doc 9.8).
     const modeParam = searchParams.get('mode')
-    setMode(modeParam === 'PRACTICE' ? AlgorithmMode.PRACTICE : AlgorithmMode.DEMO)
+    setMode(modeParam === 'DEMO' ? AlgorithmMode.DEMO : AlgorithmMode.PRACTICE)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

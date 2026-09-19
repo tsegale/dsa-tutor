@@ -381,6 +381,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               <span className="font-mono text-xs text-text-primary dark:text-dark-text-primary">{playbackSpeed.toFixed(1)}x</span>
             </div>
             <Slider
+              aria-label="Playback speed"
               min={0.5}
               max={3.0}
               step={0.25}
@@ -421,7 +422,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             Controls section (e.g. Dijkstra's contextual controls) can never
             push AI Tools out of view. */}
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
-          <section className="flex flex-col gap-2">
+          <section id="ai-tools-section" className="flex flex-col gap-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
               AI Tools
             </h3>
@@ -431,6 +432,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
 
           <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <button
+              id="code-mode-toggle"
               type="button"
               onClick={toggleCodeEditorMode}
               aria-pressed={codeEditorMode}

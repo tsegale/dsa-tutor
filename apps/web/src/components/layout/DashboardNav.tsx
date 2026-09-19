@@ -26,7 +26,12 @@ function BoltIcon() {
 export default function DashboardNav() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { resetOnboarding } = useOnboarding()
+  // Launches the walkthrough directly rather than resetOnboarding(), which
+  // reopens the welcome modal first - that modal has its own "Take the
+  // tour" button, so the header button used to require two clicks and the
+  // tour's first step repeated the same welcome text the modal just showed
+  // (see remediation doc 9.7).
+  const { startTour } = useOnboarding()
   const xpProgress = getProgressToNextLevel(user?.xpTotal ?? 0)
 
   function handleSignOut() {
@@ -45,6 +50,7 @@ export default function DashboardNav() {
         <input
           type="text"
           placeholder="Search algorithms..."
+          aria-label="Search algorithms"
           className="w-full rounded-full border border-border py-2 pr-4 pl-9 text-sm outline-none focus:border-text-muted"
         />
       </div>
@@ -52,7 +58,7 @@ export default function DashboardNav() {
       <div className="flex items-center gap-5">
         <button
           type="button"
-          onClick={resetOnboarding}
+          onClick={startTour}
           className="text-xs text-primary hover:underline"
         >
           Take the tour
@@ -103,7 +109,15 @@ export default function DashboardNav() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled>Profile</DropdownMenuItem>
+            {/* Non-interactive - just states which account is signed in,
+                which the menu never showed before (see remediation doc
+                9.5). No Profile item: there is no profile page to open,
+                and a disabled menu item with no explanation is worse than
+                no item at all. */}
+            <div className="border-b border-border px-2 py-1.5">
+              <p className="truncate text-sm font-medium text-text-primary">{user?.name}</p>
+              <p className="truncate text-xs text-text-muted">{user?.email}</p>
+            </div>
             <DropdownMenuItem onSelect={handleSignOut}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

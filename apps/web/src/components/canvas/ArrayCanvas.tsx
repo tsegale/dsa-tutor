@@ -58,8 +58,16 @@ const PADDING = 32
 
 type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted'
 
+// neutral used to be a pale lavender (#c7c9e8) at 40% opacity, following
+// the "inactive elements: 40% opacity" convention - but no opacity over a
+// white canvas can reach WCAG's 3:1 non-text contrast minimum once the
+// base colour is light to begin with (even solid black at 40% opacity
+// only reaches ~1.6:1). Neutral bars are now fully opaque with a darker
+// tone instead, staying visually de-emphasised next to the saturated
+// comparing/swapping/sorted colours through hue and saturation rather
+// than transparency (see remediation doc 9.9).
 const BAR_COLOURS: Record<BarState, { fill: string; opacity: number; glow?: string }> = {
-  neutral: { fill: '#c7c9e8', opacity: 0.4 },
+  neutral: { fill: '#8b90c9', opacity: 1.0 },
   comparing: { fill: '#f59e0b', opacity: 1.0, glow: 'rgba(245,158,11,0.3)' },
   swapping: { fill: '#7c3aed', opacity: 1.0, glow: 'rgba(124,58,237,0.3)' },
   sorted: { fill: '#16a34a', opacity: 1.0 },

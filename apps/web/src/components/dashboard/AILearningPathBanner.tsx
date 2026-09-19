@@ -13,13 +13,17 @@ function SparklesIcon() {
   )
 }
 
-const BUBBLE_SORT_TOPIC_NAME = 'bubble-sort'
-
 export default function AILearningPathBanner({ topics, onStart }: AILearningPathBannerProps) {
   const masteredTopic = [...topics]
     .filter((t) => t.masteryPercent > 0)
     .sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
   const nextTopic = topics.find((t) => !t.isLocked && t.masteryPercent === 0 && t.name !== masteredTopic?.name)
+  // Topics arrive ordered by track then curriculum order (see
+  // topic.service.ts), so the first unlocked one is always the same card
+  // the dashboard itself shows first - this must never hardcode a
+  // specific topic, or it silently drifts out of sync the moment the
+  // curriculum's starting point changes (see remediation doc 9.1).
+  const firstTopic = topics.find((t) => !t.isLocked)
 
   const bodyText = masteredTopic
     ? `Based on your last session, you've made progress on ${masteredTopic.displayName}. ${
@@ -27,13 +31,13 @@ export default function AILearningPathBanner({ topics, onStart }: AILearningPath
           ? `Recommended next step: ${nextTopic.displayName}, begin the AI diagnostic to establish your baseline.`
           : ''
       }`
-    : 'Welcome. Start with Bubble Sort to begin your adaptive learning path.'
+    : `Welcome. Start with ${firstTopic?.displayName ?? 'the first topic'} to begin your adaptive learning path.`
 
-  const ctaLabel = masteredTopic ? `Continue ${masteredTopic.displayName}` : 'Begin Bubble Sort'
+  const ctaLabel = masteredTopic ? `Continue ${masteredTopic.displayName}` : `Begin ${firstTopic?.displayName ?? 'learning'}`
 
   function handleClick() {
-    const topicName = masteredTopic?.name ?? BUBBLE_SORT_TOPIC_NAME
-    onStart(topicName, 'PRACTICE')
+    const topicName = masteredTopic?.name ?? firstTopic?.name
+    if (topicName) onStart(topicName, 'PRACTICE')
   }
 
   return (

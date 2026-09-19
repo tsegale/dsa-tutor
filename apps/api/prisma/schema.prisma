@@ -18,6 +18,8 @@ enum Track {
   SORTING
   TREES
   GRAPHS
+  SEARCHING
+  TECHNIQUES
 }
 
 enum Difficulty {

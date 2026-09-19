@@ -40,6 +40,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       className={cn(
         'flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm text-text-primary outline-none select-none hover:bg-surface focus:bg-surface',
+        'data-[disabled]:cursor-not-allowed data-[disabled]:text-text-muted data-[disabled]:hover:bg-transparent data-[disabled]:focus:bg-transparent',
         className,
       )}
       {...props}

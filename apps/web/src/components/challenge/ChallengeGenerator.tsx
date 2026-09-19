@@ -110,7 +110,12 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
       size="sm"
       onClick={handleGenerate}
       disabled={isGenerating}
-      className="w-full gap-1.5 text-white hover:text-white"
+      // White text on the secondary (amber) background fails WCAG AA
+      // contrast (~2.15:1) - the variant's own text-secondary-foreground
+      // (near-black, ~8.7:1) already exists for exactly this background
+      // and was being overridden for no visual reason (see remediation
+      // doc 9's Verify block: axe check, serious or above).
+      className="w-full gap-1.5"
     >
       {isGenerating ? <SpinnerIcon /> : <TargetIcon />}
       {isGenerating ? 'Generating...' : 'AI Challenge'}

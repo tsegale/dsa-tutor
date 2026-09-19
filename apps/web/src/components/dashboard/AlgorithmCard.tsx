@@ -6,13 +6,27 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 
 function CompetencyBadge({ topic }: { topic: TopicDto }) {
-  const style = topic.isLocked
-    ? { label: 'Locked', bg: 'var(--color-surface)', color: 'var(--color-text-muted)' }
-    : topic.masteryPercent >= 80
+  // "Full guidance" (HIGH scaffolding) is the account default for a
+  // never-started topic - showing it on all 67 never-started cards on a
+  // fresh account carries no information (see remediation doc 9.4). Only
+  // render a badge once the learner's scaffolding has actually moved away
+  // from that default in either direction.
+  if (topic.isLocked) {
+    return (
+      <span
+        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+        style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-muted)' }}
+      >
+        Locked
+      </span>
+    )
+  }
+  if (topic.masteryPercent === 0) return null
+
+  const style =
+    topic.masteryPercent >= 80
       ? { label: 'Independent mastery', bg: '#eaf3de', color: '#3b6d11' }
-      : topic.masteryPercent > 0
-        ? { label: 'Fading scaffolding', bg: '#faeeda', color: '#854f0b' }
-        : { label: 'Full guidance', bg: '#eef2ff', color: '#3730a3' }
+      : { label: 'Fading scaffolding', bg: '#faeeda', color: '#854f0b' }
 
   return (
     <span
@@ -130,6 +144,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
         <button
           type="button"
           onClick={() => onStart(topic.name, 'PRACTICE')}
+          aria-label={`Start learning ${topic.displayName}`}
           className={cn(
             'w-full rounded-md border-[1.5px] border-[#3730a3] py-2 text-sm font-medium text-[#3730a3] transition-opacity',
             'opacity-90 group-hover:opacity-100',
@@ -142,6 +157,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
           <button
             type="button"
             onClick={() => onStart(topic.name, 'PRACTICE')}
+            aria-label={`Practice ${topic.displayName}`}
             className="flex-1 rounded-md bg-[#3730a3] py-2 text-sm font-medium text-white"
           >
             Practice
@@ -149,6 +165,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
           <button
             type="button"
             onClick={() => onStart(topic.name, 'DEMO')}
+            aria-label={`Demo ${topic.displayName}`}
             className="flex-1 rounded-md border border-border py-2 text-sm font-medium text-text-primary"
           >
             Demo
@@ -158,6 +175,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
         <button
           type="button"
           onClick={() => onStart(topic.name, 'PRACTICE')}
+          aria-label={`Practice ${topic.displayName} again`}
           className="w-full rounded-md bg-[#3730a3] py-2 text-sm font-medium text-white"
         >
           Practice again

@@ -7,7 +7,6 @@ interface OnboardingStoreState {
   showWelcomeModal: boolean
   showOnboarding: boolean
   completeOnboarding: () => void
-  resetOnboarding: () => void
   closeWelcomeModal: () => void
   startTour: () => void
 }
@@ -23,10 +22,6 @@ export const useOnboardingStore = create<OnboardingStoreState>((set) => ({
   completeOnboarding: () => {
     localStorage.setItem(STORAGE_KEY, 'true')
     set({ showOnboarding: false, showWelcomeModal: false })
-  },
-  resetOnboarding: () => {
-    localStorage.removeItem(STORAGE_KEY)
-    set({ showWelcomeModal: true, showOnboarding: false })
   },
   closeWelcomeModal: () => set({ showWelcomeModal: false }),
   startTour: () => set({ showOnboarding: true }),

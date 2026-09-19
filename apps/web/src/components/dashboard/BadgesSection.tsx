@@ -49,7 +49,6 @@ export default function BadgesSection() {
               className="relative flex items-center gap-3 rounded-md border-2 bg-white p-4"
               style={{
                 borderColor: isAwarded ? TIER_BORDER[badge.tier] : '#E2E8F0',
-                opacity: isAwarded ? 1 : 0.3,
               }}
             >
               <div
@@ -62,7 +61,17 @@ export default function BadgesSection() {
                 <BadgeIcon icon={badge.icon} size={22} />
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-text-primary">{badge.title}</div>
+                {/* Locked badges used to fade the whole card to 30%
+                    opacity, which (like the canvas bars in 9.9) also faded
+                    the text below WCAG AA contrast - an axe scan turned
+                    this up as a serious violation. The lock icon and
+                    neutral icon/border colours above already communicate
+                    "locked" without needing the text itself to fade. */}
+                <div
+                  className={isAwarded ? 'truncate text-sm font-semibold text-text-primary' : 'truncate text-sm font-semibold text-text-muted'}
+                >
+                  {badge.title}
+                </div>
                 <div className="truncate text-xs text-text-muted">{badge.description}</div>
               </div>
 

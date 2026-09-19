@@ -12,6 +12,8 @@ interface CurriculumSidebarProps {
 const TRACK_ORDER: AlgorithmTrack[] = [
   AlgorithmTrack.FOUNDATIONS,
   AlgorithmTrack.SORTING,
+  AlgorithmTrack.SEARCHING,
+  AlgorithmTrack.TECHNIQUES,
   AlgorithmTrack.TREES,
   AlgorithmTrack.GRAPHS,
 ]
@@ -21,6 +23,8 @@ const TRACK_LABELS: Record<AlgorithmTrack, string> = {
   [AlgorithmTrack.SORTING]: 'Sorting',
   [AlgorithmTrack.TREES]: 'Trees',
   [AlgorithmTrack.GRAPHS]: 'Graphs',
+  [AlgorithmTrack.SEARCHING]: 'Searching',
+  [AlgorithmTrack.TECHNIQUES]: 'Techniques',
 }
 
 const TRACK_DOT_CLASS: Record<AlgorithmTrack, string> = {
@@ -28,6 +32,8 @@ const TRACK_DOT_CLASS: Record<AlgorithmTrack, string> = {
   [AlgorithmTrack.SORTING]: 'bg-primary',
   [AlgorithmTrack.TREES]: 'bg-success',
   [AlgorithmTrack.GRAPHS]: 'bg-secondary',
+  [AlgorithmTrack.SEARCHING]: 'bg-cyan-600',
+  [AlgorithmTrack.TECHNIQUES]: 'bg-amber-600',
 }
 
 function ChevronIcon({ collapsed }: { collapsed: boolean }) {
@@ -118,6 +124,11 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
                       type="button"
                       disabled={topic.isLocked}
                       onClick={() => onTopicSelect(topic.name)}
+                      aria-label={
+                        topic.isLocked
+                          ? `${topic.displayName}, locked`
+                          : `${topic.displayName}, ${topic.masteryPercent}% mastery`
+                      }
                       className={cn(
                         'flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
                         collapsed && 'justify-center px-0',

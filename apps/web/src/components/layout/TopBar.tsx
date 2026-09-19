@@ -21,6 +21,8 @@ const TRACK_DISPLAY_NAMES: Record<AlgorithmTrack, string> = {
   [AlgorithmTrack.SORTING]: 'Sorting',
   [AlgorithmTrack.TREES]: 'Trees',
   [AlgorithmTrack.GRAPHS]: 'Graphs',
+  [AlgorithmTrack.SEARCHING]: 'Searching',
+  [AlgorithmTrack.TECHNIQUES]: 'Techniques',
 }
 
 function EyeIcon({ active }: { active: boolean }) {

@@ -15,13 +15,17 @@ const TRACK_LABELS: Record<AlgorithmTrack, string> = {
   [AlgorithmTrack.SORTING]: 'Sorting',
   [AlgorithmTrack.TREES]: 'Trees',
   [AlgorithmTrack.GRAPHS]: 'Graphs',
+  [AlgorithmTrack.SEARCHING]: 'Searching',
+  [AlgorithmTrack.TECHNIQUES]: 'Techniques',
 }
 
 const TRACK_DESCRIPTIONS: Record<AlgorithmTrack, string> = {
-  [AlgorithmTrack.FOUNDATIONS]: 'Core data structures and search fundamentals',
+  [AlgorithmTrack.FOUNDATIONS]: 'Core data structures: arrays, lists, stacks, queues and hash tables',
   [AlgorithmTrack.SORTING]: 'Algorithms that arrange elements in order',
   [AlgorithmTrack.TREES]: 'Hierarchical data structures and traversal',
   [AlgorithmTrack.GRAPHS]: 'Network structures and pathfinding',
+  [AlgorithmTrack.SEARCHING]: 'Algorithms that locate a target value in a collection',
+  [AlgorithmTrack.TECHNIQUES]: 'Two pointer and sliding window problem-solving patterns',
 }
 
 function LockIcon() {
@@ -45,6 +49,28 @@ function FoundationsIcon() {
   )
 }
 
+function SearchingIcon() {
+  return (
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#0e7490]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} aria-hidden="true">
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m20 20-4.35-4.35" strokeLinecap="round" />
+      </svg>
+    </div>
+  )
+}
+
+function TechniquesIcon() {
+  return (
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#a16207]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} aria-hidden="true">
+        <path d="M3 8h6M3 16h6M15 8h6M15 16h6" strokeLinecap="round" />
+        <path d="M9 12h6" strokeLinecap="round" strokeDasharray="2 2" />
+      </svg>
+    </div>
+  )
+}
+
 function TrackIcon({ track }: { track: AlgorithmTrack }) {
   switch (track) {
     case AlgorithmTrack.SORTING:
@@ -55,6 +81,10 @@ function TrackIcon({ track }: { track: AlgorithmTrack }) {
       return <GraphsBadge size={36} />
     case AlgorithmTrack.FOUNDATIONS:
       return <FoundationsIcon />
+    case AlgorithmTrack.SEARCHING:
+      return <SearchingIcon />
+    case AlgorithmTrack.TECHNIQUES:
+      return <TechniquesIcon />
   }
 }
 
@@ -63,7 +93,6 @@ export default function TrackSection({ track, topics, onStart }: TrackSectionPro
     topics.length > 0 ? Math.round(topics.reduce((sum, t) => sum + t.masteryPercent, 0) / topics.length) : 0
 
   const allLocked = topics.every((t) => t.isLocked)
-  const allUnlocked = topics.every((t) => !t.isLocked)
 
   return (
     <section>
@@ -72,19 +101,20 @@ export default function TrackSection({ track, topics, onStart }: TrackSectionPro
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold text-primary">{TRACK_LABELS[track]}</h2>
+            {/* No "Unlocked" badge for the opposite case - every topic is
+                unlocked by default, so it would carry no information (see
+                remediation doc 9.1/9.4's "only show a badge where it
+                differs from the account default" principle). */}
             {allLocked && (
               <span className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-text-muted">
                 <LockIcon />
                 Locked
               </span>
             )}
-            {allUnlocked && (
-              <span className="rounded-full bg-success-light px-2 py-0.5 text-[11px] font-medium text-success">
-                Unlocked
-              </span>
-            )}
           </div>
-          <p className="text-xs text-text-muted">{TRACK_DESCRIPTIONS[track]}</p>
+          <p className="text-xs text-text-muted">
+            {TRACK_DESCRIPTIONS[track]} · {topics.length} topic{topics.length === 1 ? '' : 's'}
+          </p>
         </div>
 
         <div className="flex flex-1 items-center gap-2">

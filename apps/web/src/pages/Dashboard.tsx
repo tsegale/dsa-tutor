@@ -59,6 +59,8 @@ export default function Dashboard() {
   const trackOrder: AlgorithmTrack[] = [
     AlgorithmTrack.FOUNDATIONS,
     AlgorithmTrack.SORTING,
+    AlgorithmTrack.SEARCHING,
+    AlgorithmTrack.TECHNIQUES,
     AlgorithmTrack.TREES,
     AlgorithmTrack.GRAPHS,
   ]
@@ -68,7 +70,10 @@ export default function Dashboard() {
       <DashboardNav />
       {user && <StatsBanner user={user} topics={topics} />}
       <div className="flex">
-        <CurriculumSidebar topics={topics} activeTopic={null} onTopicSelect={(name) => handleStart(name, 'DEMO')} />
+        {/* PRACTICE, not DEMO - Practice is the default the study argues
+            for; Demo stays one click away on the algorithm page itself
+            (see remediation doc 9.8). */}
+        <CurriculumSidebar topics={topics} activeTopic={null} onTopicSelect={(name) => handleStart(name, 'PRACTICE')} />
         <main className="flex-1 overflow-y-auto px-8 pt-8 pb-10">
           <div className="space-y-12">
             {topics.length === 0 ? (

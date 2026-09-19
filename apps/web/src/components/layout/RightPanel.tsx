@@ -227,7 +227,7 @@ export default function RightPanel({
             onValueChange={(value) => onTabChange(Number(value))}
             className="flex h-full flex-col overflow-hidden"
           >
-            <TabsList>
+            <TabsList id="right-panel-tabs">
               <TabsTrigger value="1" className="px-[10px] py-2 text-[12px] tracking-normal">
                 AI Tutor
               </TabsTrigger>

@@ -281,6 +281,8 @@ export const AlgorithmTrack = {
   SORTING: 'SORTING',
   TREES: 'TREES',
   GRAPHS: 'GRAPHS',
+  SEARCHING: 'SEARCHING',
+  TECHNIQUES: 'TECHNIQUES',
 } as const
 export type AlgorithmTrack = (typeof AlgorithmTrack)[keyof typeof AlgorithmTrack]
 
