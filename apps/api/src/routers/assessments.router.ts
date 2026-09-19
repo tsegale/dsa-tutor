@@ -1,18 +1,9 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { getAssessmentStatus, startAttempt, submitResponse, completeAttempt } from '../services/assessment.service'
+import { startAttempt, submitResponse, completeAttempt } from '../services/assessment.service'
 
 const router = Router()
 router.use(authenticate)
-
-router.get('/status', async (req: AuthRequest, res: Response) => {
-  try {
-    const status = await getAssessmentStatus(req.userId!)
-    res.json({ data: status, error: null })
-  } catch {
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to load assessment status' } })
-  }
-})
 
 router.post('/:code/start', async (req: AuthRequest, res: Response) => {
   try {
@@ -22,6 +13,10 @@ router.post('/:code/start', async (req: AuthRequest, res: Response) => {
     const message = err instanceof Error ? err.message : ''
     if (message === 'NOT_A_PARTICIPANT') {
       res.status(403).json({ data: null, error: { code: 'NOT_A_PARTICIPANT', message: 'Not enrolled as a study participant' } })
+      return
+    }
+    if (message === 'CONSENT_REQUIRED') {
+      res.status(403).json({ data: null, error: { code: 'CONSENT_REQUIRED', message: 'Consent is required before starting an assessment' } })
       return
     }
     if (message === 'UNKNOWN_ASSESSMENT') {

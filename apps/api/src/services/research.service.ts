@@ -1,6 +1,12 @@
 import { prisma } from '../lib/prisma'
 import { toCsv, parseCsv } from '../utils/csv'
 
+// Applied to every research export: a row only exists for a consenting,
+// still-enrolled participant. Withdrawal must exclude a participant from
+// every export, not just the ones written after the withdrawal feature
+// existed.
+const ACTIVE_PARTICIPANT_FILTER = { participantCode: { not: null as string | null }, withdrawnAt: null }
+
 /** One row per incorrect interaction from a consenting, non-withdrawn
  * participant. Never includes name or email - only participantCode, which
  * is meaningless outside the study's own records. */
@@ -9,10 +15,7 @@ export async function exportMisconceptionsCsv(): Promise<string> {
     where: {
       predictionCorrect: false,
       session: {
-        user: {
-          participantCode: { not: null },
-          withdrawnAt: null,
-        },
+        user: ACTIVE_PARTICIPANT_FILTER,
       },
     },
     include: {
@@ -51,6 +54,119 @@ export async function exportMisconceptionsCsv(): Promise<string> {
     interaction.feedbackText ?? '',
     String(interaction.aiGenerated),
   ])
+
+  return toCsv(header, rows)
+}
+
+/** One row per interaction (correct and incorrect both - "correct" is
+ * itself a column) from a consenting, non-withdrawn participant. */
+export async function exportInteractionsCsv(): Promise<string> {
+  const interactions = await prisma.interaction.findMany({
+    where: { session: { user: ACTIVE_PARTICIPANT_FILTER } },
+    include: {
+      session: {
+        include: {
+          user: { select: { participantCode: true } },
+          algorithmTopic: { select: { displayName: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const header = [
+    'participantCode',
+    'algorithm',
+    'junctionType',
+    'correct',
+    'ruleLabel',
+    'aiLabel',
+    'hintsRequested',
+    'hintIndexAtResolve',
+    'bottomedOut',
+    'scaffoldingLevelAtTime',
+    'masteryScoreAtTime',
+    'timeSpentSeconds',
+    'aiGenerated',
+    'aiLatencyMs',
+  ]
+
+  const rows = interactions.map((interaction) => [
+    interaction.session.user.participantCode ?? '',
+    interaction.session.algorithmTopic.displayName,
+    interaction.criticalJunctionType ?? '',
+    String(interaction.predictionCorrect ?? ''),
+    interaction.misconceptionCategory ?? '',
+    interaction.aiMisconceptionCategory ?? '',
+    String(interaction.hintsRequested),
+    String(interaction.hintIndexAtResolve),
+    String(interaction.bottomedOut),
+    interaction.scaffoldingLevelAtTime,
+    String(interaction.masteryScoreAtTime),
+    String(interaction.timeSpentSeconds),
+    String(interaction.aiGenerated),
+    interaction.aiLatencyMs !== null ? String(interaction.aiLatencyMs) : '',
+  ])
+
+  return toCsv(header, rows)
+}
+
+/** One row per assessment response (pre and post test items both) from a
+ * consenting, non-withdrawn participant. */
+export async function exportAssessmentsCsv(): Promise<string> {
+  const responses = await prisma.assessmentResponse.findMany({
+    where: { attempt: { user: ACTIVE_PARTICIPANT_FILTER } },
+    include: {
+      attempt: {
+        include: {
+          user: { select: { participantCode: true } },
+          assessment: { select: { phase: true } },
+        },
+      },
+      item: { select: { conceptTag: true } },
+    },
+    orderBy: { submittedAt: 'asc' },
+  })
+
+  const header = ['participantCode', 'phase', 'conceptTag', 'score']
+
+  const rows = responses.map((response) => [
+    response.attempt.user.participantCode ?? '',
+    response.attempt.assessment.phase,
+    response.item.conceptTag,
+    response.score !== null ? String(response.score) : '',
+  ])
+
+  return toCsv(header, rows)
+}
+
+/** One row per session from a consenting, non-withdrawn participant.
+ * duration is in seconds, blank if the session was never ended. */
+export async function exportSessionsCsv(): Promise<string> {
+  const sessions = await prisma.session.findMany({
+    where: { user: ACTIVE_PARTICIPANT_FILTER },
+    include: {
+      user: { select: { participantCode: true } },
+      algorithmTopic: { select: { displayName: true } },
+    },
+    orderBy: { startTime: 'asc' },
+  })
+
+  const header = ['participantCode', 'algorithm', 'mode', 'durationSeconds', 'mentalEffort', 'confidence']
+
+  const rows = sessions.map((session) => {
+    const durationSeconds = session.endTime
+      ? Math.round((session.endTime.getTime() - session.startTime.getTime()) / 1000)
+      : null
+    return [
+      session.user.participantCode ?? '',
+      session.algorithmTopic.displayName,
+      session.mode,
+      durationSeconds !== null ? String(durationSeconds) : '',
+      session.mentalEffort !== null ? String(session.mentalEffort) : '',
+      session.confidence !== null ? String(session.confidence) : '',
+    ]
+  })
 
   return toCsv(header, rows)
 }

@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { getToken } from '@/api/auth'
-import { fetchAssessmentStatus } from '@/api/assessments'
+import { fetchStudyStatus } from '@/api/study'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
@@ -17,6 +17,7 @@ const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const AlgorithmPage = lazy(() => import('@/pages/AlgorithmPage'))
 const EducatorDashboard = lazy(() => import('@/pages/EducatorDashboard'))
 const AssessmentPage = lazy(() => import('@/pages/AssessmentPage'))
+const ConsentPage = lazy(() => import('@/pages/ConsentPage'))
 const Showcase = lazy(() => import('@/pages/Showcase'))
 const CanvasTest = lazy(() => import('@/pages/CanvasTest'))
 // Was a static import even though GlobalOnboarding only ever renders it for
@@ -39,19 +40,24 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/auth" replace />
 }
 
-// A study participant with no completed pre-test cannot reach a topic or
-// the dashboard at all - only /assessment/pre itself, which is wrapped in
-// RequireAuth alone so this check never applies to itself. A non-participant
+// A study participant cannot reach a topic or the dashboard at all until
+// they've consented, then until they've completed the pre-test - only
+// /consent and /assessment/pre themselves are wrapped in RequireAuth alone,
+// so this check never applies to those two routes. A non-participant
 // (isParticipant: false) is unaffected; the study's curriculum lock
-// (STUDY_TOPICS) is a separate, later concern from this gate.
+// (STUDY_TOPICS, enforced server-side in topic.service.ts) is a separate
+// concern from this route gate.
 function StudyGate({ children }: { children: ReactNode }) {
   const { data: status, isLoading } = useQuery({
-    queryKey: ['assessments', 'status'],
-    queryFn: fetchAssessmentStatus,
+    queryKey: ['study', 'status'],
+    queryFn: fetchStudyStatus,
     staleTime: 60 * 1000,
   })
 
   if (isLoading) return null
+  if (status?.consentRequired) {
+    return <Navigate to="/consent" replace />
+  }
   if (status?.pretestRequired) {
     return <Navigate to="/assessment/pre" replace />
   }
@@ -122,6 +128,14 @@ export default function App() {
                   element={
                     <RequireAuth>
                       <AssessmentPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/consent"
+                  element={
+                    <RequireAuth>
+                      <ConsentPage />
                     </RequireAuth>
                   }
                 />

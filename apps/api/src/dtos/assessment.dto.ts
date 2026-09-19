@@ -1,10 +1,3 @@
-export interface AssessmentStatusDto {
-  isParticipant: boolean
-  pretestRequired: boolean
-  posttestAvailable: boolean
-  posttestCompleted: boolean
-}
-
 export interface AssessmentItemDto {
   id: string
   order: number

@@ -638,8 +638,10 @@ export interface EducatorAnalyticsDto {
 export type AssessmentPhase = 'PRE' | 'POST'
 export type AssessmentItemType = 'MULTIPLE_CHOICE' | 'TRACE'
 
-export interface AssessmentStatusDto {
+export interface StudyStatusDto {
   isParticipant: boolean
+  withdrawn: boolean
+  consentRequired: boolean
   pretestRequired: boolean
   posttestAvailable: boolean
   posttestCompleted: boolean

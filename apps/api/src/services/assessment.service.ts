@@ -1,9 +1,6 @@
 import { prisma } from '../lib/prisma'
-import { STUDY_TOPICS } from '../config/studyTopics'
-import type { AssessmentAttemptDto, AssessmentStatusDto } from '../dtos/assessment.dto'
-
-const PRE_CODE = 'STUDY_PRE_V1'
-const POST_CODE = 'STUDY_POST_V1'
+import { getStudyStatus } from './study.service'
+import type { AssessmentAttemptDto } from '../dtos/assessment.dto'
 
 /** Deterministic scoring only - no LLM anywhere in this path. TRACE items
  * are compared after trimming surrounding whitespace; everything else must
@@ -15,42 +12,6 @@ export function scoreResponse(
   const normalized = item.itemType === 'TRACE' ? rawResponse.trim() : rawResponse
   const isCorrect = item.correctOptionId !== null && normalized === item.correctOptionId
   return { isCorrect, score: isCorrect ? item.maxScore : 0 }
-}
-
-export async function getAssessmentStatus(userId: string): Promise<AssessmentStatusDto> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true } })
-  if (!user?.participantCode) {
-    return { isParticipant: false, pretestRequired: false, posttestAvailable: false, posttestCompleted: false }
-  }
-
-  const [preAttempt, postAttempt, completedTopics] = await Promise.all([
-    prisma.assessmentAttempt.findFirst({
-      where: { userId, assessment: { code: PRE_CODE }, completedAt: { not: null } },
-    }),
-    prisma.assessmentAttempt.findFirst({
-      where: { userId, assessment: { code: POST_CODE }, completedAt: { not: null } },
-    }),
-    // findMany + distinct rather than count({ distinct }): Prisma's count
-    // aggregation doesn't support a typed distinct field list here, and
-    // this needs one row per topic regardless of how many sessions that
-    // topic has, not a raw session count.
-    prisma.session.findMany({
-      where: {
-        userId,
-        completed: true,
-        algorithmTopic: { name: { in: [...STUDY_TOPICS] } },
-      },
-      select: { algorithmTopicId: true },
-      distinct: ['algorithmTopicId'],
-    }),
-  ])
-
-  return {
-    isParticipant: true,
-    pretestRequired: !preAttempt,
-    posttestAvailable: completedTopics.length >= STUDY_TOPICS.length,
-    posttestCompleted: !!postAttempt,
-  }
 }
 
 function toAttemptDto(attempt: {
@@ -97,9 +58,15 @@ function toAttemptDto(attempt: {
  * instrument does not allow retakes, so this is intentionally idempotent
  * rather than an error. */
 export async function startAttempt(userId: string, code: string): Promise<AssessmentAttemptDto> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true } })
-  if (!user?.participantCode) {
+  const status = await getStudyStatus(userId)
+  if (!status.isParticipant) {
     throw new Error('NOT_A_PARTICIPANT')
+  }
+  // Consent is enforced here too, not just by the frontend's route gate -
+  // "no participant reaches ... an assessment without it" has to hold even
+  // if a client is scripted directly against the API.
+  if (status.consentRequired) {
+    throw new Error('CONSENT_REQUIRED')
   }
 
   const assessment = await prisma.assessment.findUnique({
@@ -110,11 +77,8 @@ export async function startAttempt(userId: string, code: string): Promise<Assess
     throw new Error('UNKNOWN_ASSESSMENT')
   }
 
-  if (assessment.phase === 'POST') {
-    const status = await getAssessmentStatus(userId)
-    if (!status.posttestAvailable) {
-      throw new Error('POSTTEST_NOT_AVAILABLE')
-    }
+  if (assessment.phase === 'POST' && !status.posttestAvailable) {
+    throw new Error('POSTTEST_NOT_AVAILABLE')
   }
 
   const existing = await prisma.assessmentAttempt.findUnique({

@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/hooks/useOnboarding'
+import { fetchStudyStatus, withdrawFromStudy } from '@/api/study'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { getProgressToNextLevel } from '@/utils/xpLevels'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
 
@@ -25,6 +30,7 @@ function BoltIcon() {
 
 export default function DashboardNav() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, logout } = useAuth()
   // Launches the walkthrough directly rather than resetOnboarding(), which
   // reopens the welcome modal first - that modal has its own "Take the
@@ -33,6 +39,20 @@ export default function DashboardNav() {
   // (see remediation doc 9.7).
   const { startTour } = useOnboarding()
   const xpProgress = getProgressToNextLevel(user?.xpTotal ?? 0)
+
+  // Shares the ['study', 'status'] cache with App.tsx's StudyGate - a
+  // non-participant gets isParticipant: false and this menu item never
+  // shows, so this query costs nothing extra for the common case.
+  const { data: studyStatus } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus })
+  const [confirmingWithdraw, setConfirmingWithdraw] = useState(false)
+
+  const withdrawMutation = useMutation({
+    mutationFn: withdrawFromStudy,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
+      setConfirmingWithdraw(false)
+    },
+  })
 
   function handleSignOut() {
     logout()
@@ -118,10 +138,42 @@ export default function DashboardNav() {
               <p className="truncate text-sm font-medium text-text-primary">{user?.name}</p>
               <p className="truncate text-xs text-text-muted">{user?.email}</p>
             </div>
+            {studyStatus?.isParticipant && !studyStatus.withdrawn && (
+              <DropdownMenuItem onSelect={() => setConfirmingWithdraw(true)}>
+                Withdraw from study
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={handleSignOut}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <Dialog open={confirmingWithdraw} onOpenChange={setConfirmingWithdraw}>
+        <DialogContent className="sm:max-w-sm">
+          <div className="flex flex-col gap-4 py-2">
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">Withdraw from the study?</h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                Your data will be removed from every research export going forward. Your account and
+                progress stay exactly as they are - this only stops you being studied, not your access.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setConfirmingWithdraw(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => withdrawMutation.mutate()}
+                disabled={withdrawMutation.isPending}
+                className="flex-1"
+              >
+                Withdraw
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   )
 }
