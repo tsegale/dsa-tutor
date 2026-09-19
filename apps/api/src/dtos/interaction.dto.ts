@@ -24,6 +24,10 @@ export interface CreateInteractionDto {
   aiLatencyMs?: number | null
   aiModel?: string | null
   promptVersion?: string | null
+  // The data structure state the student was looking at when they
+  // answered - only meaningful for the research misconception export, so
+  // it is write-only from here: never mapped back into InteractionDto.
+  dataStructureStateSnapshot?: unknown
 }
 
 export interface InteractionDto {

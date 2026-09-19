@@ -9,6 +9,7 @@ import topicsRouter from './routers/topics.router'
 import aiRouter from './routers/ai.router'
 import badgesRouter from './routers/badges.router'
 import assessmentsRouter from './routers/assessments.router'
+import researchRouter from './routers/research.router'
 
 const app = express()
 
@@ -33,6 +34,7 @@ app.use('/api/v1/topics', topicsRouter)
 app.use('/api/v1/ai', aiRouter)
 app.use('/api/v1/badges', badgesRouter)
 app.use('/api/v1/assessments', assessmentsRouter)
+app.use('/api/v1/research', researchRouter)
 
 app.use(errorHandler)
 

@@ -508,6 +508,11 @@ export default function AlgorithmPage() {
           counterfactualText: detail.counterfactualText,
           aiMisconceptionCategory: detail.aiMisconceptionCategory,
           hintIndexAtResolve: detail.hintIndexAtResolve,
+          // So a human rater reviewing this interaction later (research
+          // misconception export) can see what the student was actually
+          // looking at, not just its step index.
+          dataStructureStateSnapshot:
+            useAlgorithmStore.getState().snapshotArray[detail.stepIndex]?.dataStructureState ?? null,
         }),
       }).catch(() => {
         // Interaction logging is best-effort; it must never block the

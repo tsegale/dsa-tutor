@@ -138,9 +138,32 @@ model Interaction {
   aiModel                 String?
   promptVersion           String?
 
-  session Session @relation(fields: [sessionId], references: [id])
+  // Captured at submission time so a human rater reviewing an incorrect
+  // interaction later (see MisconceptionRating) can see what the student
+  // was actually looking at, not just the step index.
+  dataStructureStateSnapshot Json?
+
+  session          Session               @relation(fields: [sessionId], references: [id])
+  misconceptionRatings MisconceptionRating[]
 
   @@index([sessionId])
+}
+
+// An independent human label on a sampled incorrect interaction, imported
+// from a CSV a second rater filled in outside the platform - the sanity
+// check for the rule-based misconceptionCategory, in place of a full
+// inter-rater kappa workflow.
+model MisconceptionRating {
+  id            String   @id @default(cuid())
+  interactionId String
+  raterCode     String
+  label         String
+  createdAt     DateTime @default(now())
+
+  interaction Interaction @relation(fields: [interactionId], references: [id])
+
+  @@unique([interactionId, raterCode])
+  @@index([interactionId])
 }
 
 model Badge {
