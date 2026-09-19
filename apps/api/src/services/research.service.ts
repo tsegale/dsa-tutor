@@ -176,6 +176,51 @@ export async function exportSessionsCsv(): Promise<string> {
   return toCsv(header, rows)
 }
 
+/** One row per misconception event (the detect-remediate-reprobe loop's
+ * own record, not the raw interactions) from a consenting, non-withdrawn
+ * participant. */
+export async function exportMisconceptionEventsCsv(): Promise<string> {
+  const events = await prisma.misconceptionEvent.findMany({
+    where: { user: ACTIVE_PARTICIPANT_FILTER },
+    include: {
+      user: { select: { participantCode: true } },
+      algorithmTopic: { select: { displayName: true } },
+      probes: { select: { optionCount: true } },
+    },
+    orderBy: { detectedAt: 'asc' },
+  })
+
+  const header = [
+    'participantCode',
+    'algorithm',
+    'category',
+    'detectedAt',
+    'status',
+    'remediationCount',
+    'probeCount',
+    'junctionsSinceDetection',
+    'resolvedAt',
+    'bottomedOut',
+    'probeOptionCounts',
+  ]
+
+  const rows = events.map((event) => [
+    event.user.participantCode ?? '',
+    event.algorithmTopic.displayName,
+    event.category,
+    event.detectedAt.toISOString(),
+    event.status,
+    String(event.remediationCount),
+    String(event.probeCount),
+    String(event.junctionsSinceDetection),
+    event.resolvedAt?.toISOString() ?? '',
+    String(event.bottomedOut),
+    JSON.stringify(event.probes.map((p) => p.optionCount)),
+  ])
+
+  return toCsv(header, rows)
+}
+
 /** Imports a rater's CSV (interactionId, raterCode, label) as
  * MisconceptionRating rows. Upserts on (interactionId, raterCode) so
  * re-importing a corrected CSV replaces, rather than duplicates, a

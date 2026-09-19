@@ -25,6 +25,11 @@ import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToa
 import FeynmanModal from '@/components/feynman/FeynmanModal'
 import { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton'
 import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
+import RemediationModal from '@/components/prediction/RemediationModal'
+import BottomOutModal from '@/components/prediction/BottomOutModal'
+import OpenMisconceptionIndicator from '@/components/prediction/OpenMisconceptionIndicator'
+import { useMisconceptionStore } from '@/store/useMisconceptionStore'
+import { STUDY_TOPIC_SLUGS, getJunctionOptionCount } from '@/utils/misconceptionProbes'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -317,6 +322,11 @@ export default function AlgorithmPage() {
   const sessionTotalPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
   const setScaffoldingLevel = useAlgorithmStore((state) => state.setScaffoldingLevel)
   const setScaffoldingReasoning = useAlgorithmStore((state) => state.setScaffoldingReasoning)
+  const pendingRemediation = useMisconceptionStore((state) => state.pendingRemediation)
+  const lastBottomedOutCategory = useMisconceptionStore((state) => state.lastBottomedOutCategory)
+  const completePendingRemediation = useMisconceptionStore((state) => state.completePendingRemediation)
+  const dismissBottomOut = useMisconceptionStore((state) => state.dismissBottomOut)
+  const activeMisconceptionEvents = useMisconceptionStore((state) => state.activeEvents)
   const { user, refreshUser } = useAuth()
   const { play } = useSoundEffects()
   const prefersReducedMotion = useReducedMotion()
@@ -326,6 +336,9 @@ export default function AlgorithmPage() {
     queryFn: () => apiFetch<AlgorithmTopicDTO[]>('/api/v1/topics'),
   })
   const currentTopic = topics.find((t) => t.name === algorithmNameParam) ?? null
+  const openMisconceptionForTopic = currentTopic
+    ? activeMisconceptionEvents.find((e) => e.algorithmTopicId === currentTopic.id)
+    : undefined
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
@@ -494,7 +507,7 @@ export default function AlgorithmPage() {
     setScaffoldingReasoning(assessment.reasoning)
 
     if (sessionId) {
-      apiFetch('/api/v1/interactions', {
+      apiFetch<{ id: string }>('/api/v1/interactions', {
         method: 'POST',
         body: JSON.stringify({
           sessionId,
@@ -521,10 +534,39 @@ export default function AlgorithmPage() {
           dataStructureStateSnapshot:
             useAlgorithmStore.getState().snapshotArray[detail.stepIndex]?.dataStructureState ?? null,
         }),
-      }).catch(() => {
-        // Interaction logging is best-effort; it must never block the
-        // learner's practice flow if the backend is unreachable.
       })
+        .then((interaction) => {
+          // The response half of misconception handling (detection is
+          // Phase 4's tile-derived ground-truth label) is scoped to the
+          // three fully instrumented study topics - see
+          // apps/web/src/utils/misconceptionProbes.ts.
+          if (!currentTopic || !(STUDY_TOPIC_SLUGS as readonly string[]).includes(currentTopic.name)) return
+          const store = useMisconceptionStore.getState()
+          const optionCount = getJunctionOptionCount(detail.junctionType)
+          const hintUsed = detail.hintsRequestedForStep > 0
+
+          if (!detail.correct && detail.misconceptionCategory) {
+            void store.handleDetection(currentTopic.id, currentTopic.name, detail.misconceptionCategory, interaction.id)
+          }
+          // Order matters: handleDetection above may have just set
+          // pendingRemediation, which makes this probe call a no-op for
+          // the same interaction - the wrong answer that revealed a
+          // misconception must never also count as a probe of it.
+          void store.handleProbe(
+            currentTopic.id,
+            currentTopic.name,
+            interaction.id,
+            detail.junctionType,
+            optionCount,
+            detail.correct,
+            hintUsed,
+          )
+          store.tickJunctionForTopic(currentTopic.id)
+        })
+        .catch(() => {
+          // Interaction logging is best-effort; it must never block the
+          // learner's practice flow if the backend is unreachable.
+        })
     }
 
     if (gatedLevel !== currentLevel) {
@@ -740,6 +782,13 @@ export default function AlgorithmPage() {
         })
         if (!cancelled) setSessionId(session.id)
 
+        if ((STUDY_TOPIC_SLUGS as readonly string[]).includes(currentTopic.name)) {
+          // Catches the "left and didn't come back" abandonment path a
+          // per-junction counter alone can't see, since nothing fires
+          // while the student is elsewhere - see the doc's Abandon rule.
+          void useMisconceptionStore.getState().checkSessionStart(currentTopic.id)
+        }
+
         // The session POST bumps the streak server-side; refetch the
         // profile to see whether it actually went up before celebrating.
         const refreshed = await refreshUser()
@@ -823,6 +872,7 @@ export default function AlgorithmPage() {
         </motion.div>
 
         <ChallengeHintBanner />
+        {openMisconceptionForTopic && <OpenMisconceptionIndicator category={openMisconceptionForTopic.category} />}
 
         {focusModeActive && (
           <div className="absolute right-4 bottom-4 z-20 rounded-full bg-active px-3 py-1.5 text-xs font-medium text-white shadow-md">
@@ -873,6 +923,19 @@ export default function AlgorithmPage() {
       <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
       {showSessionEndSurvey && (
         <SessionEndSurvey onSubmit={handleSessionEndSubmit} onSkip={handleSessionEndSkip} />
+      )}
+      {pendingRemediation && (
+        <RemediationModal
+          payload={pendingRemediation.payload}
+          onComplete={(outcome) => void completePendingRemediation(outcome)}
+        />
+      )}
+      {!pendingRemediation && lastBottomedOutCategory && currentTopic && (
+        <BottomOutModal
+          category={lastBottomedOutCategory}
+          algorithmTopicSlug={currentTopic.name}
+          onAcknowledge={dismissBottomOut}
+        />
       )}
       <StreakToast
         streakCount={streakCountForToast}

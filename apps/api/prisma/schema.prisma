@@ -75,10 +75,11 @@ model User {
   susScore       Int?
   susSubmittedAt DateTime?
 
-  sessions           Session[]
-  userBadges         UserBadge[]
-  topicMasteries     TopicMastery[]
-  assessmentAttempts AssessmentAttempt[]
+  sessions            Session[]
+  userBadges          UserBadge[]
+  topicMasteries      TopicMastery[]
+  assessmentAttempts  AssessmentAttempt[]
+  misconceptionEvents MisconceptionEvent[]
 }
 
 model AlgorithmTopic {
@@ -93,8 +94,9 @@ model AlgorithmTopic {
   order            Int        @default(999)
   createdAt        DateTime   @default(now())
 
-  sessions       Session[]
-  topicMasteries TopicMastery[]
+  sessions            Session[]
+  topicMasteries      TopicMastery[]
+  misconceptionEvents MisconceptionEvent[]
 }
 
 model Session {
@@ -301,4 +303,62 @@ model AssessmentResponse {
 
   @@unique([attemptId, itemId])
   @@index([attemptId])
+}
+
+// The response half of misconception handling (detection is Phase 4's
+// tile-derived ground-truth label). One row per detected misconception per
+// (user, topic, category) - a repeat detection while one is already OPEN
+// or REMEDIATED escalates the existing row (see study.service.ts's
+// detectMisconception) rather than creating a second one; this is
+// enforced in application code, not a DB constraint, since Prisma has no
+// portable partial-unique-index primitive for "unique only while status
+// is OPEN or REMEDIATED".
+model MisconceptionEvent {
+  id                      String    @id @default(cuid())
+  userId                  String
+  algorithmTopicId        String
+  category                String
+  detectedAt              DateTime  @default(now())
+  detectedInteractionId   String
+  status                  String    @default("OPEN") // OPEN | REMEDIATED | RESOLVED | PERSISTENT | ABANDONED
+  remediationCount        Int       @default(0)
+  probeCount              Int       @default(0)
+  consecutiveCorrect      Int       @default(0)
+  resolvedAt              DateTime?
+  junctionsSinceDetection Int       @default(0)
+  bottomedOut             Boolean   @default(false)
+
+  user           User                 @relation(fields: [userId], references: [id])
+  algorithmTopic AlgorithmTopic       @relation(fields: [algorithmTopicId], references: [id])
+  remediations   Remediation[]
+  probes         MisconceptionProbe[]
+
+  @@index([userId, category, status])
+}
+
+model Remediation {
+  id           String    @id @default(cuid())
+  eventId      String
+  taskType     String // MICRO_PREDICTION | TRACE_COMPLETION | COUNTEREXAMPLE | SELF_EXPLANATION
+  level        Int       @default(1)
+  payload      Json
+  presentedAt  DateTime  @default(now())
+  completedAt  DateTime?
+  correct      Boolean?
+  skipped      Boolean   @default(false)
+
+  event MisconceptionEvent @relation(fields: [eventId], references: [id])
+}
+
+model MisconceptionProbe {
+  id            String   @id @default(cuid())
+  eventId       String
+  interactionId String
+  junctionType  String
+  optionCount   Int
+  correct       Boolean
+  hintUsed      Boolean
+  probedAt      DateTime @default(now())
+
+  event MisconceptionEvent @relation(fields: [eventId], references: [id])
 }

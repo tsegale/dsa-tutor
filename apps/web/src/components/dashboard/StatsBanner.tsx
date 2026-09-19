@@ -1,29 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import type { TopicDto, UserProfile } from '@dsa-tutor/types'
-import { apiFetch } from '@/api/client'
+import { fetchMisconceptionSummary } from '@/api/misconceptionEvents'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { SCAFFOLDING_LABEL } from '@/components/ui/ZPDScaffoldingPill'
 
 interface StatsBannerProps {
   user: UserProfile
   topics: TopicDto[]
-}
-
-interface SessionDto {
-  id: string
-  topic: { name: string; displayName: string }
-}
-
-interface InteractionDto {
-  predictionCorrect: boolean
-  misconceptionCategory: string | null
-}
-
-function formatCategory(key: string): string {
-  return key
-    .toLowerCase()
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function BrainIcon() {
@@ -87,6 +70,7 @@ function StatCard({
   valueColor,
   label,
   sublabel,
+  secondaryLine,
 }: {
   icon: React.ReactNode
   iconBg: string
@@ -95,6 +79,7 @@ function StatCard({
   valueColor: string
   label: string
   sublabel: string
+  secondaryLine?: string
 }) {
   return (
     <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-white p-4">
@@ -110,6 +95,7 @@ function StatCard({
         </div>
         <div className="text-xs text-text-muted">{label}</div>
         <div className="truncate text-[11px] text-text-muted">{sublabel}</div>
+        {secondaryLine && <div className="truncate text-[11px] text-text-muted">{secondaryLine}</div>}
       </div>
     </div>
   )
@@ -118,19 +104,16 @@ function StatCard({
 export default function StatsBanner({ user, topics }: StatsBannerProps) {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
 
-  const { data: latestSession } = useQuery({
-    queryKey: ['sessions', 'latest', 'completed'],
-    queryFn: () => apiFetch<SessionDto | null>('/api/v1/sessions?latest=true&completed=true'),
+  // Lifetime counts from the misconception detect-remediate-reprobe loop
+  // (see apps/api's misconceptionEvent.service.ts), not a per-session
+  // proxy - "resolved" means the deterministic resolve rule actually fired,
+  // not just that a wrong answer happened to carry a ground-truth label.
+  const { data: misconceptionSummary } = useQuery({
+    queryKey: ['misconception-events', 'summary'],
+    queryFn: fetchMisconceptionSummary,
   })
-
-  // Only the most recent completed session's interactions are available
-  // without a "list all my sessions" endpoint, which this screen's UI-only
-  // scope can't add - so this is a recent-session proxy, not a lifetime total.
-  const { data: latestInteractions = [] } = useQuery({
-    queryKey: ['interactions', 'session', latestSession?.id],
-    queryFn: () => apiFetch<InteractionDto[]>(`/api/v1/interactions/session/${latestSession!.id}`),
-    enabled: !!latestSession?.id,
-  })
+  const resolvedCount = misconceptionSummary?.resolved ?? 0
+  const inProgressCount = misconceptionSummary?.inProgress ?? 0
 
   const unlockedTopics = topics.filter((t) => !t.isLocked)
   const overallMastery =
@@ -142,16 +125,6 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
   // whichever one happened to be listed first (Array Access), silently
   // implying progress that was never made (see remediation doc 9.1).
   const mostEngagedTopic = [...unlockedTopics].filter((t) => t.masteryPercent > 0).sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
-
-  const misconceptionCounts: Record<string, number> = {}
-  let misconceptionsResolved = 0
-  latestInteractions.forEach((i) => {
-    if (i.misconceptionCategory) {
-      misconceptionsResolved += 1
-      misconceptionCounts[i.misconceptionCategory] = (misconceptionCounts[i.misconceptionCategory] ?? 0) + 1
-    }
-  })
-  const topMisconception = Object.entries(misconceptionCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
 
   return (
     <div id="dashboard-stats-banner" className="flex gap-4 border-b border-border bg-surface px-6 py-4">
@@ -176,13 +149,14 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
       />
 
       <StatCard
-        icon={misconceptionsResolved > 0 ? <AlertTriangleIcon /> : <SearchIcon />}
-        iconBg={misconceptionsResolved > 0 ? '#fcebeb' : '#f1f5f9'}
-        iconColor={misconceptionsResolved > 0 ? '#a32d2d' : '#64748b'}
-        value={misconceptionsResolved}
-        valueColor={misconceptionsResolved > 0 ? '#a32d2d' : '#64748b'}
+        icon={resolvedCount > 0 ? <AlertTriangleIcon /> : <SearchIcon />}
+        iconBg={resolvedCount > 0 ? '#fcebeb' : '#f1f5f9'}
+        iconColor={resolvedCount > 0 ? '#a32d2d' : '#64748b'}
+        value={resolvedCount}
+        valueColor={resolvedCount > 0 ? '#a32d2d' : '#64748b'}
         label="Misconceptions resolved"
-        sublabel={topMisconception ? formatCategory(topMisconception) : 'None yet'}
+        sublabel={resolvedCount === 0 && inProgressCount === 0 ? 'None yet' : ' '}
+        secondaryLine={inProgressCount > 0 ? `${inProgressCount} being worked on` : undefined}
       />
 
       <StatCard

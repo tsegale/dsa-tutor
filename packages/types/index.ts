@@ -672,3 +672,52 @@ export interface AssessmentResponseRequest {
   response: string
   timeSpentSeconds: number
 }
+
+/** The response half of misconception handling: detect (Phase 4's
+ * tile-derived ground-truth label), remediate, re-probe on a different
+ * instance, record the outcome. Resolution is decided by deterministic
+ * code (see apps/api's misconceptionEvent.service.ts), never the model. */
+export type MisconceptionEventStatus = 'OPEN' | 'REMEDIATED' | 'RESOLVED' | 'PERSISTENT' | 'ABANDONED'
+
+export interface MisconceptionEventDto {
+  id: string
+  algorithmTopicId: string
+  category: string
+  status: MisconceptionEventStatus
+  remediationCount: number
+  probeCount: number
+  consecutiveCorrect: number
+  junctionsSinceDetection: number
+  bottomedOut: boolean
+  detectedAt: string
+  resolvedAt: string | null
+}
+
+export interface RemediationDto {
+  id: string
+  eventId: string
+  taskType: string
+  level: number
+  payload: unknown
+  presentedAt: string
+}
+
+export interface ProbeResultDto {
+  event: MisconceptionEventDto
+  shouldEscalate: boolean
+  nextLevel: number
+}
+
+export interface MisconceptionSummaryDto {
+  resolved: number
+  inProgress: number
+}
+
+export interface EducatorMisconceptionSummaryRow {
+  category: string
+  detected: number
+  resolved: number
+  persistent: number
+  abandoned: number
+  medianJunctionsToResolution: number | null
+}

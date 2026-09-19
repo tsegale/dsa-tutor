@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import AnalyticsNav from '../components/analytics/AnalyticsNav'
 import SummaryStats from '../components/analytics/SummaryStats'
 import MisconceptionTable from '../components/analytics/MisconceptionTable'
+import MisconceptionResolutionTable from '../components/analytics/MisconceptionResolutionTable'
 import StepHeatmap from '../components/analytics/StepHeatmap'
 import StudentProgressTable from '../components/analytics/StudentProgressTable'
 import ClassSummaryCard from '../components/analytics/ClassSummaryCard'
@@ -85,6 +86,10 @@ export default function EducatorDashboard() {
               <section>
                 <h2 className="mb-6 text-xl font-bold text-primary">Misconception Analysis</h2>
                 <MisconceptionTable breakdown={analytics.misconceptionBreakdown} />
+              </section>
+              <section>
+                <h2 className="mb-6 text-xl font-bold text-primary">Misconception Resolution</h2>
+                <MisconceptionResolutionTable />
               </section>
               <section>
                 <StepHeatmap heatmap={analytics.stepDifficultyHeatmap} totalStudents={analytics.totalStudents} />

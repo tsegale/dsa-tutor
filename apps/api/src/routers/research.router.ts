@@ -5,6 +5,7 @@ import {
   exportInteractionsCsv,
   exportAssessmentsCsv,
   exportSessionsCsv,
+  exportMisconceptionEventsCsv,
   importMisconceptionRatings,
 } from '../services/research.service'
 
@@ -47,6 +48,14 @@ router.get('/sessions.csv', async (req: AuthRequest, res: Response) => {
     sendCsv(res, 'sessions.csv', await exportSessionsCsv())
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export sessions' } })
+  }
+})
+
+router.get('/misconception_events.csv', async (req: AuthRequest, res: Response) => {
+  try {
+    sendCsv(res, 'misconception_events.csv', await exportMisconceptionEventsCsv())
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export misconception events' } })
   }
 })
 
