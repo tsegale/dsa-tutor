@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react'
 import type { CodeEvalResponse } from '@dsa-tutor/types'
 import { evaluateCode } from '@/api/codeEval'
+import { runSwapDecisionPython } from '@/utils/pyodideRunner'
 import { cn } from '@/lib/utils'
-
-type CodeLanguage = 'pseudocode' | 'python' | 'java'
 
 interface CodeEditorInputProps {
   prompt: string
@@ -16,17 +15,11 @@ interface CodeEditorInputProps {
   onLoadingChange: (loading: boolean) => void
 }
 
-const LANGUAGES: { id: CodeLanguage; label: string }[] = [
-  { id: 'pseudocode', label: 'Pseudocode' },
-  { id: 'python', label: 'Python' },
-  { id: 'java', label: 'Java' },
-]
-
-const STARTER_TEMPLATE: Record<CodeLanguage, string> = {
-  pseudocode: 'if arr[j] > arr[j+1] then\n  swap arr[j] and arr[j+1]\nend if',
-  python: 'if arr[j] > arr[j + 1]:\n    arr[j], arr[j + 1] = arr[j + 1], arr[j]',
-  java: 'if (arr[j] > arr[j + 1]) {\n  int temp = arr[j];\n  arr[j] = arr[j + 1];\n  arr[j + 1] = temp;\n}',
-}
+// Pseudocode and Java were dropped: Pyodide (see utils/pyodideRunner.ts)
+// only executes Python, and grading pseudocode or Java would mean going
+// back to asking an LLM to "mentally execute" untrusted code and trust
+// its answer as fact - exactly the defect this real sandbox replaces.
+const STARTER_CODE = 'if arr[j] > arr[j + 1]:\n    arr[j], arr[j + 1] = arr[j + 1], arr[j]'
 
 const MIN_LINES = 5
 
@@ -40,19 +33,12 @@ export default function CodeEditorInput({
   onSubmit,
   onLoadingChange,
 }: CodeEditorInputProps) {
-  const [language, setLanguage] = useState<CodeLanguage>('pseudocode')
-  const [code, setCode] = useState(STARTER_TEMPLATE.pseudocode)
+  const [code, setCode] = useState(STARTER_CODE)
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
-
-  function handleLanguageChange(next: CodeLanguage) {
-    setLanguage(next)
-    setCode(STARTER_TEMPLATE[next])
-    setSyntaxError(null)
-  }
 
   function handleScroll() {
     if (lineNumbersRef.current && textareaRef.current) {
@@ -67,14 +53,18 @@ export default function CodeEditorInput({
     onLoadingChange(true)
     setSyntaxError(null)
     try {
+      const execution = await runSwapDecisionPython(code, currentArrayState, activeIndices[0])
       const result = await evaluateCode({
         algorithmName,
         currentArrayState,
         activeIndices,
         expectedNextState,
         studentCode: code,
-        language,
+        language: 'python',
         stepDescription,
+        actualResultingState: execution.resultingState,
+        hasSyntaxError: execution.hasSyntaxError,
+        executionErrorMessage: execution.errorMessage,
       })
       if (result.hasSyntaxError) {
         setSyntaxError(result.errorExplanation ?? 'Your code could not be evaluated. Check for syntax errors.')
@@ -92,22 +82,8 @@ export default function CodeEditorInput({
         {prompt}
       </p>
 
-      <div className="flex shrink-0 gap-4 border-b border-border">
-        {LANGUAGES.map((lang) => (
-          <button
-            key={lang.id}
-            type="button"
-            onClick={() => handleLanguageChange(lang.id)}
-            className={cn(
-              'border-b-2 pb-1.5 text-sm font-medium transition-colors',
-              language === lang.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-muted hover:text-text-primary dark:text-dark-text-secondary',
-            )}
-          >
-            {lang.label}
-          </button>
-        ))}
+      <div className="flex shrink-0 items-center border-b border-border pb-1.5">
+        <span className="border-b-2 border-primary text-sm font-medium text-primary">Python</span>
       </div>
 
       <div

@@ -10,8 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class StudentSummaryRequest(BaseModel):
+    # Never a real name or email - a participant code only. The old
+    # version also accepted student_name and interpolated it into the
+    # prompt one line above claiming the student was "anonymised", which
+    # sent the model the exact thing that line said it wasn't getting.
     student_id: str
-    student_name: str
     algorithm_name: str
     total_sessions: int
     total_predictions: int
@@ -49,7 +52,7 @@ class ClassSummaryResponse(BaseModel):
 
 STUDENT_SUMMARY_PROMPT = """You are an educational data analyst writing a natural language progress report for a teacher about one student.
 
-Student: {student_name} (anonymised as Student {student_id})
+Student: Student {student_id}
 Algorithm studied: {algorithm_name}
 
 Performance data:
@@ -98,7 +101,6 @@ Respond ONLY with valid JSON:
 async def generate_student_summary(request: StudentSummaryRequest) -> StudentSummaryResponse:
     accuracy = round((request.correct_predictions / max(request.total_predictions, 1)) * 100)
     prompt = STUDENT_SUMMARY_PROMPT.format(
-        student_name=request.student_name,
         student_id=request.student_id[-4:],
         algorithm_name=request.algorithm_name,
         total_sessions=request.total_sessions,

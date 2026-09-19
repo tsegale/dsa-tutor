@@ -424,6 +424,15 @@ export interface FeynmanRequest {
   studentExplanation: string
   completionContext: string
   sessionId: string
+  /** Every narration description the student has seen so far this run
+   * (see StepLog). Used only for the anti-gaming overlap check on the AI
+   * service - never fed back into the grading prompt. */
+  stepDescriptions?: string[]
+}
+
+export interface FeynmanRubricItemResult {
+  conceptLabel: string
+  met: boolean
 }
 
 export interface FeynmanResponse {
@@ -432,6 +441,9 @@ export interface FeynmanResponse {
   followUpQuestion: string | null
   missingConcepts: string[]
   isComplete: boolean
+  /** Per-concept results behind the score - empty when the anti-gaming
+   * check rejected the submission before grading. */
+  rubricResults: FeynmanRubricItemResult[]
 }
 
 export const InteractionType = {
@@ -461,8 +473,15 @@ export interface CodeEvalRequest {
   activeIndices: number[]
   expectedNextState: number[]
   studentCode: string
-  language: 'pseudocode' | 'python' | 'java'
+  language: 'python'
   stepDescription: string
+  /** Computed by actually running the student's code in Pyodide's WASM
+   * sandbox in the browser (see utils/pyodideRunner.ts) - the AI service
+   * is never asked to determine these itself. null when execution raised. */
+  actualResultingState: number[] | null
+  hasSyntaxError: boolean
+  /** Raw Python error message from Pyodide, when hasSyntaxError is true. */
+  executionErrorMessage: string | null
 }
 
 export interface CodeEvalResponse {
@@ -476,8 +495,9 @@ export interface CodeEvalResponse {
 }
 
 export interface StudentSummaryRequest {
+  /** A participant code only - never a real name or email (see
+   * apps/ai/routers/summaries.py's StudentSummaryRequest). */
   studentId: string
-  studentName: string
   algorithmName: string
   totalSessions: number
   totalPredictions: number

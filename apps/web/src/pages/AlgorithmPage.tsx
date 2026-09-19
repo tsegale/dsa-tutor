@@ -34,6 +34,7 @@ import { calculateMastery, gateScaffoldingReduction, RECENT_HINT_WINDOW, type Ma
 import { computeMistakePath } from '@/engine/mistakePath'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { topMisconceptionOf } from '@/utils/junctionTargeting'
+import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
 import { linearSearchEngine } from '@/engine/linearSearch'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import { selectionSortEngine } from '@/engine/selectionSort'
@@ -595,7 +596,14 @@ export default function AlgorithmPage() {
   // ask them to explain the algorithm back. Never triggers in Demo Mode.
   useEffect(() => {
     const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
-    if (!snapshot?.isFinalStep || mode !== AlgorithmMode.PRACTICE || showFeynman || feynmanShownRef.current) return
+    if (
+      !snapshot?.isFinalStep ||
+      mode !== AlgorithmMode.PRACTICE ||
+      showFeynman ||
+      feynmanShownRef.current ||
+      !hasFeynmanRubric(useAlgorithmStore.getState().algorithmName)
+    )
+      return
 
     const timer = setTimeout(() => {
       feynmanShownRef.current = true

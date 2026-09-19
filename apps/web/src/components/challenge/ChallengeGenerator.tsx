@@ -6,6 +6,7 @@ import { generateChallenge } from '@/api/challenges'
 import { apiFetch } from '@/api/client'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { topMisconceptionOf } from '@/utils/junctionTargeting'
+import { hasChallengeGenerator } from '@/utils/challengeGenerators'
 
 interface ChallengeGeneratorProps {
   difficulty: string
@@ -35,6 +36,8 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions.length > 0)
+  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  const supported = hasChallengeGenerator(algorithmName)
 
   async function handleGenerate() {
     setIsGenerating(true)
@@ -98,6 +101,8 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
       setIsGenerating(false)
     }
   }
+
+  if (!supported) return null
 
   const button = (
     <Button

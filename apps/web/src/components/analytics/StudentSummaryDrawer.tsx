@@ -60,12 +60,11 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
     setIsLoading(true)
     setError(null)
     try {
-      // The real name is never sent to the AI service - only the same
-      // anonymised label the drawer itself displays, so the generated
-      // narrative can't leak the student's actual name into the report.
+      // The real name is never sent to the AI service - the request
+      // contract has no name field at all (see StudentSummaryRequest),
+      // only studentId, which the AI service itself truncates before use.
       const result = await getStudentSummary({
         studentId: student.userId,
-        studentName: `Student ${student.userId.slice(-4)}`,
         algorithmName: ALGORITHM_NAME,
         totalSessions: student.totalSessions,
         totalPredictions: student.totalPredictions,

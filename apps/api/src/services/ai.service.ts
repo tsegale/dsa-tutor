@@ -66,6 +66,7 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
       student_explanation: request.studentExplanation,
       completion_context: request.completionContext,
       session_id: request.sessionId,
+      step_descriptions: request.stepDescriptions ?? [],
     }),
   })
   if (!response.ok) throw new Error(`AI feynman error: ${response.status}`)
@@ -76,6 +77,7 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
     followUpQuestion: data.follow_up_question ?? null,
     missingConcepts: data.missing_concepts ?? [],
     isComplete: data.is_complete,
+    rubricResults: (data.rubric_results ?? []).map((r: any) => ({ conceptLabel: r.concept_label, met: r.met })),
   }
 }
 
@@ -119,6 +121,9 @@ export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalR
       student_code: request.studentCode,
       language: request.language,
       step_description: request.stepDescription,
+      actual_resulting_state: request.actualResultingState,
+      has_syntax_error: request.hasSyntaxError,
+      execution_error_message: request.executionErrorMessage,
     }),
   })
   if (!response.ok) throw new Error(`AI code-eval error: ${response.status}`)
@@ -143,7 +148,6 @@ export async function proxyStudentSummary(request: StudentSummaryRequest): Promi
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       student_id: request.studentId,
-      student_name: request.studentName,
       algorithm_name: request.algorithmName,
       total_sessions: request.totalSessions,
       total_predictions: request.totalPredictions,

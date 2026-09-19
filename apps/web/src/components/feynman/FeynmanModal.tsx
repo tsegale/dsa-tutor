@@ -139,6 +139,7 @@ export default function FeynmanModal({
         studentExplanation: explanation,
         completionContext,
         sessionId,
+        stepDescriptions: useAlgorithmStore.getState().snapshotArray.slice(0, stepIndex + 1).map((s) => s.description),
       })
       setResult(response)
       if (response.isComplete || !response.followUpQuestion) {
@@ -165,6 +166,7 @@ export default function FeynmanModal({
         studentExplanation: combined,
         completionContext,
         sessionId,
+        stepDescriptions: useAlgorithmStore.getState().snapshotArray.slice(0, stepIndex + 1).map((s) => s.description),
       })
       setResult(response)
       await finalizeSession(response, combined)

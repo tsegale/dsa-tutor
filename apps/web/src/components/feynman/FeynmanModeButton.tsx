@@ -1,5 +1,6 @@
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
 import { cn } from '@/lib/utils'
 
 export const OPEN_FEYNMAN_MODAL_EVENT = 'dsa-tutor:open-feynman-modal'
@@ -18,7 +19,9 @@ function BrainIcon() {
 
 export default function FeynmanModeButton() {
   const totalPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
-  const disabled = totalPredictions === 0
+  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  const rubricAvailable = hasFeynmanRubric(algorithmName)
+  const disabled = totalPredictions === 0 || !rubricAvailable
 
   const button = (
     <button
@@ -42,7 +45,9 @@ export default function FeynmanModeButton() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent>Complete some practice steps first</TooltipContent>
+      <TooltipContent>
+        {!rubricAvailable ? 'Feynman Mode is not yet available for this topic' : 'Complete some practice steps first'}
+      </TooltipContent>
     </Tooltip>
   )
 }
