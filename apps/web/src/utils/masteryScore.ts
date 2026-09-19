@@ -1,3 +1,9 @@
+/** How many of the most recent predictions the fading gate looks at when
+ * deciding whether hint usage should block reducing support. Kept here
+ * (rather than inlined) since AlgorithmPage needs the same number to know
+ * how many entries to keep in recentHintCounts. */
+export const RECENT_HINT_WINDOW = 10
+
 export interface MasteryMetrics {
   totalPredictions: number
   correctPredictions: number
@@ -5,7 +11,17 @@ export interface MasteryMetrics {
   conceptualTotal: number
   proceduralCorrect: number
   proceduralTotal: number
+  /** Cumulative hints requested this session - reported to the student
+   * and used for badges/analytics, but never subtracted from the mastery
+   * score: asking for help is not a penalty. */
   hintsRequested: number
+  /** Hints requested on each of the last RECENT_HINT_WINDOW predictions,
+   * oldest first, capped at RECENT_HINT_WINDOW entries. The fading gate
+   * reads this window instead of the cumulative total, so hints asked
+   * early in a session don't lock a student out of fading for the rest
+   * of it - once enough hint-free predictions have followed, the window
+   * ages them out. */
+  recentHintCounts: number[]
   consecutiveCorrect: number
 }
 
@@ -32,32 +48,37 @@ export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
   const conceptualAccuracy = metrics.conceptualTotal > 0 ? metrics.conceptualCorrect / metrics.conceptualTotal : 0
   const proceduralAccuracy = metrics.proceduralTotal > 0 ? metrics.proceduralCorrect / metrics.proceduralTotal : 0
 
-  // Penalise hint usage: heavy hint reliance indicates lower mastery.
-  const hintPenalty = Math.min(0.2, (metrics.hintsRequested / Math.max(metrics.totalPredictions, 1)) * 0.4)
+  // Weighted toward raw overall accuracy, with conceptual/procedural
+  // accuracy breaking it down further - but a category with no data at
+  // all must not count as 0% accuracy against the student, or a learner
+  // who has only ever faced procedural junctions (say) is capped at 75
+  // regardless of how well they do. Only weights backed by real data
+  // count, renormalised so they still sum to 100%.
+  const weightedTerms: { accuracy: number; weight: number }[] = [
+    { accuracy: overallAccuracy, weight: 60 },
+    ...(metrics.conceptualTotal > 0 ? [{ accuracy: conceptualAccuracy, weight: 25 }] : []),
+    ...(metrics.proceduralTotal > 0 ? [{ accuracy: proceduralAccuracy, weight: 15 }] : []),
+  ]
+  const totalWeight = weightedTerms.reduce((sum, term) => sum + term.weight, 0)
+  const weightedAccuracy = weightedTerms.reduce((sum, term) => sum + term.accuracy * term.weight, 0) / totalWeight
 
   // Bonus for consecutive correct answers: sustained accuracy matters more than average.
   const streakBonus = Math.min(0.1, metrics.consecutiveCorrect * 0.02)
 
-  const overallScore = Math.round(
-    Math.max(
-      0,
-      Math.min(
-        100,
-        overallAccuracy * 60 + conceptualAccuracy * 25 + proceduralAccuracy * 15 - hintPenalty * 100 + streakBonus * 100,
-      ),
-    ),
-  )
+  const overallScore = Math.round(Math.max(0, Math.min(100, weightedAccuracy * 100 + streakBonus * 100)))
 
   const conceptualScore = Math.round(conceptualAccuracy * 100)
   const proceduralScore = Math.round(proceduralAccuracy * 100)
 
+  const recentHintsRequested = metrics.recentHintCounts.reduce((sum, count) => sum + count, 0)
+
   let recommendedLevel: MasteryAssessment['recommendedLevel']
   let reasoning: string
 
-  if (overallScore >= 80 && metrics.consecutiveCorrect >= 5 && metrics.hintsRequested === 0) {
+  if (overallScore >= 80 && metrics.consecutiveCorrect >= 5 && recentHintsRequested === 0) {
     recommendedLevel = 'NONE'
-    reasoning = `Score ${overallScore}/100 with ${metrics.consecutiveCorrect} consecutive correct and no hints. Scaffolding fully removed.`
-  } else if (overallScore >= 65 && metrics.hintsRequested <= 1) {
+    reasoning = `Score ${overallScore}/100 with ${metrics.consecutiveCorrect} consecutive correct and no hints in the last ${RECENT_HINT_WINDOW} predictions. Scaffolding fully removed.`
+  } else if (overallScore >= 65 && recentHintsRequested <= 1) {
     recommendedLevel = 'LOW'
     reasoning = `Score ${overallScore}/100. Hints available on request only, no proactive support.`
   } else if (overallScore >= 45) {

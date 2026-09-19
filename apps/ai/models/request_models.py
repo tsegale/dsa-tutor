@@ -54,5 +54,9 @@ class HintRequest(BaseModel):
     # index/value references in the actual state instead of leaving the
     # model to read them out of current_prediction_prompt's prose.
     current_state: Any = None
+    # Position on the graduated hint ladder (0-indexed): 0 asks a Socratic
+    # question, 1 is more direct about what to look at, and so on. None
+    # for a manual H-key/avatar request, always answered at the base level.
+    hint_index: int | None = None
     error_history: list[str] = []
     scaffolding_level: ScaffoldingLevel

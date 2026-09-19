@@ -3,6 +3,10 @@ export interface BadgeCheckStats {
   correctPredictions: number
   totalPredictions: number
   hintsRequested: number
+  /** Times a junction answered wrong was answered correctly on the very
+   * next attempt - the recovery the platform actually wants to reward,
+   * unlike never asking for help. */
+  selfCorrections: number
   streakCount: number
   masteredTopics: number
   completedSortingTrack: boolean
@@ -48,12 +52,12 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     checkCondition: (stats) => stats.completedGraphsTrack,
   },
   {
-    id: 'no-hints',
-    title: 'No Hints Needed',
-    description: 'Answer 5 predictions correctly in a session without requesting a hint',
+    id: 'self-corrector',
+    title: 'Self-Corrector',
+    description: 'Get a junction right on the next attempt after a miss, five times',
     icon: 'lightbulb-off',
     tier: 'gold',
-    checkCondition: (stats) => stats.correctPredictions >= 5 && stats.hintsRequested === 0,
+    checkCondition: (stats) => stats.selfCorrections >= 5,
   },
   {
     id: 'week-warrior',

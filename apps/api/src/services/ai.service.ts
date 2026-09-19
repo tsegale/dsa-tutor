@@ -196,6 +196,7 @@ export async function proxyHint(request: HintRequest): Promise<HintResponse> {
       step_index: request.stepIndex,
       current_prediction_prompt: request.currentPredictionPrompt,
       current_state: request.currentState ?? null,
+      hint_index: request.hintIndex ?? null,
       error_history: request.errorHistory,
       scaffolding_level: request.scaffoldingLevel,
     }),

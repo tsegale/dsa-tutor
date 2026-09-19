@@ -376,6 +376,11 @@ export interface HintRequest {
    * index/value references in the actual state instead of only the rendered
    * prompt text. */
   currentState?: unknown
+  /** Position on the graduated hint ladder (0-indexed): 0 asks a Socratic
+   * question, 1 is more direct about what to look at, and so on. Omitted
+   * for a manual H-key/avatar request, which always asks at the base
+   * level regardless of how many wrong attempts preceded it. */
+  hintIndex?: number
 }
 
 export interface HintResponse {

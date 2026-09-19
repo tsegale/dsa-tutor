@@ -30,7 +30,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
-import { calculateMastery, gateScaffoldingReduction, type MasteryMetrics } from '@/utils/masteryScore'
+import { calculateMastery, gateScaffoldingReduction, RECENT_HINT_WINDOW, type MasteryMetrics } from '@/utils/masteryScore'
 import { computeMistakePath } from '@/engine/mistakePath'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { linearSearchEngine } from '@/engine/linearSearch'
@@ -283,6 +283,7 @@ const INITIAL_MASTERY_METRICS: MasteryMetrics = {
   proceduralCorrect: 0,
   proceduralTotal: 0,
   hintsRequested: 0,
+  recentHintCounts: [],
   consecutiveCorrect: 0,
 }
 
@@ -365,10 +366,15 @@ export default function AlgorithmPage() {
 
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
-  const predictionStatsRef = useRef({ correct: 0, total: 0, hints: 0 })
+  const predictionStatsRef = useRef({ correct: 0, total: 0, hints: 0, selfCorrections: 0 })
+  // Remembers only the most recently recorded (stepIndex, wasIncorrect)
+  // pair, so a correct result immediately following an incorrect one AT
+  // THE SAME junction can be recognised as a self-correction rather than
+  // just "the next prediction happened to be right".
+  const lastAttemptRef = useRef<{ stepIndex: number; wasIncorrect: boolean } | null>(null)
 
   function buildBadgeStats(): BadgeCheckStats {
-    const { correct, total, hints } = predictionStatsRef.current
+    const { correct, total, hints, selfCorrections } = predictionStatsRef.current
     return {
       // No badge currently keys off lifetime session count; the API
       // has no endpoint to fetch it yet, so this is a harmless stub.
@@ -376,6 +382,7 @@ export default function AlgorithmPage() {
       correctPredictions: correct,
       totalPredictions: total,
       hintsRequested: hints,
+      selfCorrections,
       streakCount: user?.streakCount ?? 0,
       masteredTopics: topics.filter((t) => t.masteryPercent >= 80).length,
       // Phase 16 will add algorithms beyond Bubble Sort; these stay
@@ -396,6 +403,14 @@ export default function AlgorithmPage() {
   function handlePredictionResult(detail: PredictionOutcomeDetail) {
     predictionStatsRef.current.total += 1
     useAlgorithmStore.getState().recordPredictionResult(detail.correct, detail.hintsRequestedForStep)
+
+    const isSelfCorrection =
+      detail.correct &&
+      lastAttemptRef.current?.stepIndex === detail.stepIndex &&
+      lastAttemptRef.current.wasIncorrect
+    if (isSelfCorrection) predictionStatsRef.current.selfCorrections += 1
+    lastAttemptRef.current = { stepIndex: detail.stepIndex, wasIncorrect: !detail.correct }
+
     if (detail.correct) {
       predictionStatsRef.current.correct += 1
       runBadgeCheck()
@@ -446,6 +461,7 @@ export default function AlgorithmPage() {
       proceduralTotal: masteryMetrics.proceduralTotal + (isConceptual ? 0 : 1),
       proceduralCorrect: masteryMetrics.proceduralCorrect + (!isConceptual && detail.correct ? 1 : 0),
       hintsRequested: masteryMetrics.hintsRequested + detail.hintsRequestedForStep,
+      recentHintCounts: [...masteryMetrics.recentHintCounts, detail.hintsRequestedForStep].slice(-RECENT_HINT_WINDOW),
       consecutiveCorrect: detail.correct ? masteryMetrics.consecutiveCorrect + 1 : 0,
     }
     setMasteryMetrics(nextMetrics)
@@ -620,7 +636,8 @@ export default function AlgorithmPage() {
     setHint(null)
     feynmanShownRef.current = false
     challengeXpAwardedRef.current = false
-    predictionStatsRef.current = { correct: 0, total: 0, hints: 0 }
+    predictionStatsRef.current = { correct: 0, total: 0, hints: 0, selfCorrections: 0 }
+    lastAttemptRef.current = null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algorithmNameParam, isImplemented])
 

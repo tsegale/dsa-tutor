@@ -52,12 +52,22 @@ async def request_hint(request: HintRequest) -> HintResponse:
     else:
         comparison_values = "Not applicable for this step - rely on the prediction prompt above instead."
 
+    hint_index = request.hint_index if request.hint_index is not None else 0
+    # A higher-index hint is asked to name specific values/indices/rules on
+    # top of still being a single question, which needs more room than a
+    # bare Socratic nudge - a flat 20-word cap for every rung meant the
+    # ladder's more direct hints failed validation almost every time and
+    # silently fell back, defeating the ladder entirely.
+    max_hint_words = 20 if hint_index <= 0 else 20 + hint_index * 10
+
     prompt = HINT_USER_TEMPLATE.format(
         algorithm_context=algorithm_context,
         pseudocode=pseudocode,
         step_index=request.step_index,
         current_prediction_prompt=request.current_prediction_prompt,
         comparison_values=comparison_values,
+        hint_index=hint_index,
+        max_hint_words=max_hint_words,
         error_history=request.error_history,
         scaffolding_level=request.scaffolding_level.value,
     )
@@ -70,7 +80,7 @@ async def request_hint(request: HintRequest) -> HintResponse:
             metadata.input_tokens,
             metadata.output_tokens,
         )
-        if not is_field_valid(hint_text, max_words=20):
+        if not is_field_valid(hint_text, max_words=max_hint_words):
             logger.warning("AI hint failed validation, retrying once")
             hint_text, metadata = await call_claude_for_text(prompt, system=HINT_SYSTEM_PROMPT)
             logger.info(
@@ -79,7 +89,7 @@ async def request_hint(request: HintRequest) -> HintResponse:
                 metadata.input_tokens,
                 metadata.output_tokens,
             )
-            if not is_field_valid(hint_text, max_words=20):
+            if not is_field_valid(hint_text, max_words=max_hint_words):
                 logger.warning("AI hint failed validation again, falling back")
                 return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
         return HintResponse(hint=hint_text, scaffolding_level=request.scaffolding_level)

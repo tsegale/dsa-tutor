@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from models.request_models import PredictionRequest
+from models.request_models import PredictionRequest, ScaffoldingLevel
 from models.response_models import PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
@@ -1059,21 +1059,35 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
     return ""
 
 
-def _feedback_is_valid(feedback: dict[str, Any], correct: bool) -> bool:
+def _max_hint_words_for_level(scaffolding_level: ScaffoldingLevel) -> int:
+    # HIGH's closed question (naming the invariant) and MEDIUM's open
+    # consequence question both need more room than a bare nudge - a flat
+    # 20-word cap for every level meant those two levels' hints almost
+    # always exceeded it and silently fell back, undoing the fading
+    # FEEDBACK_SYSTEM_PROMPT's calibration guide asks for.
+    if scaffolding_level in (ScaffoldingLevel.HIGH, ScaffoldingLevel.MEDIUM):
+        return 30
+    return 20
+
+
+def _feedback_is_valid(feedback: dict[str, Any], correct: bool, scaffolding_level: ScaffoldingLevel) -> bool:
     """Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
     consequence_explanation and counterfactual_trace are capped at two
-    sentences, socratic_hint at twenty words, and counterfactual_trace is
-    only allowed to be empty when the answer was correct."""
+    sentences, socratic_hint at a level-dependent word count, and
+    counterfactual_trace is only allowed to be empty when the answer was
+    correct."""
     if not is_field_valid(feedback.get("consequence_explanation"), max_sentences=2):
         return False
-    if not is_field_valid(feedback.get("socratic_hint"), max_words=20):
+    if not is_field_valid(feedback.get("socratic_hint"), max_words=_max_hint_words_for_level(scaffolding_level)):
         return False
     if not is_field_valid(feedback.get("counterfactual_trace"), max_sentences=2, allow_empty=correct):
         return False
     return True
 
 
-async def _get_validated_feedback(prompt: str, correct: bool) -> dict[str, Any] | None:
+async def _get_validated_feedback(
+    prompt: str, correct: bool, scaffolding_level: ScaffoldingLevel
+) -> dict[str, Any] | None:
     feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
     logger.info(
         "AI prediction call: latency_ms=%s input_tokens=%s output_tokens=%s",
@@ -1081,7 +1095,7 @@ async def _get_validated_feedback(prompt: str, correct: bool) -> dict[str, Any] 
         metadata.input_tokens,
         metadata.output_tokens,
     )
-    if _feedback_is_valid(feedback, correct):
+    if _feedback_is_valid(feedback, correct, scaffolding_level):
         return feedback
 
     logger.warning("AI prediction feedback failed validation, retrying once")
@@ -1092,7 +1106,7 @@ async def _get_validated_feedback(prompt: str, correct: bool) -> dict[str, Any] 
         metadata.input_tokens,
         metadata.output_tokens,
     )
-    if _feedback_is_valid(feedback, correct):
+    if _feedback_is_valid(feedback, correct, scaffolding_level):
         return feedback
 
     logger.warning("AI prediction feedback failed validation again, falling back")
@@ -1138,7 +1152,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
         if cached_feedback is not None:
             feedback = cached_feedback
         else:
-            feedback = await _get_validated_feedback(prompt, correct)
+            feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level)
             if feedback is None:
                 return get_fallback_prediction_response(
                     correct, request.scaffolding_level, request.algorithm_name, junction_type

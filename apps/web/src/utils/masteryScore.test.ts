@@ -10,6 +10,7 @@ function metrics(overrides: Partial<MasteryMetrics> = {}): MasteryMetrics {
     proceduralCorrect: 0,
     proceduralTotal: 0,
     hintsRequested: 0,
+    recentHintCounts: [],
     consecutiveCorrect: 0,
     ...overrides,
   }
@@ -23,7 +24,7 @@ describe('calculateMastery', () => {
     expect(assessment.recommendedLevel).toBe('HIGH')
   })
 
-  it('recommends NONE only when score, streak, and zero hints all clear the bar', () => {
+  it('recommends NONE only when score, streak, and zero recent hints all clear the bar', () => {
     const assessment = calculateMastery(
       metrics({
         totalPredictions: 10,
@@ -31,14 +32,14 @@ describe('calculateMastery', () => {
         proceduralTotal: 10,
         proceduralCorrect: 10,
         consecutiveCorrect: 10,
-        hintsRequested: 0,
+        recentHintCounts: [],
       }),
     )
 
     expect(assessment.recommendedLevel).toBe('NONE')
   })
 
-  it('does not recommend NONE if any hints were requested, even with a perfect streak', () => {
+  it('does not recommend NONE if a hint was requested within the recent window, even with a perfect streak', () => {
     const assessment = calculateMastery(
       metrics({
         totalPredictions: 10,
@@ -46,14 +47,14 @@ describe('calculateMastery', () => {
         proceduralTotal: 10,
         proceduralCorrect: 10,
         consecutiveCorrect: 10,
-        hintsRequested: 1,
+        recentHintCounts: [1],
       }),
     )
 
     expect(assessment.recommendedLevel).not.toBe('NONE')
   })
 
-  it('recommends LOW for solid accuracy with at most one hint', () => {
+  it('recommends LOW for solid accuracy with at most one recent hint', () => {
     const assessment = calculateMastery(
       metrics({
         totalPredictions: 10,
@@ -61,7 +62,7 @@ describe('calculateMastery', () => {
         proceduralTotal: 10,
         proceduralCorrect: 9,
         consecutiveCorrect: 3,
-        hintsRequested: 1,
+        recentHintCounts: [1],
       }),
     )
 
@@ -76,6 +77,7 @@ describe('calculateMastery', () => {
         proceduralTotal: 10,
         proceduralCorrect: 2,
         hintsRequested: 6,
+        recentHintCounts: [1, 1, 1, 1, 1, 1],
       }),
     )
 
@@ -88,11 +90,86 @@ describe('calculateMastery', () => {
       metrics({ totalPredictions: 20, correctPredictions: 20, proceduralTotal: 20, proceduralCorrect: 20, consecutiveCorrect: 20 }),
     )
     const low = calculateMastery(
-      metrics({ totalPredictions: 20, correctPredictions: 0, proceduralTotal: 20, proceduralCorrect: 0, hintsRequested: 20 }),
+      metrics({
+        totalPredictions: 20,
+        correctPredictions: 0,
+        proceduralTotal: 20,
+        proceduralCorrect: 0,
+        hintsRequested: 20,
+        recentHintCounts: new Array(10).fill(2),
+      }),
     )
 
     expect(high.overallScore).toBeLessThanOrEqual(100)
     expect(low.overallScore).toBeGreaterThanOrEqual(0)
+  })
+
+  it('does not subtract score for hint usage - heavy hint use with perfect accuracy still scores high', () => {
+    const noHints = calculateMastery(
+      metrics({ totalPredictions: 10, correctPredictions: 10, proceduralTotal: 10, proceduralCorrect: 10 }),
+    )
+    const heavyHints = calculateMastery(
+      metrics({
+        totalPredictions: 10,
+        correctPredictions: 10,
+        proceduralTotal: 10,
+        proceduralCorrect: 10,
+        hintsRequested: 10,
+        recentHintCounts: new Array(10).fill(1),
+      }),
+    )
+
+    expect(heavyHints.overallScore).toBe(noHints.overallScore)
+  })
+
+  it('scores a procedural-only learner on procedural + overall accuracy alone, not capped by absent conceptual data', () => {
+    const assessment = calculateMastery(
+      metrics({
+        totalPredictions: 10,
+        correctPredictions: 10,
+        proceduralTotal: 10,
+        proceduralCorrect: 10,
+        conceptualTotal: 0,
+        conceptualCorrect: 0,
+      }),
+    )
+
+    // Old weighting (60/25/15 with missing categories counted as 0%)
+    // would cap this at 75 even at perfect accuracy.
+    expect(assessment.overallScore).toBe(100)
+  })
+
+  it('scores a conceptual-only learner on conceptual + overall accuracy alone, not capped by absent procedural data', () => {
+    const assessment = calculateMastery(
+      metrics({
+        totalPredictions: 10,
+        correctPredictions: 10,
+        conceptualTotal: 10,
+        conceptualCorrect: 10,
+        proceduralTotal: 0,
+        proceduralCorrect: 0,
+      }),
+    )
+
+    expect(assessment.overallScore).toBe(100)
+  })
+
+  it('windowed hint gate: hints outside the recent window no longer block fading', () => {
+    // 6 hints total, but all of them fell out of the last-10-prediction
+    // window - only the most recent 10 predictions (all hint-free) count.
+    const assessment = calculateMastery(
+      metrics({
+        totalPredictions: 20,
+        correctPredictions: 20,
+        proceduralTotal: 20,
+        proceduralCorrect: 20,
+        consecutiveCorrect: 10,
+        hintsRequested: 6,
+        recentHintCounts: new Array(10).fill(0),
+      }),
+    )
+
+    expect(assessment.recommendedLevel).toBe('NONE')
   })
 })
 

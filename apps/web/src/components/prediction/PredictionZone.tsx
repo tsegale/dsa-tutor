@@ -51,6 +51,11 @@ export interface PredictionOutcomeDetail {
   timeSpentSeconds: number
   junctionType: CriticalJunctionType
   junctionDifficulty: JunctionDifficulty
+  /** True when this submission hit the attempt cap and had its answer
+   * revealed automatically - the research-data signal for "this junction
+   * was never solved independently", distinct from a correct answer
+   * reached after retries. */
+  bottomedOut: boolean
   /** True for every Code Editor submission (correct or not). Tells the page
    * level to skip the tile-flow's computeMistakePath fallback entirely -
    * a code-eval outcome drives the canvas only via codeEvalBuggyState. */
@@ -103,10 +108,9 @@ const HANDS_ON_DRAG_JUNCTIONS: Set<CriticalJunctionType> = new Set([
   CriticalJunctionType.HEAP_COMPARE,
 ])
 
-const PROACTIVE_HINT_DELAY_MS = 8000
+const PROACTIVE_HINT_DELAY_MS = 25000
 const AUTO_RESET_DELAY_MS = 1200
-const NONE_ADVANCE_DELAY_MS = 1500
-const MAX_ATTEMPTS_BEFORE_ADVANCE = 2
+const BOTTOM_OUT_ADVANCE_DELAY_MS = 1500
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -1065,7 +1069,7 @@ export default function PredictionZone({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hintLoading, setHintLoading] = useState(false)
   // Only true when the current hint came from a manual H-key / avatar
-  // click, never from the proactive 8-second timer - drives whether
+  // click, never from the proactive hint timer - drives whether
   // HintAvatar's floating canvas bubble is allowed to render at all.
   const [wasRequestedManually, setWasRequestedManually] = useState(false)
   const [shakeToken, setShakeToken] = useState(0)
@@ -1226,6 +1230,38 @@ export default function PredictionZone({
     setHintLoading(false)
   }
 
+  // The graduated hint ladder: fires automatically on every wrong attempt
+  // below the bottom-out cap, escalating hintIndex each time (0 = Socratic
+  // question, 1 = more direct). Unlike handleRequestHint, this always
+  // fetches a fresh hint for the new attempt rather than skipping because
+  // one is already showing.
+  async function requestLadderHint(hintIndex: number) {
+    if (!snapshot) return
+    setHint(null)
+    setHintLoading(true)
+    setWasRequestedManually(true)
+    setHintsRequestedCount((count) => count + 1)
+    onHintRequested?.()
+
+    const request: HintRequest = {
+      algorithmName,
+      stepIndex: snapshot.stepIndex,
+      currentPredictionPrompt: getPromptForSnapshot(snapshot, algorithmName),
+      currentState: {
+        dataStructureState: snapshot.dataStructureState,
+        activeIndices: snapshot.activeIndices,
+        criticalJunctionType: snapshot.criticalJunctionType,
+      },
+      hintIndex,
+      errorHistory: [],
+      scaffoldingLevel,
+    }
+
+    const response = await requestHint(request)
+    setHint(response.hint)
+    setHintLoading(false)
+  }
+
   function handleTryAgain() {
     setSubmissionState('idle')
     setCurrentAnswer(null)
@@ -1282,6 +1318,18 @@ export default function PredictionZone({
 
     const timeSpentSeconds = Math.round((Date.now() - stepStartTime) / 1000)
 
+    // NONE gets one fewer attempt than every other level before bottoming
+    // out, per the scaffolding contract - it's already offering the least
+    // support, so it also gives up the least room to keep guessing.
+    const maxAttempts = scaffoldingLevel === ScaffoldingLevel.NONE ? 2 : 3
+    let attempt = attemptCountRef.current
+    let isBottomedOut = false
+    if (!response.correct) {
+      attemptCountRef.current += 1
+      attempt = attemptCountRef.current
+      isBottomedOut = attempt >= maxAttempts
+    }
+
     onPredictionResult?.({
       correct: response.correct,
       stepIndex: snapshot.stepIndex,
@@ -1291,6 +1339,7 @@ export default function PredictionZone({
       timeSpentSeconds,
       junctionType,
       junctionDifficulty,
+      bottomedOut: isBottomedOut,
     })
 
     if (response.correct) {
@@ -1318,10 +1367,8 @@ export default function PredictionZone({
     play('incorrect')
     setSubmissionState('incorrect')
     setShakeToken((token) => token + 1)
-    attemptCountRef.current += 1
-    const attempt = attemptCountRef.current
 
-    if (attempt >= MAX_ATTEMPTS_BEFORE_ADVANCE) {
+    if (isBottomedOut) {
       setRevealAnswer(true)
       setPredictionResolved(true)
     }
@@ -1347,16 +1394,28 @@ export default function PredictionZone({
       setMistakeCounterfactual(response.counterfactualTrace || null)
     }
 
-    if (scaffoldingLevel === ScaffoldingLevel.NONE && attempt >= MAX_ATTEMPTS_BEFORE_ADVANCE) {
+    if (isBottomedOut) {
+      // Graduated ladder bottomed out: the answer is now shown (via
+      // revealAnswer, above) with the AI's own explanation as the
+      // justification - wait long enough to read it, then advance
+      // regardless of scaffolding level. Retrying further would have
+      // nothing left to discover.
       window.dispatchEvent(new CustomEvent(SHOW_EXPLANATION_LINK_EVENT))
-      await wait(NONE_ADVANCE_DELAY_MS)
+      await wait(BOTTOM_OUT_ADVANCE_DELAY_MS)
       setSubmissionState('idle')
       setCurrentAnswer(null)
       setMistakeAnalysis(null)
+      setMistakeHint(null)
+      setMistakeCounterfactual(null)
       window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
       stepForward()
       return
     }
+
+    // Still below the cap: escalate to the next rung of the hint ladder
+    // automatically (0 = Socratic question, 1 = more direct) rather than
+    // waiting for the learner to notice they can press H.
+    void requestLadderHint(attempt - 1)
 
     if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
       // Wait for the learner to click "Try again" rather than resetting
@@ -1393,6 +1452,7 @@ export default function PredictionZone({
       timeSpentSeconds,
       junctionType,
       junctionDifficulty,
+      bottomedOut: false,
       isCodeEval: true,
       codeEvalBuggyState:
         !result.isLogicallyCorrect && !result.hasSyntaxError && result.executeVisually && result.resultingState

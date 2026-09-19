@@ -30,6 +30,12 @@ schema:
     the algorithm state if the student's wrong answer were applied. Be
     specific: name the array values, indices, and what the array would
     look like after one more step if the wrong operation were executed.
+    Work out which value sits at which index BEFORE writing the sentence,
+    then state each index's value exactly once and directly. Never think
+    aloud or backtrack inside this field - do not write words like wait,
+    actually, hmm, or let me, and do not re-derive a value you already
+    stated. If a value does not change because no swap happened, simply
+    state that it stays the same; do not narrate the act of checking it.
     If the answer is correct, return empty string. Example style: If we
     skip this swap, the array becomes [..., 7, 3, ...] and the 7 remains
     at index 2. On the next inner loop iteration, the algorithm will
@@ -37,14 +43,33 @@ schema:
     travel through additional unnecessary comparisons before eventually
     reaching its correct position.,
   "socratic_hint": A single guiding question addressed directly to the
-    student, maximum 20 words. Use second person. Do not start with
-    You. Start with a question word: What, Which, How, Can, Does, If.
-    The question should nudge the student toward the answer without
-    giving it. Example style: Which of the two highlighted values is
-    larger, and where should the larger value end up by the time
-    sorting is complete?,
+    student. Maximum 20 words for LOW or NONE scaffolding; a HIGH closed
+    question or a MEDIUM open consequence question may run up to 30 words
+    if the specificity genuinely needs it, but never pad it. Use second
+    person. Do not start with You. Start with a question word: What,
+    Which, How, Can, Does, If. The question should nudge the student
+    toward the answer without giving it. Example style: Which of the two
+    highlighted values is larger, and where should the larger value end
+    up by the time sorting is complete?,
   "xp_awarded": an integer, 10 if correct, 0 if incorrect
-}"""
+}
+
+Calibrate every field to the scaffolding level given below - the level
+must change what you actually write, not just how much of it the client
+ends up displaying:
+- HIGH: name the specific invariant or rule this junction is testing, and
+  end the socratic_hint with a closed question (yes/no, or a choice
+  between two named options) the student can act on immediately.
+- MEDIUM: ask an open question about the consequence of the student's
+  choice - "what happens next if..." - without naming the invariant
+  outright.
+- LOW: give a single oblique nudge that points at the general area to
+  look again (e.g. "reconsider the two elements you just compared")
+  without stating any specific value, index, or the invariant itself.
+- NONE: return the minimum the schema allows - a single short, neutral
+  sentence for consequence_explanation, a counterfactual_trace that only
+  states that the run would diverge (no traced values), and the shortest
+  socratic_hint that is still a real question."""
 
 FEEDBACK_USER_TEMPLATE = PromptTemplate(
     input_variables=[
@@ -83,15 +108,27 @@ Never state the correct answer outright. Ask a guiding question or point
 at what to look at, calibrated to the requested scaffolding level (HIGH
 scaffolding = more direct guidance, NONE = only the faintest nudge).
 
+This is one rung of a graduated hint ladder, keyed by "Hint index" below:
+- Index 0 (first wrong attempt): ask an open Socratic question that nudges
+  the student toward noticing the relevant comparison or invariant,
+  without naming which values or property are involved.
+- Index 1 and above (later wrong attempts on the same step): be more
+  direct - explicitly name which values, indices, or property the student
+  should compare, while still stopping short of stating the final answer.
+  Each increase in index should feel noticeably more direct than the last.
+
 Any index or value you reference MUST match "Exact index/value pairs for
 this step" exactly - never attribute two different values to the same
 index, and never reference an index or value not given there.
 
 Write a single question addressed directly to the student. Use second
-person. Maximum 20 words. Start with a question word. Do not repeat the
-original question. Do not say things like "as a hint" or "to guide you".
-Just ask the question naturally as a tutor would. Example: What does
-Bubble Sort do when the left element is larger than the right one?
+person. Stay within "Maximum words for this hint" given below - a more
+direct, higher-index hint is allowed more words than index 0, but never
+pad it, use exactly as many as the specificity requires. Start with a
+question word. Do not repeat the original question. Do not say things
+like "as a hint" or "to guide you". Just ask the question naturally as a
+tutor would. Example: What does Bubble Sort do when the left element is
+larger than the right one?
 
 Respond with plain text only, no markdown, no JSON."""
 
@@ -102,6 +139,8 @@ HINT_USER_TEMPLATE = PromptTemplate(
         "step_index",
         "current_prediction_prompt",
         "comparison_values",
+        "hint_index",
+        "max_hint_words",
         "error_history",
         "scaffolding_level",
     ],
@@ -114,6 +153,8 @@ Pseudocode:
 Current step index: {step_index}
 What the student is being asked to predict: {current_prediction_prompt}
 Exact index/value pairs for this step: {comparison_values}
+Hint index (0 = Socratic, higher = more direct): {hint_index}
+Maximum words for this hint: {max_hint_words}
 Student's prior errors on this step: {error_history}
 Scaffolding level: {scaffolding_level}""",
 )
