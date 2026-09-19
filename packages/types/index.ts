@@ -633,3 +633,40 @@ export interface EducatorAnalyticsDto {
     averageTimePerStep: number
   }>
 }
+
+/** The independent pre/post-test used as the study's outcome measure. */
+export type AssessmentPhase = 'PRE' | 'POST'
+export type AssessmentItemType = 'MULTIPLE_CHOICE' | 'TRACE'
+
+export interface AssessmentStatusDto {
+  isParticipant: boolean
+  pretestRequired: boolean
+  posttestAvailable: boolean
+  posttestCompleted: boolean
+}
+
+/** An item as delivered to the student - never carries the correct answer. */
+export interface AssessmentItemDto {
+  id: string
+  order: number
+  itemType: AssessmentItemType
+  stem: string
+  options: Array<{ id: string; text: string }> | null
+}
+
+export interface AssessmentAttemptDto {
+  id: string
+  assessmentId: string
+  code: string
+  phase: AssessmentPhase
+  title: string
+  items: AssessmentItemDto[]
+  startedAt: string
+  completedAt: string | null
+}
+
+export interface AssessmentResponseRequest {
+  itemId: string
+  response: string
+  timeSpentSeconds: number
+}

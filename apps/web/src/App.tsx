@@ -1,9 +1,10 @@
 import { Suspense, lazy } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { getToken } from '@/api/auth'
+import { fetchAssessmentStatus } from '@/api/assessments'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
@@ -15,6 +16,7 @@ const AuthPage = lazy(() => import('@/pages/AuthPage'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const AlgorithmPage = lazy(() => import('@/pages/AlgorithmPage'))
 const EducatorDashboard = lazy(() => import('@/pages/EducatorDashboard'))
+const AssessmentPage = lazy(() => import('@/pages/AssessmentPage'))
 const Showcase = lazy(() => import('@/pages/Showcase'))
 const CanvasTest = lazy(() => import('@/pages/CanvasTest'))
 // Was a static import even though GlobalOnboarding only ever renders it for
@@ -33,8 +35,35 @@ function RouteFallback() {
   )
 }
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
+function RequireAuth({ children }: { children: ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/auth" replace />
+}
+
+// A study participant with no completed pre-test cannot reach a topic or
+// the dashboard at all - only /assessment/pre itself, which is wrapped in
+// RequireAuth alone so this check never applies to itself. A non-participant
+// (isParticipant: false) is unaffected; the study's curriculum lock
+// (STUDY_TOPICS) is a separate, later concern from this gate.
+function StudyGate({ children }: { children: ReactNode }) {
+  const { data: status, isLoading } = useQuery({
+    queryKey: ['assessments', 'status'],
+    queryFn: fetchAssessmentStatus,
+    staleTime: 60 * 1000,
+  })
+
+  if (isLoading) return null
+  if (status?.pretestRequired) {
+    return <Navigate to="/assessment/pre" replace />
+  }
+  return <>{children}</>
+}
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  return (
+    <RequireAuth>
+      <StudyGate>{children}</StudyGate>
+    </RequireAuth>
+  )
 }
 
 // Mounted once, alongside the router's routes rather than inside any
@@ -86,6 +115,14 @@ export default function App() {
                     <ProtectedRoute>
                       <EducatorDashboard />
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/assessment/:phase"
+                  element={
+                    <RequireAuth>
+                      <AssessmentPage />
+                    </RequireAuth>
                   }
                 />
                 <Route path="/showcase" element={<Showcase />} />

@@ -67,10 +67,10 @@ model User {
   consentAt       DateTime?
   withdrawnAt     DateTime?
 
-  sessions            Session[]
-  userBadges          UserBadge[]
-  topicMasteries      TopicMastery[]
-  assessmentResponses AssessmentResponse[]
+  sessions           Session[]
+  userBadges         UserBadge[]
+  topicMasteries     TopicMastery[]
+  assessmentAttempts AssessmentAttempt[]
 }
 
 model AlgorithmTopic {
@@ -186,39 +186,82 @@ model TopicMastery {
   @@unique([userId, algorithmTopicId])
 }
 
-enum AssessmentType {
-  PRE_TEST
-  POST_TEST
+enum AssessmentPhase {
+  PRE
+  POST
 }
 
-// Pre-test/post-test items, so the comparison against passive visualisers
-// (the study's control condition) can be run inside the platform instead
-// of joined by hand from a separate form.
-model Assessment {
-  id        String         @id @default(cuid())
-  name      String         @unique
-  type      AssessmentType
-  createdAt DateTime       @default(now())
+enum AssessmentItemType {
+  MULTIPLE_CHOICE
+  TRACE
+}
 
-  responses AssessmentResponse[]
+// The independent outcome measure. Deliberately separate from mastery
+// score/Interaction: those are computed from the same predictions the
+// tutor trains and scaffolds on, so they cannot also be the measure used
+// to judge whether the tutor worked.
+model Assessment {
+  id         String          @id @default(cuid())
+  code       String          @unique
+  phase      AssessmentPhase
+  title      String
+  version    String          @default("1.0")
+  topicSlugs String[]
+  createdAt  DateTime        @default(now())
+
+  items    AssessmentItem[]
+  attempts AssessmentAttempt[]
+}
+
+model AssessmentItem {
+  id           String             @id @default(cuid())
+  assessmentId String
+  order        Int
+  itemType     AssessmentItemType
+  stem         String
+  options      Json?
+  // For MULTIPLE_CHOICE, the id of the correct option within `options`.
+  // For TRACE, the canonical exact-match answer string - the schema gives
+  // this one correctness field for both item types rather than a second
+  // TRACE-only column.
+  correctOptionId String?
+  conceptTag      String
+  maxScore        Int      @default(1)
+
+  assessment Assessment           @relation(fields: [assessmentId], references: [id])
+  responses  AssessmentResponse[]
+
+  @@index([assessmentId])
+}
+
+model AssessmentAttempt {
+  id           String    @id @default(cuid())
+  userId       String
+  assessmentId String
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  totalScore   Int?
+
+  user       User                 @relation(fields: [userId], references: [id])
+  assessment Assessment           @relation(fields: [assessmentId], references: [id])
+  responses  AssessmentResponse[]
+
+  @@unique([userId, assessmentId])
 }
 
 model AssessmentResponse {
-  id            String   @id @default(cuid())
-  userId        String
-  assessmentId  String
-  // Identifies which item within the assessment this answers - the
-  // assessment's own item bank/ordering lives outside the database (the
-  // same way Interaction.criticalJunctionType references a client-side
-  // concept rather than a normalised table).
-  itemId        String
-  responseValue String
-  isCorrect     Boolean?
-  submittedAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  attemptId        String
+  itemId           String
+  response         String
+  isCorrect        Boolean?
+  score            Int?
+  timeSpentSeconds Int
+  submittedAt      DateTime @default(now())
 
-  user       User       @relation(fields: [userId], references: [id])
-  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  attempt AssessmentAttempt @relation(fields: [attemptId], references: [id])
+  item    AssessmentItem    @relation(fields: [itemId], references: [id])
 
-  @@index([userId])
-  @@index([assessmentId])
+  @@unique([attemptId, itemId])
+  @@index([attemptId])
 }
