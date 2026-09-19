@@ -343,10 +343,13 @@ def _evaluate_mst_edge_select(ds: dict, student_answer: str | None) -> bool:
     candidates = ds.get("candidateEdges") or []
     if not candidates:
         return False
-    # candidateEdges is already sorted ascending by weight (see prim.ts) -
-    # the first entry is always the minimum.
-    from_node, to_node, _weight = candidates[0]
-    return student_answer == f"{from_node}-{to_node}"
+    # candidateEdges is already sorted ascending by weight (see prim.ts),
+    # but the minimum is not always unique - two edges can tie on weight,
+    # and either is a valid MST choice. Accept any candidate whose weight
+    # equals the minimum rather than only the first in sort order.
+    min_weight = min(weight for _from, _to, weight in candidates)
+    valid_answers = {f"{from_node}-{to_node}" for from_node, to_node, weight in candidates if weight == min_weight}
+    return student_answer in valid_answers
 
 
 def _evaluate_cycle_found(ds: dict, student_answer: str | None) -> bool:
@@ -388,8 +391,12 @@ def _evaluate_grid_next_cell(ds: dict, student_answer: str | None) -> bool:
         h = info.get("hScore", 0) or 0
         return g + h if is_astar else g
 
-    best = min(frontier, key=priority)
-    return student_answer == f"{best[0]},{best[1]}"
+    # Ties in BFS/Dijkstra/A* frontiers are common (e.g. two cells reached
+    # by the same shortest distance) - any cell at the minimum priority is
+    # a valid next pick, not only whichever min() happens to return first.
+    best_priority = min(priority(cell) for cell in frontier)
+    valid_answers = {f"{r},{c}" for r, c in frontier if priority([r, c]) == best_priority}
+    return student_answer in valid_answers
 
 
 def _evaluate_heap_sift_down(ds: dict, student_answer: str | None) -> bool:
@@ -410,8 +417,26 @@ def _evaluate_heap_sift_down(ds: dict, student_answer: str | None) -> bool:
     if right is not None and right < len(array) and has_priority(right, target):
         target = right
 
-    expected = "stay" if target == curr else ("left" if target == left else "right")
-    return student_answer == expected
+    if target == curr:
+        return student_answer == "stay"
+
+    # Both children can tie on priority (e.g. two equal values, both
+    # greater than the parent in a max-heap) - swapping with either
+    # preserves the heap property equally validly, so both are accepted
+    # rather than only whichever the left-then-right scan happened to
+    # settle on.
+    valid_answers = {"left" if target == left else "right"}
+    if (
+        left is not None
+        and right is not None
+        and left < len(array)
+        and right < len(array)
+        and array[left] == array[right]
+        and has_priority(left, curr)
+        and has_priority(right, curr)
+    ):
+        valid_answers = {"left", "right"}
+    return student_answer in valid_answers
 
 
 # --- Foundations track ------------------------------------------------

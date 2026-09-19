@@ -433,7 +433,7 @@ function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string)
         { id: 'go-left', label: `${targetVal} is less than ${currentVal} - go left`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
         {
           id: 'go-right',
-          label: `${targetVal} is greater than ${currentVal} - go right`,
+          label: `${targetVal} is greater than or equal to ${currentVal} - go right`,
           misconception: MisconceptionCategory.COMPARISON_DIRECTION,
         },
         {

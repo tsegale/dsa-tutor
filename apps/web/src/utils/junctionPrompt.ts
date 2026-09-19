@@ -87,9 +87,13 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
 
     case CriticalJunctionType.BST_DIRECTION: {
       const s = snapshot.dataStructureState as { currentNode: { value: number } | null; targetValue: number }
+      // This tree's convention (matching bst.ts's own insert/search logic)
+      // sends a value equal to the current node right, not left - stated
+      // explicitly here so a student taught the opposite convention isn't
+      // marked wrong without ever being told which one this tree uses.
       return s.currentNode === null
         ? `Reached an empty position. Where does ${s.targetValue} belong?`
-        : `At node ${s.currentNode.value}: is ${s.targetValue} smaller or larger?`
+        : `At node ${s.currentNode.value}: is ${s.targetValue} smaller, or greater than or equal to it? (Equal values go right in this tree.)`
     }
 
     case CriticalJunctionType.NEXT_NODE_SELECTION:
