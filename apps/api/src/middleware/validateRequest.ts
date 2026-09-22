@@ -16,3 +16,34 @@ export function requireFields(fields: string[]) {
     next()
   }
 }
+
+// Rejects a body that is missing a required string field, has a field of the
+// wrong type, or carries any field outside the allowed set. The unknown-field
+// check is the important part here: it is the reason a client cannot smuggle
+// a field like `role` into /auth/register and expect it to reach the service
+// layer (see auth.dto.ts, which has no `role` field at all).
+export function validateStringBody(requiredFields: string[], allowedFields: string[] = requiredFields) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const body = req.body ?? {}
+
+    const unknown = Object.keys(body).filter((key) => !allowedFields.includes(key))
+    if (unknown.length > 0) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: `Unknown field(s): ${unknown.join(', ')}` },
+      })
+      return
+    }
+
+    const invalid = requiredFields.filter((field) => typeof body[field] !== 'string' || body[field].trim() === '')
+    if (invalid.length > 0) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: `Missing or invalid field(s): ${invalid.join(', ')}` },
+      })
+      return
+    }
+
+    next()
+  }
+}

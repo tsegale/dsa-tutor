@@ -13,7 +13,7 @@ export async function register(dto: RegisterDto): Promise<AuthResponseDto> {
       email: dto.email,
       passwordHash,
       name: dto.name,
-      role: dto.role ?? 'STUDENT',
+      role: 'STUDENT',
     },
   })
 

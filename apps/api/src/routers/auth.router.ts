@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express'
 import { register, login } from '../services/auth.service'
 import { authenticate, AuthRequest } from '../middleware/auth'
+import { validateStringBody } from '../middleware/validateRequest'
 import { prisma } from '../lib/prisma'
 
 const router = Router()
 
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', validateStringBody(['email', 'password', 'name']), async (req: Request, res: Response) => {
   try {
     const result = await register(req.body)
     res.status(201).json({ data: result, error: null })
@@ -18,7 +19,7 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 })
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', validateStringBody(['email', 'password']), async (req: Request, res: Response) => {
   try {
     const result = await login(req.body)
     res.json({ data: result, error: null })

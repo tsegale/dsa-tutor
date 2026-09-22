@@ -2,7 +2,6 @@ export interface RegisterDto {
   email: string
   password: string
   name: string
-  role?: 'STUDENT' | 'EDUCATOR'
 }
 
 export interface LoginDto {

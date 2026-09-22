@@ -127,7 +127,7 @@ function LoginForm({ role }: { role: Role }) {
   )
 }
 
-function RegisterForm({ role }: { role: Role }) {
+function RegisterForm() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   const [name, setName] = useState('')
@@ -141,9 +141,12 @@ function RegisterForm({ role }: { role: Role }) {
     setError(null)
     setIsSubmitting(true)
     try {
+      // Self-registration always creates a STUDENT account (see apps/api
+      // auth.service.ts) - educators are provisioned separately, so this
+      // always lands on the student home, never /educator.
       await register(email, password, name)
       await refreshUser()
-      navigate(role === 'instructor' ? '/educator' : '/')
+      navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -203,6 +206,7 @@ function RegisterForm({ role }: { role: Role }) {
 
 export default function AuthPage() {
   const [role, setRole] = useState<Role>('student')
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
 
   return (
     <div className="flex h-screen w-full">
@@ -249,28 +253,30 @@ export default function AuthPage() {
         <div className="w-full max-w-[320px]">
           <h1 className="mb-8 text-center text-lg font-semibold text-text-primary md:hidden">DSA Tutor</h1>
 
-          <div className="mb-6">
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-text-muted uppercase">I am a</p>
-            <div className="flex gap-0.5 rounded-lg border-[0.5px] border-border bg-surface p-[3px]">
-              {(['student', 'instructor'] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setRole(option)}
-                  className={cn(
-                    'flex-1 rounded-md py-1.5 text-sm font-medium capitalize transition-colors',
-                    role === option
-                      ? 'border-[0.5px] border-border bg-white text-[#3730a3]'
-                      : 'border-[0.5px] border-transparent text-text-secondary',
-                  )}
-                >
-                  {option}
-                </button>
-              ))}
+          {activeTab === 'login' && (
+            <div className="mb-6">
+              <p className="mb-2 text-[11px] font-medium tracking-wide text-text-muted uppercase">I am a</p>
+              <div className="flex gap-0.5 rounded-lg border-[0.5px] border-border bg-surface p-[3px]">
+                {(['student', 'instructor'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setRole(option)}
+                    className={cn(
+                      'flex-1 rounded-md py-1.5 text-sm font-medium capitalize transition-colors',
+                      role === option
+                        ? 'border-[0.5px] border-border bg-white text-[#3730a3]'
+                        : 'border-[0.5px] border-transparent text-text-secondary',
+                    )}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <Tabs defaultValue="login">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
             <TabsList className="w-full bg-transparent p-0">
               <TabsTrigger
                 value="login"
@@ -289,7 +295,7 @@ export default function AuthPage() {
               <LoginForm role={role} />
             </TabsContent>
             <TabsContent value="register" className="mt-6">
-              <RegisterForm role={role} />
+              <RegisterForm />
             </TabsContent>
           </Tabs>
 
