@@ -53,6 +53,21 @@ describe('generateRemediationTask', () => {
     expect(l2?.scaffold).not.toBeNull()
     expect(l3?.scaffold).not.toEqual(l2?.scaffold)
   })
+
+  // remediation doc Phase 12A.3: a Quick Check question with no defensible
+  // answer as worded (asking whether sortedness changed after a comparison
+  // that left the array untouched) reached students. Every option-based
+  // task must have exactly one option whose id matches correctOptionId -
+  // free-response tasks (no options) are graded elsewhere and skipped here.
+  it.each(CASES)('%s / %s has exactly one correct option, when it has options', (category, slug) => {
+    for (const level of [1, 2, 3]) {
+      const payload = generateRemediationTask(category, slug, level)
+      if (!payload?.options) continue
+      expect(payload.correctOptionId).not.toBeUndefined()
+      const matches = payload.options.filter((option) => option.id === payload.correctOptionId)
+      expect(matches, `${category}/${slug} level ${level}: options were [${payload.options.map((o) => o.id).join(', ')}], correctOptionId was "${payload.correctOptionId}"`).toHaveLength(1)
+    }
+  })
 })
 
 describe('assessment item bank values stay out of remediation content', () => {

@@ -198,7 +198,17 @@ def _evaluate_bst_direction(ds: dict, student_answer: str | None) -> bool:
     current_node = ds.get("currentNode")
     target = ds.get("targetValue")
     if current_node is None:
-        return student_answer == "insert-here"
+        # Reached the empty slot itself - nothing left to compare against,
+        # so this is never "insert-here" (see tileBuilder.ts's own note on
+        # why that used to be asked, and produced tiles with no correct
+        # option). A root insertion has no parent to attach to; otherwise
+        # the correct answer names which side of the parent it attaches to,
+        # matching the same "equal goes right" convention as below.
+        parent_value = ds.get("insertionParentValue")
+        if parent_value is None:
+            return student_answer == "becomes-root"
+        correct_side = "left" if target < parent_value else "right"
+        return student_answer == f"attach-{correct_side}"
     current_val = current_node.get("value")
     # Standard convention: a value equal to the current node goes right.
     if target < current_val:

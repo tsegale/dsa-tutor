@@ -181,19 +181,19 @@ function structuralPropertyViolationBubbleSort(level: number): RemediationPayloa
   return {
     taskType: 'COUNTEREXAMPLE',
     level,
-    prompt: `Bubble sort is comparing index 0 (value ${array[0]}) and index 1 (value ${array[1]}) and leaves them as they are. Is the array now closer to sorted, or further from it?`,
+    prompt: `Bubble sort leaves ${array[0]} and ${array[1]} in this order. Is this pair now in the correct order?`,
     scaffold: scaffoldForLevel(
       level,
       'Two adjacent elements that are out of order and left untouched are still out of order - nothing about "leaving them" fixes that.',
-      'Worked answer: further from sorted - 8 and 2 are still in the wrong relative order, and skipping the swap here means a later pass will have to fix it, or it never gets fixed at all. Now judge the same situation for a different pair.',
+      'Worked answer: no - 8 and 2 are still in the wrong relative order, and skipping the swap here means a later pass will have to fix it, or it never gets fixed at all. Now judge the same situation for a different pair.',
     ),
     array,
     highlightIndices: [0, 1],
     options: [
-      { id: 'closer', text: 'Closer to sorted' },
-      { id: 'further', text: 'Further from sorted' },
+      { id: 'yes', text: 'Yes' },
+      { id: 'no', text: 'No' },
     ],
-    correctOptionId: 'further',
+    correctOptionId: 'no',
   }
 }
 

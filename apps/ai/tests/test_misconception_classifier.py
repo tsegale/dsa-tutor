@@ -81,6 +81,22 @@ def test_rule_based_classifier_covers_bst_direction_not_just_two_index_arrays():
     assert classify_misconception("go-left", current_state) is None
 
 
+def test_rule_based_classifier_covers_bst_empty_slot_root_and_non_root():
+    root_case = {
+        "criticalJunctionType": "BST_DIRECTION",
+        "dataStructureState": {"currentNode": None, "targetValue": 8, "insertionParentValue": None},
+    }
+    assert classify_misconception("becomes-root", root_case) is None
+    assert classify_misconception("stays-empty", root_case) == MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION
+
+    non_root_case = {
+        "criticalJunctionType": "BST_DIRECTION",
+        "dataStructureState": {"currentNode": None, "targetValue": 2, "insertionParentValue": 4},
+    }
+    assert classify_misconception("attach-left", non_root_case) is None
+    assert classify_misconception("attach-right", non_root_case) == MisconceptionCategory.COMPARISON_DIRECTION
+
+
 def test_rule_based_classifier_covers_trie_junctions():
     current_state = {
         "criticalJunctionType": "TRIE_CHARACTER_MATCH",

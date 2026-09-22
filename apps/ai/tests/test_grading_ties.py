@@ -114,3 +114,42 @@ def test_bst_direction_equal_value_goes_right_by_stated_convention():
     }
     assert evaluate_answer(_request(current_state, "go-right")) is True
     assert evaluate_answer(_request(current_state, "go-left")) is False
+
+
+def test_bst_direction_root_insertion_accepts_becomes_root():
+    # Reached the empty slot with no parent at all (first insertion into an
+    # empty tree) - there is nothing to compare against, so the only
+    # sensible answer is "it becomes the root" (remediation doc Phase 12A.1).
+    current_state = {
+        "criticalJunctionType": "BST_DIRECTION",
+        "dataStructureState": {"currentNode": None, "targetValue": 8, "insertionParentValue": None},
+    }
+    assert evaluate_answer(_request(current_state, "becomes-root")) is True
+    assert evaluate_answer(_request(current_state, "stays-empty")) is False
+    assert evaluate_answer(_request(current_state, "needs-comparison")) is False
+
+
+def test_bst_direction_non_root_empty_slot_names_the_correct_side_of_the_parent():
+    current_state = {
+        "criticalJunctionType": "BST_DIRECTION",
+        "dataStructureState": {"currentNode": None, "targetValue": 2, "insertionParentValue": 4},
+    }
+    assert evaluate_answer(_request(current_state, "attach-left")) is True
+    assert evaluate_answer(_request(current_state, "attach-right")) is False
+
+    current_state_right = {
+        "criticalJunctionType": "BST_DIRECTION",
+        "dataStructureState": {"currentNode": None, "targetValue": 6, "insertionParentValue": 4},
+    }
+    assert evaluate_answer(_request(current_state_right, "attach-right")) is True
+    assert evaluate_answer(_request(current_state_right, "attach-left")) is False
+
+
+def test_bst_direction_non_root_empty_slot_equal_value_attaches_right():
+    # Same "equal goes right" convention as the node-to-node comparison above.
+    current_state = {
+        "criticalJunctionType": "BST_DIRECTION",
+        "dataStructureState": {"currentNode": None, "targetValue": 4, "insertionParentValue": 4},
+    }
+    assert evaluate_answer(_request(current_state, "attach-right")) is True
+    assert evaluate_answer(_request(current_state, "attach-left")) is False

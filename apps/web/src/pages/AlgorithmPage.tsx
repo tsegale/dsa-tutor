@@ -388,6 +388,18 @@ export default function AlgorithmPage() {
   const [hint, setHint] = useState<string | null>(null)
   const [predictionResolved, setPredictionResolved] = useState(false)
 
+  // predictionResolved resets to false on every step change (see
+  // PredictionZone's per-step effect), so it cannot gate the Quick Check
+  // modal on its own: misconception detection is an async round trip, and
+  // by the time it resolves the learner may already be a step or two past
+  // the junction that triggered it, with predictionResolved back to false
+  // for the new, not-yet-attempted step. This flag instead tracks only
+  // "is the most recent submission a wrong answer with a retry still
+  // available" - it does not reset on step change, so a Quick Check that
+  // becomes ready while the learner has moved on can still show once it's
+  // actually safe to (see the RemediationModal render guard below).
+  const [junctionRetryInProgress, setJunctionRetryInProgress] = useState(false)
+
   // Guards against re-triggering the modal every time the learner steps
   // back to the final step and forward again within the same practice
   // run. Reset when a fresh run starts (stepIndex back to 0) so a genuine
@@ -435,9 +447,23 @@ export default function AlgorithmPage() {
     predictionStatsRef.current.hints += 1
   }
 
+  // Wraps the raw setter passed to PredictionZone so "Show me the answer"
+  // (the one resolution path with no PredictionOutcomeDetail of its own -
+  // see handlePredictionResult below) also clears junctionRetryInProgress,
+  // the same as a correct or bottomed-out submission does.
+  function handleSetPredictionResolved(value: boolean) {
+    setPredictionResolved(value)
+    if (value) setJunctionRetryInProgress(false)
+  }
+
   function handlePredictionResult(detail: PredictionOutcomeDetail) {
     predictionStatsRef.current.total += 1
     useAlgorithmStore.getState().recordPredictionResult(detail.correct, detail.hintsRequestedForStep)
+
+    // Correct or bottomed-out both mean this junction is done with retries;
+    // anything else is a wrong answer with a retry still open, which the
+    // Quick Check modal must never interrupt (remediation doc 12A.2).
+    setJunctionRetryInProgress(!detail.correct && !detail.bottomedOut)
 
     const isSelfCorrection =
       detail.correct &&
@@ -900,7 +926,7 @@ export default function AlgorithmPage() {
         setMistakeCounterfactual={setMistakeCounterfactual}
         hint={hint}
         setHint={setHint}
-        setPredictionResolved={setPredictionResolved}
+        setPredictionResolved={handleSetPredictionResolved}
       />
     </div>
   ) : (
@@ -924,7 +950,7 @@ export default function AlgorithmPage() {
       {showSessionEndSurvey && (
         <SessionEndSurvey onSubmit={handleSessionEndSubmit} onSkip={handleSessionEndSkip} />
       )}
-      {pendingRemediation && (
+      {pendingRemediation && !junctionRetryInProgress && (
         <RemediationModal
           payload={pendingRemediation.payload}
           onComplete={(outcome) => void completePendingRemediation(outcome)}

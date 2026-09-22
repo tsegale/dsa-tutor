@@ -19,6 +19,12 @@ export interface BSTState {
   insertedValue?: number
   foundNode?: BSTNode | null
   operation: 'insert' | 'search' | 'delete'
+  /** Only set on the "reached an empty position" insert snapshot
+   * (currentNode is null there, so there is nothing left to compare
+   * against) - null for a root insertion, otherwise the parent's value,
+   * so the tile builder and the backend evaluator can both word and grade
+   * that step without ever referencing currentNode.value. */
+  insertionParentValue?: number | null
 }
 
 // Indices match the pseudocode panel's bst array exactly:
@@ -160,7 +166,14 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
           : `Reached an empty position to the ${wentLeft ? 'left' : 'right'} of node ${parent.value}. Insert ${value} here.`,
       pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
       isPredictionRequired: true,
-      state: { root, currentNode: null, targetValue: value, path, operation: 'insert' },
+      state: {
+        root,
+        currentNode: null,
+        targetValue: value,
+        path,
+        operation: 'insert',
+        insertionParentValue: parent === null ? null : parent.value,
+      },
       criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
       junctionDifficulty: JunctionDifficulty.PROCEDURAL,
     })

@@ -38,7 +38,13 @@ def _classify_bst_direction(student_answer: str, ds: dict) -> MisconceptionCateg
     current_node = ds.get("currentNode")
     target = ds.get("targetValue")
     if current_node is None:
-        return None if student_answer == "insert-here" else MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION
+        # Mirrors tileBuilder.ts's own tile ids for this empty-slot case -
+        # see that file's comment on why this is never "insert-here".
+        parent_value = ds.get("insertionParentValue")
+        if parent_value is None:
+            return None if student_answer == "becomes-root" else MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION
+        correct_side = "left" if target is not None and target < parent_value else "right"
+        return None if student_answer == f"attach-{correct_side}" else MisconceptionCategory.COMPARISON_DIRECTION
     current_val = current_node.get("value")
     should_go_left = target is not None and current_val is not None and target < current_val
     if should_go_left and student_answer != "go-left":
