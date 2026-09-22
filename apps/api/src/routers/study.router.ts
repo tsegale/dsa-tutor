@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { getStudyStatus, recordConsent, withdrawParticipant, submitSus } from '../services/study.service'
+import { getStudyStatus, recordConsent, withdrawParticipant, submitSus, enrolParticipant } from '../services/study.service'
 
 const router = Router()
 router.use(authenticate)
@@ -11,6 +11,33 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
     res.json({ data: status, error: null })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to load study status' } })
+  }
+})
+
+router.post('/enrol', async (req: AuthRequest, res: Response) => {
+  try {
+    const { code } = req.body as { code?: string }
+    if (typeof code !== 'string' || !code.trim()) {
+      res.status(400).json({ data: null, error: { code: 'INVALID_CODE', message: 'A code is required' } })
+      return
+    }
+    const status = await enrolParticipant(req.userId!, code)
+    res.json({ data: status, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ''
+    if (message === 'INVALID_CODE') {
+      res.status(400).json({ data: null, error: { code: 'INVALID_CODE', message: 'That code is not recognised' } })
+      return
+    }
+    if (message === 'CODE_TAKEN') {
+      res.status(409).json({ data: null, error: { code: 'CODE_TAKEN', message: 'That code has already been claimed' } })
+      return
+    }
+    if (message === 'ALREADY_ENROLLED') {
+      res.status(409).json({ data: null, error: { code: 'ALREADY_ENROLLED', message: 'This account is already enrolled' } })
+      return
+    }
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to enrol in the study' } })
   }
 })
 

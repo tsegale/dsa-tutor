@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { getStudyStatus } from './study.service'
 import type { AssessmentAttemptDto } from '../dtos/assessment.dto'
@@ -88,10 +89,26 @@ export async function startAttempt(userId: string, code: string): Promise<Assess
     return toAttemptDto({ ...existing, assessment })
   }
 
-  const attempt = await prisma.assessmentAttempt.create({
-    data: { userId, assessmentId: assessment.id },
-  })
-  return toAttemptDto({ ...attempt, assessment })
+  // The findUnique-then-create above isn't atomic: two calls that both see
+  // no existing attempt (e.g. React StrictMode's dev-only double effect
+  // invocation, or a genuine double-click) can both reach create, and the
+  // second collides with the unique index on (userId, assessmentId) - P2002
+  // - rather than a real failure. Fetching and returning the row the other
+  // call just created keeps this idempotent instead of 500ing.
+  try {
+    const attempt = await prisma.assessmentAttempt.create({
+      data: { userId, assessmentId: assessment.id },
+    })
+    return toAttemptDto({ ...attempt, assessment })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      const raceWinner = await prisma.assessmentAttempt.findUnique({
+        where: { userId_assessmentId: { userId, assessmentId: assessment.id } },
+      })
+      if (raceWinner) return toAttemptDto({ ...raceWinner, assessment })
+    }
+    throw err
+  }
 }
 
 /** Scores server-side and stores the result, but never returns isCorrect or

@@ -1,22 +1,75 @@
-import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { recordConsent } from '@/api/study'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchStudyStatus, recordConsent } from '@/api/study'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
 
+function ConsentPageHeader() {
+  return (
+    <header className="flex h-16 items-center border-b border-border bg-white px-6">
+      <DSATutorLogo variant="dark" showTagline={false} />
+    </header>
+  )
+}
+
 export default function ConsentPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // Shares the ['study', 'status'] cache with App.tsx's StudyGate and
+  // DashboardNav - reaching this page directly by URL (rather than via
+  // StudyGate's redirect) is otherwise possible for any authenticated user,
+  // so this page checks the same status itself before showing a consent
+  // button that cannot work for them.
+  const statusQuery = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus, staleTime: 60 * 1000 })
 
   const consentMutation = useMutation({
     mutationFn: recordConsent,
-    onSuccess: () => navigate('/', { replace: true }),
+    // Without invalidating first, StudyGate's own ['study', 'status'] read
+    // right after this navigate would still see the pre-consent, cached
+    // consentRequired: true (staleTime hasn't elapsed) and bounce straight
+    // back here - consent would appear to silently do nothing.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
+      navigate('/', { replace: true })
+    },
   })
+
+  if (statusQuery.isLoading) return null
+
+  if (statusQuery.isError) {
+    return (
+      <div className="min-h-screen bg-surface">
+        <ConsentPageHeader />
+        <main className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-6 py-24 text-center">
+          <p className="text-text-primary">Could not load your study status. Check your connection and try again.</p>
+          <Button onClick={() => statusQuery.refetch()}>Retry</Button>
+        </main>
+      </div>
+    )
+  }
+
+  const status = statusQuery.data
+  if (!status?.isParticipant) {
+    return <Navigate to="/study/join" replace />
+  }
+
+  if (status.withdrawn) {
+    return (
+      <div className="min-h-screen bg-surface">
+        <ConsentPageHeader />
+        <main className="mx-auto max-w-2xl px-6 py-24 text-center">
+          <p className="text-text-primary">
+            You've withdrawn from this study, so there is no consent form to complete.
+          </p>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="flex h-16 items-center border-b border-border bg-white px-6">
-        <DSATutorLogo variant="dark" showTagline={false} />
-      </header>
+      <ConsentPageHeader />
 
       <main className="mx-auto max-w-2xl px-6 py-12">
         <h1 className="mb-2 text-xl font-bold text-text-primary">Before you start: research consent</h1>
@@ -64,8 +117,12 @@ export default function ConsentPage() {
           </div>
         </div>
 
+        {consentMutation.isError && (
+          <p className="mb-3 text-sm text-error">Could not record your consent. Check your connection and try again.</p>
+        )}
+
         <Button onClick={() => consentMutation.mutate()} disabled={consentMutation.isPending}>
-          I understand and consent to take part
+          {consentMutation.isError ? 'Retry' : 'I understand and consent to take part'}
         </Button>
       </main>
     </div>

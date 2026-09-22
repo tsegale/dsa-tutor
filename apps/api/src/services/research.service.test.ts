@@ -1,5 +1,27 @@
 import { describe, it, expect } from 'vitest'
-import { computeAgreement, agreementToMarkdownTable } from './research.service'
+import { computeAgreement, agreementToMarkdownTable, participantWhere } from './research.service'
+
+describe('participantWhere', () => {
+  it('excludes PILOT- codes by default', () => {
+    const where = participantWhere(false)
+    expect(where).toEqual({
+      participantCode: { not: null },
+      consentAt: { not: null },
+      withdrawnAt: null,
+      NOT: { participantCode: { startsWith: 'PILOT-' } },
+    })
+  })
+
+  it('includes PILOT- codes when includePilot is true', () => {
+    const where = participantWhere(true)
+    expect(where).toEqual({
+      participantCode: { not: null },
+      consentAt: { not: null },
+      withdrawnAt: null,
+    })
+    expect(where).not.toHaveProperty('NOT')
+  })
+})
 
 describe('computeAgreement', () => {
   it('computes 100% agreement when every label matches the rule label', () => {

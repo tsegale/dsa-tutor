@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../api/client'
 import type { TopicDto } from '@dsa-tutor/types'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +36,19 @@ export default function Dashboard() {
   const { user, refreshUser } = useAuth()
   const navigate = useNavigate()
   const { showWelcomeModal, closeWelcomeModal, startTour, completeOnboarding } = useOnboarding()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Set by AlgorithmPage's redirect when a study participant opens a real,
+  // implemented algorithm that isn't one of the three study topics - the
+  // dashboard itself has no other way to explain why they landed back here.
+  const [showBlockedNotice, setShowBlockedNotice] = useState(searchParams.get('blocked') === 'study')
+
+  useEffect(() => {
+    if (searchParams.has('blocked')) {
+      searchParams.delete('blocked')
+      setSearchParams(searchParams, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Re-fetch the profile every time the dashboard is landed on, so XP
   // and streak earned during a practice session (on a different page)
@@ -72,6 +85,19 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-surface">
       <DashboardNav />
+      {showBlockedNotice && (
+        <div className="flex items-center justify-between border-b border-border bg-white px-6 py-2 text-sm text-text-primary">
+          <span>That algorithm isn't part of your study topics, so it isn't available while you're enrolled.</span>
+          <button
+            type="button"
+            onClick={() => setShowBlockedNotice(false)}
+            aria-label="Dismiss"
+            className="text-text-muted hover:text-text-primary"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {user && <StatsBanner user={user} topics={topics} />}
       <div className="flex">
         {/* PRACTICE, not DEMO - Practice is the default the study argues

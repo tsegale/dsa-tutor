@@ -82,12 +82,16 @@ export default function SusPage() {
           ))}
         </div>
 
+        {submitMutation.isError && (
+          <p className="mt-4 text-sm text-error">Could not submit your answers. Check your connection and try again.</p>
+        )}
+
         <Button
           onClick={() => submitMutation.mutate()}
           disabled={!canSubmit || submitMutation.isPending}
-          className="mt-8"
+          className="mt-4"
         >
-          Submit
+          {submitMutation.isError ? 'Retry' : 'Submit'}
         </Button>
       </main>
     </div>

@@ -7,6 +7,7 @@ import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
+import { fetchStudyStatus } from '@/api/study'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
 import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT, REQUEST_SESSION_EXIT_EVENT } from '@/components/layout/TopBar'
 import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
@@ -340,6 +341,20 @@ export default function AlgorithmPage() {
     ? activeMisconceptionEvents.find((e) => e.algorithmTopicId === currentTopic.id)
     : undefined
 
+  // Shares the ['study', 'status'] cache with App.tsx's StudyGate. For an
+  // active participant, topic.service.ts already restricted /api/v1/topics
+  // to STUDY_TOPICS server-side, so a real, implemented algorithm outside
+  // that list (opened by typing its URL directly) has no matching
+  // currentTopic - that combination is the signal to redirect, rather than
+  // letting it fall through to the generic "coming soon" placeholder,
+  // which would misleadingly suggest the algorithm just isn't built yet.
+  const { data: studyStatus } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus, staleTime: 60 * 1000 })
+  const isActiveParticipant = !!studyStatus?.isParticipant && !studyStatus.consentRequired && !studyStatus.withdrawn
+  useEffect(() => {
+    if (!algorithmNameParam || !isImplemented || currentTopic || !isActiveParticipant) return
+    navigate('/?blocked=study', { replace: true })
+  }, [algorithmNameParam, isImplemented, currentTopic, isActiveParticipant, navigate])
+
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const { isTooSmall, isCompact } = useLayoutBreakpoint()
@@ -369,10 +384,8 @@ export default function AlgorithmPage() {
     masteryMetricsRef.current = masteryMetrics
   }, [masteryMetrics])
   const [showSessionEndSurvey, setShowSessionEndSurvey] = useState(false)
-  // Set just before navigating away, so the unmount cleanup's session PATCH
-  // below can include them - the survey's answers exist for only a moment
-  // between "submit" and the resulting unmount, so a ref outlives that.
-  const sessionEndAnswersRef = useRef<{ mentalEffort: number; confidence: number } | null>(null)
+  const [sessionEndSubmitting, setSessionEndSubmitting] = useState(false)
+  const [sessionEndError, setSessionEndError] = useState<string | null>(null)
   const [scaffoldingTransitionMessage, setScaffoldingTransitionMessage] = useState<string | null>(null)
   const [explanationLinkVisible, setExplanationLinkVisible] = useState(false)
   const [mistakePath, setMistakePath] = useState<AlgorithmSnapshot[] | null>(null)
@@ -640,10 +653,30 @@ export default function AlgorithmPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function handleSessionEndSubmit(mentalEffort: number, confidence: number) {
-    sessionEndAnswersRef.current = { mentalEffort, confidence }
-    setShowSessionEndSurvey(false)
-    navigate('/')
+  // Sent immediately, while the survey dialog is still open, rather than
+  // deferred to the unmount cleanup below - deferring it meant a failed
+  // save was indistinguishable from a successful one, since by the time it
+  // failed the page navigating away had already unmounted and nothing was
+  // left to show an error on.
+  async function handleSessionEndSubmit(mentalEffort: number, confidence: number) {
+    if (!sessionId) {
+      setShowSessionEndSurvey(false)
+      navigate('/')
+      return
+    }
+    setSessionEndSubmitting(true)
+    setSessionEndError(null)
+    try {
+      await apiFetch(`/api/v1/sessions/${sessionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ mentalEffort, confidence }),
+      })
+      setShowSessionEndSurvey(false)
+      navigate('/')
+    } catch {
+      setSessionEndSubmitting(false)
+      setSessionEndError('Could not save your answers. Check your connection and try again.')
+    }
   }
 
   function handleSessionEndSkip() {
@@ -836,7 +869,6 @@ export default function AlgorithmPage() {
       const activeSessionId = useAlgorithmStore.getState().sessionId
       if (activeSessionId) {
         const finalAssessment = calculateMastery(masteryMetricsRef.current)
-        const sessionEndAnswers = sessionEndAnswersRef.current
         apiFetch(`/api/v1/sessions/${activeSessionId}`, {
           method: 'PATCH',
           body: JSON.stringify({
@@ -847,10 +879,6 @@ export default function AlgorithmPage() {
             proceduralScore: finalAssessment.proceduralScore,
             totalPredictions: masteryMetricsRef.current.totalPredictions,
             correctPredictions: masteryMetricsRef.current.correctPredictions,
-            ...(sessionEndAnswers && {
-              mentalEffort: sessionEndAnswers.mentalEffort,
-              confidence: sessionEndAnswers.confidence,
-            }),
           }),
         }).catch(() => {})
       }
@@ -948,7 +976,12 @@ export default function AlgorithmPage() {
       <KeyboardShortcutsModal open={shortcutsModalOpen} onClose={() => setShortcutsModalOpen(false)} />
       <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
       {showSessionEndSurvey && (
-        <SessionEndSurvey onSubmit={handleSessionEndSubmit} onSkip={handleSessionEndSkip} />
+        <SessionEndSurvey
+          onSubmit={handleSessionEndSubmit}
+          onSkip={handleSessionEndSkip}
+          isSubmitting={sessionEndSubmitting}
+          error={sessionEndError}
+        />
       )}
       {pendingRemediation && !junctionRetryInProgress && (
         <RemediationModal

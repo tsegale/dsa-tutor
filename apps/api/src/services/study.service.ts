@@ -5,6 +5,32 @@ import type { StudyStatusDto } from '../dtos/study.dto'
 const PRE_CODE = 'STUDY_PRE_V1'
 const POST_CODE = 'STUDY_POST_V1'
 
+type ParticipantFields = {
+  participantCode: string | null
+  consentAt: Date | null
+  withdrawnAt: Date | null
+}
+
+/** The one definition of "currently an active study participant" - used
+ * everywhere that decision matters (topic restriction, research export
+ * inclusion, study status) instead of each call site re-deriving its own
+ * ad-hoc check. A participant who withdrew is excluded even though
+ * participantCode is never cleared - see withdrawParticipant's own
+ * comment on why (remediation doc 12D.2). */
+export function isActiveParticipant(user: ParticipantFields): boolean {
+  return !!user.participantCode && !!user.consentAt && user.withdrawnAt === null
+}
+
+/** Prisma where-clause form of isActiveParticipant, for querying the User
+ * model directly or through a relation (e.g. `session: { user:
+ * ACTIVE_PARTICIPANT_WHERE }`) rather than fetching rows just to filter
+ * them in memory. */
+export const ACTIVE_PARTICIPANT_WHERE = {
+  participantCode: { not: null as string | null },
+  consentAt: { not: null as Date | null },
+  withdrawnAt: null as Date | null,
+}
+
 export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -55,12 +81,61 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
 
   return {
     isParticipant: true,
-    withdrawn: !!user.withdrawnAt,
+    // participantCode and consentAt are both already known truthy at this
+    // point, so isActiveParticipant here differs from withdrawnAt alone
+    // only in name, not in value - using it keeps this branch expressed
+    // in terms of the one shared definition instead of a fourth ad-hoc
+    // !!withdrawnAt check.
+    withdrawn: !isActiveParticipant(user),
     consentRequired: false,
     pretestRequired: !preAttempt,
     posttestAvailable: completedTopics.length >= STUDY_TOPICS.length,
     posttestCompleted: !!postAttempt,
   }
+}
+
+/** A code as the participant typed it, normalised to how it's matched and
+ * stored - trimmed and uppercased, so "p01" and "P01" are the same claim. */
+export function normalizeParticipantCode(raw: string): string {
+  return raw.trim().toUpperCase()
+}
+
+/** Parses the comma-separated allowlist of codes a researcher has actually
+ * issued to participants, e.g. "P01,P02,PILOT-1,PILOT-2". Never generated
+ * or derived here - these are handed out outside the app and only checked
+ * against here. */
+export function parseEnrolmentAllowlist(raw: string): Set<string> {
+  return new Set(
+    raw
+      .split(',')
+      .map((code) => normalizeParticipantCode(code))
+      .filter((code) => code.length > 0),
+  )
+}
+
+/** Claims a researcher-issued code as this user's participantCode. The
+ * unique index on participantCode is what actually prevents a second
+ * person claiming an already-claimed code; this checks first only to
+ * return a clean 409 instead of a raw constraint-violation 500. */
+export async function enrolParticipant(userId: string, rawCode: string): Promise<StudyStatusDto> {
+  const code = normalizeParticipantCode(rawCode)
+  if (!code || !parseEnrolmentAllowlist(process.env.STUDY_ENROLMENT_CODES ?? '').has(code)) {
+    throw new Error('INVALID_CODE')
+  }
+
+  const [self, claimedBy] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true } }),
+    prisma.user.findUnique({ where: { participantCode: code }, select: { id: true } }),
+  ])
+  if (self?.participantCode) {
+    throw new Error('ALREADY_ENROLLED')
+  }
+  if (claimedBy) {
+    throw new Error('CODE_TAKEN')
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { participantCode: code } })
+  return getStudyStatus(userId)
 }
 
 /** Idempotent: consenting twice just keeps the original timestamp. */

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { startAssessment, submitAssessmentResponse, completeAssessment } from '@/api/assessments'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
@@ -13,6 +13,7 @@ const CODE_BY_PHASE: Record<string, string> = {
 export default function AssessmentPage() {
   const { phase } = useParams<{ phase: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const code = phase ? CODE_BY_PHASE[phase] : undefined
 
   const startMutation = useMutation({
@@ -31,6 +32,7 @@ export default function AssessmentPage() {
   const [answer, setAnswer] = useState('')
   const itemStartedAt = useRef<number>(Date.now())
   const [isFinishing, setIsFinishing] = useState(false)
+  const [nextError, setNextError] = useState<string | null>(null)
 
   const responseMutation = useMutation({
     mutationFn: (body: { itemId: string; response: string; timeSpentSeconds: number }) =>
@@ -41,7 +43,14 @@ export default function AssessmentPage() {
     mutationFn: () => completeAssessment(attempt!.id),
     // The post-test is the last thing before the study's usability survey;
     // the pre-test just returns to the dashboard to start practice sessions.
-    onSuccess: () => navigate(phase === 'post' ? '/sus' : '/', { replace: true }),
+    // Completing the pre-test flips pretestRequired server-side - without
+    // invalidating first, StudyGate's cached ['study', 'status'] (staleTime
+    // 60s) would still show pretestRequired: true right after this
+    // navigate and bounce straight back to /assessment/pre.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
+      navigate(phase === 'post' ? '/sus' : '/', { replace: true })
+    },
   })
 
   if (!code) {
@@ -52,6 +61,15 @@ export default function AssessmentPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface p-8 text-center">
         <p className="text-text-primary">This assessment has already been submitted. Thank you.</p>
+      </div>
+    )
+  }
+
+  if (startMutation.isError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface p-8 text-center">
+        <p className="text-text-primary">Could not start this assessment. Check your connection and try again.</p>
+        <Button onClick={() => startMutation.mutate()}>Retry</Button>
       </div>
     )
   }
@@ -68,14 +86,25 @@ export default function AssessmentPage() {
   const isLast = index === attempt.items.length - 1
 
   async function handleNext() {
+    setNextError(null)
     const timeSpentSeconds = Math.round((Date.now() - itemStartedAt.current) / 1000)
-    await responseMutation.mutateAsync({ itemId: item.id, response: answer, timeSpentSeconds })
+    try {
+      await responseMutation.mutateAsync({ itemId: item.id, response: answer, timeSpentSeconds })
+    } catch {
+      setNextError('Could not save your answer. Check your connection and try again.')
+      return
+    }
     setAnswer('')
     itemStartedAt.current = Date.now()
 
     if (isLast) {
       setIsFinishing(true)
-      await completeMutation.mutateAsync()
+      try {
+        await completeMutation.mutateAsync()
+      } catch {
+        setIsFinishing(false)
+        setNextError('Could not submit the assessment. Check your connection and try again.')
+      }
     } else {
       setIndex((i) => i + 1)
     }
@@ -131,6 +160,8 @@ export default function AssessmentPage() {
             className="mb-8 w-full rounded-md border border-border px-4 py-3 text-sm outline-none focus:border-primary"
           />
         )}
+
+        {nextError && <p className="mb-3 text-sm text-error">{nextError}</p>}
 
         <Button onClick={handleNext} disabled={!canSubmit || responseMutation.isPending || isFinishing}>
           {isLast ? 'Finish' : 'Next'}

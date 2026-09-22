@@ -5,6 +5,13 @@ export function fetchStudyStatus() {
   return apiFetch<StudyStatusDto>('/api/v1/study/status')
 }
 
+export function enrolInStudy(code: string) {
+  return apiFetch<StudyStatusDto>('/api/v1/study/enrol', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  })
+}
+
 export function recordConsent() {
   return apiFetch<{ consented: boolean }>('/api/v1/study/consent', { method: 'POST' })
 }

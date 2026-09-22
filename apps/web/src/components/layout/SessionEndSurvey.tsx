@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 interface SessionEndSurveyProps {
   onSubmit: (mentalEffort: number, confidence: number) => void
   onSkip: () => void
+  isSubmitting: boolean
+  error: string | null
 }
 
 const MENTAL_EFFORT_SCALE = [1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -57,7 +59,7 @@ function ScaleButtons({
 // this only fires from an explicit exit action, not on a timer. Skippable:
 // this is self-report data for the study, not something a student can be
 // forced to give.
-export default function SessionEndSurvey({ onSubmit, onSkip }: SessionEndSurveyProps) {
+export default function SessionEndSurvey({ onSubmit, onSkip, isSubmitting, error }: SessionEndSurveyProps) {
   const [mentalEffort, setMentalEffort] = useState<number | null>(null)
   const [confidence, setConfidence] = useState<number | null>(null)
 
@@ -101,16 +103,18 @@ export default function SessionEndSurvey({ onSubmit, onSkip }: SessionEndSurveyP
             />
           </div>
 
+          {error && <p className="text-sm text-error">{error}</p>}
+
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={onSkip} className="flex-1">
+            <Button variant="ghost" onClick={onSkip} disabled={isSubmitting} className="flex-1">
               Skip
             </Button>
             <Button
               onClick={() => canSubmit && onSubmit(mentalEffort, confidence)}
-              disabled={!canSubmit}
+              disabled={!canSubmit || isSubmitting}
               className="flex-1"
             >
-              Submit
+              {isSubmitting ? 'Saving...' : error ? 'Retry' : 'Submit'}
             </Button>
           </div>
         </div>

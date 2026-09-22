@@ -19,9 +19,13 @@ function sendCsv(res: Response, filename: string, csv: string) {
   res.send(csv)
 }
 
+function includePilotFlag(req: AuthRequest): boolean {
+  return req.query.includePilot === 'true'
+}
+
 router.get('/misconceptions.csv', async (req: AuthRequest, res: Response) => {
   try {
-    sendCsv(res, 'misconceptions.csv', await exportMisconceptionsCsv())
+    sendCsv(res, 'misconceptions.csv', await exportMisconceptionsCsv(includePilotFlag(req)))
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export misconceptions' } })
   }
@@ -29,7 +33,7 @@ router.get('/misconceptions.csv', async (req: AuthRequest, res: Response) => {
 
 router.get('/interactions.csv', async (req: AuthRequest, res: Response) => {
   try {
-    sendCsv(res, 'interactions.csv', await exportInteractionsCsv())
+    sendCsv(res, 'interactions.csv', await exportInteractionsCsv(includePilotFlag(req)))
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export interactions' } })
   }
@@ -37,7 +41,7 @@ router.get('/interactions.csv', async (req: AuthRequest, res: Response) => {
 
 router.get('/assessments.csv', async (req: AuthRequest, res: Response) => {
   try {
-    sendCsv(res, 'assessments.csv', await exportAssessmentsCsv())
+    sendCsv(res, 'assessments.csv', await exportAssessmentsCsv(includePilotFlag(req)))
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export assessments' } })
   }
@@ -45,7 +49,7 @@ router.get('/assessments.csv', async (req: AuthRequest, res: Response) => {
 
 router.get('/sessions.csv', async (req: AuthRequest, res: Response) => {
   try {
-    sendCsv(res, 'sessions.csv', await exportSessionsCsv())
+    sendCsv(res, 'sessions.csv', await exportSessionsCsv(includePilotFlag(req)))
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export sessions' } })
   }
@@ -53,7 +57,7 @@ router.get('/sessions.csv', async (req: AuthRequest, res: Response) => {
 
 router.get('/misconception_events.csv', async (req: AuthRequest, res: Response) => {
   try {
-    sendCsv(res, 'misconception_events.csv', await exportMisconceptionEventsCsv())
+    sendCsv(res, 'misconception_events.csv', await exportMisconceptionEventsCsv(includePilotFlag(req)))
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export misconception events' } })
   }

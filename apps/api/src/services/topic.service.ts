@@ -1,13 +1,17 @@
 import { prisma } from '../lib/prisma'
 import { STUDY_TOPICS } from '../config/studyTopics'
+import { isActiveParticipant } from './study.service'
 import type { TopicDto } from '../dtos/topic.dto'
 
 export async function getAllTopics(userId: string): Promise<TopicDto[]> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { condition: true } })
-  // A participant assigned to a study condition only ever sees the three
-  // instrumented topics - everyone else (non-participants, and
-  // participants not yet assigned a condition) sees the full catalogue.
-  const restrictToStudyTopics = !!user?.condition
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { participantCode: true, consentAt: true, withdrawnAt: true },
+  })
+  // An active study participant only ever sees the three instrumented
+  // topics - everyone else (non-participants, participants who haven't
+  // consented yet, and withdrawn participants) sees the full catalogue.
+  const restrictToStudyTopics = isActiveParticipant(user ?? { participantCode: null, consentAt: null, withdrawnAt: null })
 
   const [topics, interactions] = await Promise.all([
     prisma.algorithmTopic.findMany({

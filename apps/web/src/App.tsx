@@ -18,6 +18,7 @@ const AlgorithmPage = lazy(() => import('@/pages/AlgorithmPage'))
 const EducatorDashboard = lazy(() => import('@/pages/EducatorDashboard'))
 const AssessmentPage = lazy(() => import('@/pages/AssessmentPage'))
 const ConsentPage = lazy(() => import('@/pages/ConsentPage'))
+const StudyJoinPage = lazy(() => import('@/pages/StudyJoinPage'))
 const SusPage = lazy(() => import('@/pages/SusPage'))
 const Showcase = lazy(() => import('@/pages/Showcase'))
 const CanvasTest = lazy(() => import('@/pages/CanvasTest'))
@@ -137,6 +138,14 @@ export default function App() {
                   element={
                     <RequireAuth>
                       <ConsentPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/study/join"
+                  element={
+                    <RequireAuth>
+                      <StudyJoinPage />
                     </RequireAuth>
                   }
                 />

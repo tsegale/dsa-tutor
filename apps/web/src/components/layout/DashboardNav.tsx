@@ -138,6 +138,9 @@ export default function DashboardNav() {
               <p className="truncate text-sm font-medium text-text-primary">{user?.name}</p>
               <p className="truncate text-xs text-text-muted">{user?.email}</p>
             </div>
+            {studyStatus && !studyStatus.isParticipant && (
+              <DropdownMenuItem onSelect={() => navigate('/study/join')}>Join the study</DropdownMenuItem>
+            )}
             {studyStatus?.isParticipant && !studyStatus.withdrawn && (
               <DropdownMenuItem onSelect={() => setConfirmingWithdraw(true)}>
                 Withdraw from study

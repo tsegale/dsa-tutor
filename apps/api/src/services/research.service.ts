@@ -1,21 +1,32 @@
 import { prisma } from '../lib/prisma'
 import { toCsv, parseCsv } from '../utils/csv'
+import { ACTIVE_PARTICIPANT_WHERE } from './study.service'
+import { STUDY_TOPICS } from '../config/studyTopics'
 
 // Applied to every research export: a row only exists for a consenting,
-// still-enrolled participant. Withdrawal must exclude a participant from
-// every export, not just the ones written after the withdrawal feature
-// existed.
-const ACTIVE_PARTICIPANT_FILTER = { participantCode: { not: null as string | null }, withdrawnAt: null }
+// still-enrolled, non-withdrawn participant - the same definition used to
+// gate topic access (study.service.ts's isActiveParticipant), so a user who
+// can't see the study topics can't appear in a study export either.
+// PILOT- codes are dry-run data, excluded by default so a rehearsal never
+// contaminates the real dataset; includePilot=true opts back in to check
+// the pilot export itself.
+export function participantWhere(includePilot: boolean) {
+  if (includePilot) return ACTIVE_PARTICIPANT_WHERE
+  return { ...ACTIVE_PARTICIPANT_WHERE, NOT: { participantCode: { startsWith: 'PILOT-' } } }
+}
 
-/** One row per incorrect interaction from a consenting, non-withdrawn
- * participant. Never includes name or email - only participantCode, which
- * is meaningless outside the study's own records. */
-export async function exportMisconceptionsCsv(): Promise<string> {
+const STUDY_TOPIC_FILTER = { name: { in: [...STUDY_TOPICS] } }
+
+/** One row per incorrect interaction from an active study participant, on
+ * a study topic only. Never includes name or email - only participantCode,
+ * which is meaningless outside the study's own records. */
+export async function exportMisconceptionsCsv(includePilot = false): Promise<string> {
   const interactions = await prisma.interaction.findMany({
     where: {
       predictionCorrect: false,
       session: {
-        user: ACTIVE_PARTICIPANT_FILTER,
+        user: participantWhere(includePilot),
+        algorithmTopic: STUDY_TOPIC_FILTER,
       },
     },
     include: {
@@ -59,10 +70,11 @@ export async function exportMisconceptionsCsv(): Promise<string> {
 }
 
 /** One row per interaction (correct and incorrect both - "correct" is
- * itself a column) from a consenting, non-withdrawn participant. */
-export async function exportInteractionsCsv(): Promise<string> {
+ * itself a column) from an active study participant, on a study topic
+ * only. */
+export async function exportInteractionsCsv(includePilot = false): Promise<string> {
   const interactions = await prisma.interaction.findMany({
-    where: { session: { user: ACTIVE_PARTICIPANT_FILTER } },
+    where: { session: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER } },
     include: {
       session: {
         include: {
@@ -111,11 +123,13 @@ export async function exportInteractionsCsv(): Promise<string> {
   return toCsv(header, rows)
 }
 
-/** One row per assessment response (pre and post test items both) from a
- * consenting, non-withdrawn participant. */
-export async function exportAssessmentsCsv(): Promise<string> {
+/** One row per assessment response (pre and post test items both) from an
+ * active study participant. Assessments aren't scoped to an AlgorithmTopic,
+ * so there is no STUDY_TOPICS filter to apply here - only the participant
+ * and pilot filters. */
+export async function exportAssessmentsCsv(includePilot = false): Promise<string> {
   const responses = await prisma.assessmentResponse.findMany({
-    where: { attempt: { user: ACTIVE_PARTICIPANT_FILTER } },
+    where: { attempt: { user: participantWhere(includePilot) } },
     include: {
       attempt: {
         include: {
@@ -140,11 +154,11 @@ export async function exportAssessmentsCsv(): Promise<string> {
   return toCsv(header, rows)
 }
 
-/** One row per session from a consenting, non-withdrawn participant.
- * duration is in seconds, blank if the session was never ended. */
-export async function exportSessionsCsv(): Promise<string> {
+/** One row per session from an active study participant, on a study topic
+ * only. duration is in seconds, blank if the session was never ended. */
+export async function exportSessionsCsv(includePilot = false): Promise<string> {
   const sessions = await prisma.session.findMany({
-    where: { user: ACTIVE_PARTICIPANT_FILTER },
+    where: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER },
     include: {
       user: { select: { participantCode: true, susScore: true } },
       algorithmTopic: { select: { displayName: true } },
@@ -177,11 +191,11 @@ export async function exportSessionsCsv(): Promise<string> {
 }
 
 /** One row per misconception event (the detect-remediate-reprobe loop's
- * own record, not the raw interactions) from a consenting, non-withdrawn
- * participant. */
-export async function exportMisconceptionEventsCsv(): Promise<string> {
+ * own record, not the raw interactions) from an active study participant,
+ * on a study topic only. */
+export async function exportMisconceptionEventsCsv(includePilot = false): Promise<string> {
   const events = await prisma.misconceptionEvent.findMany({
-    where: { user: ACTIVE_PARTICIPANT_FILTER },
+    where: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER },
     include: {
       user: { select: { participantCode: true } },
       algorithmTopic: { select: { displayName: true } },
