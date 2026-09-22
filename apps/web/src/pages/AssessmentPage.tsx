@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { startAssessment, submitAssessmentResponse, completeAssessment } from '@/api/assessments'
+import { resumeState } from '@/lib/assessmentResume'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
 
@@ -33,6 +34,22 @@ export default function AssessmentPage() {
   const itemStartedAt = useRef<number>(Date.now())
   const [isFinishing, setIsFinishing] = useState(false)
   const [nextError, setNextError] = useState<string | null>(null)
+  const hasResumedRef = useRef(false)
+
+  // On first load of an attempt that already has responses (a reload
+  // mid-assessment), resume at the first unanswered item instead of
+  // restarting from question 1, and restore that item's answer if it was
+  // already answered (e.g. every item is answered but completion never
+  // went through).
+  useEffect(() => {
+    if (!attempt || hasResumedRef.current) return
+    hasResumedRef.current = true
+
+    const { index: resumeIndex, answer: resumeAnswer } = resumeState(attempt.items, attempt.responses)
+    setIndex(resumeIndex)
+    setAnswer(resumeAnswer)
+    itemStartedAt.current = Date.now()
+  }, [attempt])
 
   const responseMutation = useMutation({
     mutationFn: (body: { itemId: string; response: string; timeSpentSeconds: number }) =>

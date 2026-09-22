@@ -19,6 +19,7 @@ function toAttemptDto(attempt: {
   id: string
   startedAt: Date
   completedAt: Date | null
+  responses?: Array<{ itemId: string; response: string }>
   assessment: {
     id: string
     code: string
@@ -41,6 +42,7 @@ function toAttemptDto(attempt: {
     title: attempt.assessment.title,
     startedAt: attempt.startedAt.toISOString(),
     completedAt: attempt.completedAt?.toISOString() ?? null,
+    responses: (attempt.responses ?? []).map((r) => ({ itemId: r.itemId, response: r.response })),
     items: attempt.assessment.items
       .slice()
       .sort((a, b) => a.order - b.order)
@@ -84,6 +86,7 @@ export async function startAttempt(userId: string, code: string): Promise<Assess
 
   const existing = await prisma.assessmentAttempt.findUnique({
     where: { userId_assessmentId: { userId, assessmentId: assessment.id } },
+    include: { responses: true },
   })
   if (existing) {
     return toAttemptDto({ ...existing, assessment })

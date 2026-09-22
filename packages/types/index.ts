@@ -666,6 +666,11 @@ export interface AssessmentItemDto {
   options: Array<{ id: string; text: string }> | null
 }
 
+export interface AssessmentResponseSummaryDto {
+  itemId: string
+  response: string
+}
+
 export interface AssessmentAttemptDto {
   id: string
   assessmentId: string
@@ -673,6 +678,9 @@ export interface AssessmentAttemptDto {
   phase: AssessmentPhase
   title: string
   items: AssessmentItemDto[]
+  // Answers already recorded for this attempt, so a reload can resume where
+  // the participant left off instead of restarting from question 1.
+  responses: AssessmentResponseSummaryDto[]
   startedAt: string
   completedAt: string | null
 }
