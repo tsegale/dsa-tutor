@@ -201,7 +201,7 @@ const BINARY_SEARCH_ITEMS: ItemDefinition[] = [
   {
     order: 6,
     itemType: 'MULTIPLE_CHOICE',
-    stem: 'Binary search is run on the single-element array [42], searching for 42. How many comparisons occur?',
+    stem: 'Binary search is run on the single-element array [42], searching for 42. Counting one comparison per iteration (as in the earlier question about a 15-element array), how many comparisons occur?',
     options: [
       { id: 'a', text: '0' },
       { id: 'b', text: '1' },
@@ -325,7 +325,7 @@ const BST_ITEMS: ItemDefinition[] = [
   {
     order: 7,
     itemType: 'MULTIPLE_CHOICE',
-    stem: 'A BST with a single node (the root, no children) has height:',
+    stem: 'Using the convention that height counts edges on the longest root-to-leaf path (so an empty tree has height -1), a BST with a single node (the root, no children) has height:',
     options: [
       { id: 'a', text: '-1' },
       { id: 'b', text: '0' },

@@ -744,7 +744,14 @@ export default function PredictionZone({
               // A real flex item (not an absolute overlay) so the canvas
               // area above shrinks to make room instead of this panel
               // covering whatever canvas content sits under it.
-              'relative z-20 flex w-full shrink-0 items-start gap-3 rounded-t-lg border-t-2 bg-white px-[14px] py-[10px] shadow-lg dark:bg-dark-surface',
+              // overflow-y-auto: the panel's height is capped (h-[35%]/
+              // h-[70%] below), and on a short viewport a junction with
+              // several tiles (or Code Editor Mode's textarea) can need
+              // more room than that cap allows - without a scroll
+              // escape hatch, whatever doesn't fit was simply clipped
+              // and unreachable rather than visible below a scrollbar
+              // (remediation doc 12C.3).
+              'relative z-20 flex w-full shrink-0 items-start gap-3 overflow-y-auto rounded-t-lg border-t-2 bg-white px-[14px] py-[10px] shadow-lg dark:bg-dark-surface',
               // Code Editor Mode needs real room for a multi-line textarea,
               // language tabs and its own submit button - the 35% budget
               // that fits a single tile prompt comfortably clips it.

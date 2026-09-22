@@ -531,6 +531,9 @@ function BSTControls({ slug }: { slug: string }) {
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
       <h3 className={labelClass}>BST Insert</h3>
+      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
+        Rebuilds the tree from scratch with this value inserted last - unrelated to the practice question above.
+      </p>
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
       <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target]))}>
         Insert
@@ -615,6 +618,9 @@ function HeapControls({ slug }: { slug: string }) {
         </Button>
       ) : (
         <>
+          <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
+            Rebuilds the heap from scratch with this value inserted last - unrelated to the practice question above.
+          </p>
           <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
           <Button variant="outline" size="sm" onClick={() => apply(slug, insertEngine([...HEAP_SEED, target]))}>
             Insert

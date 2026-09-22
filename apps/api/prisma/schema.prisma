@@ -37,6 +37,15 @@ enum Mode {
   CHALLENGE
 }
 
+// Leftover from an earlier control-vs-treatment experimental design. The
+// study was redesigned to a single-arm pre/post pilot (every participant
+// gets the same tutor) tracked instead via User.participantCode/consentAt/
+// withdrawnAt (see study.service.ts) - nothing ever writes User.condition
+// any more, so it is always null and carries no data. Kept rather than
+// dropped because removing an enum and its column is a migration against
+// a live database for zero benefit; it is excluded from every research
+// export (research.service.ts) precisely because it would only ever
+// contribute an all-null column (remediation doc 12C.3).
 enum Condition {
   CONTROL
   TREATMENT
@@ -63,6 +72,8 @@ model User {
   // Study protocol fields - null for a normal account, populated only for
   // an account enrolled as a research participant.
   participantCode String?    @unique
+  // Always null - see the Condition enum's own comment. Participant
+  // status is participantCode/consentAt/withdrawnAt below, not this.
   condition       Condition?
   consentAt       DateTime?
   withdrawnAt     DateTime?
