@@ -21,6 +21,17 @@ request_timeout_seconds = float(os.getenv("CLAUDE_TIMEOUT_SECONDS", "20"))
 # meant to be shown to a student verbatim.
 SELF_CORRECTION_MARKERS = ("wait,", "actually,", "hmm", "let me")
 
+# The project's global style rule bans em/en dashes in every piece of
+# copy, AI-generated included (remediation doc 12B.1) - the system
+# prompts also ask for this, but a prompt instruction is a request, not a
+# guarantee, so every text field the model returns is sanitised here
+# regardless of whether it complied.
+_DASH_PATTERN = re.compile(r"\s*[–—]\s*")
+
+
+def sanitize_dashes(text: str) -> str:
+    return _DASH_PATTERN.sub(" - ", text)
+
 
 @dataclass
 class CallMetadata:
@@ -89,10 +100,14 @@ async def _create_message(prompt: str, system: str | None) -> tuple[str, CallMet
     return response.content[0].text, metadata
 
 
+def _sanitize_feedback_dashes(feedback: dict) -> dict:
+    return {key: sanitize_dashes(value) if isinstance(value, str) else value for key, value in feedback.items()}
+
+
 async def call_claude_for_feedback(prompt: str, system: str | None = None) -> tuple[dict, CallMetadata]:
     text, metadata = await _create_message(prompt, system)
     try:
-        return json.loads(_strip_code_fences(text)), metadata
+        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text))), metadata
     except json.JSONDecodeError:
         # Retry once, telling the model exactly what it did wrong. If this
         # also fails to parse, give up and let the caller fall back - a
@@ -103,9 +118,9 @@ async def call_claude_for_feedback(prompt: str, system: str | None = None) -> tu
             "fences, no commentary before or after it."
         )
         text, metadata = await _create_message(retry_prompt, system)
-        return json.loads(_strip_code_fences(text)), metadata
+        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text))), metadata
 
 
 async def call_claude_for_text(prompt: str, system: str | None = None) -> tuple[str, CallMetadata]:
     text, metadata = await _create_message(prompt, system)
-    return text.strip(), metadata
+    return sanitize_dashes(text.strip()), metadata

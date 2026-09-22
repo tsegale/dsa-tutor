@@ -27,6 +27,16 @@ class PredictionResponse(CamelModel):
     ai_generated: bool = True
 
 
+class PredictionEvaluateResponse(CamelModel):
+    """The deterministic half of PredictionResponse only - correctness and
+    ground-truth misconception, both rule-based and available without
+    calling Claude at all. Lets the client show a verdict within a second
+    instead of waiting on the full AI explanation (remediation doc 12B.3)."""
+
+    correct: bool
+    misconception_category: MisconceptionCategory | None = None
+
+
 class HintResponse(CamelModel):
     hint: str
     scaffolding_level: ScaffoldingLevel

@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from models.request_models import MisconceptionCategory, PredictionRequest, ScaffoldingLevel
-from models.response_models import PredictionResponse
+from models.response_models import PredictionEvaluateResponse, PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
 from services.claude_service import call_claude_for_feedback, is_field_valid
@@ -1095,25 +1095,91 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
 
 
 def _max_hint_words_for_level(scaffolding_level: ScaffoldingLevel) -> int:
-    # HIGH's closed question (naming the invariant) and MEDIUM's open
-    # consequence question both need more room than a bare nudge - a flat
-    # 20-word cap for every level meant those two levels' hints almost
-    # always exceeded it and silently fell back, undoing the fading
-    # FEEDBACK_SYSTEM_PROMPT's calibration guide asks for.
+    # HIGH's closed question (naming the invariant, in the abstract, then
+    # asking the student to apply it) and MEDIUM's open consequence
+    # question both need more room than a bare nudge - a flat 20-word cap
+    # for every level meant those two levels' hints almost always
+    # exceeded it and silently fell back, undoing the fading
+    # FEEDBACK_SYSTEM_PROMPT's calibration guide asks for. HIGH's cap was
+    # raised from 30 to 40 when the prompt stopped allowing it to plug in
+    # this step's values (remediation doc 12B.1) - naming the rule in the
+    # abstract and then asking the student to apply it takes measurably
+    # more words than a terse, value-substituted yes/no ever did.
     if scaffolding_level in (ScaffoldingLevel.HIGH, ScaffoldingLevel.MEDIUM):
-        return 30
+        return 40
     return 20
 
 
-def _feedback_is_valid(feedback: dict[str, Any], correct: bool, scaffolding_level: ScaffoldingLevel) -> bool:
+def _collect_numeric_leaves(node: Any) -> set[int]:
+    values: set[int] = set()
+    if isinstance(node, dict):
+        for value in node.values():
+            values |= _collect_numeric_leaves(value)
+    elif isinstance(node, list):
+        for item in node:
+            values |= _collect_numeric_leaves(item)
+    elif isinstance(node, (int, float)) and not isinstance(node, bool):
+        values.add(int(node))
+    return values
+
+
+def _collect_comparison_values(current_state: Any) -> set[int]:
+    """Only the specific numeric literals actually being compared at this
+    junction - not every value anywhere in the state. dataStructureState
+    is often a full array (e.g. Bubble Sort's [5, 3, 1, 4, 2]) of which
+    only the two elements named by activeIndices are relevant here; a
+    hint mentioning some OTHER, unrelated array value (or any small
+    number for an unrelated reason) must not be flagged just because that
+    number happens to appear elsewhere in the array. dict-shaped states
+    (BST's currentNode/targetValue/insertionParentValue, etc.) are small
+    enough that every numeric leaf genuinely is a value in play. Used to
+    catch a HIGH-scaffolding socratic_hint that plugs in this step's real
+    values instead of stating the rule in the abstract (remediation doc
+    12B.1)."""
+    if not isinstance(current_state, dict):
+        return set()
+    ds = current_state.get("dataStructureState")
+    if isinstance(ds, list):
+        active_indices = current_state.get("activeIndices")
+        if not isinstance(active_indices, list):
+            return set()
+        values: set[int] = set()
+        for index in active_indices:
+            if isinstance(index, int) and 0 <= index < len(ds):
+                element = ds[index]
+                if isinstance(element, (int, float)) and not isinstance(element, bool):
+                    values.add(int(element))
+        return values
+    return _collect_numeric_leaves(ds)
+
+
+def _hint_leaks_comparison_value(hint: str, current_state: Any) -> bool:
+    tokens = {int(match) for match in re.findall(r"\d+", hint)}
+    return bool(tokens & _collect_comparison_values(current_state))
+
+
+def _feedback_is_valid(
+    feedback: dict[str, Any], correct: bool, scaffolding_level: ScaffoldingLevel, current_state: Any = None
+) -> bool:
     """Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
     consequence_explanation and counterfactual_trace are capped at two
     sentences, socratic_hint at a level-dependent word count, and
     counterfactual_trace is only allowed to be empty when the answer was
-    correct."""
+    correct. HIGH's socratic_hint additionally must not plug in this
+    step's actual comparison values - the whole point of asking the
+    student to apply the rule themselves rather than confirming a
+    conclusion for them."""
     if not is_field_valid(feedback.get("consequence_explanation"), max_sentences=2):
         return False
-    if not is_field_valid(feedback.get("socratic_hint"), max_words=_max_hint_words_for_level(scaffolding_level)):
+    socratic_hint = feedback.get("socratic_hint")
+    if not is_field_valid(socratic_hint, max_words=_max_hint_words_for_level(scaffolding_level)):
+        return False
+    if (
+        scaffolding_level == ScaffoldingLevel.HIGH
+        and not correct
+        and isinstance(socratic_hint, str)
+        and _hint_leaks_comparison_value(socratic_hint, current_state)
+    ):
         return False
     if not is_field_valid(feedback.get("counterfactual_trace"), max_sentences=2, allow_empty=correct):
         return False
@@ -1121,7 +1187,7 @@ def _feedback_is_valid(feedback: dict[str, Any], correct: bool, scaffolding_leve
 
 
 async def _get_validated_feedback(
-    prompt: str, correct: bool, scaffolding_level: ScaffoldingLevel
+    prompt: str, correct: bool, scaffolding_level: ScaffoldingLevel, current_state: Any = None
 ) -> dict[str, Any] | None:
     feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
     logger.info(
@@ -1130,7 +1196,7 @@ async def _get_validated_feedback(
         metadata.input_tokens,
         metadata.output_tokens,
     )
-    if _feedback_is_valid(feedback, correct, scaffolding_level):
+    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state):
         return feedback
 
     logger.warning("AI prediction feedback failed validation, retrying once")
@@ -1141,7 +1207,7 @@ async def _get_validated_feedback(
         metadata.input_tokens,
         metadata.output_tokens,
     )
-    if _feedback_is_valid(feedback, correct, scaffolding_level):
+    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state):
         return feedback
 
     logger.warning("AI prediction feedback failed validation again, falling back")
@@ -1217,7 +1283,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
         if cached_feedback is not None:
             feedback = cached_feedback
         else:
-            feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level)
+            feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level, wrapper)
             if feedback is None:
                 return get_fallback_prediction_response(
                     correct, request.scaffolding_level, request.algorithm_name, junction_type,
@@ -1247,3 +1313,17 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
             correct, request.scaffolding_level, request.algorithm_name, junction_type,
             ground_truth_misconception,
         )
+
+
+@router.post("/evaluate", response_model=PredictionEvaluateResponse)
+async def evaluate_prediction(request: PredictionRequest) -> PredictionEvaluateResponse:
+    """Correctness and ground-truth misconception only - both rule-based,
+    no Claude call, so the client can show a verdict within a second
+    instead of waiting on the full explanation (remediation doc 12B.3).
+    submit_prediction (above) remains the source of the rich explanation/
+    hint/counterfactual text, fetched separately in the background."""
+    correct = evaluate_answer(request)
+    return PredictionEvaluateResponse(
+        correct=correct,
+        misconception_category=resolve_ground_truth_misconception(correct, request),
+    )

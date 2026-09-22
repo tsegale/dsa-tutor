@@ -6,11 +6,20 @@ phrasing), and only Bubble Sort had a real rubric so every other topic's
 score wasn't comparable. Also covers the anti-gaming overlap check."""
 
 from routers.feynman import (
+    DEFAULT_RUBRIC,
     FEYNMAN_RUBRIC,
     _looks_copied_from_reference,
     _normalize,
     score_feynman_response,
 )
+
+# Mirrors apps/api/src/config/studyTopics.ts's STUDY_TOPICS - the three
+# fully instrumented algorithms used for the honours study. A generic
+# three-item rubric would produce Feynman scores that aren't comparable
+# across topics (see FEYNMAN_RUBRIC's own module comment), so every study
+# topic must resolve to its own real rubric, not the DEFAULT_RUBRIC
+# fallback - this is the regression guard for remediation doc 12B.4.
+_STUDY_TOPIC_SLUGS = ["bubble-sort", "binary-search", "bst"]
 
 RUBRIC = [
     ("mentions comparison of adjacent elements", "Comparing adjacent elements"),
@@ -89,6 +98,13 @@ def test_bfs_dfs_bst_rubrics_are_registered_under_both_slug_and_display_forms():
     assert FEYNMAN_RUBRIC["bfs"] == FEYNMAN_RUBRIC["breadth_first_search"]
     assert FEYNMAN_RUBRIC["dfs"] == FEYNMAN_RUBRIC["depth_first_search"]
     assert FEYNMAN_RUBRIC["bst"] == FEYNMAN_RUBRIC["binary_search_tree"]
+
+
+def test_every_study_topic_has_a_real_feynman_rubric_not_the_generic_fallback():
+    for slug in _STUDY_TOPIC_SLUGS:
+        rubric = FEYNMAN_RUBRIC.get(_normalize(slug))
+        assert rubric is not None, f"'{slug}' has no Feynman rubric registered at all"
+        assert rubric != DEFAULT_RUBRIC, f"'{slug}' falls back to the generic rubric"
 
 
 def test_looks_copied_flags_a_near_verbatim_restatement_of_the_reference():

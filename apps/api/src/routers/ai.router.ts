@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import {
   proxyPrediction,
+  proxyPredictionEvaluate,
   proxyHint,
   proxyFeynman,
   proxyChallenge,
@@ -19,6 +20,16 @@ router.post('/predictions', async (req: AuthRequest, res: Response) => {
     res.json({ data: result, error: null })
   } catch (err) {
     console.error('proxyPrediction failed:', err)
+    res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
+  }
+})
+
+router.post('/predictions/evaluate', async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await proxyPredictionEvaluate(req.body)
+    res.json({ data: result, error: null })
+  } catch (err) {
+    console.error('proxyPredictionEvaluate failed:', err)
     res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
   }
 })

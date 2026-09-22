@@ -390,6 +390,16 @@ export interface PredictionResponse {
   aiGenerated: boolean
 }
 
+/**
+ * The fast, deterministic half of PredictionResponse - correctness and
+ * ground-truth misconception only, no AI call, so the client can show a
+ * verdict within a second instead of waiting on the full explanation.
+ */
+export interface PredictionEvaluateResponse {
+  correct: boolean
+  misconceptionCategory: MisconceptionCategory | null
+}
+
 export interface HintRequest {
   algorithmName: string
   stepIndex: number

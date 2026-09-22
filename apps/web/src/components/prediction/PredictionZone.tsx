@@ -8,7 +8,7 @@ import type {
   PredictionRequest,
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
-import { submitPrediction, requestHint } from '@/api/predictions'
+import { submitPrediction, evaluatePrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
@@ -204,6 +204,13 @@ export default function PredictionZone({
 
   const attemptCountRef = useRef(0)
   const proactiveHintFiredRef = useRef(false)
+  // Bumped whenever the current attempt's feedback is dismissed or
+  // superseded (a new submission, a step change, "Try again") - the slow
+  // submitPrediction call's UI side effects (mistake text, ladder hint,
+  // delayed auto-advance) check this before applying, so a response that
+  // finally arrives after the learner has already moved on is silently
+  // dropped instead of painting over a UI they've since navigated past.
+  const submissionTokenRef = useRef(0)
 
   const isVisible =
     (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) &&
@@ -220,6 +227,7 @@ export default function PredictionZone({
   // step and held fixed - regenerating on every render would reshuffle
   // out from under the learner mid-decision.
   useEffect(() => {
+    submissionTokenRef.current += 1
     if (snapshot?.isPredictionRequired) {
       setCurrentTiles(getTilesForSnapshot(snapshot, algorithmName))
     }
@@ -385,6 +393,7 @@ export default function PredictionZone({
   }
 
   function handleTryAgain() {
+    submissionTokenRef.current += 1
     setSubmissionState('idle')
     setCurrentAnswer(null)
     setMistakeAnalysis(null)
@@ -408,11 +417,116 @@ export default function PredictionZone({
     stepForward()
   }
 
+  // The rich explanation/hint/counterfactual text still needs Claude and
+  // can take up to ~15s - fetched here in the background, after the
+  // verdict itself has already been shown from the fast /evaluate call
+  // (remediation doc 12B.3). Guarded by submissionToken: dropped silently
+  // if the learner has since retried, dismissed the feedback, or moved to
+  // a different step, so a slow response never paints over a UI they've
+  // navigated past. onPredictionResult (interaction logging and the
+  // misconception pipeline) fires regardless of staleness - that pipeline
+  // has its own resolution-aware gating (see AlgorithmPage's
+  // junctionRetryInProgress) and must never silently lose a data point.
+  async function resolveRichFeedback(
+    request: PredictionRequest,
+    answer: string,
+    submissionToken: number,
+    attempt: number,
+    isBottomedOut: boolean,
+    timeSpentSeconds: number,
+    junctionType: CriticalJunctionType,
+    junctionDifficulty: JunctionDifficulty,
+  ) {
+    const response = await submitPrediction(request)
+
+    onPredictionResult?.({
+      correct: response.correct,
+      stepIndex: request.stepIndex,
+      predictionSubmitted: answer,
+      misconceptionCategory: response.correct ? null : response.misconceptionCategory,
+      hintsRequestedForStep: hintsRequestedCount,
+      timeSpentSeconds,
+      junctionType,
+      junctionDifficulty,
+      bottomedOut: isBottomedOut,
+      aiGenerated: response.aiGenerated,
+      feedbackText: response.consequenceExplanation || null,
+      hintText: response.correct ? null : response.socraticHint || null,
+      counterfactualText: response.correct ? null : response.counterfactualTrace || null,
+      aiMisconceptionCategory: response.correct ? null : response.aiMisconceptionCategory,
+      hintIndexAtResolve: attempt,
+    })
+
+    if (response.correct || submissionTokenRef.current !== submissionToken) return
+
+    // NONE's mistake text is a static sentence set instantly in
+    // handleSubmit - it never needed Claude, so there's nothing to
+    // backfill here.
+    if (scaffoldingLevel === ScaffoldingLevel.LOW) {
+      // Brief, one-sentence analysis only; the counterfactual trace is
+      // extra elaboration that contradicts "reason through it independently".
+      setMistakeAnalysis(firstSentence(response.consequenceExplanation))
+      setMistakeHint(null)
+      setMistakeCounterfactual(null)
+    } else if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
+      setMistakeAnalysis(response.consequenceExplanation)
+      setMistakeHint(response.socraticHint)
+      setMistakeCounterfactual(response.counterfactualTrace || null)
+    } else if (scaffoldingLevel !== ScaffoldingLevel.NONE) {
+      setMistakeAnalysis(response.consequenceExplanation)
+      setMistakeHint(null)
+      setMistakeCounterfactual(response.counterfactualTrace || null)
+    }
+
+    if (isBottomedOut) {
+      // Graduated ladder bottomed out: the answer is now shown (via
+      // revealAnswer, set in handleSubmit) with the AI's own explanation
+      // as the justification - wait long enough to read it, then advance
+      // regardless of scaffolding level. Retrying further would have
+      // nothing left to discover.
+      window.dispatchEvent(new CustomEvent(SHOW_EXPLANATION_LINK_EVENT))
+      await wait(BOTTOM_OUT_ADVANCE_DELAY_MS)
+      if (submissionTokenRef.current !== submissionToken) return
+      setSubmissionState('idle')
+      setCurrentAnswer(null)
+      setMistakeAnalysis(null)
+      setMistakeHint(null)
+      setMistakeCounterfactual(null)
+      window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
+      stepForward()
+      return
+    }
+
+    // Still below the cap: escalate to the next rung of the hint ladder
+    // automatically (0 = Socratic question, 1 = more direct) rather than
+    // waiting for the learner to notice they can press H. Skipped at HIGH
+    // scaffolding - mistakeHint above already carries a hint from the same
+    // feedback response, and firing this too showed a second, separate
+    // hint (the floating bubble) at the same time (remediation doc 12B.2).
+    if (scaffoldingLevel !== ScaffoldingLevel.HIGH) {
+      void requestLadderHint(attempt - 1)
+    }
+
+    if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
+      // Wait for the learner to click "Try again" rather than resetting
+      // automatically, so they see what went wrong before retrying.
+      return
+    }
+
+    await wait(AUTO_RESET_DELAY_MS)
+    if (submissionTokenRef.current !== submissionToken) return
+    setSubmissionState('idle')
+    setCurrentAnswer(null)
+    window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
+  }
+
   async function handleSubmit(explicitAnswer?: string) {
     const answer = explicitAnswer ?? currentAnswer
     if (answer === null || isSubmitting || !snapshot) return
     onSubmit(answer)
     setIsSubmitting(true)
+    submissionTokenRef.current += 1
+    const submissionToken = submissionTokenRef.current
 
     // The engine only ever marks isPredictionRequired true alongside a
     // junction type, so these fallbacks are defensive, not expected.
@@ -442,7 +556,10 @@ export default function PredictionZone({
       groundTruthMisconception: selectedTile?.misconception ?? null,
     }
 
-    const response = await submitPrediction(request)
+    // Correctness and the ground-truth misconception are both rule-based -
+    // no Claude call - so this resolves in milliseconds and the verdict
+    // below never waits on the full explanation (remediation doc 12B.3).
+    const evaluation = await evaluatePrediction(request)
     setIsSubmitting(false)
 
     const timeSpentSeconds = Math.round((Date.now() - stepStartTime) / 1000)
@@ -453,45 +570,42 @@ export default function PredictionZone({
     const maxAttempts = scaffoldingLevel === ScaffoldingLevel.NONE ? 2 : 3
     let attempt = attemptCountRef.current
     let isBottomedOut = false
-    if (!response.correct) {
+    if (!evaluation.correct) {
       attemptCountRef.current += 1
       attempt = attemptCountRef.current
       isBottomedOut = attempt >= maxAttempts
     }
 
-    onPredictionResult?.({
-      correct: response.correct,
-      stepIndex: snapshot.stepIndex,
-      predictionSubmitted: answer,
-      misconceptionCategory: response.correct ? null : response.misconceptionCategory,
-      hintsRequestedForStep: hintsRequestedCount,
+    // xpAwarded is likewise deterministic (10 for correct, 0 otherwise -
+    // see FEEDBACK_SYSTEM_PROMPT/get_fallback_prediction_response, both of
+    // which hard-code this rule), so awarding it never needs to wait on
+    // the AI call either.
+    const xpAwarded = evaluation.correct ? 10 : 0
+
+    void resolveRichFeedback(
+      request,
+      answer,
+      submissionToken,
+      attempt,
+      isBottomedOut,
       timeSpentSeconds,
       junctionType,
       junctionDifficulty,
-      bottomedOut: isBottomedOut,
-      aiGenerated: response.aiGenerated,
-      feedbackText: response.consequenceExplanation || null,
-      hintText: response.correct ? null : response.socraticHint || null,
-      counterfactualText: response.correct ? null : response.counterfactualTrace || null,
-      aiMisconceptionCategory: response.correct ? null : response.aiMisconceptionCategory,
-      hintIndexAtResolve: attempt,
-    })
+    )
 
-    if (response.correct) {
+    if (evaluation.correct) {
       play('correct')
       setSubmissionState('correct')
       setPredictionResolved(true)
-      addXP(response.xpAwarded)
-      if (response.xpAwarded > 0) {
-        apiFetch('/api/v1/auth/xp', {
-          method: 'POST',
-          body: JSON.stringify({ amount: response.xpAwarded }),
-        }).catch(() => {
-          // XP persistence is best-effort; the local session XP already
-          // reflects the award regardless of whether this call lands.
-        })
-      }
-      setXpAmount(response.xpAwarded)
+      addXP(xpAwarded)
+      apiFetch('/api/v1/auth/xp', {
+        method: 'POST',
+        body: JSON.stringify({ amount: xpAwarded }),
+      }).catch(() => {
+        // XP persistence is best-effort; the local session XP already
+        // reflects the award regardless of whether this call lands.
+      })
+      setXpAmount(xpAwarded)
       setXpVisible(true)
       play('xp')
       await wait(500)
@@ -509,59 +623,13 @@ export default function PredictionZone({
     }
 
     if (scaffoldingLevel === ScaffoldingLevel.NONE) {
-      // No elaboration from Claude at all, per the NONE scaffolding contract.
+      // No elaboration from Claude at all, per the NONE scaffolding
+      // contract - this never needed the rich response, so it's set here
+      // instantly rather than in resolveRichFeedback.
       setMistakeAnalysis('Incorrect. Consider the algorithm state and try again.')
       setMistakeHint(null)
       setMistakeCounterfactual(null)
-    } else if (scaffoldingLevel === ScaffoldingLevel.LOW) {
-      // Brief, one-sentence analysis only; the counterfactual trace is
-      // extra elaboration that contradicts "reason through it independently".
-      setMistakeAnalysis(firstSentence(response.consequenceExplanation))
-      setMistakeHint(null)
-      setMistakeCounterfactual(null)
-    } else if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
-      setMistakeAnalysis(response.consequenceExplanation)
-      setMistakeHint(response.socraticHint)
-      setMistakeCounterfactual(response.counterfactualTrace || null)
-    } else {
-      setMistakeAnalysis(response.consequenceExplanation)
-      setMistakeHint(null)
-      setMistakeCounterfactual(response.counterfactualTrace || null)
     }
-
-    if (isBottomedOut) {
-      // Graduated ladder bottomed out: the answer is now shown (via
-      // revealAnswer, above) with the AI's own explanation as the
-      // justification - wait long enough to read it, then advance
-      // regardless of scaffolding level. Retrying further would have
-      // nothing left to discover.
-      window.dispatchEvent(new CustomEvent(SHOW_EXPLANATION_LINK_EVENT))
-      await wait(BOTTOM_OUT_ADVANCE_DELAY_MS)
-      setSubmissionState('idle')
-      setCurrentAnswer(null)
-      setMistakeAnalysis(null)
-      setMistakeHint(null)
-      setMistakeCounterfactual(null)
-      window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
-      stepForward()
-      return
-    }
-
-    // Still below the cap: escalate to the next rung of the hint ladder
-    // automatically (0 = Socratic question, 1 = more direct) rather than
-    // waiting for the learner to notice they can press H.
-    void requestLadderHint(attempt - 1)
-
-    if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
-      // Wait for the learner to click "Try again" rather than resetting
-      // automatically, so they see what went wrong before retrying.
-      return
-    }
-
-    await wait(AUTO_RESET_DELAY_MS)
-    setSubmissionState('idle')
-    setCurrentAnswer(null)
-    window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
   // Code Editor Mode's entire submission flow: CodeEditorInput owns the

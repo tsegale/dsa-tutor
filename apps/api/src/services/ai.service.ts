@@ -1,6 +1,7 @@
 import type {
   PredictionRequest,
   PredictionResponse,
+  PredictionEvaluateResponse,
   HintRequest,
   HintResponse,
   FeynmanRequest,
@@ -51,6 +52,32 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     counterfactualTrace: data.counterfactualTrace ?? '',
     aiGenerated: data.aiGenerated ?? true,
   }
+}
+
+// The deterministic verdict-only counterpart to proxyPrediction above -
+// no Claude call on the AI service side, so this resolves in milliseconds
+// and lets the client show correct/incorrect before the full explanation
+// arrives (remediation doc 12B.3).
+export async function proxyPredictionEvaluate(request: PredictionRequest): Promise<PredictionEvaluateResponse> {
+  const response = await fetch(`${AI_URL}/api/v1/predictions/evaluate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      step_index: request.stepIndex,
+      current_state: request.currentState,
+      student_answer: request.studentAnswer,
+      error_history: request.errorHistory,
+      scaffolding_level: request.scaffoldingLevel,
+      session_id: request.sessionId,
+      junction_type: request.junctionType ?? null,
+      junction_difficulty: request.junctionDifficulty ?? null,
+      ground_truth_misconception: request.groundTruthMisconception ?? null,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI service error: ${response.status}`)
+  const data = (await response.json()) as any
+  return { correct: data.correct, misconceptionCategory: data.misconceptionCategory ?? null }
 }
 
 // Unlike PredictionResponse/HintResponse, the AI service's FeynmanResponse
