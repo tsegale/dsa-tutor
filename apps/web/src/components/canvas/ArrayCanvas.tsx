@@ -54,14 +54,18 @@ function extractWindow(state: unknown): { start: number | null; end: number | nu
 
 const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 
-// 44, not a smaller value: the progress meter overlay sits in an absolute
-// div at top-2 over this same canvas area, occupying roughly its own
-// height down to y~24. The tallest bar's value label renders at
-// bar.y - 10 (see the label's own y calculation below), so PADDING needs
-// enough headroom above that label position to clear the overlay -
-// 32 put the max-value bar's label directly under it (remediation doc
-// 12C.3).
-const PADDING = 44
+// 60, not a smaller value: two different absolute-positioned badges sit
+// over this same canvas area at the top-left - the progress meter
+// (top-2, bottom edge ~24px) and, when a misconception is open for this
+// topic, OpenMisconceptionIndicator (top-4, an opaque bg-white pill,
+// bottom edge ~48px - see its own "never covers the canvas" comment,
+// which this PADDING value is what actually keeps that promise). The
+// tallest bar's value label renders at bar.y - 10 (see the label's own y
+// calculation below), and bar.y equals PADDING for the max-value bar, so
+// PADDING needs enough headroom above that label position to clear
+// whichever badge is taller - 32 put the max-value bar's label directly
+// under both (remediation doc 12C.3).
+const PADDING = 60
 
 type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted'
 
