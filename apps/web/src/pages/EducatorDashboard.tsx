@@ -12,6 +12,7 @@ import StepHeatmap from '../components/analytics/StepHeatmap'
 import StudentProgressTable from '../components/analytics/StudentProgressTable'
 import ClassSummaryCard from '../components/analytics/ClassSummaryCard'
 import StudentSummaryDrawer from '../components/analytics/StudentSummaryDrawer'
+import ResearchExports from '../components/analytics/ResearchExports'
 
 export default function EducatorDashboard() {
   const { user } = useAuth()
@@ -97,6 +98,9 @@ export default function EducatorDashboard() {
               <section>
                 <h2 className="mb-6 text-xl font-bold text-primary">Student Progress</h2>
                 <StudentProgressTable students={analytics.studentProgress} onSelectStudent={handleSelectStudent} />
+              </section>
+              <section>
+                <ResearchExports />
               </section>
             </div>
           </>
