@@ -30,6 +30,12 @@ export interface DisplayedFeedback {
  * explanation, MEDIUM adds the counterfactual, HIGH adds the hint too, NONE
  * shows no AI text, and a correct answer shows only the verdict.
  *
+ * One voice per card: when the explanation is the model's own, a hint or
+ * counterfactual that fell back is left out rather than shown as generic
+ * canned text beside specific AI text (it read as two different voices in
+ * the browser check). When the explanation itself fell back, the fallback
+ * set is shown together.
+ *
  * aiGenerated is false when any displayed field came from the rule-based
  * fallback; aiFailureReason records why, and is null when everything shown
  * was AI-generated (a fallback on a field nobody saw is not counted).
@@ -45,11 +51,14 @@ export function resolveDisplayedFeedback(
 
   if (!response.correct && level !== ScaffoldingLevel.NONE) {
     const explanation = response.consequenceExplanation
-    const counterfactual = response.counterfactualTrace || null
+    const aiExplanation = !fallbackFields.includes('consequence_explanation')
+    const keep = (field: FeedbackField, text: string | null) =>
+      aiExplanation && fallbackFields.includes(field) ? null : text
+    const counterfactual = keep('counterfactual_trace', response.counterfactualTrace || null)
     if (level === ScaffoldingLevel.LOW) {
       card = { analysis: firstSentence(explanation), hint: null, counterfactual: null }
     } else if (level === ScaffoldingLevel.HIGH) {
-      card = { analysis: explanation, hint: response.socraticHint, counterfactual }
+      card = { analysis: explanation, hint: keep('socratic_hint', response.socraticHint), counterfactual }
     } else {
       card = { analysis: explanation, hint: null, counterfactual }
     }

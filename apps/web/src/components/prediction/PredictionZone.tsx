@@ -11,7 +11,14 @@ import type {
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { useMisconceptionStore } from '@/store/useMisconceptionStore'
-import { submitPrediction, streamPrediction, StreamDisconnectedError, evaluatePrediction, requestHint } from '@/api/predictions'
+import {
+  submitPrediction,
+  streamPrediction,
+  StreamDisconnectedError,
+  evaluatePrediction,
+  requestHint,
+  type StreamedPrediction,
+} from '@/api/predictions'
 import { resolveDisplayedFeedback, disconnectedFeedback, type DisplayedFeedback } from '@/utils/displayedFeedback'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
@@ -30,6 +37,12 @@ import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import CodeEditorInput from './CodeEditorInput'
+
+/** A feedback stream opened before the verdict is known (see startFeedbackStream). */
+interface FeedbackStream {
+  preview: { latest: string | null; show: ((explanationSoFar: string) => void) | null }
+  result: Promise<StreamedPrediction>
+}
 
 export interface PredictionOutcomeDetail {
   correct: boolean
@@ -454,7 +467,24 @@ export default function PredictionZone({
   // misconception pipeline) fires regardless of staleness - that pipeline
   // has its own resolution-aware gating (see AlgorithmPage's
   // junctionRetryInProgress) and must never silently lose a data point.
+  // Opened alongside /evaluate rather than after it: the verdict still
+  // arrives first, but the explanation no longer waits the ~1.4s the
+  // verdict call takes before it even starts. Preview text that lands
+  // before the verdict is held, and shown once the answer is known wrong.
+  function startFeedbackStream(request: PredictionRequest): FeedbackStream {
+    const preview: FeedbackStream['preview'] = { latest: null, show: null }
+    const result = streamPrediction(request, (explanationSoFar) => {
+      preview.latest = explanationSoFar
+      preview.show?.(explanationSoFar)
+    })
+    // Awaited in resolveRichFeedback; this only keeps a failure that
+    // happens before that await from surfacing as an unhandled rejection.
+    result.catch(() => undefined)
+    return { preview, result }
+  }
+
   async function resolveRichFeedback(
+    feedbackStream: FeedbackStream,
     request: PredictionRequest,
     answer: string,
     submissionToken: number,
@@ -477,10 +507,14 @@ export default function PredictionZone({
     let response: PredictionResponse | null = null
     let displayed: DisplayedFeedback
     try {
-      const streamed = await streamPrediction(request, (explanationSoFar) => {
-        if (!showPreview || submissionTokenRef.current !== submissionToken) return
-        setMistakeAnalysis(scaffoldingLevel === ScaffoldingLevel.LOW ? firstSentence(explanationSoFar) : explanationSoFar)
-      })
+      if (showPreview) {
+        feedbackStream.preview.show = (explanationSoFar) => {
+          if (submissionTokenRef.current !== submissionToken) return
+          setMistakeAnalysis(scaffoldingLevel === ScaffoldingLevel.LOW ? firstSentence(explanationSoFar) : explanationSoFar)
+        }
+        if (feedbackStream.preview.latest) feedbackStream.preview.show(feedbackStream.preview.latest)
+      }
+      const streamed = await feedbackStream.result
       response = streamed.response
       displayed = resolveDisplayedFeedback(scaffoldingLevel, response, streamed.fallbackFields, streamed.failureReason)
     } catch (err) {
@@ -612,6 +646,7 @@ export default function PredictionZone({
     // Correctness and the ground-truth misconception are both rule-based -
     // no Claude call - so this resolves in milliseconds and the verdict
     // below never waits on the full explanation (remediation doc 12B.3).
+    const feedbackStream = startFeedbackStream(request)
     const evaluation = await evaluatePrediction(request)
     setIsSubmitting(false)
 
@@ -636,6 +671,7 @@ export default function PredictionZone({
     const xpAwarded = evaluation.correct ? 10 : 0
 
     void resolveRichFeedback(
+      feedbackStream,
       request,
       answer,
       submissionToken,

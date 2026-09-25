@@ -991,7 +991,9 @@ export default function AlgorithmPage() {
     <>
       <FocusModeOverlay />
       <KeyboardShortcutsModal open={shortcutsModalOpen} onClose={() => setShortcutsModalOpen(false)} />
-      <BadgeAwardModal badgeId={pendingBadge} onClose={handleBadgeModalClose} />
+      {/* Held while a Quick Check is pending so the two never stack; the
+          badge stays in pendingBadge and appears once the check is done. */}
+      <BadgeAwardModal badgeId={pendingRemediation ? null : pendingBadge} onClose={handleBadgeModalClose} />
       {showSessionEndSurvey && (
         <SessionEndSurvey
           onSubmit={handleSessionEndSubmit}

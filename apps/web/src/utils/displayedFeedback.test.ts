@@ -35,14 +35,24 @@ describe('resolveDisplayedFeedback', () => {
     expect(low.log.counterfactualText).toBeNull()
   })
 
-  it('marks feedback as a fallback only when a displayed field fell back', () => {
+  it('leaves a fallen-back hint out beside an AI explanation, so the card is one voice', () => {
     const hintFellBack = { ...wrong, socraticHint: 'Canned hint.', aiGenerated: false }
     const high = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, hintFellBack, ['socratic_hint'], 'socratic_hint.words')
-    expect(high.log).toMatchObject({ hintText: 'Canned hint.', aiGenerated: false, aiFailureReason: 'socratic_hint.words' })
+    expect(high.card).toEqual({ analysis: wrong.consequenceExplanation, hint: null, counterfactual: wrong.counterfactualTrace })
+    // Nothing canned was shown, so nothing is logged as a fallback.
+    expect(high.log).toMatchObject({ hintText: null, aiGenerated: true, aiFailureReason: null })
 
-    // MEDIUM never shows the hint, so its fallback does not count.
-    const medium = resolveDisplayedFeedback(ScaffoldingLevel.MEDIUM, hintFellBack, ['socratic_hint'], 'socratic_hint.words')
-    expect(medium.log).toMatchObject({ aiGenerated: true, aiFailureReason: null })
+    const cfFellBack = resolveDisplayedFeedback(ScaffoldingLevel.MEDIUM, wrong, ['counterfactual_trace'], 'counterfactual_trace.sentences')
+    expect(cfFellBack.card?.counterfactual).toBeNull()
+    expect(cfFellBack.log.counterfactualText).toBeNull()
+  })
+
+  it('shows the fallback set together when the explanation itself fell back', () => {
+    const allFallback = { ...wrong, consequenceExplanation: 'Canned explanation.', socraticHint: 'Canned hint.', aiGenerated: false }
+    const fields = ['consequence_explanation', 'socratic_hint', 'counterfactual_trace'] as const
+    const high = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, allFallback, fields, 'consequence_explanation.notation')
+    expect(high.card?.hint).toBe('Canned hint.')
+    expect(high.log).toMatchObject({ aiGenerated: false, aiFailureReason: 'consequence_explanation.notation' })
   })
 
   it('shows nothing and logs no text for a correct answer or NONE', () => {
