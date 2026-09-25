@@ -1,10 +1,16 @@
+import asyncio
 import json
+import logging
 import os
 import re
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import Generic, TypeVar
 
-from anthropic import AsyncAnthropic
+from anthropic import APITimeoutError, AsyncAnthropic
+
+logger = logging.getLogger(__name__)
 
 client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 model_name = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
@@ -14,6 +20,11 @@ max_tokens = int(os.getenv("MAX_TOKENS", "1000"))
 # repetitive across genuinely different student answers.
 temperature = float(os.getenv("CLAUDE_TEMPERATURE", "0.25"))
 request_timeout_seconds = float(os.getenv("CLAUDE_TIMEOUT_SECONDS", "20"))
+# Wall-clock ceiling for the single retry a failed validation may earn. The
+# first call keeps request_timeout_seconds; the retry only gets this long,
+# so the worst case is one full call plus this budget rather than the four
+# sequential calls the old nested JSON-retry and validation-retry allowed.
+retry_budget_seconds = float(os.getenv("CLAUDE_RETRY_BUDGET_SECONDS", "4"))
 
 # Phrases that mark a model thinking out loud mid-answer rather than giving
 # a clean, final response (e.g. "...index 1 (value 5... wait, still 5) -
@@ -49,6 +60,30 @@ def _sentence_count(text: str) -> int:
     return len([s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s])
 
 
+def field_failure(
+    text: str | None,
+    *,
+    max_sentences: int | None = None,
+    max_words: int | None = None,
+    allow_empty: bool = False,
+) -> str | None:
+    """Names the first rule a generated field breaks, or None if it passes.
+    A field fails if it's empty (unless the field is allowed to be, e.g.
+    counterfactual_trace on a correct answer), contains a mid-answer
+    self-correction marker, or exceeds the sentence/word limit stated in its
+    own prompt instruction. The name is logged on every retry, so a rule
+    that fails often points at a prompt to fix rather than retry against."""
+    if text is None or not text.strip():
+        return None if allow_empty else "empty"
+    if has_self_correction_marker(text):
+        return "self_correction"
+    if max_sentences is not None and _sentence_count(text) > max_sentences:
+        return "sentences"
+    if max_words is not None and len(text.split()) > max_words:
+        return "words"
+    return None
+
+
 def is_field_valid(
     text: str | None,
     *,
@@ -56,19 +91,7 @@ def is_field_valid(
     max_words: int | None = None,
     allow_empty: bool = False,
 ) -> bool:
-    """A generated field is invalid if it's empty (unless the field is
-    allowed to be, e.g. counterfactual_trace on a correct answer), contains
-    a mid-answer self-correction marker, or exceeds the sentence/word limit
-    stated in its own prompt instruction."""
-    if text is None or not text.strip():
-        return allow_empty
-    if has_self_correction_marker(text):
-        return False
-    if max_sentences is not None and _sentence_count(text) > max_sentences:
-        return False
-    if max_words is not None and len(text.split()) > max_words:
-        return False
-    return True
+    return field_failure(text, max_sentences=max_sentences, max_words=max_words, allow_empty=allow_empty) is None
 
 
 # An identifier immediately followed by a bracketed index, e.g. arr[j+1] or
@@ -111,13 +134,23 @@ def _strip_code_fences(text: str) -> str:
     return stripped
 
 
-async def _create_message(prompt: str, system: str | None) -> tuple[str, CallMetadata]:
+async def _create_message(
+    prompt: str,
+    system: str | None,
+    *,
+    timeout: float | None = None,
+    max_retries: int | None = None,
+    token_limit: int | None = None,
+) -> tuple[str, CallMetadata]:
     start = time.monotonic()
-    response = await client.messages.create(
+    # max_retries=0 on a budgeted retry: the SDK's own transparent retries
+    # would otherwise add hidden sequential calls on top of ours.
+    caller = client if max_retries is None else client.with_options(max_retries=max_retries)
+    response = await caller.messages.create(
         model=model_name,
-        max_tokens=max_tokens,
+        max_tokens=token_limit or max_tokens,
         temperature=temperature,
-        timeout=request_timeout_seconds,
+        timeout=timeout or request_timeout_seconds,
         system=system or "",
         messages=[{"role": "user", "content": prompt}],
     )
@@ -153,3 +186,99 @@ async def call_claude_for_feedback(prompt: str, system: str | None = None) -> tu
 async def call_claude_for_text(prompt: str, system: str | None = None) -> tuple[str, CallMetadata]:
     text, metadata = await _create_message(prompt, system)
     return sanitize_dashes(text.strip()), metadata
+
+
+JSON_RETRY_SUFFIX = (
+    "\n\nYour previous response was not valid JSON. Respond with the raw JSON "
+    "object only - no markdown, no code fences, no commentary before or after it."
+)
+
+
+async def attempt_feedback(
+    prompt: str,
+    system: str | None,
+    *,
+    retry_reason: str | None,
+    token_limit: int | None = None,
+) -> tuple[dict | None, CallMetadata]:
+    """One feedback call with no retry of its own: returns (None, metadata)
+    for a response that is not valid JSON, so the caller's single bounded
+    retry covers parse failures and validation failures alike."""
+    budgeted = retry_reason is not None
+    text, metadata = await _create_message(
+        prompt + JSON_RETRY_SUFFIX if retry_reason == "json_parse" else prompt,
+        system,
+        timeout=retry_budget_seconds if budgeted else None,
+        max_retries=0 if budgeted else None,
+        token_limit=token_limit,
+    )
+    try:
+        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text))), metadata
+    except json.JSONDecodeError:
+        return None, metadata
+
+
+async def attempt_text(prompt: str, system: str | None, *, retry_reason: str | None) -> tuple[str, CallMetadata]:
+    """One plain-text call; a retry runs on the retry budget with no SDK retries."""
+    budgeted = retry_reason is not None
+    text, metadata = await _create_message(
+        prompt,
+        system,
+        timeout=retry_budget_seconds if budgeted else None,
+        max_retries=0 if budgeted else None,
+    )
+    return sanitize_dashes(text.strip()), metadata
+
+
+T = TypeVar("T")
+
+
+@dataclass
+class BoundedCall(Generic[T]):
+    """value is None when the caller should fall back; failure_reason says why."""
+
+    value: T | None
+    attempts: int
+    retry_reason: str | None
+    failure_reason: str | None
+    latency_ms: int
+
+
+async def call_with_bounded_retry(
+    attempt: Callable[[str | None], Awaitable[tuple[T, CallMetadata]]],
+    failure_of: Callable[[T], str | None],
+    label: str,
+) -> BoundedCall[T]:
+    """At most two calls: the first on the normal timeout, and one retry -
+    only if the first fails validation - hard-capped at
+    retry_budget_seconds of wall clock. Exceptions from the first call
+    propagate so the caller's fallback handles them."""
+    start = time.monotonic()
+
+    def elapsed() -> int:
+        return round((time.monotonic() - start) * 1000)
+
+    first, metadata = await attempt(None)
+    logger.info(
+        "AI %s call: latency_ms=%s input_tokens=%s output_tokens=%s",
+        label, metadata.latency_ms, metadata.input_tokens, metadata.output_tokens,
+    )
+    reason = failure_of(first)
+    if reason is None:
+        return BoundedCall(first, 1, None, None, elapsed())
+
+    logger.info("AI %s retry: reason=%s", label, reason)
+    try:
+        second, metadata = await asyncio.wait_for(attempt(reason), timeout=retry_budget_seconds)
+    except (asyncio.TimeoutError, APITimeoutError):
+        logger.warning(
+            "AI %s retry exceeded %.1fs budget, falling back (first failure: %s)",
+            label, retry_budget_seconds, reason,
+        )
+        return BoundedCall(None, 2, reason, "retry_timeout", elapsed())
+    logger.info("AI %s retry call: latency_ms=%s output_tokens=%s", label, metadata.latency_ms, metadata.output_tokens)
+    second_reason = failure_of(second)
+    if second_reason is not None:
+        logger.warning("AI %s retry also failed: reason=%s, falling back", label, second_reason)
+        return BoundedCall(None, 2, reason, second_reason, elapsed())
+    return BoundedCall(second, 2, reason, None, elapsed())

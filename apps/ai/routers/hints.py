@@ -1,13 +1,13 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from models.request_models import HintRequest
 from models.response_models import HintResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import HINT_SYSTEM_PROMPT, HINT_USER_TEMPLATE
-from services.claude_service import call_claude_for_text, is_field_valid, uses_foreign_array_notation
+from services.claude_service import attempt_text, call_with_bounded_retry, field_failure, uses_foreign_array_notation
 from services.fallback_service import get_fallback_hint
 
 router = APIRouter()
@@ -35,14 +35,22 @@ def _extract_comparison_pair(current_state: Any) -> tuple[int, Any, int, Any] | 
     return i, ds[i], j, ds[j]
 
 
+def _hint_failure(hint_text: str, max_hint_words: int, pseudocode: str) -> str | None:
+    """Names the rule a hint breaks, or None - logged on every retry."""
+    why = field_failure(hint_text, max_words=max_hint_words)
+    if why:
+        return f"hint.{why}"
+    if uses_foreign_array_notation(hint_text, pseudocode):
+        return "hint.notation"
+    return None
+
+
 def _hint_is_valid(hint_text: str, max_hint_words: int, pseudocode: str) -> bool:
-    return is_field_valid(hint_text, max_words=max_hint_words) and not uses_foreign_array_notation(
-        hint_text, pseudocode
-    )
+    return _hint_failure(hint_text, max_hint_words, pseudocode) is None
 
 
 @router.post("/", response_model=HintResponse)
-async def request_hint(request: HintRequest) -> HintResponse:
+async def request_hint(request: HintRequest, response: Response) -> HintResponse:
     algorithm_context, registry_pseudocode, _ = get_algorithm_context(request.algorithm_name)
     pseudocode = request.pseudocode or registry_pseudocode
     junction_type = (
@@ -80,26 +88,20 @@ async def request_hint(request: HintRequest) -> HintResponse:
     )
 
     try:
-        hint_text, metadata = await call_claude_for_text(prompt, system=HINT_SYSTEM_PROMPT)
-        logger.info(
-            "AI hint call: latency_ms=%s input_tokens=%s output_tokens=%s",
-            metadata.latency_ms,
-            metadata.input_tokens,
-            metadata.output_tokens,
+        result = await call_with_bounded_retry(
+            lambda retry_reason: attempt_text(prompt, HINT_SYSTEM_PROMPT, retry_reason=retry_reason),
+            lambda hint_text: _hint_failure(hint_text, max_hint_words, pseudocode),
+            label="hint",
         )
-        if not _hint_is_valid(hint_text, max_hint_words, pseudocode):
-            logger.warning("AI hint failed validation, retrying once")
-            hint_text, metadata = await call_claude_for_text(prompt, system=HINT_SYSTEM_PROMPT)
-            logger.info(
-                "AI hint retry call: latency_ms=%s input_tokens=%s output_tokens=%s",
-                metadata.latency_ms,
-                metadata.input_tokens,
-                metadata.output_tokens,
-            )
-            if not _hint_is_valid(hint_text, max_hint_words, pseudocode):
-                logger.warning("AI hint failed validation again, falling back")
-                return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
-        return HintResponse(hint=hint_text, scaffolding_level=request.scaffolding_level)
+        # Diagnostics only; the api service does not forward headers.
+        response.headers["X-AI-Outcome"] = "ai" if result.value is not None else "fallback"
+        response.headers["X-AI-Attempts"] = str(result.attempts)
+        response.headers["X-AI-Retry-Reason"] = result.retry_reason or "none"
+        response.headers["X-AI-Failure-Reason"] = result.failure_reason or "none"
+        response.headers["X-AI-Latency-Ms"] = str(result.latency_ms)
+        if result.value is None:
+            return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
+        return HintResponse(hint=result.value, scaffolding_level=request.scaffolding_level)
     except Exception:
         logger.warning(
             "AI hint call failed for algorithm=%s junction_type=%s step_index=%s, falling back",

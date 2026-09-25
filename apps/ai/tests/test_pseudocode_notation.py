@@ -6,6 +6,8 @@ something false about what the student could see."""
 
 import asyncio
 
+from fastapi import Response
+
 from models.request_models import HintRequest, ScaffoldingLevel
 from routers import hints
 from routers.predictions import _feedback_is_valid
@@ -76,17 +78,17 @@ def _hint_request(pseudocode: str | None) -> HintRequest:
 def _stub_claude(monkeypatch, replies: list[str]) -> list[str]:
     prompts: list[str] = []
 
-    async def fake_call(prompt: str, system: str | None = None) -> tuple[str, CallMetadata]:
+    async def fake_call(prompt: str, system: str | None = None, *, retry_reason: str | None = None) -> tuple[str, CallMetadata]:
         prompts.append(prompt)
         return replies[len(prompts) - 1], CallMetadata(latency_ms=1, input_tokens=1, output_tokens=1)
 
-    monkeypatch.setattr(hints, "call_claude_for_text", fake_call)
+    monkeypatch.setattr(hints, "attempt_text", fake_call)
     return prompts
 
 
 def test_hint_with_foreign_notation_is_retried_and_retry_used(monkeypatch):
     prompts = _stub_claude(monkeypatch, [FOREIGN_HINT, MATCHING_HINT])
-    response = asyncio.run(hints.request_hint(_hint_request(TAB_PSEUDOCODE)))
+    response = asyncio.run(hints.request_hint(_hint_request(TAB_PSEUDOCODE), Response()))
     assert len(prompts) == 2
     assert response.hint == MATCHING_HINT
     assert TAB_PSEUDOCODE in prompts[0]
@@ -94,6 +96,6 @@ def test_hint_with_foreign_notation_is_retried_and_retry_used(monkeypatch):
 
 def test_hint_falls_back_when_retry_also_uses_foreign_notation(monkeypatch):
     prompts = _stub_claude(monkeypatch, [FOREIGN_HINT, FOREIGN_HINT])
-    response = asyncio.run(hints.request_hint(_hint_request(TAB_PSEUDOCODE)))
+    response = asyncio.run(hints.request_hint(_hint_request(TAB_PSEUDOCODE), Response()))
     assert len(prompts) == 2
     assert "A[i" not in response.hint

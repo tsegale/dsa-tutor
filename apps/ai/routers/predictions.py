@@ -2,13 +2,19 @@ import logging
 import re
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from models.request_models import MisconceptionCategory, PredictionRequest, ScaffoldingLevel
 from models.response_models import PredictionEvaluateResponse, PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
-from services.claude_service import call_claude_for_feedback, is_field_valid, uses_foreign_array_notation
+from services.claude_service import (
+    BoundedCall,
+    attempt_feedback,
+    call_with_bounded_retry,
+    field_failure,
+    uses_foreign_array_notation,
+)
 from services.fallback_service import get_fallback_prediction_response
 from services.feedback_cache import CACHE_ENABLED, feedback_cache, make_cache_key
 from services.misconception_classifier import classify_misconception
@@ -1158,14 +1164,15 @@ def _hint_leaks_comparison_value(hint: str, current_state: Any) -> bool:
     return bool(tokens & _collect_comparison_values(current_state))
 
 
-def _feedback_is_valid(
-    feedback: dict[str, Any],
+def _feedback_failure(
+    feedback: dict[str, Any] | None,
     correct: bool,
     scaffolding_level: ScaffoldingLevel,
     current_state: Any = None,
     pseudocode: str | None = None,
-) -> bool:
-    """Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
+) -> str | None:
+    """Names the first contract rule a feedback response breaks, or None.
+    Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
     consequence_explanation and counterfactual_trace are capped at two
     sentences, socratic_hint at a level-dependent word count, and
     counterfactual_trace is only allowed to be empty when the answer was
@@ -1173,27 +1180,44 @@ def _feedback_is_valid(
     step's actual comparison values - the whole point of asking the
     student to apply the rule themselves rather than confirming a
     conclusion for them. When pseudocode is given, no text field may use
-    array notation that pseudocode does not contain."""
-    if pseudocode is not None and any(
-        uses_foreign_array_notation(feedback.get(field), pseudocode)
-        for field in ("consequence_explanation", "counterfactual_trace", "socratic_hint")
-    ):
-        return False
-    if not is_field_valid(feedback.get("consequence_explanation"), max_sentences=2):
-        return False
+    array notation that pseudocode does not contain. The returned name is
+    what the retry log and the X-AI-Retry-Reason header report."""
+    if feedback is None:
+        return "json_parse"
+    if not isinstance(feedback, dict):
+        return "json_shape"
+    if pseudocode is not None:
+        for field in ("consequence_explanation", "counterfactual_trace", "socratic_hint"):
+            if uses_foreign_array_notation(feedback.get(field), pseudocode):
+                return f"{field}.notation"
+    why = field_failure(feedback.get("consequence_explanation"), max_sentences=2)
+    if why:
+        return f"consequence_explanation.{why}"
     socratic_hint = feedback.get("socratic_hint")
-    if not is_field_valid(socratic_hint, max_words=_max_hint_words_for_level(scaffolding_level)):
-        return False
+    why = field_failure(socratic_hint, max_words=_max_hint_words_for_level(scaffolding_level))
+    if why:
+        return f"socratic_hint.{why}"
     if (
         scaffolding_level == ScaffoldingLevel.HIGH
         and not correct
         and isinstance(socratic_hint, str)
         and _hint_leaks_comparison_value(socratic_hint, current_state)
     ):
-        return False
-    if not is_field_valid(feedback.get("counterfactual_trace"), max_sentences=2, allow_empty=correct):
-        return False
-    return True
+        return "socratic_hint.leaks_value"
+    why = field_failure(feedback.get("counterfactual_trace"), max_sentences=2, allow_empty=correct)
+    if why:
+        return f"counterfactual_trace.{why}"
+    return None
+
+
+def _feedback_is_valid(
+    feedback: dict[str, Any] | None,
+    correct: bool,
+    scaffolding_level: ScaffoldingLevel,
+    current_state: Any = None,
+    pseudocode: str | None = None,
+) -> bool:
+    return _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode) is None
 
 
 async def _get_validated_feedback(
@@ -1202,30 +1226,27 @@ async def _get_validated_feedback(
     scaffolding_level: ScaffoldingLevel,
     current_state: Any = None,
     pseudocode: str | None = None,
-) -> dict[str, Any] | None:
-    feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
-    logger.info(
-        "AI prediction call: latency_ms=%s input_tokens=%s output_tokens=%s",
-        metadata.latency_ms,
-        metadata.input_tokens,
-        metadata.output_tokens,
+) -> BoundedCall[dict[str, Any] | None]:
+    """At most one retry, on a hard wall-clock budget (see
+    call_with_bounded_retry). result.value is None when the caller should
+    fall back."""
+    return await call_with_bounded_retry(
+        lambda retry_reason: attempt_feedback(prompt, FEEDBACK_SYSTEM_PROMPT, retry_reason=retry_reason),
+        lambda feedback: _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode),
+        label="prediction",
     )
-    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state, pseudocode):
-        return feedback
 
-    logger.warning("AI prediction feedback failed validation, retrying once")
-    feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
-    logger.info(
-        "AI prediction retry call: latency_ms=%s input_tokens=%s output_tokens=%s",
-        metadata.latency_ms,
-        metadata.input_tokens,
-        metadata.output_tokens,
-    )
-    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state, pseudocode):
-        return feedback
 
-    logger.warning("AI prediction feedback failed validation again, falling back")
-    return None
+def _set_ai_headers(response: Response, outcome: str, result: BoundedCall | None = None) -> None:
+    """Diagnostics for latency measurement against this service directly.
+    The api service rebuilds the JSON body and does not forward these, so
+    they never reach a student's browser."""
+    response.headers["X-AI-Outcome"] = outcome
+    response.headers["X-AI-Attempts"] = str(result.attempts if result else 0)
+    response.headers["X-AI-Retry-Reason"] = (result.retry_reason if result else None) or "none"
+    response.headers["X-AI-Failure-Reason"] = (result.failure_reason if result else None) or "none"
+    if result:
+        response.headers["X-AI-Latency-Ms"] = str(result.latency_ms)
 
 
 def resolve_ground_truth_misconception(
@@ -1257,7 +1278,7 @@ def resolve_ai_misconception(correct: bool, feedback: dict[str, Any]) -> Misconc
 
 
 @router.post("/", response_model=PredictionResponse)
-async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
+async def submit_prediction(request: PredictionRequest, response: Response) -> PredictionResponse:
     correct = evaluate_answer(request)
 
     wrapper = request.current_state if isinstance(request.current_state, dict) else {}
@@ -1297,8 +1318,11 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     try:
         if cached_feedback is not None:
             feedback = cached_feedback
+            _set_ai_headers(response, "cache")
         else:
-            feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level, wrapper, pseudocode)
+            result = await _get_validated_feedback(prompt, correct, request.scaffolding_level, wrapper, pseudocode)
+            feedback = result.value
+            _set_ai_headers(response, "ai" if feedback is not None else "fallback", result)
             if feedback is None:
                 return get_fallback_prediction_response(
                     correct, request.scaffolding_level, request.algorithm_name, junction_type,
@@ -1317,6 +1341,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
             counterfactual_trace="" if correct else feedback.get("counterfactual_trace", ""),
         )
     except Exception:
+        _set_ai_headers(response, "error")
         logger.warning(
             "AI prediction call failed for algorithm=%s junction_type=%s step_index=%s, falling back",
             request.algorithm_name,
