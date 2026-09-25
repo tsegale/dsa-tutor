@@ -24,13 +24,21 @@ export interface StreamedPrediction {
   failureReason: string | null
 }
 
-/** The stream opened but ended before its final event. */
+/** The stream broke before its final event: "stream_disconnected" when the
+ * connection dropped, "stream_timeout" when it outlived STREAM_CEILING_MS. */
 export class StreamDisconnectedError extends Error {
-  constructor() {
-    super('Prediction stream ended without a final event')
+  readonly reason: 'stream_disconnected' | 'stream_timeout'
+
+  constructor(reason: 'stream_disconnected' | 'stream_timeout' = 'stream_disconnected') {
+    super(`Prediction stream ended without a final event (${reason})`)
     this.name = 'StreamDisconnectedError'
+    this.reason = reason
   }
 }
+
+// Above the AI service's own 20s stream ceiling plus network time: the
+// client never waits indefinitely on a stream that stopped progressing.
+const STREAM_CEILING_MS = 30_000
 
 /**
  * Streams prediction feedback. onPreview receives the explanation so far
@@ -44,9 +52,27 @@ export async function streamPrediction(
   request: PredictionRequest,
   onPreview: (explanationSoFar: string) => void,
 ): Promise<StreamedPrediction> {
+  const abort = new AbortController()
+  const ceiling = setTimeout(() => abort.abort(), STREAM_CEILING_MS)
+  try {
+    return await readPredictionStream(request, onPreview, abort.signal)
+  } catch (err) {
+    if (abort.signal.aborted) throw new StreamDisconnectedError('stream_timeout')
+    throw err
+  } finally {
+    clearTimeout(ceiling)
+  }
+}
+
+async function readPredictionStream(
+  request: PredictionRequest,
+  onPreview: (explanationSoFar: string) => void,
+  signal: AbortSignal,
+): Promise<StreamedPrediction> {
   const response = await apiRequest('/api/v1/ai/predictions/stream', {
     method: 'POST',
     body: JSON.stringify(request),
+    signal,
   })
   if (!response.ok || !response.body) throw new Error(`Prediction stream failed: ${response.status}`)
 

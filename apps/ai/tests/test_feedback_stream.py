@@ -227,3 +227,28 @@ def test_both_endpoints_agree_on_the_verdict(monkeypatch, path):
     body = res.json() if path.endswith("/") else json.loads(res.text.strip().split("\n\n")[-1].split("data: ", 1)[1])["response"]
     assert body["correct"] is False
     assert body["socraticHint"] == VALID["socratic_hint"]
+
+
+def test_a_stalled_generation_is_cut_off_at_the_wall_clock_ceiling(monkeypatch):
+    import asyncio
+    import time
+
+    async def stalls_after_first_sentence(prompt, system, *, token_limit=None):
+        yield "text", '{"consequence_explanation": "Skipping the swap leaves 7 before 3. '
+        await asyncio.sleep(30)  # model stalls; keep-alive pings would hide this from the SDK
+        yield "text", "never arrives"
+
+    monkeypatch.setattr(predictions, "request_timeout_seconds", 0.3)
+    start = time.monotonic()
+    monkeypatch.setattr(predictions, "stream_message", stalls_after_first_sentence)
+    monkeypatch.setattr(predictions, "CACHE_ENABLED", False)
+    with TestClient(app) as client:
+        res = client.post("/api/v1/predictions/stream", json=REQUEST)
+    elapsed = time.monotonic() - start
+    blocks = res.text.strip().split("\n\n")
+    finals = [b for b in blocks if b.startswith("event: final")]
+    assert elapsed < 5
+    assert len(finals) == 1
+    final = json.loads(finals[0].split("data: ", 1)[1])
+    assert final["outcome"] == "timeout" and final["failureReason"] == "timeout"
+    assert final["response"]["consequenceExplanation"] == "Skipping the swap leaves 7 before 3."

@@ -75,3 +75,9 @@ describe('disconnectedFeedback', () => {
     expect(dropped.log.aiFailureReason).toBe('stream_disconnected')
   })
 })
+
+describe('disconnectedFeedback reasons', () => {
+  it('records a stream that hit the client ceiling separately from a dropped one', () => {
+    expect(disconnectedFeedback(ScaffoldingLevel.HIGH, false, 'stream_timeout').log.aiFailureReason).toBe('stream_timeout')
+  })
+})

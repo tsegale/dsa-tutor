@@ -482,7 +482,7 @@ export default function PredictionZone({
       displayed = resolveDisplayedFeedback(scaffoldingLevel, response, streamed.fallbackFields, streamed.failureReason)
     } catch (err) {
       if (err instanceof StreamDisconnectedError) {
-        displayed = disconnectedFeedback(scaffoldingLevel, verdictCorrect)
+        displayed = disconnectedFeedback(scaffoldingLevel, verdictCorrect, err.reason)
       } else {
         // Never opened (network, or the api not yet deployed with the
         // stream route): nothing was shown, so the JSON endpoint is safe.

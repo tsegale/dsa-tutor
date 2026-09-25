@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -22,6 +23,7 @@ from services.claude_service import (
     field_failure,
     has_self_correction_marker,
     parse_feedback_json,
+    request_timeout_seconds,
     sanitize_dashes,
     stream_message,
     uses_foreign_array_notation,
@@ -1489,9 +1491,23 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
     gate = SentenceGate(_sentence_check(prep.pseudocode), max_sentences=2)
     parts: list[str] = []
     metadata: CallMetadata | None = None
-    stream_error = False
+    stream_error: str | None = None
+    # A hard wall-clock ceiling on the whole stream. The SDK's timeout only
+    # bounds the gap between reads, and Anthropic sends keep-alive pings
+    # while generating, so a stalled generation could otherwise hold the
+    # connection open indefinitely (seen once in production at >120s).
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + request_timeout_seconds
+    events = stream_message(prep.prompt, FEEDBACK_SYSTEM_PROMPT, token_limit=feedback_max_tokens).__aiter__()
     try:
-        async for kind, value in stream_message(prep.prompt, FEEDBACK_SYSTEM_PROMPT, token_limit=feedback_max_tokens):
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise asyncio.TimeoutError
+            try:
+                kind, value = await asyncio.wait_for(events.__anext__(), timeout=remaining)
+            except StopAsyncIteration:
+                break
             if kind == "done":
                 metadata = value  # type: ignore[assignment]
                 continue
@@ -1504,9 +1520,18 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
                 released += gate.finish()
             for sentence in released:
                 yield _sse("delta", {"text": sentence})
+    except asyncio.TimeoutError:
+        stream_error = "timeout"
+        logger.warning("AI prediction stream exceeded %.0fs, falling back for unrevealed fields", request_timeout_seconds)
     except Exception:
-        stream_error = True
+        stream_error = "error"
         _log_prediction_failure(request, prep)
+    finally:
+        try:
+            await events.aclose()
+        except Exception:
+            # Already closed by the cancellation above; nothing left to release.
+            logger.debug("stream generator already closed", exc_info=True)
 
     truncated = metadata is not None and metadata.stop_reason == "max_tokens"
     if not gate.closed:
@@ -1546,13 +1571,13 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
     counterfactual = "" if prep.correct else field("counterfactual_trace", fallback.counterfactual_trace)
 
     failure_reason = (
-        "error" if stream_error
+        stream_error if stream_error
         else "truncated" if truncated
         else "json_parse" if feedback is None
         else f"consequence_explanation.{gate.failure}" if gate.failure
         else _feedback_failure(feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
     )
-    outcome = "error" if stream_error else "ai" if not fallback_fields else "partial"
+    outcome = stream_error if stream_error else "ai" if not fallback_fields else "partial"
     if metadata is not None:
         logger.info(
             "AI prediction stream: latency_ms=%s output_tokens=%s stop_reason=%s outcome=%s failure=%s fallback_fields=%s",

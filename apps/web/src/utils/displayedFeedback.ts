@@ -72,11 +72,15 @@ export function resolveDisplayedFeedback(
 }
 
 /**
- * The stream dropped before its final event. Whatever partial text had
- * appeared is discarded; wrong answers at a level that shows feedback get
- * DISCONNECTED_FALLBACK_TEXT instead.
+ * The stream dropped, or hit the client ceiling, before its final event.
+ * Whatever partial text had appeared is discarded; wrong answers at a level
+ * that shows feedback get DISCONNECTED_FALLBACK_TEXT instead.
  */
-export function disconnectedFeedback(level: ScaffoldingLevel, correct: boolean): DisplayedFeedback {
+export function disconnectedFeedback(
+  level: ScaffoldingLevel,
+  correct: boolean,
+  reason: 'stream_disconnected' | 'stream_timeout' = 'stream_disconnected',
+): DisplayedFeedback {
   const showsText = !correct && level !== ScaffoldingLevel.NONE
   return {
     card: showsText ? { analysis: DISCONNECTED_FALLBACK_TEXT, hint: null, counterfactual: null } : undefined,
@@ -85,7 +89,7 @@ export function disconnectedFeedback(level: ScaffoldingLevel, correct: boolean):
       hintText: null,
       counterfactualText: null,
       aiGenerated: false,
-      aiFailureReason: 'stream_disconnected',
+      aiFailureReason: reason,
     },
   }
 }
