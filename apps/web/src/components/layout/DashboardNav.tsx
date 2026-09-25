@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { getProgressToNextLevel } from '@/utils/xpLevels'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
 import AccountIdentity from './AccountIdentity'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 function SearchIcon() {
   return (
@@ -77,6 +78,7 @@ export default function DashboardNav() {
       </div>
 
       <div className="flex items-center gap-5">
+        <ThemeToggle />
         <button
           type="button"
           onClick={startTour}

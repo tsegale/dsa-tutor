@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { useOnboardingStore } from './useOnboarding'
-
-const THEME_STORAGE_KEY = 'dsa-tutor-theme'
+import { useThemeStore } from '@/store/useThemeStore'
 
 interface UseKeyboardShortcutsConfig {
   onTabChange: (tab: number) => void
@@ -51,11 +50,9 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
         case 'KeyO':
           store.setMode(AlgorithmMode.HANDS_ON)
           break
-        case 'KeyT': {
-          const isDark = document.documentElement.classList.toggle('dark')
-          localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light')
+        case 'KeyT':
+          useThemeStore.getState().toggleTheme()
           break
-        }
         case 'Digit1':
           onTabChange(1)
           break

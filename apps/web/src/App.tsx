@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
@@ -7,6 +7,7 @@ import { getToken } from '@/api/auth'
 import { fetchStudyStatus } from '@/api/study'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useThemeStore } from '@/store/useThemeStore'
 
 // Route-level splitting: each page (and everything it alone depends on,
 // e.g. AlgorithmPage's canvas/D3/Pyodide code) ships as its own chunk
@@ -92,7 +93,19 @@ function GlobalOnboarding() {
   )
 }
 
+// The theme class lives on <html> for every route, not only the algorithm
+// page, so dashboards, modals and portalled menus all follow one setting.
+function useApplyTheme() {
+  const theme = useThemeStore((state) => state.theme)
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    document.documentElement.style.colorScheme = theme
+  }, [theme])
+}
+
 export default function App() {
+  useApplyTheme()
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

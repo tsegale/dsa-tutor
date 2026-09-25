@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
@@ -12,9 +11,9 @@ import AccountIdentity from './AccountIdentity'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
 import SoundToggle from '@/components/ui/SoundToggle'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 import ZPDScaffoldingPill from '@/components/ui/ZPDScaffoldingPill'
 
-const THEME_STORAGE_KEY = 'dsa-tutor-theme'
 export const OPEN_SHORTCUTS_MODAL_EVENT = 'dsa-tutor:open-shortcuts-modal'
 // AlgorithmPage owns whether leaving now should show the session-end
 // survey first (it knows the active DB session id); this button only
@@ -43,28 +42,6 @@ function EyeIcon({ active }: { active: boolean }) {
     >
       <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
       <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-}
-
-function ThemeIcon({ isDark }: { isDark: boolean }) {
-  if (isDark) {
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-text-muted dark:text-dark-text-secondary">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
-      </svg>
-    )
-  }
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" className="text-text-muted dark:text-dark-text-secondary">
-      <circle cx="12" cy="12" r="4" fill="currentColor" />
-      <path
-        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        fill="none"
-      />
     </svg>
   )
 }
@@ -98,29 +75,6 @@ export default function TopBar() {
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const toggleFocusMode = useAlgorithmStore((state) => state.toggleFocusMode)
   const resetAlgorithm = useAlgorithmStore((state) => state.resetAlgorithm)
-
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'))
-
-  useEffect(() => {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY)
-    document.documentElement.classList.toggle('dark', saved === 'dark')
-  }, [])
-
-  useEffect(() => {
-    const root = document.documentElement
-    const sync = () => setIsDark(root.classList.contains('dark'))
-    sync()
-    // Reflects the actual DOM state regardless of what changed it (this
-    // button, or the T keyboard shortcut, which mutates the class directly).
-    const observer = new MutationObserver(sync)
-    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
-
-  function toggleTheme() {
-    const dark = document.documentElement.classList.toggle('dark')
-    localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light')
-  }
 
   // Looked up from the URL slug, not the store's algorithmName: an
   // AlgorithmPage effect overwrites algorithmName with the topic's
@@ -176,14 +130,7 @@ export default function TopBar() {
           <SoundToggle />
         </div>
 
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface"
-        >
-          <ThemeIcon isDark={isDark} />
-        </button>
+        <ThemeToggle />
 
         <Tooltip>
           <TooltipTrigger asChild>

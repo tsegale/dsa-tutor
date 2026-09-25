@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { DSATutorLogo } from '@/components/brand'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 interface AnalyticsNavProps {
   refetch: () => void
@@ -67,6 +68,7 @@ export default function AnalyticsNav({ refetch, isFetching }: AnalyticsNavProps)
         >
           <RefreshIcon spinning={isFetching} />
         </button>
+        <ThemeToggle />
       </div>
     </header>
   )

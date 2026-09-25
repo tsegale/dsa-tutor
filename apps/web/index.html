@@ -10,6 +10,17 @@
       rel="stylesheet"
     />
     <title>DSA Tutor</title>
+    <!-- Applies the saved (or OS) theme before first paint so a reload never
+         flashes light. Same key and rule as src/store/useThemeStore.ts. -->
+    <script>
+      try {
+        var saved = localStorage.getItem('dsa-tutor-theme')
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (dark) document.documentElement.classList.add('dark')
+      } catch (e) {
+        // Storage blocked: useThemeStore still resolves and applies the theme on mount.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
