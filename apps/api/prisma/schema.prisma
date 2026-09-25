@@ -147,6 +147,12 @@ model Interaction {
   aiLatencyMs             Int?
   aiModel                 String?
   promptVersion           String?
+  // Why displayed feedback fell back, when it did: the validator rule that
+  // tripped (e.g. "socratic_hint.words"), "truncated", "error", or
+  // "stream_disconnected" when the client lost the stream mid-response.
+  // Null when everything displayed was AI-generated. With aiGenerated and
+  // predictionCorrect this gives the wrong-answer fallback rate.
+  aiFailureReason         String?
 
   // Captured at submission time so a human rater reviewing an incorrect
   // interaction later (see MisconceptionRating) can see what the student

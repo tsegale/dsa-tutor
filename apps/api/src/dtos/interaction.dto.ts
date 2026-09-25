@@ -24,6 +24,9 @@ export interface CreateInteractionDto {
   aiLatencyMs?: number | null
   aiModel?: string | null
   promptVersion?: string | null
+  /** Why displayed feedback fell back (validator rule, "truncated", "error",
+   * "stream_disconnected"); null when all displayed text was AI-generated. */
+  aiFailureReason?: string | null
   // The data structure state the student was looking at when they
   // answered - only meaningful for the research misconception export, so
   // it is write-only from here: never mapped back into InteractionDto.

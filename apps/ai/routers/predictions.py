@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -20,12 +20,13 @@ from services.claude_service import (
     call_with_bounded_retry,
     feedback_max_tokens,
     field_failure,
+    has_self_correction_marker,
     parse_feedback_json,
     sanitize_dashes,
     stream_message,
     uses_foreign_array_notation,
 )
-from services.feedback_stream import JsonStringFieldStreamer
+from services.feedback_stream import JsonStringFieldStreamer, SentenceGate
 from services.fallback_service import get_fallback_prediction_response
 from services.feedback_cache import CACHE_ENABLED, feedback_cache, make_cache_key
 from services.misconception_classifier import classify_misconception
@@ -1175,6 +1176,48 @@ def _hint_leaks_comparison_value(hint: str, current_state: Any) -> bool:
     return bool(tokens & _collect_comparison_values(current_state))
 
 
+FEEDBACK_TEXT_FIELDS = ("consequence_explanation", "counterfactual_trace", "socratic_hint")
+
+
+def _feedback_field_failures(
+    feedback: dict[str, Any],
+    correct: bool,
+    scaffolding_level: ScaffoldingLevel,
+    current_state: Any = None,
+    pseudocode: str | None = None,
+) -> dict[str, str]:
+    """Judges each text field on its own against its prompt contract in
+    FEEDBACK_SYSTEM_PROMPT, returning {field: rule} for the ones that fail.
+    Field-level (not all-or-nothing) so the stream can keep an explanation
+    the student has already read when only a later field fails.
+
+    consequence_explanation and counterfactual_trace are capped at two
+    sentences and may be empty only when the answer was correct - the
+    prompt defines the explanation as what would go wrong with the
+    student's choice, so on a correct answer the model rightly leaves it
+    empty (requiring it there made 15 of 15 correct answers at
+    HIGH/MEDIUM/LOW retry and fall back in the A2.2 measurement).
+    socratic_hint has a level-dependent word cap, and at HIGH must not plug
+    in this step's actual comparison values - the point is for the student
+    to apply the rule themselves. No field may use array notation the
+    pseudocode does not contain."""
+    failures: dict[str, str] = {}
+    for field in FEEDBACK_TEXT_FIELDS:
+        text = feedback.get(field)
+        if pseudocode is not None and uses_foreign_array_notation(text, pseudocode):
+            failures[field] = "notation"
+            continue
+        if field == "socratic_hint":
+            why = field_failure(text, max_words=_max_hint_words_for_level(scaffolding_level))
+            if why is None and scaffolding_level == ScaffoldingLevel.HIGH and not correct and isinstance(text, str):
+                why = "leaks_value" if _hint_leaks_comparison_value(text, current_state) else None
+        else:
+            why = field_failure(text, max_sentences=2, allow_empty=correct)
+        if why is not None:
+            failures[field] = why
+    return failures
+
+
 def _feedback_failure(
     feedback: dict[str, Any] | None,
     correct: bool,
@@ -1182,46 +1225,16 @@ def _feedback_failure(
     current_state: Any = None,
     pseudocode: str | None = None,
 ) -> str | None:
-    """Names the first contract rule a feedback response breaks, or None.
-    Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
-    consequence_explanation and counterfactual_trace are capped at two
-    sentences, socratic_hint at a level-dependent word count, and
-    consequence_explanation and counterfactual_trace may both be empty only
-    when the answer was correct - the prompt defines the explanation as
-    what would go wrong with the student's choice, so on a correct answer
-    the model rightly leaves it empty. Requiring it there made every
-    correct answer at HIGH/MEDIUM/LOW retry and then fall back (15 of 15
-    in the A2.2 measurement). HIGH's socratic_hint additionally must not plug in this
-    step's actual comparison values - the whole point of asking the
-    student to apply the rule themselves rather than confirming a
-    conclusion for them. When pseudocode is given, no text field may use
-    array notation that pseudocode does not contain. The returned name is
-    what the retry log and the X-AI-Retry-Reason header report."""
+    """Names the first contract rule a feedback response breaks, or None -
+    what the logs, X-AI-Retry-Reason and the stream's failureReason report."""
     if feedback is None:
         return "json_parse"
     if not isinstance(feedback, dict):
         return "json_shape"
-    if pseudocode is not None:
-        for field in ("consequence_explanation", "counterfactual_trace", "socratic_hint"):
-            if uses_foreign_array_notation(feedback.get(field), pseudocode):
-                return f"{field}.notation"
-    why = field_failure(feedback.get("consequence_explanation"), max_sentences=2, allow_empty=correct)
-    if why:
-        return f"consequence_explanation.{why}"
-    socratic_hint = feedback.get("socratic_hint")
-    why = field_failure(socratic_hint, max_words=_max_hint_words_for_level(scaffolding_level))
-    if why:
-        return f"socratic_hint.{why}"
-    if (
-        scaffolding_level == ScaffoldingLevel.HIGH
-        and not correct
-        and isinstance(socratic_hint, str)
-        and _hint_leaks_comparison_value(socratic_hint, current_state)
-    ):
-        return "socratic_hint.leaks_value"
-    why = field_failure(feedback.get("counterfactual_trace"), max_sentences=2, allow_empty=correct)
-    if why:
-        return f"counterfactual_trace.{why}"
+    failures = _feedback_field_failures(feedback, correct, scaffolding_level, current_state, pseudocode)
+    for field in ("consequence_explanation", "socratic_hint", "counterfactual_trace"):
+        if field in failures:
+            return f"{field}.{failures[field]}"
     return None
 
 
@@ -1416,66 +1429,150 @@ def _sse(event: str, payload: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
+def _sentence_check(pseudocode: str) -> Callable[[str], str | None]:
+    """The explanation rules that can be judged one sentence at a time,
+    before the sentence is shown. The two-sentence cap is the gate's own."""
+
+    def check(sentence: str) -> str | None:
+        if has_self_correction_marker(sentence):
+            return "self_correction"
+        if uses_foreign_array_notation(sentence, pseudocode):
+            return "notation"
+        return None
+
+    return check
+
+
 async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
-    """delta events carry consequence_explanation as the model writes it;
-    exactly one final event carries the validated PredictionResponse. The
-    streamed text is a preview only: the assembled response is validated
-    against the same _feedback_failure contract as the JSON endpoint, and
-    on failure final carries the rule-based fallback with replaced=true so
-    the client swaps the preview out. No retry - a retry would visibly
-    restart text the student is already reading."""
+    """Streams prediction feedback without ever showing unvalidated text.
+
+    delta events each carry one whole explanation sentence, released only
+    after it passed the sentence-level rules (see SentenceGate), so the
+    first appears about a second in. Exactly one final event follows with
+    the full PredictionResponse. What the student sees on each failure:
+
+    - An explanation sentence fails (self-correction, foreign notation, a
+      third sentence): the reveal stops. The explanation is exactly the
+      sentences already shown - never replaced, since each one passed. If
+      none was shown, the fallback explanation is used (nothing to swap).
+    - A later field fails (socratic_hint, counterfactual_trace - never
+      streamed) or the JSON will not parse: only those fields take the
+      fallback text; the visible explanation stands.
+    - The model call errors: same as above - revealed sentences stand,
+      everything else is fallback.
+    - The connection to the client drops: handled client-side (the partial
+      is discarded and a fallback shown, logged as stream_disconnected).
+
+    final carries fallbackFields and failureReason so the client can log
+    exactly what was displayed and why. No retry - a retry would restart
+    text the student is reading. A fully valid response populates the
+    cache; a cache hit sends final immediately rather than faking a stream.
+    """
     prep = _prepare_prediction(request)
 
-    def final(outcome: str, body: PredictionResponse, failure_reason: str | None = None, streamed: bool = False) -> str:
+    def final(outcome: str, body: PredictionResponse, fallback_fields: list[str], failure_reason: str | None) -> str:
         return _sse(
             "final",
             {
                 "outcome": outcome,
                 "failureReason": failure_reason,
-                "replaced": streamed and outcome != "ai",
+                "fallbackFields": fallback_fields,
                 "response": body.model_dump(by_alias=True, mode="json"),
             },
         )
 
     if prep.cached_feedback is not None:
-        yield final("cache", _response_from_feedback(prep, prep.cached_feedback))
+        yield final("cache", _response_from_feedback(prep, prep.cached_feedback), [], None)
         return
 
     streamer = JsonStringFieldStreamer("consequence_explanation")
-    streamed = False
+    gate = SentenceGate(_sentence_check(prep.pseudocode), max_sentences=2)
     parts: list[str] = []
+    metadata: CallMetadata | None = None
+    stream_error = False
     try:
-        metadata: CallMetadata | None = None
         async for kind, value in stream_message(prep.prompt, FEEDBACK_SYSTEM_PROMPT, token_limit=feedback_max_tokens):
             if kind == "done":
                 metadata = value  # type: ignore[assignment]
                 continue
             parts.append(value)  # type: ignore[arg-type]
+            if gate.closed:
+                continue  # keep reading: the later fields still arrive
             delta = streamer.feed(value)  # type: ignore[arg-type]
-            if delta:
-                streamed = True
-                yield _sse("delta", {"text": sanitize_dashes(delta)})
-
-        feedback = parse_feedback_json("".join(parts))
-        truncated = metadata is not None and metadata.stop_reason == "max_tokens"
-        reason = "truncated" if truncated else _feedback_failure(
-            feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode
-        )
-        if metadata is not None:
-            logger.info(
-                "AI prediction stream: latency_ms=%s output_tokens=%s stop_reason=%s failure=%s",
-                metadata.latency_ms, metadata.output_tokens, metadata.stop_reason, reason,
-            )
-        if reason is not None or feedback is None:
-            logger.warning("AI prediction stream failed validation: reason=%s, falling back (no retry)", reason)
-            yield final("fallback", _fallback_for(prep, request), reason, streamed)
-            return
-        if CACHE_ENABLED:
-            feedback_cache.set(prep.cache_key, feedback)
-        yield final("ai", _response_from_feedback(prep, feedback), None, streamed)
+            released = gate.feed(sanitize_dashes(delta)) if delta else []
+            if streamer.done:
+                released += gate.finish()
+            for sentence in released:
+                yield _sse("delta", {"text": sentence})
     except Exception:
+        stream_error = True
         _log_prediction_failure(request, prep)
-        yield final("error", _fallback_for(prep, request), "error", streamed)
+
+    truncated = metadata is not None and metadata.stop_reason == "max_tokens"
+    if not gate.closed:
+        # The field never closed (truncated or dropped): its unfinished last
+        # sentence was never checked, so it is never shown.
+        gate.closed = True
+        gate.failure = gate.failure or "incomplete"
+
+    feedback = None if stream_error else parse_feedback_json("".join(parts))
+    if not isinstance(feedback, dict):
+        feedback = None
+    field_failures = (
+        _feedback_field_failures(feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
+        if feedback is not None
+        else {}
+    )
+    fallback = _fallback_for(prep, request)
+
+    # Explanation: what was revealed, else (nothing shown) the model's own
+    # empty explanation on a correct answer, else the fallback.
+    fallback_fields: list[str] = []
+    if gate.released:
+        explanation = gate.text
+    elif feedback is not None and prep.correct and not (feedback.get("consequence_explanation") or "").strip():
+        explanation = ""
+    else:
+        explanation = fallback.consequence_explanation
+        fallback_fields.append("consequence_explanation")
+
+    def field(name: str, fallback_value: str) -> str:
+        if feedback is None or name in field_failures:
+            fallback_fields.append(name)
+            return fallback_value
+        return feedback.get(name) or ""
+
+    socratic_hint = field("socratic_hint", fallback.socratic_hint)
+    counterfactual = "" if prep.correct else field("counterfactual_trace", fallback.counterfactual_trace)
+
+    failure_reason = (
+        "error" if stream_error
+        else "truncated" if truncated
+        else "json_parse" if feedback is None
+        else f"consequence_explanation.{gate.failure}" if gate.failure
+        else _feedback_failure(feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
+    )
+    outcome = "error" if stream_error else "ai" if not fallback_fields else "partial"
+    if metadata is not None:
+        logger.info(
+            "AI prediction stream: latency_ms=%s output_tokens=%s stop_reason=%s outcome=%s failure=%s fallback_fields=%s",
+            metadata.latency_ms, metadata.output_tokens, metadata.stop_reason, outcome, failure_reason, fallback_fields,
+        )
+
+    if feedback is not None and failure_reason is None and CACHE_ENABLED:
+        feedback_cache.set(prep.cache_key, feedback)
+
+    body = PredictionResponse(
+        correct=prep.correct,
+        misconception_category=prep.ground_truth,
+        ai_misconception_category=resolve_ai_misconception(prep.correct, feedback) if feedback is not None else None,
+        consequence_explanation=explanation,
+        socratic_hint=socratic_hint,
+        xp_awarded=10 if prep.correct else 0,
+        counterfactual_trace=counterfactual,
+        ai_generated=not fallback_fields,
+    )
+    yield final(outcome, body, fallback_fields, failure_reason)
 
 
 @router.post("/stream")

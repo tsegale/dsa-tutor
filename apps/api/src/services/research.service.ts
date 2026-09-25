@@ -100,6 +100,7 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     'masteryScoreAtTime',
     'timeSpentSeconds',
     'aiGenerated',
+    'aiFailureReason',
     'aiLatencyMs',
   ]
 
@@ -117,6 +118,7 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     String(interaction.masteryScoreAtTime),
     String(interaction.timeSpentSeconds),
     String(interaction.aiGenerated),
+    interaction.aiFailureReason ?? '',
     interaction.aiLatencyMs !== null ? String(interaction.aiLatencyMs) : '',
   ])
 

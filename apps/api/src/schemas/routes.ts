@@ -94,6 +94,7 @@ export const interactions = {
       aiLatencyMs: z.number().min(0).nullable().optional(),
       aiModel: shortText.nullable().optional(),
       promptVersion: shortText.nullable().optional(),
+      aiFailureReason: shortText.nullable().optional(),
       dataStructureStateSnapshot: z.unknown().optional(),
     }),
   },

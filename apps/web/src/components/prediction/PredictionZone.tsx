@@ -11,7 +11,8 @@ import type {
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { useMisconceptionStore } from '@/store/useMisconceptionStore'
-import { submitPrediction, streamPrediction, evaluatePrediction, requestHint } from '@/api/predictions'
+import { submitPrediction, streamPrediction, StreamDisconnectedError, evaluatePrediction, requestHint } from '@/api/predictions'
+import { resolveDisplayedFeedback, disconnectedFeedback, type DisplayedFeedback } from '@/utils/displayedFeedback'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
@@ -61,6 +62,9 @@ export interface PredictionOutcomeDetail {
   counterfactualText: string | null
   aiMisconceptionCategory: MisconceptionCategory | null
   hintIndexAtResolve: number
+  /** Why displayed feedback fell back (validator rule, "truncated",
+   * "stream_disconnected", ...); null when everything shown was AI text. */
+  aiFailureReason?: string | null
 }
 
 const CODE_EVAL_XP = 5
@@ -458,63 +462,66 @@ export default function PredictionZone({
     junctionDifficulty: JunctionDifficulty,
     verdictCorrect: boolean,
   ) {
-    // Streams the explanation into the feedback card as the model writes
-    // it (Week 1 addendum A2.4) - the verdict above is already shown, so
-    // this turns a ~5s wait into text appearing within about a second. The
-    // preview follows the same per-level rule as the final text (LOW shows
-    // one sentence, NONE shows none) and is overwritten below by the
-    // server-validated response, which swaps in the fallback if the
-    // streamed text failed validation.
+    // Streams the explanation into the feedback card (Week 1 addendum
+    // A2.4): the verdict is already shown, so text appearing about a second
+    // in replaces a ~5s wait. Each streamed piece is one sentence the AI
+    // service has already validated, so nothing unchecked is ever shown,
+    // and whatever appears is kept - the final response's explanation is
+    // exactly the sentences previewed. If the stream drops mid-response the
+    // partial is discarded and a neutral fallback shown instead; only a
+    // stream that never opened falls back to the JSON endpoint.
     const showPreview = !verdictCorrect && scaffoldingLevel !== ScaffoldingLevel.NONE
-    let response: PredictionResponse
+    let response: PredictionResponse | null = null
+    let displayed: DisplayedFeedback
     try {
-      ;({ response } = await streamPrediction(request, (explanationSoFar) => {
+      const streamed = await streamPrediction(request, (explanationSoFar) => {
         if (!showPreview || submissionTokenRef.current !== submissionToken) return
         setMistakeAnalysis(scaffoldingLevel === ScaffoldingLevel.LOW ? firstSentence(explanationSoFar) : explanationSoFar)
-      }))
-    } catch {
-      // The stream could not be opened or dropped before its final event.
-      // The JSON endpoint returns the same validated response, just not live.
-      response = await submitPrediction(request)
+      })
+      response = streamed.response
+      displayed = resolveDisplayedFeedback(scaffoldingLevel, response, streamed.fallbackFields, streamed.failureReason)
+    } catch (err) {
+      if (err instanceof StreamDisconnectedError) {
+        displayed = disconnectedFeedback(scaffoldingLevel, verdictCorrect)
+      } else {
+        // Never opened (network, or the api not yet deployed with the
+        // stream route): nothing was shown, so the JSON endpoint is safe.
+        response = await submitPrediction(request)
+        displayed = resolveDisplayedFeedback(
+          scaffoldingLevel,
+          response,
+          response.aiGenerated ? [] : ['consequence_explanation', 'socratic_hint', 'counterfactual_trace'],
+          response.aiGenerated ? null : 'json_fallback',
+        )
+      }
     }
 
+    const correct = response?.correct ?? verdictCorrect
     onPredictionResult?.({
-      correct: response.correct,
+      correct,
       stepIndex: request.stepIndex,
       predictionSubmitted: answer,
-      misconceptionCategory: response.correct ? null : response.misconceptionCategory,
+      misconceptionCategory: correct ? null : (response?.misconceptionCategory ?? request.groundTruthMisconception ?? null),
       hintsRequestedForStep: hintsRequestedCount,
       timeSpentSeconds,
       junctionType,
       junctionDifficulty,
       bottomedOut: isBottomedOut,
-      aiGenerated: response.aiGenerated,
-      feedbackText: response.consequenceExplanation || null,
-      hintText: response.correct ? null : response.socraticHint || null,
-      counterfactualText: response.correct ? null : response.counterfactualTrace || null,
-      aiMisconceptionCategory: response.correct ? null : response.aiMisconceptionCategory,
+      // What the student was shown, not what the model wrote - see
+      // resolveDisplayedFeedback.
+      ...displayed.log,
+      aiMisconceptionCategory: correct ? null : (response?.aiMisconceptionCategory ?? null),
       hintIndexAtResolve: attempt,
     })
 
-    if (response.correct || submissionTokenRef.current !== submissionToken) return
+    if (correct || submissionTokenRef.current !== submissionToken) return
 
     // NONE's mistake text is a static sentence set instantly in
-    // handleSubmit - it never needed Claude, so there's nothing to
-    // backfill here.
-    if (scaffoldingLevel === ScaffoldingLevel.LOW) {
-      // Brief, one-sentence analysis only; the counterfactual trace is
-      // extra elaboration that contradicts "reason through it independently".
-      setMistakeAnalysis(firstSentence(response.consequenceExplanation))
-      setMistakeHint(null)
-      setMistakeCounterfactual(null)
-    } else if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
-      setMistakeAnalysis(response.consequenceExplanation)
-      setMistakeHint(response.socraticHint)
-      setMistakeCounterfactual(response.counterfactualTrace || null)
-    } else if (scaffoldingLevel !== ScaffoldingLevel.NONE) {
-      setMistakeAnalysis(response.consequenceExplanation)
-      setMistakeHint(null)
-      setMistakeCounterfactual(response.counterfactualTrace || null)
+    // handleSubmit - it never needed Claude, so displayed.card is empty.
+    if (displayed.card) {
+      setMistakeAnalysis(displayed.card.analysis)
+      setMistakeHint(displayed.card.hint)
+      setMistakeCounterfactual(displayed.card.counterfactual)
     }
 
     if (isBottomedOut) {

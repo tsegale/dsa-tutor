@@ -26,6 +26,7 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       aiLatencyMs: dto.aiLatencyMs ?? null,
       aiModel: dto.aiModel ?? null,
       promptVersion: dto.promptVersion ?? null,
+      aiFailureReason: dto.aiFailureReason ?? null,
       dataStructureStateSnapshot: dto.dataStructureStateSnapshot ?? undefined,
     },
   })

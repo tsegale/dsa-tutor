@@ -7,6 +7,7 @@ import type {
 } from '@dsa-tutor/types'
 import { apiFetch, apiRequest } from './client'
 import { parseSseEvents } from '@/utils/sse'
+import type { FeedbackField } from '@/utils/displayedFeedback'
 
 export async function submitPrediction(request: PredictionRequest): Promise<PredictionResponse> {
   return apiFetch<PredictionResponse>('/api/v1/ai/predictions', {
@@ -17,17 +18,27 @@ export async function submitPrediction(request: PredictionRequest): Promise<Pred
 
 export interface StreamedPrediction {
   response: PredictionResponse
-  /** True when text was previewed but failed validation, so the preview
-   * must be swapped for the fallback in response. */
-  replaced: boolean
+  /** Fields that carry rule-based fallback text instead of the model's. */
+  fallbackFields: FeedbackField[]
+  /** The rule that tripped, if any (e.g. "socratic_hint.words"). */
+  failureReason: string | null
+}
+
+/** The stream opened but ended before its final event. */
+export class StreamDisconnectedError extends Error {
+  constructor() {
+    super('Prediction stream ended without a final event')
+    this.name = 'StreamDisconnectedError'
+  }
 }
 
 /**
- * Streams the explanation as the model writes it: onPreview receives the
- * explanation text so far after every delta. Resolves with the final,
- * server-validated response. Rejects if the stream cannot be opened or
- * ends without a final event - the caller then falls back to
- * submitPrediction, so a broken stream never loses the feedback.
+ * Streams prediction feedback. onPreview receives the explanation so far
+ * after each delta; every delta is one whole sentence the server has
+ * already validated, so nothing shown here is unchecked (see the AI
+ * service's SentenceGate). Resolves with the final validated response.
+ * Throws StreamDisconnectedError if the connection drops after opening,
+ * or a plain Error if it never opened.
  */
 export async function streamPrediction(
   request: PredictionRequest,
@@ -41,25 +52,40 @@ export async function streamPrediction(
 
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
+  const sentences: string[] = []
   let buffer = ''
-  let preview = ''
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    const { events, rest } = parseSseEvents(buffer + decoder.decode(value, { stream: true }))
-    buffer = rest
-    for (const event of events) {
-      const payload = JSON.parse(event.data) as { text?: string; response?: PredictionResponse; replaced?: boolean }
-      if (event.event === 'delta' && payload.text) {
-        preview += payload.text
-        onPreview(preview)
-      } else if (event.event === 'final' && payload.response) {
-        await reader.cancel()
-        return { response: payload.response, replaced: payload.replaced ?? false }
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const { events, rest } = parseSseEvents(buffer + decoder.decode(value, { stream: true }))
+      buffer = rest
+      for (const event of events) {
+        const payload = JSON.parse(event.data) as {
+          text?: string
+          response?: PredictionResponse
+          fallbackFields?: FeedbackField[]
+          failureReason?: string | null
+        }
+        if (event.event === 'delta' && payload.text) {
+          sentences.push(payload.text)
+          onPreview(sentences.join(' '))
+        } else if (event.event === 'final' && payload.response) {
+          await reader.cancel()
+          return {
+            response: payload.response,
+            fallbackFields: payload.fallbackFields ?? [],
+            failureReason: payload.failureReason ?? null,
+          }
+        }
       }
     }
+  } catch {
+    // A dropped connection or a garbled event: either way the stream broke
+    // after opening, which the caller handles as a disconnect.
+    throw new StreamDisconnectedError()
   }
-  throw new Error('Prediction stream ended without a final event')
+  throw new StreamDisconnectedError()
 }
 
 // The deterministic verdict only - no AI call on the backend, so this

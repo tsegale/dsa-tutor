@@ -1,8 +1,10 @@
 """Streamed explanations (Week 1 addendum A2.4).
 
-The explanation is streamed as a preview while the model writes it; the
-assembled response is still validated before anything is treated as
-final, and a failed validation swaps the preview for the fallback."""
+Unvalidated text is never shown: the explanation is revealed one whole
+sentence at a time, each checked before release, and whatever was revealed
+is the final explanation - it is never swapped out. Later fields that fail
+take the fallback text on their own. Every scenario below checks that
+invariant: the deltas the student saw are, joined, the final explanation."""
 
 import json
 
@@ -12,7 +14,7 @@ from fastapi.testclient import TestClient
 from main import app
 from routers import predictions
 from services.claude_service import CallMetadata
-from services.feedback_stream import JsonStringFieldStreamer
+from services.feedback_stream import JsonStringFieldStreamer, SentenceGate
 
 VALID = {
     "misconception_category": None,
@@ -53,16 +55,32 @@ def test_emits_nothing_until_the_field_appears():
     assert streamer.feed('"a": "hi"}') == "hi"
 
 
+def test_sentence_gate_releases_only_checked_sentences():
+    gate = SentenceGate(lambda s: "bad" if "bad" in s else None, max_sentences=2)
+    assert gate.feed("First one. Seco") == ["First one."]
+    assert gate.feed("nd is bad. Third.") == []
+    assert gate.closed and gate.failure == "bad" and gate.text == "First one."
+    assert gate.finish() == []
+
+
+def test_sentence_gate_does_not_split_decimals_and_judges_the_last_sentence_on_finish():
+    gate = SentenceGate(lambda s: None, max_sentences=2)
+    assert gate.feed("The value 3.5 stays") == []
+    assert gate.finish() == ["The value 3.5 stays"]
+
+
 REQUEST = {
     "algorithm_name": "Bubble Sort",
     "step_index": 1,
     "current_state": {"dataStructureState": [7, 3], "activeIndices": [0, 1], "criticalJunctionType": "SWAP_DECISION"},
     "student_answer": "no-swap",
     "error_history": [],
-    "scaffolding_level": "MEDIUM",
+    "scaffolding_level": "HIGH",
     "session_id": "s",
     "pseudocode": "if arr[j] > arr[j+1] then swap arr[j] and arr[j+1]",
 }
+
+TWO_SENTENCES = "Skipping the swap leaves 7 before 3. The larger value stays on the left."
 
 
 def fake_stream(text: str, *, fail_after: int | None = None, stop_reason: str = "end_turn"):
@@ -76,51 +94,112 @@ def fake_stream(text: str, *, fail_after: int | None = None, stop_reason: str = 
     return stream_message
 
 
-def events(monkeypatch, stream) -> list[tuple[str, dict]]:
-    monkeypatch.setattr(predictions, "stream_message", stream)
+def run(monkeypatch, feedback_text: str, request: dict = REQUEST, **kwargs) -> tuple[list[str], dict]:
+    """Returns (delta texts in order, final payload) and asserts the shared
+    invariants: exactly one final event, last; the revealed sentences joined
+    are exactly the final explanation."""
+    monkeypatch.setattr(predictions, "stream_message", fake_stream(feedback_text, **kwargs))
     monkeypatch.setattr(predictions, "CACHE_ENABLED", False)
     with TestClient(app) as client:
-        res = client.post("/api/v1/predictions/stream", json=REQUEST)
+        res = client.post("/api/v1/predictions/stream", json=request)
     assert res.status_code == 200
     assert res.headers["content-type"].startswith("text/event-stream")
     parsed = []
     for block in res.text.strip().split("\n\n"):
         lines = dict(line.split(": ", 1) for line in block.splitlines())
         parsed.append((lines["event"], json.loads(lines["data"])))
-    return parsed
+    kinds = [kind for kind, _ in parsed]
+    assert kinds.count("final") == 1 and kinds[-1] == "final"
+    deltas = [data["text"] for kind, data in parsed if kind == "delta"]
+    final = parsed[-1][1]
+    if deltas:
+        assert final["response"]["consequenceExplanation"] == " ".join(deltas)
+    return deltas, final
 
 
-def test_valid_stream_previews_the_explanation_then_finalises(monkeypatch):
-    got = events(monkeypatch, fake_stream(json.dumps(VALID)))
-    deltas = [e for e in got if e[0] == "delta"]
-    finals = [e for e in got if e[0] == "final"]
-    assert "".join(d[1]["text"] for d in deltas) == VALID["consequence_explanation"]
-    assert len(finals) == 1 and got[-1][0] == "final"
-    final = finals[0][1]
-    assert final["outcome"] == "ai" and final["replaced"] is False
-    assert final["response"]["consequenceExplanation"] == VALID["consequence_explanation"]
-    assert final["response"]["correct"] is False
+def feedback(**override) -> str:
+    return json.dumps({**VALID, "consequence_explanation": TWO_SENTENCES, **override})
 
 
-def test_invalid_stream_is_replaced_by_the_fallback(monkeypatch):
-    bad = {**VALID, "socratic_hint": " ".join(["word"] * 60)}
-    final = events(monkeypatch, fake_stream(json.dumps(bad)))[-1][1]
-    assert final["outcome"] == "fallback"
-    assert final["failureReason"] == "socratic_hint.words"
-    assert final["replaced"] is True
+def test_valid_stream_reveals_whole_sentences_then_finalises(monkeypatch):
+    deltas, final = run(monkeypatch, feedback())
+    assert deltas == ["Skipping the swap leaves 7 before 3.", "The larger value stays on the left."]
+    assert final["outcome"] == "ai" and final["fallbackFields"] == [] and final["failureReason"] is None
+    assert final["response"]["aiGenerated"] is True
+    assert final["response"]["socraticHint"] == VALID["socratic_hint"]
+
+
+def test_a_self_correcting_sentence_is_never_revealed(monkeypatch):
+    text = "Skipping the swap leaves 7 before 3. Wait, actually the 3 moves."
+    deltas, final = run(monkeypatch, feedback(consequence_explanation=text))
+    assert deltas == ["Skipping the swap leaves 7 before 3."]
+    # The explanation is what was shown - kept, not swapped.
+    assert final["response"]["consequenceExplanation"] == "Skipping the swap leaves 7 before 3."
+    assert final["failureReason"] == "consequence_explanation.self_correction"
+    assert final["fallbackFields"] == []
+
+
+def test_foreign_notation_is_never_revealed(monkeypatch):
+    text = "The pseudocode compares A[i - 1] with A[i]. So they swap."
+    deltas, final = run(monkeypatch, feedback(consequence_explanation=text))
+    assert deltas == []
+    assert final["failureReason"] == "consequence_explanation.notation"
+    assert final["fallbackFields"][0] == "consequence_explanation"
+    assert "A[i" not in final["response"]["consequenceExplanation"]
     assert final["response"]["aiGenerated"] is False
 
 
-def test_truncated_stream_is_replaced(monkeypatch):
-    final = events(monkeypatch, fake_stream(json.dumps(VALID), stop_reason="max_tokens"))[-1][1]
-    assert final["outcome"] == "fallback" and final["failureReason"] == "truncated"
+def test_a_third_sentence_is_held_back(monkeypatch):
+    deltas, final = run(monkeypatch, feedback(consequence_explanation=TWO_SENTENCES + " And a third one."))
+    assert len(deltas) == 2
+    assert final["failureReason"] == "consequence_explanation.sentences"
+    assert final["fallbackFields"] == []
 
 
-def test_a_dropped_stream_still_ends_with_one_final_event(monkeypatch):
-    got = events(monkeypatch, fake_stream(json.dumps(VALID), fail_after=60))
-    assert [e[0] for e in got].count("final") == 1
-    assert got[-1][1]["outcome"] == "error"
-    assert got[-1][1]["response"]["aiGenerated"] is False
+def test_a_failing_hint_takes_the_fallback_but_the_visible_explanation_stands(monkeypatch):
+    long_hint = " ".join(["word"] * 60)
+    deltas, final = run(monkeypatch, feedback(socratic_hint=long_hint))
+    assert len(deltas) == 2
+    assert final["response"]["consequenceExplanation"] == TWO_SENTENCES
+    assert final["fallbackFields"] == ["socratic_hint"]
+    assert final["failureReason"] == "socratic_hint.words"
+    assert final["outcome"] == "partial"
+    assert final["response"]["socraticHint"] != long_hint
+    assert final["response"]["aiGenerated"] is False
+
+
+def test_a_truncated_response_never_reveals_its_unfinished_sentence(monkeypatch):
+    text = '{"consequence_explanation": "Skipping the swap leaves 7 before 3. The larger val'
+    deltas, final = run(monkeypatch, text, stop_reason="max_tokens")
+    assert deltas == ["Skipping the swap leaves 7 before 3."]
+    assert final["failureReason"] == "truncated"
+    assert set(final["fallbackFields"]) == {"socratic_hint", "counterfactual_trace"}
+
+
+def test_a_model_error_mid_stream_keeps_revealed_sentences_and_falls_back_for_the_rest(monkeypatch):
+    deltas, final = run(monkeypatch, feedback(), fail_after=70)
+    assert final["outcome"] == "error" and final["failureReason"] == "error"
+    assert {"socratic_hint", "counterfactual_trace"} <= set(final["fallbackFields"])
+    assert final["response"]["aiGenerated"] is False
+
+
+def test_a_correct_answer_with_an_empty_explanation_is_valid(monkeypatch):
+    correct = {**REQUEST, "student_answer": "swap"}
+    deltas, final = run(monkeypatch, feedback(consequence_explanation="", counterfactual_trace=""), request=correct)
+    assert deltas == []
+    assert final["outcome"] == "ai" and final["fallbackFields"] == []
+    assert final["response"]["correct"] is True
+
+
+def test_a_complete_valid_stream_populates_the_cache(monkeypatch):
+    stored: dict = {}
+    monkeypatch.setattr(predictions, "stream_message", fake_stream(feedback()))
+    monkeypatch.setattr(predictions, "CACHE_ENABLED", True)
+    monkeypatch.setattr(predictions.feedback_cache, "get", lambda key: None)
+    monkeypatch.setattr(predictions.feedback_cache, "set", lambda key, value: stored.update({key: value}))
+    with TestClient(app) as client:
+        client.post("/api/v1/predictions/stream", json=REQUEST)
+    assert len(stored) == 1
 
 
 def test_a_cache_hit_sends_only_the_final_event(monkeypatch):
