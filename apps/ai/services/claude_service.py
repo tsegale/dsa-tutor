@@ -30,26 +30,6 @@ request_timeout_seconds = float(os.getenv("CLAUDE_TIMEOUT_SECONDS", "20"))
 # so the worst case is one full call plus this budget rather than the four
 # sequential calls the old nested JSON-retry and validation-retry allowed.
 retry_budget_seconds = float(os.getenv("CLAUDE_RETRY_BUDGET_SECONDS", "4"))
-# Prompt caching TTL for the static prefix of prediction feedback: "5m"
-# (default; refreshed on every use) or "1h" (2x write price, worth it when
-# participants run back to back with gaps over five minutes). Caching is an
-# infrastructure optimisation only - the model receives the same text.
-cache_ttl = os.getenv("CLAUDE_CACHE_TTL", "5m")
-
-# A prompt or system prompt is either plain text or a list of content blocks
-# (the block form is what lets part of it carry cache_control).
-Prompt = str | list[dict]
-
-
-def cache_control() -> dict:
-    return {"type": "ephemeral", "ttl": "1h"} if cache_ttl == "1h" else {"type": "ephemeral"}
-
-
-def cached_text_block(text: str) -> dict:
-    """A text block marked as a cache breakpoint: everything up to and
-    including it is cached as a prefix. Below the model's minimum cacheable
-    length (1024 tokens on Sonnet 4.6) the marker silently does nothing."""
-    return {"type": "text", "text": text, "cache_control": cache_control()}
 
 # Phrases that mark a model thinking out loud mid-answer rather than giving
 # a clean, final response (e.g. "...index 1 (value 5... wait, still 5) -
@@ -76,27 +56,6 @@ class CallMetadata:
     output_tokens: int
     # "max_tokens" means the response was cut off at the token limit.
     stop_reason: str | None = None
-    # Prompt-cache accounting: tokens written to / served from the cache.
-    # input_tokens excludes both. A hit rate of reads / (reads + writes) is
-    # the evidence caching worked with no behavioural effect.
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
-    # Streams only: time from sending the request to the first text chunk.
-    first_token_ms: int | None = None
-
-
-def _metadata(usage, started: float, stop_reason: str | None, first_token_ms: int | None = None) -> CallMetadata:
-    # getattr: the cache fields are absent on responses that never touched
-    # the cache, and on older SDK response models.
-    return CallMetadata(
-        latency_ms=round((time.monotonic() - started) * 1000),
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        stop_reason=stop_reason,
-        cache_creation_input_tokens=getattr(usage, "cache_creation_input_tokens", None) or 0,
-        cache_read_input_tokens=getattr(usage, "cache_read_input_tokens", None) or 0,
-        first_token_ms=first_token_ms,
-    )
 
 
 def has_self_correction_marker(text: str) -> bool:
@@ -183,8 +142,8 @@ def _strip_code_fences(text: str) -> str:
 
 
 async def _create_message(
-    prompt: Prompt,
-    system: Prompt | None,
+    prompt: str,
+    system: str | None,
     *,
     timeout: float | None = None,
     max_retries: int | None = None,
@@ -202,7 +161,13 @@ async def _create_message(
         system=system or "",
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.content[0].text, _metadata(response.usage, start, response.stop_reason)
+    metadata = CallMetadata(
+        latency_ms=round((time.monotonic() - start) * 1000),
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+        stop_reason=response.stop_reason,
+    )
+    return response.content[0].text, metadata
 
 
 def _sanitize_feedback_dashes(feedback: dict) -> dict:
@@ -237,15 +202,9 @@ JSON_RETRY_SUFFIX = (
 )
 
 
-def _with_json_reminder(prompt: Prompt) -> Prompt:
-    if isinstance(prompt, str):
-        return prompt + JSON_RETRY_SUFFIX
-    return [*prompt, {"type": "text", "text": JSON_RETRY_SUFFIX.strip()}]
-
-
 async def attempt_feedback(
-    prompt: Prompt,
-    system: Prompt | None,
+    prompt: str,
+    system: str | None,
     *,
     retry_reason: str | None,
     token_limit: int | None = None,
@@ -255,7 +214,7 @@ async def attempt_feedback(
     retry covers parse failures and validation failures alike."""
     budgeted = retry_reason is not None
     text, metadata = await _create_message(
-        _with_json_reminder(prompt) if retry_reason == "json_parse" else prompt,
+        prompt + JSON_RETRY_SUFFIX if retry_reason == "json_parse" else prompt,
         system,
         timeout=retry_budget_seconds if budgeted else None,
         max_retries=0 if budgeted else None,
@@ -280,8 +239,8 @@ async def attempt_text(prompt: str, system: str | None, *, retry_reason: str | N
 
 
 async def stream_message(
-    prompt: Prompt,
-    system: Prompt | None,
+    prompt: str,
+    system: str | None,
     *,
     token_limit: int | None = None,
 ) -> AsyncIterator[tuple[str, str | CallMetadata]]:
@@ -298,13 +257,15 @@ async def stream_message(
         system=system or "",
         messages=[{"role": "user", "content": prompt}],
     ) as stream:
-        first_token_ms: int | None = None
         async for chunk in stream.text_stream:
-            if first_token_ms is None:
-                first_token_ms = round((time.monotonic() - start) * 1000)
             yield "text", chunk
         final = await stream.get_final_message()
-    yield "done", _metadata(final.usage, start, final.stop_reason, first_token_ms)
+    yield "done", CallMetadata(
+        latency_ms=round((time.monotonic() - start) * 1000),
+        input_tokens=final.usage.input_tokens,
+        output_tokens=final.usage.output_tokens,
+        stop_reason=final.stop_reason,
+    )
 
 
 def parse_feedback_json(text: str) -> dict | None:
@@ -350,9 +311,8 @@ async def call_with_bounded_retry(
 
     first, metadata = await attempt(None)
     logger.info(
-        "AI %s call: latency_ms=%s input_tokens=%s cache_write=%s cache_read=%s output_tokens=%s stop_reason=%s",
-        label, metadata.latency_ms, metadata.input_tokens, metadata.cache_creation_input_tokens,
-        metadata.cache_read_input_tokens, metadata.output_tokens, metadata.stop_reason,
+        "AI %s call: latency_ms=%s input_tokens=%s output_tokens=%s stop_reason=%s",
+        label, metadata.latency_ms, metadata.input_tokens, metadata.output_tokens, metadata.stop_reason,
     )
     reason = "truncated" if metadata.stop_reason == "max_tokens" else failure_of(first)
     if reason is None:
