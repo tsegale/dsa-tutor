@@ -16,8 +16,37 @@ import type {
   ClassSummaryResponse,
 } from '@dsa-tutor/types'
 import type { Response as ExpressResponse } from 'express'
+import { randomUUID } from 'node:crypto'
+import { currentRequestId } from '../lib/requestContext'
+import { logEvent } from '../lib/log'
 
 const AI_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
+
+/**
+ * Every call to the AI service goes through here: it forwards the current
+ * request's correlation id (see lib/requestContext) and logs the call's
+ * start and end under it. Joined with the AI service's own "request start"
+ * and "request end" lines, a stalled call can be placed - no AI-side start
+ * means it never got past Railway's edge; a start with no end means the AI
+ * service itself stalled. For a stream, "end" here is when headers arrived;
+ * relayPredictionStream logs when the body finished.
+ */
+async function aiFetch(path: string, init: RequestInit): Promise<Response> {
+  const requestId = currentRequestId() ?? randomUUID()
+  const started = Date.now()
+  logEvent('ai_call_start', { requestId, path })
+  try {
+    const response = await fetch(`${AI_URL}${path}`, {
+      ...init,
+      headers: { ...(init.headers as Record<string, string>), 'X-Request-Id': requestId },
+    })
+    logEvent('ai_call_end', { requestId, path, status: response.status, ms: Date.now() - started })
+    return response
+  } catch (err) {
+    logEvent('ai_call_error', { requestId, path, ms: Date.now() - started, error: String(err) })
+    throw err
+  }
+}
 
 // snake_case body shared by the JSON and streaming prediction proxies, so
 // the two can never send the AI service different requests.
@@ -43,7 +72,7 @@ function toPredictionBody(request: PredictionRequest): string {
 // the outbound request needs the camelCase -> snake_case translation,
 // since the AI service's request models use snake_case field names.
 export async function proxyPrediction(request: PredictionRequest): Promise<PredictionResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/predictions/`, {
+  const response = await aiFetch('/api/v1/predictions/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: toPredictionBody(request),
@@ -78,7 +107,7 @@ export async function relayPredictionStream(
   res: ExpressResponse,
   signal: AbortSignal,
 ): Promise<void> {
-  const upstream = await fetch(`${AI_URL}/api/v1/predictions/stream`, {
+  const upstream = await aiFetch('/api/v1/predictions/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: toPredictionBody(request),
@@ -95,12 +124,17 @@ export async function relayPredictionStream(
   res.flushHeaders()
 
   const reader = upstream.body.getReader()
+  const started = Date.now()
+  let bytes = 0
+  let completed = false
   try {
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
+      bytes += value.byteLength
       res.write(value)
     }
+    completed = true
   } catch (err) {
     // The client navigated away (signal aborted) or the AI service dropped
     // the connection mid-stream. Headers are already sent, so all that is
@@ -108,6 +142,12 @@ export async function relayPredictionStream(
     // final event as a failure and falls back to the JSON endpoint.
     if (!signal.aborted) console.error('relayPredictionStream dropped:', err)
   } finally {
+    logEvent(completed ? 'ai_stream_end' : 'ai_stream_aborted', {
+      requestId: currentRequestId(),
+      ms: Date.now() - started,
+      bytes,
+      clientGone: signal.aborted,
+    })
     res.end()
   }
 }
@@ -117,7 +157,7 @@ export async function relayPredictionStream(
 // and lets the client show correct/incorrect before the full explanation
 // arrives (remediation doc 12B.3).
 export async function proxyPredictionEvaluate(request: PredictionRequest): Promise<PredictionEvaluateResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/predictions/evaluate`, {
+  const response = await aiFetch('/api/v1/predictions/evaluate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -142,7 +182,7 @@ export async function proxyPredictionEvaluate(request: PredictionRequest): Promi
 // model is a plain Pydantic BaseModel (no camelCase alias generator), so
 // its JSON comes back snake_case and needs explicit field mapping here.
 export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/feynman/`, {
+  const response = await aiFetch('/api/v1/feynman/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -170,7 +210,7 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
 // plain Pydantic BaseModel (no camelCase alias generator), so its JSON
 // comes back snake_case and needs explicit field mapping here.
 export async function proxyChallenge(request: ChallengeRequest): Promise<ChallengeResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/challenges/`, {
+  const response = await aiFetch('/api/v1/challenges/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -195,7 +235,7 @@ export async function proxyChallenge(request: ChallengeRequest): Promise<Challen
 // model is a plain Pydantic BaseModel (no camelCase alias generator), so
 // its JSON comes back snake_case and needs explicit field mapping here.
 export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/code-eval/`, {
+  const response = await aiFetch('/api/v1/code-eval/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -228,7 +268,7 @@ export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalR
 // are plain Pydantic BaseModels (no camelCase alias generator), so their
 // JSON comes back snake_case and needs explicit field mapping here.
 export async function proxyStudentSummary(request: StudentSummaryRequest): Promise<StudentSummaryResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/summaries/student`, {
+  const response = await aiFetch('/api/v1/summaries/student', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -256,7 +296,7 @@ export async function proxyStudentSummary(request: StudentSummaryRequest): Promi
 }
 
 export async function proxyClassSummary(request: ClassSummaryRequest): Promise<ClassSummaryResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/summaries/class`, {
+  const response = await aiFetch('/api/v1/summaries/class', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -279,7 +319,7 @@ export async function proxyClassSummary(request: ClassSummaryRequest): Promise<C
 }
 
 export async function proxyHint(request: HintRequest): Promise<HintResponse> {
-  const response = await fetch(`${AI_URL}/api/v1/hints/`, {
+  const response = await aiFetch('/api/v1/hints/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

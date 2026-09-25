@@ -52,6 +52,35 @@ describe('POST /api/v1/ai/predictions/stream', () => {
     expect(JSON.parse(init.body as string)).toMatchObject({ algorithm_name: 'Bubble Sort', student_answer: 'no-swap' })
   })
 
+  it('forwards one correlation id to the AI service and echoes it to the client', async () => {
+    const fetchMock = vi.fn(async () => upstream([SSE]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await request(app).post('/api/v1/ai/predictions/stream').set(bearer).send(body)
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    const forwarded = (init.headers as Record<string, string>)['X-Request-Id']
+    expect(forwarded).toMatch(/^[\w-]{8,}$/)
+    expect(res.headers['x-request-id']).toBe(forwarded)
+  })
+
+  it('reuses a sane caller-supplied id and replaces a malformed one', async () => {
+    const fetchMock = vi.fn(async () => upstream([SSE]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await request(app).post('/api/v1/ai/predictions/stream').set(bearer).set('X-Request-Id', 'probe-42').send(body)
+    const bad = await request(app)
+      .post('/api/v1/ai/predictions/stream')
+      .set(bearer)
+      .set('X-Request-Id', 'bad id with spaces')
+      .send(body)
+
+    const ids = fetchMock.mock.calls.map((call) => ((call as unknown as [string, RequestInit])[1].headers as Record<string, string>)['X-Request-Id'])
+    expect(ids[0]).toBe('probe-42')
+    expect(ids[1]).not.toBe('bad id with spaces')
+    expect(bad.headers['x-request-id']).toBe(ids[1])
+  })
+
   it('answers 502 JSON when the stream cannot be opened', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => upstream([], 500)))
 

@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { errorHandler } from './middleware/errorHandler'
+import { requestId } from './lib/requestContext'
 import authRouter from './routers/auth.router'
 import sessionsRouter from './routers/sessions.router'
 import interactionsRouter from './routers/interactions.router'
@@ -22,6 +23,8 @@ app.use(
   }),
 )
 
+// First, so every later handler and AI call runs inside the request's context.
+app.use(requestId)
 app.use(express.json())
 
 app.get('/health', (req, res) => {

@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -6,12 +7,21 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
+# Without this, uvicorn leaves the root logger at WARNING and every
+# logger.info line in this service (call latency, retry reasons, request
+# correlation) is silently dropped.
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+
 from models.response_models import HealthResponse
 from routers import hints, predictions
 from routers.challenges import router as challenges_router
 from routers.code_eval import router as code_eval_router
 from routers.feynman import router as feynman_router
 from routers.summaries import router as summaries_router
+from services.request_log import RequestIdMiddleware
 
 app = FastAPI(title="DSA Tutor AI Service")
 
@@ -24,6 +34,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestIdMiddleware)
 
 app.include_router(predictions.router, prefix="/api/v1/predictions", tags=["predictions"])
 app.include_router(hints.router, prefix="/api/v1/hints", tags=["hints"])
