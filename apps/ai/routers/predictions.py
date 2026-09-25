@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from typing import Any
 
@@ -1175,8 +1176,12 @@ def _feedback_failure(
     Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
     consequence_explanation and counterfactual_trace are capped at two
     sentences, socratic_hint at a level-dependent word count, and
-    counterfactual_trace is only allowed to be empty when the answer was
-    correct. HIGH's socratic_hint additionally must not plug in this
+    consequence_explanation and counterfactual_trace may both be empty only
+    when the answer was correct - the prompt defines the explanation as
+    what would go wrong with the student's choice, so on a correct answer
+    the model rightly leaves it empty. Requiring it there made every
+    correct answer at HIGH/MEDIUM/LOW retry and then fall back (15 of 15
+    in the A2.2 measurement). HIGH's socratic_hint additionally must not plug in this
     step's actual comparison values - the whole point of asking the
     student to apply the rule themselves rather than confirming a
     conclusion for them. When pseudocode is given, no text field may use
@@ -1190,7 +1195,7 @@ def _feedback_failure(
         for field in ("consequence_explanation", "counterfactual_trace", "socratic_hint"):
             if uses_foreign_array_notation(feedback.get(field), pseudocode):
                 return f"{field}.notation"
-    why = field_failure(feedback.get("consequence_explanation"), max_sentences=2)
+    why = field_failure(feedback.get("consequence_explanation"), max_sentences=2, allow_empty=correct)
     if why:
         return f"consequence_explanation.{why}"
     socratic_hint = feedback.get("socratic_hint")
@@ -1242,6 +1247,9 @@ def _set_ai_headers(response: Response, outcome: str, result: BoundedCall | None
     The api service rebuilds the JSON body and does not forward these, so
     they never reach a student's browser."""
     response.headers["X-AI-Outcome"] = outcome
+    # Railway sets this per deploy, so a measurement can confirm which
+    # build answered it.
+    response.headers["X-AI-Build"] = os.getenv("RAILWAY_GIT_COMMIT_SHA", "local")[:7]
     response.headers["X-AI-Attempts"] = str(result.attempts if result else 0)
     response.headers["X-AI-Retry-Reason"] = (result.retry_reason if result else None) or "none"
     response.headers["X-AI-Failure-Reason"] = (result.failure_reason if result else None) or "none"

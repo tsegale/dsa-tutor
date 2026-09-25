@@ -142,3 +142,11 @@ def test_feedback_failure_names_parse_and_notation_failures():
     assert _feedback_failure(["not", "a", "dict"], False, ScaffoldingLevel.LOW) == "json_shape"
     notation = {**VALID, "socratic_hint": "Is A[i] larger?"}
     assert _feedback_failure(notation, False, ScaffoldingLevel.LOW, None, "if arr[j] > arr[j+1]") == "socratic_hint.notation"
+
+
+def test_an_empty_explanation_is_valid_only_for_a_correct_answer():
+    # A2.2 measurement: 15 of 15 retries were correct answers whose
+    # explanation the model (rightly) left empty.
+    empty = {**VALID, "consequence_explanation": "", "counterfactual_trace": ""}
+    assert _feedback_failure(empty, True, ScaffoldingLevel.HIGH) is None
+    assert _feedback_failure(empty, False, ScaffoldingLevel.HIGH) == "consequence_explanation.empty"
