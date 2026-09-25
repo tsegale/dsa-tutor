@@ -11,7 +11,10 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #   2026-09-25.1    HIGH socratic_hint: rule in <=10 words, exactly one
 #                   question, no values from the current step (digits or
 #                   spelled out), worked example
-PROMPT_VERSION = "2026-09-25.1"
+#   2026-09-25.2    Feedback JSON key order: consequence_explanation first
+#                   (was misconception_category first), so the streamed
+#                   explanation starts sooner. Field wording unchanged.
+PROMPT_VERSION = "2026-09-25.2"
 
 # Stable across every call regardless of algorithm, student or step - the
 # tutor persona and the JSON contract belong in the system prompt, not
@@ -30,12 +33,9 @@ write A[i - 1], A[i], or any other array name or index expression it does
 not contain.
 
 Respond with ONLY valid JSON, no markdown code fences, matching exactly this
-schema:
+schema, with the keys in exactly this order (consequence_explanation first -
+the student sees it as it is written):
 {
-  "misconception_category": one of "OFF_BY_ONE", "ORDER_OF_OPERATIONS",
-    "STRUCTURAL_PROPERTY_VIOLATION", "POINTER_CONFUSION",
-    "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION", or null if the
-    answer was correct or no misconception is evident,
   "consequence_explanation": Two sentences maximum, written directly to
     the student in second person. Explain what would go wrong with their
     choice using the actual array values. Start with what their answer
@@ -76,6 +76,10 @@ schema:
     below, not a paraphrase. Example style: Which of the two highlighted
     values is larger, and where should the larger value end up by the
     time sorting is complete?,
+  "misconception_category": one of "OFF_BY_ONE", "ORDER_OF_OPERATIONS",
+    "STRUCTURAL_PROPERTY_VIOLATION", "POINTER_CONFUSION",
+    "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION", or null if the
+    answer was correct or no misconception is evident,
   "xp_awarded": an integer, 10 if correct, 0 if incorrect
 }
 
