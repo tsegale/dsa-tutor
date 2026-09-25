@@ -10,6 +10,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { getProgressToNextLevel } from '@/utils/xpLevels'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
+import AccountIdentity from './AccountIdentity'
 
 function SearchIcon() {
   return (
@@ -129,15 +130,10 @@ export default function DashboardNav() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {/* Non-interactive - just states which account is signed in,
-                which the menu never showed before (see remediation doc
-                9.5). No Profile item: there is no profile page to open,
-                and a disabled menu item with no explanation is worse than
-                no item at all. */}
-            <div className="border-b border-border px-2 py-1.5">
-              <p className="truncate text-sm font-medium text-text-primary">{user?.name}</p>
-              <p className="truncate text-xs text-text-muted">{user?.email}</p>
-            </div>
+            {/* No Profile item: there is no profile page to open, and a
+                disabled menu item with no explanation is worse than no
+                item at all. */}
+            <AccountIdentity />
             {studyStatus && !studyStatus.isParticipant && (
               <DropdownMenuItem onSelect={() => navigate('/study/join')}>Join the study</DropdownMenuItem>
             )}

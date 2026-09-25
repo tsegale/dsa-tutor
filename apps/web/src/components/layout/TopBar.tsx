@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StudentAvatar } from '@/components/brand'
+import AccountIdentity from './AccountIdentity'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
 import SoundToggle from '@/components/ui/SoundToggle'
@@ -210,6 +211,7 @@ export default function TopBar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <AccountIdentity />
             <DropdownMenuItem
               onSelect={() => {
                 logout()
