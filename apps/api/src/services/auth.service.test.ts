@@ -33,7 +33,7 @@ describe('register', () => {
     } as never)
 
     // RegisterDto has no `role` field, so this cast simulates a raw HTTP
-    // body that bypassed validateStringBody and still carries one.
+    // body that bypassed the route's validate() schema and still carries one.
     const smuggledBody = { email: 'a@b.com', password: 'hunter2!', name: 'A', role: 'EDUCATOR' } as unknown as RegisterDto
 
     await register(smuggledBody)

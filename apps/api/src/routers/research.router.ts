@@ -8,6 +8,8 @@ import {
   exportMisconceptionEventsCsv,
   importMisconceptionRatings,
 } from '../services/research.service'
+import { validate, type BodyOf } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
@@ -23,7 +25,7 @@ function includePilotFlag(req: AuthRequest): boolean {
   return req.query.includePilot === 'true'
 }
 
-router.get('/misconceptions.csv', async (req: AuthRequest, res: Response) => {
+router.get('/misconceptions.csv', validate(S.research.export), async (req: AuthRequest, res: Response) => {
   try {
     sendCsv(res, 'misconceptions.csv', await exportMisconceptionsCsv(includePilotFlag(req)))
   } catch {
@@ -31,7 +33,7 @@ router.get('/misconceptions.csv', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/interactions.csv', async (req: AuthRequest, res: Response) => {
+router.get('/interactions.csv', validate(S.research.export), async (req: AuthRequest, res: Response) => {
   try {
     sendCsv(res, 'interactions.csv', await exportInteractionsCsv(includePilotFlag(req)))
   } catch {
@@ -39,7 +41,7 @@ router.get('/interactions.csv', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/assessments.csv', async (req: AuthRequest, res: Response) => {
+router.get('/assessments.csv', validate(S.research.export), async (req: AuthRequest, res: Response) => {
   try {
     sendCsv(res, 'assessments.csv', await exportAssessmentsCsv(includePilotFlag(req)))
   } catch {
@@ -47,7 +49,7 @@ router.get('/assessments.csv', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/sessions.csv', async (req: AuthRequest, res: Response) => {
+router.get('/sessions.csv', validate(S.research.export), async (req: AuthRequest, res: Response) => {
   try {
     sendCsv(res, 'sessions.csv', await exportSessionsCsv(includePilotFlag(req)))
   } catch {
@@ -55,7 +57,7 @@ router.get('/sessions.csv', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/misconception_events.csv', async (req: AuthRequest, res: Response) => {
+router.get('/misconception_events.csv', validate(S.research.export), async (req: AuthRequest, res: Response) => {
   try {
     sendCsv(res, 'misconception_events.csv', await exportMisconceptionEventsCsv(includePilotFlag(req)))
   } catch {
@@ -63,13 +65,9 @@ router.get('/misconception_events.csv', async (req: AuthRequest, res: Response) 
   }
 })
 
-router.post('/ratings', async (req: AuthRequest, res: Response) => {
+router.post('/ratings', validate(S.research.ratings), async (req: AuthRequest, res: Response) => {
   try {
-    const { csv } = req.body as { csv?: string }
-    if (typeof csv !== 'string' || csv.trim().length === 0) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'csv (string) is required' } })
-      return
-    }
+    const { csv } = req.body as BodyOf<typeof S.research.ratings>
     const result = await importMisconceptionRatings(csv)
     res.json({ data: result, error: null })
   } catch {

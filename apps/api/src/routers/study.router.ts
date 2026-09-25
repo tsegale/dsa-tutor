@@ -1,11 +1,13 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { getStudyStatus, recordConsent, withdrawParticipant, submitSus, enrolParticipant } from '../services/study.service'
+import { validate, type BodyOf } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
 
-router.get('/status', async (req: AuthRequest, res: Response) => {
+router.get('/status', validate(S.study.status), async (req: AuthRequest, res: Response) => {
   try {
     const status = await getStudyStatus(req.userId!)
     res.json({ data: status, error: null })
@@ -14,13 +16,9 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/enrol', async (req: AuthRequest, res: Response) => {
+router.post('/enrol', validate(S.study.enrol), async (req: AuthRequest, res: Response) => {
   try {
-    const { code } = req.body as { code?: string }
-    if (typeof code !== 'string' || !code.trim()) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_CODE', message: 'A code is required' } })
-      return
-    }
+    const { code } = req.body as BodyOf<typeof S.study.enrol>
     const status = await enrolParticipant(req.userId!, code)
     res.json({ data: status, error: null })
   } catch (err) {
@@ -41,7 +39,7 @@ router.post('/enrol', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/consent', async (req: AuthRequest, res: Response) => {
+router.post('/consent', validate(S.study.consent), async (req: AuthRequest, res: Response) => {
   try {
     await recordConsent(req.userId!)
     res.json({ data: { consented: true }, error: null })
@@ -55,7 +53,7 @@ router.post('/consent', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/withdraw', async (req: AuthRequest, res: Response) => {
+router.post('/withdraw', validate(S.study.withdraw), async (req: AuthRequest, res: Response) => {
   try {
     await withdrawParticipant(req.userId!)
     res.json({ data: { withdrawn: true }, error: null })
@@ -69,13 +67,9 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/sus', async (req: AuthRequest, res: Response) => {
+router.post('/sus', validate(S.study.sus), async (req: AuthRequest, res: Response) => {
   try {
-    const { responses } = req.body as { responses?: number[] }
-    if (!Array.isArray(responses)) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'responses (number[10]) is required' } })
-      return
-    }
+    const { responses } = req.body as BodyOf<typeof S.study.sus>
     const result = await submitSus(req.userId!, responses)
     res.json({ data: result, error: null })
   } catch (err) {

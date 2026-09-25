@@ -13,21 +13,15 @@ import {
   toEventDto,
 } from '../services/misconceptionEvent.service'
 import { getEducatorMisconceptionSummary } from '../services/misconceptionReport.service'
+import { validate, type BodyOf, type QueryOf } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
 
-router.post('/detect', async (req: AuthRequest, res: Response) => {
+router.post('/detect', validate(S.misconceptionEvents.detect), async (req: AuthRequest, res: Response) => {
   try {
-    const { algorithmTopicId, category, detectedInteractionId } = req.body as {
-      algorithmTopicId?: string
-      category?: string
-      detectedInteractionId?: string
-    }
-    if (!algorithmTopicId || !category || !detectedInteractionId) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'algorithmTopicId, category, and detectedInteractionId are required' } })
-      return
-    }
+    const { algorithmTopicId, category, detectedInteractionId } = req.body as BodyOf<typeof S.misconceptionEvents.detect>
     const event = await detectOrEscalate(req.userId!, algorithmTopicId, category, detectedInteractionId)
     res.json({ data: { event: toEventDto(event), nextLevel: nextRemediationLevel(event.remediationCount) }, error: null })
   } catch {
@@ -35,13 +29,9 @@ router.post('/detect', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/:eventId/remediations', async (req: AuthRequest, res: Response) => {
+router.post('/:eventId/remediations', validate(S.misconceptionEvents.presentRemediation), async (req: AuthRequest, res: Response) => {
   try {
-    const { taskType, level, payload } = req.body as { taskType?: string; level?: number; payload?: unknown }
-    if (!taskType || typeof level !== 'number' || payload === undefined) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'taskType, level, and payload are required' } })
-      return
-    }
+    const { taskType, level, payload } = req.body as BodyOf<typeof S.misconceptionEvents.presentRemediation>
     const remediation = await presentRemediation(req.userId!, req.params.eventId, taskType, level, payload)
     res.json({ data: remediation, error: null })
   } catch (err) {
@@ -54,9 +44,9 @@ router.post('/:eventId/remediations', async (req: AuthRequest, res: Response) =>
   }
 })
 
-router.patch('/remediations/:remediationId', async (req: AuthRequest, res: Response) => {
+router.patch('/remediations/:remediationId', validate(S.misconceptionEvents.completeRemediation), async (req: AuthRequest, res: Response) => {
   try {
-    const { correct, skipped } = req.body as { correct?: boolean | null; skipped?: boolean }
+    const { correct, skipped } = req.body as BodyOf<typeof S.misconceptionEvents.completeRemediation>
     const remediation = await completeRemediation(req.userId!, req.params.remediationId, {
       correct: correct ?? null,
       skipped: !!skipped,
@@ -72,19 +62,9 @@ router.patch('/remediations/:remediationId', async (req: AuthRequest, res: Respo
   }
 })
 
-router.post('/:eventId/probes', async (req: AuthRequest, res: Response) => {
+router.post('/:eventId/probes', validate(S.misconceptionEvents.recordProbe), async (req: AuthRequest, res: Response) => {
   try {
-    const { interactionId, junctionType, optionCount, correct, hintUsed } = req.body as {
-      interactionId?: string
-      junctionType?: string
-      optionCount?: number
-      correct?: boolean
-      hintUsed?: boolean
-    }
-    if (!interactionId || !junctionType || typeof optionCount !== 'number' || typeof correct !== 'boolean') {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'interactionId, junctionType, optionCount, and correct are required' } })
-      return
-    }
+    const { interactionId, junctionType, optionCount, correct, hintUsed } = req.body as BodyOf<typeof S.misconceptionEvents.recordProbe>
     const result = await recordProbe(
       req.userId!,
       req.params.eventId,
@@ -112,13 +92,9 @@ router.post('/:eventId/probes', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/junction-tick', async (req: AuthRequest, res: Response) => {
+router.post('/junction-tick', validate(S.misconceptionEvents.junctionTick), async (req: AuthRequest, res: Response) => {
   try {
-    const { algorithmTopicId } = req.body as { algorithmTopicId?: string }
-    if (!algorithmTopicId) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'algorithmTopicId is required' } })
-      return
-    }
+    const { algorithmTopicId } = req.body as BodyOf<typeof S.misconceptionEvents.junctionTick>
     await incrementJunctionsSinceDetection(req.userId!, algorithmTopicId)
     res.json({ data: { ok: true }, error: null })
   } catch {
@@ -126,13 +102,9 @@ router.post('/junction-tick', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/session-check', async (req: AuthRequest, res: Response) => {
+router.post('/session-check', validate(S.misconceptionEvents.sessionCheck), async (req: AuthRequest, res: Response) => {
   try {
-    const { algorithmTopicId } = req.body as { algorithmTopicId?: string }
-    if (!algorithmTopicId) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'algorithmTopicId is required' } })
-      return
-    }
+    const { algorithmTopicId } = req.body as BodyOf<typeof S.misconceptionEvents.junctionTick>
     await checkStaleEventsOnSessionStart(req.userId!, algorithmTopicId)
     res.json({ data: { ok: true }, error: null })
   } catch {
@@ -140,13 +112,9 @@ router.post('/session-check', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/status', async (req: AuthRequest, res: Response) => {
+router.get('/status', validate(S.misconceptionEvents.status), async (req: AuthRequest, res: Response) => {
   try {
-    const algorithmTopicId = req.query.algorithmTopicId as string | undefined
-    if (!algorithmTopicId) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_QUERY', message: 'algorithmTopicId is required' } })
-      return
-    }
+    const algorithmTopicId = (req.query as QueryOf<typeof S.misconceptionEvents.status>).algorithmTopicId
     const events = await getEventStatusForTopic(req.userId!, algorithmTopicId)
     res.json({ data: events.map(toEventDto), error: null })
   } catch {
@@ -154,7 +122,7 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/summary', async (req: AuthRequest, res: Response) => {
+router.get('/summary', validate(S.misconceptionEvents.summary), async (req: AuthRequest, res: Response) => {
   try {
     const summary = await getDashboardSummary(req.userId!)
     res.json({ data: summary, error: null })
@@ -163,7 +131,7 @@ router.get('/summary', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/educator-summary', requireEducator, async (req: AuthRequest, res: Response) => {
+router.get('/educator-summary', requireEducator, validate(S.misconceptionEvents.educatorSummary), async (req: AuthRequest, res: Response) => {
   try {
     const summary = await getEducatorMisconceptionSummary()
     res.json({ data: summary, error: null })

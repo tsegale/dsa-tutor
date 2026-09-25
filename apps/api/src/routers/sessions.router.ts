@@ -2,11 +2,13 @@ import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { createSession, updateSession, getSession, getLatestSession } from '../services/session.service'
 import { updateStreak } from '../services/auth.service'
+import { validate } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
 
-router.post('/', async (req: AuthRequest, res: Response) => {
+router.post('/', validate(S.sessions.create), async (req: AuthRequest, res: Response) => {
   try {
     await updateStreak(req.userId!)
     const session = await createSession(req.userId!, req.body)
@@ -16,7 +18,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', validate(S.sessions.list), async (req: AuthRequest, res: Response) => {
   try {
     if (req.query.latest !== 'true') {
       res.json({ data: null, error: null })
@@ -30,7 +32,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+router.get('/:id', validate(S.sessions.get), async (req: AuthRequest, res: Response) => {
   try {
     const session = await getSession(req.params.id, req.userId!)
     res.json({ data: session, error: null })
@@ -39,7 +41,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.patch('/:id', async (req: AuthRequest, res: Response) => {
+router.patch('/:id', validate(S.sessions.update), async (req: AuthRequest, res: Response) => {
   try {
     const session = await updateSession(req.params.id, req.userId!, req.body)
     res.json({ data: session, error: null })

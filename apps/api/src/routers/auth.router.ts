@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express'
 import { register, login } from '../services/auth.service'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { validateStringBody } from '../middleware/validateRequest'
 import { prisma } from '../lib/prisma'
+import { validate, type BodyOf } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 
-router.post('/register', validateStringBody(['email', 'password', 'name']), async (req: Request, res: Response) => {
+router.post('/register', validate(S.auth.register), async (req: Request, res: Response) => {
   try {
     const result = await register(req.body)
     res.status(201).json({ data: result, error: null })
@@ -19,7 +20,7 @@ router.post('/register', validateStringBody(['email', 'password', 'name']), asyn
   }
 })
 
-router.post('/login', validateStringBody(['email', 'password']), async (req: Request, res: Response) => {
+router.post('/login', validate(S.auth.login), async (req: Request, res: Response) => {
   try {
     const result = await login(req.body)
     res.json({ data: result, error: null })
@@ -34,7 +35,7 @@ router.post('/login', validateStringBody(['email', 'password']), async (req: Req
   }
 })
 
-router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/me', authenticate, validate(S.auth.me), async (req: AuthRequest, res: Response) => {
   try {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.userId },
@@ -54,13 +55,9 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/xp', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/xp', authenticate, validate(S.auth.xp), async (req: AuthRequest, res: Response) => {
   try {
-    const { amount } = req.body as { amount: number }
-    if (amount <= 0) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_AMOUNT', message: 'XP amount must be positive' } })
-      return
-    }
+    const { amount } = req.body as BodyOf<typeof S.auth.xp>
     const user = await prisma.user.update({
       where: { id: req.userId },
       data: { xpTotal: { increment: amount } },

@@ -1,11 +1,13 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { startAttempt, submitResponse, completeAttempt } from '../services/assessment.service'
+import { validate, type BodyOf } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
 
-router.post('/:code/start', async (req: AuthRequest, res: Response) => {
+router.post('/:code/start', validate(S.assessments.start), async (req: AuthRequest, res: Response) => {
   try {
     const attempt = await startAttempt(req.userId!, req.params.code)
     res.json({ data: attempt, error: null })
@@ -31,17 +33,9 @@ router.post('/:code/start', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/attempts/:attemptId/responses', async (req: AuthRequest, res: Response) => {
+router.post('/attempts/:attemptId/responses', validate(S.assessments.submitResponse), async (req: AuthRequest, res: Response) => {
   try {
-    const { itemId, response, timeSpentSeconds } = req.body as {
-      itemId?: string
-      response?: string
-      timeSpentSeconds?: number
-    }
-    if (!itemId || typeof response !== 'string' || typeof timeSpentSeconds !== 'number') {
-      res.status(400).json({ data: null, error: { code: 'INVALID_BODY', message: 'itemId, response, and timeSpentSeconds are required' } })
-      return
-    }
+    const { itemId, response, timeSpentSeconds } = req.body as BodyOf<typeof S.assessments.submitResponse>
     // Server records the score; the client only ever gets an
     // acknowledgement back - no isCorrect/score field, so no answer
     // feedback can leak during or after the study.
@@ -61,7 +55,7 @@ router.post('/attempts/:attemptId/responses', async (req: AuthRequest, res: Resp
   }
 })
 
-router.post('/attempts/:attemptId/complete', async (req: AuthRequest, res: Response) => {
+router.post('/attempts/:attemptId/complete', validate(S.assessments.complete), async (req: AuthRequest, res: Response) => {
   try {
     await completeAttempt(req.userId!, req.params.attemptId)
     res.json({ data: { completed: true }, error: null })

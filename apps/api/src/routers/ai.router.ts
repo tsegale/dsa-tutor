@@ -10,11 +10,13 @@ import {
   proxyStudentSummary,
   proxyClassSummary,
 } from '../services/ai.service'
+import { validate } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
 
-router.post('/predictions', async (req: AuthRequest, res: Response) => {
+router.post('/predictions', validate(S.ai.predictions), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyPrediction(req.body)
     res.json({ data: result, error: null })
@@ -24,7 +26,7 @@ router.post('/predictions', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/predictions/evaluate', async (req: AuthRequest, res: Response) => {
+router.post('/predictions/evaluate', validate(S.ai.predictionsEvaluate), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyPredictionEvaluate(req.body)
     res.json({ data: result, error: null })
@@ -34,7 +36,7 @@ router.post('/predictions/evaluate', async (req: AuthRequest, res: Response) => 
   }
 })
 
-router.post('/hints', async (req: AuthRequest, res: Response) => {
+router.post('/hints', validate(S.ai.hints), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyHint(req.body)
     res.json({ data: result, error: null })
@@ -44,7 +46,7 @@ router.post('/hints', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/feynman', async (req: AuthRequest, res: Response) => {
+router.post('/feynman', validate(S.ai.feynman), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyFeynman(req.body)
     res.json({ data: result, error: null })
@@ -54,7 +56,7 @@ router.post('/feynman', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/challenges', async (req: AuthRequest, res: Response) => {
+router.post('/challenges', validate(S.ai.challenges), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyChallenge(req.body)
     res.json({ data: result, error: null })
@@ -64,7 +66,7 @@ router.post('/challenges', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/code-eval', async (req: AuthRequest, res: Response) => {
+router.post('/code-eval', validate(S.ai.codeEval), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyCodeEval(req.body)
     res.json({ data: result, error: null })
@@ -74,7 +76,7 @@ router.post('/code-eval', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/summaries/student', async (req: AuthRequest, res: Response) => {
+router.post('/summaries/student', validate(S.ai.studentSummary), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyStudentSummary(req.body)
     res.json({ data: result, error: null })
@@ -84,7 +86,7 @@ router.post('/summaries/student', async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.post('/summaries/class', async (req: AuthRequest, res: Response) => {
+router.post('/summaries/class', validate(S.ai.classSummary), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyClassSummary(req.body)
     res.json({ data: result, error: null })

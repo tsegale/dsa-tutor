@@ -1,11 +1,13 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { getAllTopics } from '../services/topic.service'
+import { validate } from '../middleware/validate'
+import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
 
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', validate(S.topics.list), async (req: AuthRequest, res: Response) => {
   try {
     const topics = await getAllTopics(req.userId!)
     // Per-user (masteryPercent is computed from this user's own
