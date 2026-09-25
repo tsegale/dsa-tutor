@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 model_name = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 max_tokens = int(os.getenv("MAX_TOKENS", "1000"))
+# The prediction feedback JSON is four short fields (two sentences, a
+# question, an integer); 1000 tokens let the counterfactual run long and
+# slow every call down. A response cut off at this limit is caught as
+# "truncated" below rather than shown half-finished.
+feedback_max_tokens = int(os.getenv("FEEDBACK_MAX_TOKENS", "400"))
 # Low but non-zero: tutoring feedback should be reproducible across
 # participants in the study, not creative, but 0 can make the model overly
 # repetitive across genuinely different student answers.
@@ -49,6 +54,8 @@ class CallMetadata:
     latency_ms: int
     input_tokens: int
     output_tokens: int
+    # "max_tokens" means the response was cut off at the token limit.
+    stop_reason: str | None = None
 
 
 def has_self_correction_marker(text: str) -> bool:
@@ -158,6 +165,7 @@ async def _create_message(
         latency_ms=round((time.monotonic() - start) * 1000),
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
+        stop_reason=response.stop_reason,
     )
     return response.content[0].text, metadata
 
@@ -242,6 +250,8 @@ class BoundedCall(Generic[T]):
     retry_reason: str | None
     failure_reason: str | None
     latency_ms: int
+    # From the last call made; shows how close responses run to the limit.
+    output_tokens: int = 0
 
 
 async def call_with_bounded_retry(
@@ -260,12 +270,12 @@ async def call_with_bounded_retry(
 
     first, metadata = await attempt(None)
     logger.info(
-        "AI %s call: latency_ms=%s input_tokens=%s output_tokens=%s",
-        label, metadata.latency_ms, metadata.input_tokens, metadata.output_tokens,
+        "AI %s call: latency_ms=%s input_tokens=%s output_tokens=%s stop_reason=%s",
+        label, metadata.latency_ms, metadata.input_tokens, metadata.output_tokens, metadata.stop_reason,
     )
-    reason = failure_of(first)
+    reason = "truncated" if metadata.stop_reason == "max_tokens" else failure_of(first)
     if reason is None:
-        return BoundedCall(first, 1, None, None, elapsed())
+        return BoundedCall(first, 1, None, None, elapsed(), metadata.output_tokens)
 
     logger.info("AI %s retry: reason=%s", label, reason)
     try:
@@ -276,9 +286,12 @@ async def call_with_bounded_retry(
             label, retry_budget_seconds, reason,
         )
         return BoundedCall(None, 2, reason, "retry_timeout", elapsed())
-    logger.info("AI %s retry call: latency_ms=%s output_tokens=%s", label, metadata.latency_ms, metadata.output_tokens)
-    second_reason = failure_of(second)
+    logger.info(
+        "AI %s retry call: latency_ms=%s output_tokens=%s stop_reason=%s",
+        label, metadata.latency_ms, metadata.output_tokens, metadata.stop_reason,
+    )
+    second_reason = "truncated" if metadata.stop_reason == "max_tokens" else failure_of(second)
     if second_reason is not None:
         logger.warning("AI %s retry also failed: reason=%s, falling back", label, second_reason)
-        return BoundedCall(None, 2, reason, second_reason, elapsed())
-    return BoundedCall(second, 2, reason, None, elapsed())
+        return BoundedCall(None, 2, reason, second_reason, elapsed(), metadata.output_tokens)
+    return BoundedCall(second, 2, reason, None, elapsed(), metadata.output_tokens)

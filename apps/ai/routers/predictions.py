@@ -13,6 +13,7 @@ from services.claude_service import (
     BoundedCall,
     attempt_feedback,
     call_with_bounded_retry,
+    feedback_max_tokens,
     field_failure,
     uses_foreign_array_notation,
 )
@@ -1236,7 +1237,9 @@ async def _get_validated_feedback(
     call_with_bounded_retry). result.value is None when the caller should
     fall back."""
     return await call_with_bounded_retry(
-        lambda retry_reason: attempt_feedback(prompt, FEEDBACK_SYSTEM_PROMPT, retry_reason=retry_reason),
+        lambda retry_reason: attempt_feedback(
+            prompt, FEEDBACK_SYSTEM_PROMPT, retry_reason=retry_reason, token_limit=feedback_max_tokens
+        ),
         lambda feedback: _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode),
         label="prediction",
     )
@@ -1255,6 +1258,7 @@ def _set_ai_headers(response: Response, outcome: str, result: BoundedCall | None
     response.headers["X-AI-Failure-Reason"] = (result.failure_reason if result else None) or "none"
     if result:
         response.headers["X-AI-Latency-Ms"] = str(result.latency_ms)
+        response.headers["X-AI-Output-Tokens"] = str(result.output_tokens)
 
 
 def resolve_ground_truth_misconception(

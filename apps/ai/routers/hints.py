@@ -99,6 +99,7 @@ async def request_hint(request: HintRequest, response: Response) -> HintResponse
         response.headers["X-AI-Retry-Reason"] = result.retry_reason or "none"
         response.headers["X-AI-Failure-Reason"] = result.failure_reason or "none"
         response.headers["X-AI-Latency-Ms"] = str(result.latency_ms)
+        response.headers["X-AI-Output-Tokens"] = str(result.output_tokens)
         if result.value is None:
             return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
         return HintResponse(hint=result.value, scaffolding_level=request.scaffolding_level)

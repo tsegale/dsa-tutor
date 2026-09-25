@@ -150,3 +150,16 @@ def test_an_empty_explanation_is_valid_only_for_a_correct_answer():
     empty = {**VALID, "consequence_explanation": "", "counterfactual_trace": ""}
     assert _feedback_failure(empty, True, ScaffoldingLevel.HIGH) is None
     assert _feedback_failure(empty, False, ScaffoldingLevel.HIGH) == "consequence_explanation.empty"
+
+def test_a_response_cut_off_at_the_token_limit_is_retried_as_truncated():
+    truncated = CallMetadata(latency_ms=1, input_tokens=1, output_tokens=400, stop_reason="max_tokens")
+    calls: list[str | None] = []
+
+    async def attempt(retry_reason):
+        calls.append(retry_reason)
+        return ({"partial": True}, truncated) if len(calls) == 1 else ({"ok": True}, META)
+
+    result = asyncio.run(call_with_bounded_retry(attempt, lambda value: None, "t"))
+    assert result.retry_reason == "truncated"
+    assert result.value == {"ok": True}
+    assert calls == [None, "truncated"]
