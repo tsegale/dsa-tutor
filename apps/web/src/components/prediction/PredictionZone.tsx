@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useParams } from 'react-router-dom'
 import { AlgorithmMode, CriticalJunctionType, JunctionDifficulty, MisconceptionCategory, PredictionType, ScaffoldingLevel } from '@dsa-tutor/types'
 import type {
   AlgorithmSnapshot,
@@ -16,6 +17,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { firstSentence } from '@/utils/predictionJunction'
 import { getHandsOnInstructionText } from '@/utils/handsOnInstructions'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
+import { getPseudocodeText } from '@/utils/pseudocode'
 import { getTilesForSnapshot } from '@/utils/tileBuilder'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { topMisconceptionOf } from '@/utils/junctionTargeting'
@@ -174,6 +176,10 @@ export default function PredictionZone({
   const mode = useAlgorithmStore((state) => state.mode)
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  // Keyed by the same route slug PseudocodePanel reads, so the AI is given
+  // exactly the text on the Pseudocode tab and cannot quote other notation.
+  const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
+  const pseudocode = getPseudocodeText(algorithmSlug)
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const sessionId = useAlgorithmStore((state) => state.sessionId)
   const stepForward = useAlgorithmStore((state) => state.stepForward)
@@ -353,6 +359,7 @@ export default function PredictionZone({
       },
       errorHistory: [],
       scaffoldingLevel,
+      pseudocode,
     }
 
     const response = await requestHint(request)
@@ -385,6 +392,7 @@ export default function PredictionZone({
       hintIndex,
       errorHistory: [],
       scaffoldingLevel,
+      pseudocode,
     }
 
     const response = await requestHint(request)
@@ -550,6 +558,7 @@ export default function PredictionZone({
       studentAnswer: answer,
       errorHistory: [],
       scaffoldingLevel,
+      pseudocode,
       sessionId: sessionId ?? 'local-session',
       junctionType,
       junctionDifficulty,

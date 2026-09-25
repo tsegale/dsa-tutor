@@ -38,6 +38,7 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
       junction_type: request.junctionType ?? null,
       junction_difficulty: request.junctionDifficulty ?? null,
       ground_truth_misconception: request.groundTruthMisconception ?? null,
+      pseudocode: request.pseudocode ?? null,
     }),
   })
   if (!response.ok) throw new Error(`AI service error: ${response.status}`)
@@ -230,6 +231,7 @@ export async function proxyHint(request: HintRequest): Promise<HintResponse> {
       current_prediction_prompt: request.currentPredictionPrompt,
       current_state: request.currentState ?? null,
       hint_index: request.hintIndex ?? null,
+      pseudocode: request.pseudocode ?? null,
       error_history: request.errorHistory,
       scaffolding_level: request.scaffoldingLevel,
     }),

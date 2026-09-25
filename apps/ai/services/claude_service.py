@@ -71,6 +71,35 @@ def is_field_valid(
     return True
 
 
+# An identifier immediately followed by a bracketed index, e.g. arr[j+1] or
+# A[i - 1]. No whitespace is allowed before the bracket so a plain English
+# "the array [5, 3, 1]" is never mistaken for pseudocode notation.
+_ARRAY_REF_PATTERN = re.compile(r"\b([A-Za-z_]\w*)\[([^\[\]]*)\]")
+
+
+def _array_refs(text: str) -> list[tuple[str, str]]:
+    return [(name, re.sub(r"\s+", "", index)) for name, index in _ARRAY_REF_PATTERN.findall(text)]
+
+
+def uses_foreign_array_notation(text: str | None, pseudocode: str) -> bool:
+    """True when text writes array notation the student's pseudocode does
+    not contain - e.g. a hint quoting "A[i - 1] > A[i]" while the Pseudocode
+    tab shows "arr[j] > arr[j+1]". The array name must appear in the
+    pseudocode, and a symbolic index must match one the pseudocode uses
+    (whitespace ignored). A literal integer index on a known array, like
+    arr[2], is allowed since it names a concrete position, not notation."""
+    if not text:
+        return False
+    known_refs = set(_array_refs(pseudocode))
+    known_names = {name for name, _ in known_refs}
+    for name, index in _array_refs(text):
+        if name not in known_names:
+            return True
+        if not index.isdigit() and (name, index) not in known_refs:
+            return True
+    return False
+
+
 def _strip_code_fences(text: str) -> str:
     stripped = text.strip()
     if stripped.startswith("```"):

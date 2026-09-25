@@ -12,6 +12,11 @@ guided prediction, not direct explanation. Never state the correct answer
 outright. Ask a question that leads the student to discover it themselves.
 Never use an em dash or en dash anywhere in your response; use a comma,
 period, or "-" instead.
+Refer to variables and array elements only with the exact names and
+notation in the Pseudocode block of the user message - it is what the
+student sees in the Pseudocode tab. If it writes arr[j] > arr[j+1], never
+write A[i - 1], A[i], or any other array name or index expression it does
+not contain.
 
 Respond with ONLY valid JSON, no markdown code fences, matching exactly this
 schema:
@@ -99,7 +104,7 @@ FEEDBACK_USER_TEMPLATE = PromptTemplate(
     template="""Algorithm context:
 {algorithm_context}
 
-Pseudocode:
+Pseudocode (exactly as shown in the student's Pseudocode tab):
 {pseudocode}
 
 Current step index: {step_index}
@@ -119,6 +124,11 @@ at what to look at, calibrated to the requested scaffolding level (HIGH
 scaffolding = more direct guidance, NONE = only the faintest nudge).
 Never use an em dash or en dash anywhere in your response; use a comma,
 period, or "-" instead.
+Refer to variables and array elements only with the exact names and
+notation in the Pseudocode block of the user message - it is what the
+student sees in the Pseudocode tab. If it writes arr[j] > arr[j+1], never
+write A[i - 1], A[i], or any other array name or index expression it does
+not contain.
 
 This is one rung of a graduated hint ladder, keyed by "Hint index" below:
 - Index 0 (first wrong attempt): ask an open Socratic question that nudges
@@ -159,7 +169,7 @@ HINT_USER_TEMPLATE = PromptTemplate(
     template="""Algorithm context:
 {algorithm_context}
 
-Pseudocode:
+Pseudocode (exactly as shown in the student's Pseudocode tab):
 {pseudocode}
 
 Current step index: {step_index}

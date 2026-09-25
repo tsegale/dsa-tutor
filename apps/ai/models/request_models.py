@@ -58,6 +58,10 @@ class PredictionRequest(BaseModel):
     # research question - the AI's own guess is never trusted as fact (see
     # services/misconception_classifier.py and routers/predictions.py).
     ground_truth_misconception: MisconceptionCategory | None = None
+    # The Pseudocode tab's exact text (apps/web/src/utils/pseudocode.ts),
+    # sent by the client so the model quotes the notation the student can
+    # actually see. None falls back to the registry's copy.
+    pseudocode: str | None = None
 
 
 class HintRequest(BaseModel):
@@ -74,5 +78,7 @@ class HintRequest(BaseModel):
     # question, 1 is more direct about what to look at, and so on. None
     # for a manual H-key/avatar request, always answered at the base level.
     hint_index: int | None = None
+    # Same as PredictionRequest.pseudocode.
+    pseudocode: str | None = None
     error_history: list[str] = []
     scaffolding_level: ScaffoldingLevel

@@ -363,6 +363,12 @@ export interface PredictionRequest {
    * label - the AI's own guess is reported separately as
    * PredictionResponse.aiMisconceptionCategory, never stored as fact. */
   groundTruthMisconception?: MisconceptionCategory | null
+  /** The Pseudocode tab's exact text for this algorithm (see
+   * apps/web/src/utils/pseudocode.ts). The AI service quotes its variable
+   * names and array notation instead of its own copy, so a hint can never
+   * describe pseudocode the student cannot see. Omitted when the tab has
+   * none, in which case the AI service uses its registry copy. */
+  pseudocode?: string
 }
 
 /**
@@ -416,6 +422,8 @@ export interface HintRequest {
    * for a manual H-key/avatar request, which always asks at the base
    * level regardless of how many wrong attempts preceded it. */
   hintIndex?: number
+  /** Same as PredictionRequest.pseudocode. */
+  pseudocode?: string
 }
 
 export interface HintResponse {

@@ -7,7 +7,7 @@ from models.request_models import HintRequest
 from models.response_models import HintResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import HINT_SYSTEM_PROMPT, HINT_USER_TEMPLATE
-from services.claude_service import call_claude_for_text, is_field_valid
+from services.claude_service import call_claude_for_text, is_field_valid, uses_foreign_array_notation
 from services.fallback_service import get_fallback_hint
 
 router = APIRouter()
@@ -35,9 +35,16 @@ def _extract_comparison_pair(current_state: Any) -> tuple[int, Any, int, Any] | 
     return i, ds[i], j, ds[j]
 
 
+def _hint_is_valid(hint_text: str, max_hint_words: int, pseudocode: str) -> bool:
+    return is_field_valid(hint_text, max_words=max_hint_words) and not uses_foreign_array_notation(
+        hint_text, pseudocode
+    )
+
+
 @router.post("/", response_model=HintResponse)
 async def request_hint(request: HintRequest) -> HintResponse:
-    algorithm_context, pseudocode, _ = get_algorithm_context(request.algorithm_name)
+    algorithm_context, registry_pseudocode, _ = get_algorithm_context(request.algorithm_name)
+    pseudocode = request.pseudocode or registry_pseudocode
     junction_type = (
         request.current_state.get("criticalJunctionType") if isinstance(request.current_state, dict) else None
     )
@@ -80,7 +87,7 @@ async def request_hint(request: HintRequest) -> HintResponse:
             metadata.input_tokens,
             metadata.output_tokens,
         )
-        if not is_field_valid(hint_text, max_words=max_hint_words):
+        if not _hint_is_valid(hint_text, max_hint_words, pseudocode):
             logger.warning("AI hint failed validation, retrying once")
             hint_text, metadata = await call_claude_for_text(prompt, system=HINT_SYSTEM_PROMPT)
             logger.info(
@@ -89,7 +96,7 @@ async def request_hint(request: HintRequest) -> HintResponse:
                 metadata.input_tokens,
                 metadata.output_tokens,
             )
-            if not is_field_valid(hint_text, max_words=max_hint_words):
+            if not _hint_is_valid(hint_text, max_hint_words, pseudocode):
                 logger.warning("AI hint failed validation again, falling back")
                 return get_fallback_hint(request.scaffolding_level, request.algorithm_name, junction_type)
         return HintResponse(hint=hint_text, scaffolding_level=request.scaffolding_level)

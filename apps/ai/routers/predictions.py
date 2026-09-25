@@ -8,7 +8,7 @@ from models.request_models import MisconceptionCategory, PredictionRequest, Scaf
 from models.response_models import PredictionEvaluateResponse, PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
-from services.claude_service import call_claude_for_feedback, is_field_valid
+from services.claude_service import call_claude_for_feedback, is_field_valid, uses_foreign_array_notation
 from services.fallback_service import get_fallback_prediction_response
 from services.feedback_cache import CACHE_ENABLED, feedback_cache, make_cache_key
 from services.misconception_classifier import classify_misconception
@@ -1159,7 +1159,11 @@ def _hint_leaks_comparison_value(hint: str, current_state: Any) -> bool:
 
 
 def _feedback_is_valid(
-    feedback: dict[str, Any], correct: bool, scaffolding_level: ScaffoldingLevel, current_state: Any = None
+    feedback: dict[str, Any],
+    correct: bool,
+    scaffolding_level: ScaffoldingLevel,
+    current_state: Any = None,
+    pseudocode: str | None = None,
 ) -> bool:
     """Matches each field's own prompt contract in FEEDBACK_SYSTEM_PROMPT:
     consequence_explanation and counterfactual_trace are capped at two
@@ -1168,7 +1172,13 @@ def _feedback_is_valid(
     correct. HIGH's socratic_hint additionally must not plug in this
     step's actual comparison values - the whole point of asking the
     student to apply the rule themselves rather than confirming a
-    conclusion for them."""
+    conclusion for them. When pseudocode is given, no text field may use
+    array notation that pseudocode does not contain."""
+    if pseudocode is not None and any(
+        uses_foreign_array_notation(feedback.get(field), pseudocode)
+        for field in ("consequence_explanation", "counterfactual_trace", "socratic_hint")
+    ):
+        return False
     if not is_field_valid(feedback.get("consequence_explanation"), max_sentences=2):
         return False
     socratic_hint = feedback.get("socratic_hint")
@@ -1187,7 +1197,11 @@ def _feedback_is_valid(
 
 
 async def _get_validated_feedback(
-    prompt: str, correct: bool, scaffolding_level: ScaffoldingLevel, current_state: Any = None
+    prompt: str,
+    correct: bool,
+    scaffolding_level: ScaffoldingLevel,
+    current_state: Any = None,
+    pseudocode: str | None = None,
 ) -> dict[str, Any] | None:
     feedback, metadata = await call_claude_for_feedback(prompt, system=FEEDBACK_SYSTEM_PROMPT)
     logger.info(
@@ -1196,7 +1210,7 @@ async def _get_validated_feedback(
         metadata.input_tokens,
         metadata.output_tokens,
     )
-    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state):
+    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state, pseudocode):
         return feedback
 
     logger.warning("AI prediction feedback failed validation, retrying once")
@@ -1207,7 +1221,7 @@ async def _get_validated_feedback(
         metadata.input_tokens,
         metadata.output_tokens,
     )
-    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state):
+    if _feedback_is_valid(feedback, correct, scaffolding_level, current_state, pseudocode):
         return feedback
 
     logger.warning("AI prediction feedback failed validation again, falling back")
@@ -1250,7 +1264,8 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
     junction_type = wrapper.get("criticalJunctionType") or request.junction_type or "SWAP_DECISION"
     junction_difficulty = request.junction_difficulty.value if request.junction_difficulty else "PROCEDURAL"
     comparison_context = build_comparison_context(junction_type, wrapper, request.student_answer)
-    algorithm_context, pseudocode, junction_guidance_map = get_algorithm_context(request.algorithm_name)
+    algorithm_context, registry_pseudocode, junction_guidance_map = get_algorithm_context(request.algorithm_name)
+    pseudocode = request.pseudocode or registry_pseudocode
 
     cache_key = make_cache_key(
         request.algorithm_name,
@@ -1283,7 +1298,7 @@ async def submit_prediction(request: PredictionRequest) -> PredictionResponse:
         if cached_feedback is not None:
             feedback = cached_feedback
         else:
-            feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level, wrapper)
+            feedback = await _get_validated_feedback(prompt, correct, request.scaffolding_level, wrapper, pseudocode)
             if feedback is None:
                 return get_fallback_prediction_response(
                     correct, request.scaffolding_level, request.algorithm_name, junction_type,
