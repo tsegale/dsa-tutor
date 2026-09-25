@@ -205,7 +205,7 @@ export default function FeynmanModal({
               value={explanation}
               onChange={(event) => setExplanation(event.target.value)}
               placeholder="Type your explanation here..."
-              className="min-h-[120px] resize-y rounded-md border border-border bg-white p-3 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
+              className="min-h-[120px] resize-y rounded-md border border-border bg-background p-3 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
             />
             <div className="flex items-center justify-between">
               <span className="text-xs text-text-muted dark:text-dark-text-secondary">
@@ -258,7 +258,7 @@ export default function FeynmanModal({
               </DialogTitle>
             </div>
 
-            <div className="rounded-md border-l-4 border-secondary bg-white p-3 text-[14px] text-text-primary italic dark:bg-dark-surface dark:text-dark-text-primary">
+            <div className="rounded-md border-l-4 border-secondary bg-card p-3 text-[14px] text-text-primary italic dark:text-dark-text-primary">
               {result.feedbackSummary}
             </div>
 
@@ -300,7 +300,7 @@ export default function FeynmanModal({
                   value={followUpAnswer}
                   onChange={(event) => setFollowUpAnswer(event.target.value)}
                   placeholder="Type your answer here..."
-                  className="min-h-[80px] resize-y rounded-md border border-border bg-white p-3 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
+                  className="min-h-[80px] resize-y rounded-md border border-border bg-background p-3 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
                 />
                 {errorMessage && <p className="text-xs text-error">{errorMessage}</p>}
                 <button

@@ -36,6 +36,17 @@
   --sidebar-accent-foreground: #4f46e5;
   --sidebar-border: #e2e8f0;
   --sidebar-ring: #4f46e5;
+  /* Project tokens below were literal hex in @theme, so they never
+     flipped with .dark - text-text-primary stayed #0f172a on a dark card.
+     Light values are unchanged. */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --surface: #f8fafc;
+  --primary-light: #eef2ff;
+  --secondary-light: #fffbeb;
+  --success-light: #f0fdf4;
+  --error-light: #fef2f2;
 }
 
 .dark {
@@ -70,6 +81,18 @@
   --sidebar-accent-foreground: #6366f1;
   --sidebar-border: #334155;
   --sidebar-ring: #6366f1;
+  /* Same values as the dark-text-primary/secondary tokens the existing
+     dark: overrides use, so a pair and a bare token render identically.
+     #94a3b8 muted is ~5.7:1 on the #1e293b card. Tints become low-alpha
+     washes of their hue so text-text-primary stays legible on them. */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --surface: #1e293b;
+  --primary-light: rgba(99, 102, 241, 0.18);
+  --secondary-light: rgba(245, 158, 11, 0.15);
+  --success-light: rgba(22, 163, 74, 0.18);
+  --error-light: rgba(220, 38, 38, 0.18);
 }
 
 @theme inline {
@@ -82,11 +105,11 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-hover: #4338ca;
-  --color-primary-light: #eef2ff;
+  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary-hover: #d97706;
-  --color-secondary-light: #fffbeb;
+  --color-secondary-light: var(--secondary-light);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -95,22 +118,22 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-surface: #f8fafc;
+  --color-surface: var(--surface);
   --color-success: #16a34a;
-  --color-success-light: #f0fdf4;
+  --color-success-light: var(--success-light);
   --color-error: #dc2626;
-  --color-error-light: #fef2f2;
+  --color-error-light: var(--error-light);
   --color-active: #7c3aed;
   --color-streak: #ea580c;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
   /* Was #94a3b8 (~2.6:1 on white) - an axe-core "serious" color-contrast
      violation on 237 nodes across the dashboard alone, since this token
      is the default for every secondary/muted label in the app. #64748b
      (~4.76:1 on white) clears WCAG AA's 4.5:1 for normal text while
      staying visibly more muted than --color-text-secondary (see
      remediation doc 9's Verify block: axe check, serious or above). */
-  --color-text-muted: #64748b;
+  --color-text-muted: var(--text-muted);
   --color-text-accent: #378add;
   --color-dark-background: #0f172a;
   --color-dark-surface: #1e293b;

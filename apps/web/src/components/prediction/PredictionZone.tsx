@@ -774,7 +774,7 @@ export default function PredictionZone({
               // escape hatch, whatever doesn't fit was simply clipped
               // and unreachable rather than visible below a scrollbar
               // (remediation doc 12C.3).
-              'relative z-20 flex w-full shrink-0 items-start gap-3 overflow-y-auto rounded-t-lg border-t-2 bg-white px-[14px] py-[10px] shadow-lg dark:bg-dark-surface',
+              'relative z-20 flex w-full shrink-0 items-start gap-3 overflow-y-auto rounded-t-lg border-t-2 bg-card px-[14px] py-[10px] shadow-lg',
               // Code Editor Mode needs real room for a multi-line textarea,
               // language tabs and its own submit button - the 35% budget
               // that fits a single tile prompt comfortably clips it.

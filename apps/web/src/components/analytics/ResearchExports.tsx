@@ -34,7 +34,7 @@ export default function ResearchExports() {
   }
 
   return (
-    <div className="rounded-md border border-border bg-white">
+    <div className="rounded-md border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
         <span className="text-sm font-semibold text-text-primary">Research data</span>
         <p className="mt-1 text-xs text-text-muted">

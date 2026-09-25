@@ -67,7 +67,7 @@ export default function FocusModeOverlay() {
           <button
             type="button"
             onClick={toggleFocusMode}
-            className="fixed top-4 right-4 z-[11] rounded-md bg-white px-3 py-1.5 text-sm font-medium text-primary shadow-md"
+            className="fixed top-4 right-4 z-[11] rounded-md bg-popover px-3 py-1.5 text-sm font-medium text-primary shadow-md"
           >
             Exit Focus Mode
           </button>

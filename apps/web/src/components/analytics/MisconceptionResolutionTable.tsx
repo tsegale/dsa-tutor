@@ -19,7 +19,7 @@ export default function MisconceptionResolutionTable() {
   })
 
   if (isLoading) {
-    return <div className="h-48 animate-pulse rounded-md border border-border bg-white" />
+    return <div className="h-48 animate-pulse rounded-md border border-border bg-card" />
   }
 
   if (rows.length === 0) {
@@ -27,7 +27,7 @@ export default function MisconceptionResolutionTable() {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-white">
+    <div className="overflow-x-auto rounded-md border border-border bg-card">
       <table className="w-full text-left text-sm">
         <thead className="border-b border-border bg-surface text-xs text-text-muted uppercase">
           <tr>

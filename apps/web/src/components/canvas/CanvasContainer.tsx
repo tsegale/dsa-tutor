@@ -155,7 +155,7 @@ export default function CanvasContainer({
     <div
       id="algorithm-canvas"
       ref={containerRef}
-      className="relative h-full w-full rounded-md border border-border bg-white shadow-sm dark:bg-dark-surface"
+      className="relative h-full w-full rounded-md border border-border bg-card shadow-sm"
     >
       {renderCanvas()}
     </div>

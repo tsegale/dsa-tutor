@@ -56,14 +56,14 @@ export default function MisconceptionTable({ breakdown }: MisconceptionTableProp
 
   if (entries.length === 0) {
     return (
-      <div className="rounded-md border border-border bg-white p-12 text-center text-sm text-text-muted">
+      <div className="rounded-md border border-border bg-card p-12 text-center text-sm text-text-muted">
         No misconception data yet. Have students complete practice sessions to see patterns here.
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-white">
+    <div className="overflow-hidden rounded-md border border-border bg-card">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

@@ -28,7 +28,7 @@ export default function StepLog({ predictionResolved }: StepLogProps) {
 
   return (
     <div
-      className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-white dark:bg-dark-surface"
+      className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-card"
       style={{ width: '100%' }}
     >
       <div className="border-b border-border px-4 py-2">

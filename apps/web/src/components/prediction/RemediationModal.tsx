@@ -59,7 +59,7 @@ export default function RemediationModal({ payload, onComplete }: RemediationMod
                   className={`flex size-10 items-center justify-center rounded-md border text-sm font-semibold ${
                     payload.highlightIndices?.includes(index)
                       ? 'border-primary bg-primary-light text-primary'
-                      : 'border-border bg-white text-text-primary'
+                      : 'border-border bg-background text-text-primary'
                   }`}
                 >
                   {value}
@@ -95,7 +95,7 @@ export default function RemediationModal({ payload, onComplete }: RemediationMod
                           ? 'border-error bg-error/10 text-text-primary'
                           : isSelected
                             ? 'border-primary bg-primary-light text-text-primary'
-                            : 'border-border bg-white text-text-primary hover:border-primary'
+                            : 'border-border bg-background text-text-primary hover:border-primary'
                     }`}
                   >
                     {option.text}

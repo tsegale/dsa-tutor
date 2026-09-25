@@ -46,7 +46,7 @@ export default function BadgesSection() {
           return (
             <div
               key={badge.id}
-              className="relative flex items-center gap-3 rounded-md border-2 bg-white p-4"
+              className="relative flex items-center gap-3 rounded-md border-2 bg-card p-4"
               style={{
                 borderColor: isAwarded ? TIER_BORDER[badge.tier] : '#E2E8F0',
               }}

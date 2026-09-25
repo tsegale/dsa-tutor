@@ -114,16 +114,16 @@ export default function EducatorDashboard() {
 function EducatorDashboardSkeleton() {
   return (
     <div className="min-h-screen animate-pulse bg-surface">
-      <div className="h-16 border-b bg-white" />
+      <div className="h-16 border-b bg-card" />
       <div className="mx-auto max-w-7xl space-y-12 px-8 py-8">
         <div className="grid grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 rounded-md border bg-white" />
+            <div key={i} className="h-28 rounded-md border bg-card" />
           ))}
         </div>
-        <div className="h-64 rounded-md border bg-white" />
-        <div className="h-48 rounded-md border bg-white" />
-        <div className="h-80 rounded-md border bg-white" />
+        <div className="h-64 rounded-md border bg-card" />
+        <div className="h-48 rounded-md border bg-card" />
+        <div className="h-80 rounded-md border bg-card" />
       </div>
     </div>
   )

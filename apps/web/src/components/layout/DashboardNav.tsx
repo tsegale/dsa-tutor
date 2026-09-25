@@ -61,7 +61,7 @@ export default function DashboardNav() {
   }
 
   return (
-    <header className="flex h-16 w-full items-center justify-between border-b border-border bg-white px-6">
+    <header className="flex h-16 w-full items-center justify-between border-b border-border bg-card px-6">
       <DSATutorLogo variant="dark" showTagline={false} />
 
       <div className="relative w-80">

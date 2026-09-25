@@ -109,7 +109,7 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
                     ? 'border-error bg-error-light text-error'
                     : isSelected
                       ? 'border-secondary bg-secondary-light text-text-primary dark:bg-secondary/20 dark:text-dark-text-primary'
-                      : 'border-border bg-white text-text-primary dark:bg-dark-background dark:text-dark-text-primary',
+                      : 'border-border bg-background text-text-primary dark:text-dark-text-primary',
               )}
             >
               <span className="font-medium">{option.label}</span>

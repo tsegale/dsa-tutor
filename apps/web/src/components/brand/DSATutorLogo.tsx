@@ -8,8 +8,10 @@ interface DSATutorLogoProps {
 
 export default function DSATutorLogo({ variant = 'dark', className = '', showTagline = true }: DSATutorLogoProps) {
   const titleId = useId()
-  const textColor = variant === 'white' ? '#fff' : '#1e293b'
-  const accentColor = variant === 'white' ? '#a5b4fc' : '#3730a3'
+  // The 'dark' variant sits on the app's own headers, which turn dark with
+  // the theme - its wordmark flips too, or it vanishes into the header.
+  const textClass = variant === 'white' ? 'text-white' : 'text-[#1e293b] dark:text-dark-text-primary'
+  const accentClass = variant === 'white' ? 'text-[#a5b4fc]' : 'text-[#3730a3] dark:text-[#a5b4fc]'
   const taglineColor = variant === 'white' ? 'rgba(255,255,255,0.5)' : '#94a3b8'
   const iconBg = variant === 'white' ? 'rgba(255,255,255,0.2)' : '#3730a3'
   const iconStroke = variant === 'white' ? 'rgba(255,255,255,0.3)' : 'transparent'
@@ -34,8 +36,8 @@ export default function DSATutorLogo({ variant = 'dark', className = '', showTag
         <circle cx="35" cy="6" r="5" fill="none" stroke="#7c3aed" strokeWidth="1" opacity={0.4} />
       </svg>
       <div className="flex flex-col">
-        <span style={{ fontSize: 18, fontWeight: 700, color: textColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
-          DSA<span style={{ color: accentColor }}>Tutor</span>
+        <span className={textClass} style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em' }}>
+          DSA<span className={accentClass}>Tutor</span>
         </span>
         {showTagline && (
           <span

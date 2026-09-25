@@ -94,7 +94,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
     <motion.div
       whileHover={{ y: -4, boxShadow: '0 8px 24px -4px rgba(15, 23, 42, 0.15)' }}
       transition={{ duration: 0.15, ease: 'easeIn' }}
-      className="group relative flex h-[200px] w-[220px] shrink-0 flex-col overflow-hidden rounded-md border border-border bg-white p-4 shadow-sm"
+      className="group relative flex h-[200px] w-[220px] shrink-0 flex-col overflow-hidden rounded-md border border-border bg-card p-4 shadow-sm"
     >
       {isMastered && (
         <span className="absolute top-2 right-2">

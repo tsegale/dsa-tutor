@@ -36,7 +36,7 @@ export default function AnalyticsNav({ refetch, isFetching }: AnalyticsNavProps)
   const navigate = useNavigate()
 
   return (
-    <header className="flex h-16 w-full items-center justify-between border-b border-border bg-white px-6">
+    <header className="flex h-16 w-full items-center justify-between border-b border-border bg-card px-6">
       <div className="flex items-center gap-3">
         <DSATutorLogo variant="dark" showTagline={false} />
         <div className="h-6 w-[0.5px] bg-border" aria-hidden="true" />

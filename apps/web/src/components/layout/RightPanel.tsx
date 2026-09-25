@@ -101,7 +101,7 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
       : snapshot.description
 
   return (
-    <div className="rounded-md border border-border bg-white p-3 dark:bg-dark-surface">
+    <div className="rounded-md border border-border bg-card p-3">
       <p className="text-xs font-bold text-primary">Socratic guidance</p>
       <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">{guidanceText}</p>
 
@@ -148,7 +148,7 @@ export default function RightPanel({
       animate={fullWidth ? undefined : { width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       className={cn(
-        'flex h-full flex-col overflow-hidden border-l border-border bg-white dark:bg-dark-surface',
+        'flex h-full flex-col overflow-hidden border-l border-border bg-card',
         fullWidth && 'w-full',
       )}
       style={{ overflowX: 'hidden' }}

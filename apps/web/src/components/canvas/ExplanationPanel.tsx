@@ -11,7 +11,7 @@ export default function ExplanationPanel() {
   const [simplified, setSimplified] = useState(false)
 
   return (
-    <div className="flex h-full flex-col rounded-md border border-border bg-white dark:bg-dark-surface">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Explanation</span>
         <label className="flex items-center gap-2 text-xs text-text-secondary dark:text-dark-text-secondary">

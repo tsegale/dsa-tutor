@@ -131,7 +131,7 @@ export default function AssessmentPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="flex h-16 items-center border-b border-border bg-white px-6">
+      <header className="flex h-16 items-center border-b border-border bg-card px-6">
         <DSATutorLogo variant="dark" showTagline={false} />
       </header>
 
@@ -139,7 +139,7 @@ export default function AssessmentPage() {
         <p className="mb-2 text-sm font-medium text-text-muted">
           {attempt.title} - question {index + 1} of {attempt.items.length}
         </p>
-        <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-white">
+        <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-card">
           <div
             className="h-full rounded-full bg-primary transition-[width] duration-300"
             style={{ width: `${((index + 1) / attempt.items.length) * 100}%` }}
@@ -153,7 +153,7 @@ export default function AssessmentPage() {
             {item.options.map((option) => (
               <label
                 key={option.id}
-                className="flex cursor-pointer items-center gap-3 rounded-md border border-border bg-white p-3 has-[:checked]:border-primary has-[:checked]:bg-primary-light"
+                className="flex cursor-pointer items-center gap-3 rounded-md border border-border bg-card p-3 has-[:checked]:border-primary has-[:checked]:bg-primary-light"
               >
                 <input
                   type="radio"

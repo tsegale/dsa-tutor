@@ -69,7 +69,7 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
         </select>
       </div>
 
-      <div className="rounded-md border border-border bg-white p-6">
+      <div className="rounded-md border border-border bg-card p-6">
         {cells.length === 0 ? (
           <p className="text-center text-sm text-text-muted">No error data yet for this algorithm.</p>
         ) : isBubbleSort ? (

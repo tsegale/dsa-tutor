@@ -42,7 +42,7 @@ export default function StreakToast({ streakCount, visible, onDismiss }: StreakT
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -40, opacity: 0 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="pointer-events-auto flex items-center gap-2 rounded-md border border-border bg-white px-4 py-2.5 shadow-lg dark:bg-dark-surface"
+            className="pointer-events-auto flex items-center gap-2 rounded-md border border-border bg-popover px-4 py-2.5 shadow-lg"
           >
             <FlameIcon />
             <span className="text-sm font-medium text-text-primary dark:text-dark-text-primary">

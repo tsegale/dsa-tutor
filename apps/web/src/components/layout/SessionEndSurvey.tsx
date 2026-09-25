@@ -39,7 +39,7 @@ function ScaleButtons({
               'flex h-9 flex-1 items-center justify-center rounded-md border text-sm font-medium transition-colors',
               selected === value
                 ? 'border-primary bg-primary text-white'
-                : 'border-border bg-white text-text-primary hover:border-primary',
+                : 'border-border bg-background text-text-primary hover:border-primary',
             )}
           >
             {value}

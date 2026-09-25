@@ -167,7 +167,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
   }
 
   return (
-    <div className="rounded-md border border-border bg-white">
+    <div className="rounded-md border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-semibold text-text-primary">
           {students.length} {students.length === 1 ? 'student' : 'students'}

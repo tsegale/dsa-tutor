@@ -71,7 +71,7 @@ import type { GridCell, GridAlgorithmState } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 
 const inputClass =
-  'w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary'
+  'w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary'
 const labelClass = 'text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary'
 
 function parseArrayInput(input: string): number[] | null {

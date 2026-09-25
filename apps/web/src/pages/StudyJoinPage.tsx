@@ -29,7 +29,7 @@ export default function StudyJoinPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="flex h-16 items-center border-b border-border bg-white px-6">
+      <header className="flex h-16 items-center border-b border-border bg-card px-6">
         <DSATutorLogo variant="dark" showTagline={false} />
       </header>
 

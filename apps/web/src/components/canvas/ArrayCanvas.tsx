@@ -57,7 +57,7 @@ const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 // 60, not a smaller value: two different absolute-positioned badges sit
 // over this same canvas area at the top-left - the progress meter
 // (top-2, bottom edge ~24px) and, when a misconception is open for this
-// topic, OpenMisconceptionIndicator (top-4, an opaque bg-white pill,
+// topic, OpenMisconceptionIndicator (top-4, an opaque bg-popover pill,
 // bottom edge ~48px - see its own "never covers the canvas" comment,
 // which this PADDING value is what actually keeps that promise). The
 // tallest bar's value label renders at bar.y - 10 (see the label's own y

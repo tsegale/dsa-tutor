@@ -246,7 +246,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
       animate={fullWidth ? undefined : { width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       className={cn(
-        'flex h-full flex-col overflow-hidden border-r border-border bg-white dark:bg-dark-surface',
+        'flex h-full flex-col overflow-hidden border-r border-border bg-card',
         fullWidth && 'w-full',
       )}
     >
@@ -405,7 +405,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                   if (event.key === 'Enter') applyArrayInput()
                 }}
                 placeholder="5,3,1,4,2"
-                className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:bg-dark-background dark:text-dark-text-primary"
+                className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
               />
               {inputError && <p className="text-xs text-error">{inputError}</p>}
               <Button variant="outline" size="sm" onClick={applyArrayInput}>
@@ -454,7 +454,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                   codeEditorMode ? 'justify-end bg-primary' : 'justify-start bg-border',
                 )}
               >
-                <span className="size-4 rounded-full bg-white shadow-sm" />
+                <span className="size-4 rounded-full bg-background shadow-sm" />
               </span>
             </button>
           </section>

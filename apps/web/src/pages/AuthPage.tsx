@@ -249,7 +249,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-center bg-white px-10 py-16">
+      <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-center bg-background px-10 py-16">
         <div className="w-full max-w-[320px]">
           <h1 className="mb-8 text-center text-lg font-semibold text-text-primary md:hidden">DSA Tutor</h1>
 
@@ -265,7 +265,7 @@ export default function AuthPage() {
                     className={cn(
                       'flex-1 rounded-md py-1.5 text-sm font-medium capitalize transition-colors',
                       role === option
-                        ? 'border-[0.5px] border-border bg-white text-[#3730a3]'
+                        ? 'border-[0.5px] border-border bg-card text-[#3730a3]'
                         : 'border-[0.5px] border-transparent text-text-secondary',
                     )}
                   >

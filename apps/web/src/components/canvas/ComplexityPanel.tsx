@@ -514,7 +514,7 @@ export default function ComplexityPanel() {
 
   if (!data) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-md border border-border bg-white p-4 text-center dark:bg-dark-surface">
+      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-md border border-border bg-card p-4 text-center">
         <span className="text-sm text-text-muted dark:text-dark-text-secondary">
           Complexity data for this algorithm will be added soon.
         </span>
@@ -530,7 +530,7 @@ export default function ComplexityPanel() {
   ]
 
   return (
-    <div className="flex h-full flex-col gap-3 rounded-md border border-border bg-white p-4 dark:bg-dark-surface">
+    <div className="flex h-full flex-col gap-3 rounded-md border border-border bg-card p-4">
       {rows.map((row) => (
         <div key={row.label} className="flex items-center justify-between">
           <span className="text-sm text-text-secondary dark:text-dark-text-secondary">

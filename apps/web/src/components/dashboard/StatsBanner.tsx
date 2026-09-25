@@ -82,7 +82,7 @@ function StatCard({
   secondaryLine?: string
 }) {
   return (
-    <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-white p-4">
+    <div className="flex flex-1 items-center gap-3 rounded-md border border-border bg-card p-4">
       <div
         className="flex size-10 shrink-0 items-center justify-center rounded-md"
         style={{ backgroundColor: iconBg, color: iconColor }}

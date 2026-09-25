@@ -132,7 +132,7 @@ export default function TopBar() {
   const trackDisplayName = registryEntry ? TRACK_DISPLAY_NAMES[registryEntry.track] : ''
 
   return (
-    <header className="relative flex h-14 w-full items-center justify-between border-b border-border bg-white px-4 dark:bg-dark-surface">
+    <header className="relative flex h-14 w-full items-center justify-between border-b border-border bg-card px-4">
       <div className="flex items-center gap-3">
         <nav className="flex items-center gap-1 text-[13px]">
           <span className="text-text-muted dark:text-dark-text-secondary">Dashboard</span>

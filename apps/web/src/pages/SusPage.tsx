@@ -40,7 +40,7 @@ export default function SusPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="flex h-16 items-center border-b border-border bg-white px-6">
+      <header className="flex h-16 items-center border-b border-border bg-card px-6">
         <DSATutorLogo variant="dark" showTagline={false} />
       </header>
 
@@ -53,7 +53,7 @@ export default function SusPage() {
 
         <div className="flex flex-col gap-6">
           {SUS_ITEMS.map((statement, index) => (
-            <div key={statement} className="rounded-md border border-border bg-white p-4">
+            <div key={statement} className="rounded-md border border-border bg-card p-4">
               <p className="mb-3 text-sm font-medium text-text-primary">
                 {index + 1}. {statement}
               </p>
@@ -67,7 +67,7 @@ export default function SusPage() {
                     className={`flex h-9 flex-1 items-center justify-center rounded-md border text-sm font-medium transition-colors ${
                       responses[index] === value
                         ? 'border-primary bg-primary text-white'
-                        : 'border-border bg-white text-text-primary hover:border-primary'
+                        : 'border-border bg-background text-text-primary hover:border-primary'
                     }`}
                   >
                     {value}

@@ -18,13 +18,13 @@ import { EmptyStateIllustration } from '../components/brand'
 function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-surface">
-      <div className="h-16 w-full animate-pulse border-b border-border bg-white" />
-      <div className="h-24 w-full animate-pulse border-b border-border bg-white" />
+      <div className="h-16 w-full animate-pulse border-b border-border bg-card" />
+      <div className="h-24 w-full animate-pulse border-b border-border bg-card" />
       <div className="flex">
-        <div className="h-[calc(100vh-160px)] w-[260px] shrink-0 animate-pulse border-r border-border bg-white" />
+        <div className="h-[calc(100vh-160px)] w-[260px] shrink-0 animate-pulse border-r border-border bg-card" />
         <main className="flex-1 space-y-12 p-8">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-48 w-full animate-pulse rounded-md bg-white" />
+            <div key={i} className="h-48 w-full animate-pulse rounded-md bg-card" />
           ))}
         </main>
       </div>
@@ -86,7 +86,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-surface">
       <DashboardNav />
       {showBlockedNotice && (
-        <div className="flex items-center justify-between border-b border-border bg-white px-6 py-2 text-sm text-text-primary">
+        <div className="flex items-center justify-between border-b border-border bg-card px-6 py-2 text-sm text-text-primary">
           <span>That algorithm isn't part of your study topics, so it isn't available while you're enrolled.</span>
           <button
             type="button"

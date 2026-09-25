@@ -952,7 +952,7 @@ export default function AlgorithmPage() {
           <button
             type="button"
             onClick={openExplanationTab}
-            className="absolute bottom-4 left-4 z-20 rounded-full border border-primary bg-white px-3 py-1.5 text-xs font-medium text-primary shadow-md dark:bg-dark-surface"
+            className="absolute bottom-4 left-4 z-20 rounded-full border border-primary bg-popover px-3 py-1.5 text-xs font-medium text-primary shadow-md"
           >
             Explanation available
           </button>
@@ -1041,7 +1041,7 @@ export default function AlgorithmPage() {
 
   if (isTooSmall) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center gap-3 bg-white px-6 text-center dark:bg-dark-background">
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-3 bg-background px-6 text-center">
         <span className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
           DSA Tutor needs a larger screen
         </span>
@@ -1055,7 +1055,7 @@ export default function AlgorithmPage() {
 
   if (isCompact) {
     return (
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-white dark:bg-dark-background">
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
         <TopBar />
         <div className="relative flex-1 overflow-hidden">
           {compactTab === 'canvas' && (
@@ -1064,7 +1064,7 @@ export default function AlgorithmPage() {
             </div>
           )}
           {compactTab === 'controls' && (
-            <div className="h-full overflow-y-auto bg-white dark:bg-dark-surface">
+            <div className="h-full overflow-y-auto bg-card">
               <LeftPanel
                 collapsed={false}
                 onToggle={() => {}}
@@ -1074,7 +1074,7 @@ export default function AlgorithmPage() {
             </div>
           )}
           {compactTab === 'tutor' && (
-            <div className="h-full overflow-y-auto bg-white dark:bg-dark-surface">
+            <div className="h-full overflow-y-auto bg-card">
               <RightPanel
                 collapsed={false}
                 onToggle={() => {}}
@@ -1096,7 +1096,7 @@ export default function AlgorithmPage() {
           )}
         </div>
 
-        <nav className="grid shrink-0 grid-cols-3 border-t border-border bg-white text-xs font-medium dark:border-dark-border dark:bg-dark-surface">
+        <nav className="grid shrink-0 grid-cols-3 border-t border-border bg-card text-xs font-medium dark:border-dark-border">
           {(
             [
               ['canvas', 'Canvas'],

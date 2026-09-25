@@ -6,7 +6,7 @@ import { DSATutorLogo } from '@/components/brand'
 
 function ConsentPageHeader() {
   return (
-    <header className="flex h-16 items-center border-b border-border bg-white px-6">
+    <header className="flex h-16 items-center border-b border-border bg-card px-6">
       <DSATutorLogo variant="dark" showTagline={false} />
     </header>
   )
@@ -79,7 +79,7 @@ export default function ConsentPage() {
           following before continuing.
         </p>
 
-        <div className="mb-6 flex flex-col gap-4 rounded-md border border-border bg-white p-5 text-sm text-text-primary">
+        <div className="mb-6 flex flex-col gap-4 rounded-md border border-border bg-card p-5 text-sm text-text-primary">
           <div>
             <h2 className="mb-1 font-semibold">What you'll be doing</h2>
             <p className="text-text-secondary">

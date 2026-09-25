@@ -97,11 +97,11 @@ export default function OnboardingTooltip({
           left: coords?.left ?? -9999,
           visibility: coords ? 'visible' : 'hidden',
         }}
-        className="z-[51] w-[320px] rounded-lg bg-white p-6 shadow-xl"
+        className="z-[51] w-[320px] rounded-lg bg-popover p-6 shadow-xl"
       >
         <span
           className={cn(
-            'absolute h-3 w-3 rotate-45 bg-white',
+            'absolute h-3 w-3 rotate-45 bg-popover',
             position === 'bottom' && 'top-[-6px] left-1/2 -translate-x-1/2',
             position === 'top' && 'bottom-[-6px] left-1/2 -translate-x-1/2',
             position === 'right' && 'left-[-6px] top-1/2 -translate-y-1/2',
