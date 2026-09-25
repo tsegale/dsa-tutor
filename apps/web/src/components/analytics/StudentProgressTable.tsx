@@ -230,10 +230,10 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                   hintPct === null
                     ? null
                     : hintPct < 40
-                      ? { bar: '#d1fae5', text: '#065f46' }
+                      ? { bar: 'var(--tone-emerald-bg)', text: 'var(--tone-emerald-fg)' }
                       : hintPct <= 70
-                        ? { bar: '#fed7aa', text: '#9a3412' }
-                        : { bar: '#fca5a5', text: '#7f1d1d' }
+                        ? { bar: 'var(--tone-orange-bg)', text: 'var(--tone-orange-fg)' }
+                        : { bar: 'var(--tone-rose-bar)', text: 'var(--tone-rose-fg)' }
 
                 return (
                 <tr
@@ -291,7 +291,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                     {needsManualReview ? (
                       <span
                         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                        style={{ backgroundColor: '#fecaca', color: '#7f1d1d' }}
+                        style={{ backgroundColor: 'var(--tone-rose-bg)', color: 'var(--tone-rose-fg)' }}
                       >
                         <AlertTriangleIcon />
                         Manual review
@@ -299,7 +299,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                     ) : declining ? (
                       <span
                         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                        style={{ backgroundColor: '#faeeda', color: '#854f0b' }}
+                        style={{ backgroundColor: 'var(--tone-amber-bg)', color: 'var(--tone-amber-fg)' }}
                       >
                         Declining trend
                       </span>

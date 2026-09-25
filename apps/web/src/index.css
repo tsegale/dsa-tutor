@@ -60,6 +60,46 @@
   --tone-green-fg: #3b6d11;
   --tone-slate-bg: #f1f5f9;
   --tone-slate-fg: #64748b;
+  --tone-indigo-label: #4338ca;
+  --tone-indigo-soft-bg: #e0e7ff;
+  --tone-emerald-bg: #d1fae5;
+  --tone-emerald-fg: #065f46;
+  --tone-orange-bg: #fed7aa;
+  --tone-orange-fg: #9a3412;
+  --tone-rose-bg: #fecaca;
+  --tone-rose-bar: #fca5a5;
+  --tone-rose-fg: #7f1d1d;
+  --tier-bronze-bg: #fdf0e6;
+  --tier-silver-bg: #f4f4f5;
+  --tier-gold-bg: #fef9e7;
+  --tier-platinum-bg: #f0f3f8;
+  --tier-bronze-icon: #cd7f32;
+  --tier-silver-icon: #71717a;
+  --tier-gold-icon: #b8860b;
+  --tier-platinum-icon: #5b6b87;
+
+  /* Theme-invariant: these sit on fixed-colour surfaces (the indigo brand
+     panel, badge metals, categorical chart dots) that do not change with
+     the theme, so they have no .dark override. Tokens anyway, so every
+     colour lives here rather than scattered as hex in components. */
+  --brand-indigo: #3730a3;
+  --brand-on-indigo: #e0e7ff;
+  --brand-on-indigo-muted: #a5b4fc;
+  --brand-pillar-indigo: #4f46e5;
+  --brand-pillar-teal: #0f6e56;
+  --brand-pillar-amber: #854f0b;
+  --tier-bronze: #cd7f32;
+  --tier-silver: #a8a9ad;
+  --tier-gold: #d4af37;
+  --tier-platinum: #8e9aaf;
+  --tier-locked: #94a3b8;
+  --category-1: #ef4444;
+  --category-2: #f59e0b;
+  --category-3: #8b5cf6;
+  --category-4: #10b981;
+  --category-5: #3b82f6;
+  --category-6: #64748b;
+  --category-other: #94a3b8;
 }
 
 .dark {
@@ -117,6 +157,23 @@
   --tone-green-fg: #86efac;
   --tone-slate-bg: #334155;
   --tone-slate-fg: #cbd5e1;
+  --tone-indigo-label: #a5b4fc;
+  --tone-indigo-soft-bg: rgba(99, 102, 241, 0.25);
+  --tone-emerald-bg: rgba(16, 185, 129, 0.2);
+  --tone-emerald-fg: #6ee7b7;
+  --tone-orange-bg: rgba(249, 115, 22, 0.2);
+  --tone-orange-fg: #fdba74;
+  --tone-rose-bg: rgba(244, 63, 94, 0.2);
+  --tone-rose-bar: rgba(244, 63, 94, 0.45);
+  --tone-rose-fg: #fda4af;
+  --tier-bronze-bg: rgba(205, 127, 50, 0.18);
+  --tier-silver-bg: rgba(168, 169, 173, 0.18);
+  --tier-gold-bg: rgba(212, 175, 55, 0.18);
+  --tier-platinum-bg: rgba(142, 154, 175, 0.18);
+  --tier-bronze-icon: #cd7f32;
+  --tier-silver-icon: #a8a9ad;
+  --tier-gold-icon: #d4af37;
+  --tier-platinum-icon: #8e9aaf;
 }
 
 @theme inline {
@@ -161,6 +218,12 @@
   --color-tone-indigo: var(--tone-indigo-fg);
   --color-tone-indigo-bg: var(--tone-indigo-bg);
   --color-tone-indigo-border: var(--tone-indigo-border);
+  --color-tone-indigo-label: var(--tone-indigo-label);
+  --color-tone-red: var(--tone-red-fg);
+  --color-tone-rose-bg: var(--tone-rose-bg);
+  --color-brand-indigo: var(--brand-indigo);
+  --color-brand-on-indigo: var(--brand-on-indigo);
+  --color-brand-on-indigo-muted: var(--brand-on-indigo-muted);
   --color-text-accent: #378add;
   --color-dark-background: #0f172a;
   --color-dark-surface: #1e293b;

@@ -8,32 +8,32 @@ const MISCONCEPTION_DESCRIPTIONS: Record<string, { readable: string; detail: str
   OFF_BY_ONE: {
     readable: 'Off-by-one array indexing',
     detail: 'Selecting index n instead of n-1 as the loop boundary',
-    dot: '#ef4444',
+    dot: 'var(--category-1)',
   },
   ORDER_OF_OPERATIONS: {
     readable: 'Order of operations error',
     detail: 'Swapping before comparing, or applying the wrong comparison direction',
-    dot: '#f59e0b',
+    dot: 'var(--category-2)',
   },
   STRUCTURAL_PROPERTY_VIOLATION: {
     readable: 'Structural property violation',
     detail: 'Swapping equal elements, breaks the stable sort invariant',
-    dot: '#8b5cf6',
+    dot: 'var(--category-3)',
   },
   POINTER_CONFUSION: {
     readable: 'Pointer null reference confusion',
     detail: 'Treating a pointer to a node as the node value itself',
-    dot: '#10b981',
+    dot: 'var(--category-4)',
   },
   BASE_CASE_OMISSION: {
     readable: 'Base case omission',
     detail: 'Failing to identify or apply the recursion termination condition',
-    dot: '#3b82f6',
+    dot: 'var(--category-5)',
   },
   COMPLEXITY_MISATTRIBUTION: {
     readable: 'Complexity misattribution',
     detail: 'Incorrectly stating or reasoning about time or space complexity',
-    dot: '#64748b',
+    dot: 'var(--category-6)',
   },
 }
 
@@ -89,7 +89,7 @@ export default function MisconceptionTable({ breakdown }: MisconceptionTableProp
                     <div className="flex items-start gap-2">
                       <span
                         className="mt-1.5 size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: desc?.dot ?? '#94a3b8' }}
+                        style={{ backgroundColor: desc?.dot ?? 'var(--category-other)' }}
                       />
                       <div>
                         <p className="text-text-primary">{desc?.readable ?? formatCategory(category)}</p>

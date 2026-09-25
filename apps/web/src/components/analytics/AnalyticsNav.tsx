@@ -52,7 +52,7 @@ export default function AnalyticsNav({ refetch, isFetching }: AnalyticsNavProps)
         <span className="text-[14px] font-medium text-text-primary">Educator dashboard</span>
         <span
           className="rounded-[10px] px-2 py-0.5 text-[10px] font-medium"
-          style={{ backgroundColor: '#eef2ff', color: '#3730a3', border: '0.5px solid #c7d2fe' }}
+          style={{ backgroundColor: 'var(--tone-indigo-bg)', color: 'var(--tone-indigo-fg)', border: '0.5px solid var(--tone-indigo-border)' }}
         >
           Educator
         </span>

@@ -67,22 +67,22 @@ export default function ClassSummaryCard({ analytics }: ClassSummaryCardProps) {
   return (
     <div
       className="flex items-start gap-3 rounded-[10px] p-3.5"
-      style={{ backgroundColor: '#eef2ff', border: '0.5px solid #c7d2fe' }}
+      style={{ backgroundColor: 'var(--tone-indigo-bg)', border: '0.5px solid var(--tone-indigo-border)' }}
     >
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#3730a3] text-white">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-indigo text-white">
         <SparkleIcon />
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-medium tracking-wide text-[#4338ca] uppercase">AI classroom insight</p>
+          <p className="text-[10px] font-medium tracking-wide text-tone-indigo-label uppercase">AI classroom insight</p>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 onClick={() => void handleGenerate()}
                 disabled={isLoading}
-                className="shrink-0 rounded-md bg-[#3730a3] px-3 py-1 text-[11px] font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="shrink-0 rounded-md bg-brand-indigo px-3 py-1 text-[11px] font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? 'Generating...' : summary ? 'Regenerate' : 'Generate Report'}
               </button>
@@ -96,7 +96,7 @@ export default function ClassSummaryCard({ analytics }: ClassSummaryCardProps) {
         {error && <p className="mt-1.5 text-xs text-error">{error}</p>}
 
         {!summary && !isLoading && !error && (
-          <p className="mt-1 text-xs text-[#3730a3]">
+          <p className="mt-1 text-xs text-tone-indigo">
             Click Generate Report to get an AI-powered analysis of your class performance.
           </p>
         )}
@@ -108,7 +108,7 @@ export default function ClassSummaryCard({ analytics }: ClassSummaryCardProps) {
         )}
 
         {summary && !isLoading && (
-          <p className="mt-0.5 text-xs leading-[1.6] text-[#3730a3]">
+          <p className="mt-0.5 text-xs leading-[1.6] text-tone-indigo">
             {summary.narrativeSummary}
             {summary.keyFindings[0] && <> {summary.keyFindings[0]}</>}
           </p>

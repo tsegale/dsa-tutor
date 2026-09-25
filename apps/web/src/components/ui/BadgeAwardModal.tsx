@@ -13,13 +13,13 @@ interface BadgeAwardModalProps {
 }
 
 const TIER_COLORS: Record<BadgeTier, { border: string; bg: string; icon: string; label: string }> = {
-  bronze: { border: '#CD7F32', bg: '#FDF0E6', icon: '#CD7F32', label: 'Bronze' },
-  silver: { border: '#A8A9AD', bg: '#F4F4F5', icon: '#71717A', label: 'Silver' },
-  gold: { border: '#D4AF37', bg: '#FEF9E7', icon: '#B8860B', label: 'Gold' },
-  platinum: { border: '#8E9AAF', bg: '#F0F3F8', icon: '#5B6B87', label: 'Platinum' },
+  bronze: { border: 'var(--tier-bronze)', bg: 'var(--tier-bronze-bg)', icon: 'var(--tier-bronze-icon)', label: 'Bronze' },
+  silver: { border: 'var(--tier-silver)', bg: 'var(--tier-silver-bg)', icon: 'var(--tier-silver-icon)', label: 'Silver' },
+  gold: { border: 'var(--tier-gold)', bg: 'var(--tier-gold-bg)', icon: 'var(--tier-gold-icon)', label: 'Gold' },
+  platinum: { border: 'var(--tier-platinum)', bg: 'var(--tier-platinum-bg)', icon: 'var(--tier-platinum-icon)', label: 'Platinum' },
 }
 
-const CONFETTI_COLORS = ['#4F46E5', '#F59E0B', '#16A34A', '#DC2626', '#7C3AED']
+const CONFETTI_COLORS = ['var(--color-primary)', 'var(--color-secondary)', 'var(--color-success)', 'var(--color-error)', 'var(--color-active)']
 const CONFETTI_COUNT = 40
 
 interface ConfettiPiece {

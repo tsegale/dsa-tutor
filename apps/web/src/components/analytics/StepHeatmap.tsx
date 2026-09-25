@@ -20,7 +20,7 @@ const BUBBLE_SORT_PHASES = [
 
 function heatmapColour(intensity: number): string {
   // intensity is 0.0 to 1.0
-  if (intensity === 0) return '#FFFFFF'
+  if (intensity === 0) return 'var(--card)'
   if (intensity < 0.33) return `rgba(245, 158, 11, ${intensity * 1.5})` // amber
   if (intensity < 0.66) return `rgba(239, 68, 68, ${0.4 + intensity * 0.6})` // red building
   return `rgba(185, 28, 28, ${0.6 + intensity * 0.4})` // deep red
@@ -79,12 +79,12 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
                 <div
                   key={phase.label}
                   className="rounded-md p-2"
-                  style={phase.isHot ? { backgroundColor: '#fef2f2' } : undefined}
+                  style={phase.isHot ? { backgroundColor: 'var(--error-light)' } : undefined}
                 >
                   <p className="text-[10px] font-medium text-text-primary">{phase.label}</p>
                   {phase.sub && <p className="text-[10px] text-text-muted">{phase.sub}</p>}
                   {phase.isHot && (
-                    <span className="mt-1 inline-block rounded-full bg-[#fecaca] px-1.5 py-0.5 text-[10px] text-[#a32d2d]">
+                    <span className="mt-1 inline-block rounded-full bg-tone-rose-bg px-1.5 py-0.5 text-[10px] text-tone-red">
                       High error rate
                     </span>
                   )}
@@ -117,7 +117,7 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
             <div className="mt-4 flex items-center gap-4">
               {(
                 [
-                  ['No errors', '#FFFFFF'],
+                  ['No errors', 'var(--card)'],
                   ['Low', 'rgba(245, 158, 11, 0.3)'],
                   ['Medium', 'rgba(239, 68, 68, 0.5)'],
                   ['High', 'rgba(185, 28, 28, 0.8)'],

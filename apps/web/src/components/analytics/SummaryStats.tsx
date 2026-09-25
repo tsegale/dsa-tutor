@@ -52,9 +52,9 @@ function formatCategory(key: string): string {
 }
 
 function accuracyColor(rate: number): string {
-  if (rate >= 70) return '#3b6d11'
-  if (rate >= 50) return '#854f0b'
-  return '#a32d2d'
+  if (rate >= 70) return 'var(--tone-green-fg)'
+  if (rate >= 50) return 'var(--tone-amber-fg)'
+  return 'var(--tone-red-fg)'
 }
 
 function StatCard({
@@ -99,26 +99,26 @@ export default function SummaryStats({ analytics }: SummaryStatsProps) {
     <div className="flex gap-4">
       <StatCard
         icon={<UsersIcon />}
-        iconBg="#eef2ff"
-        iconColor="#3730a3"
+        iconBg="var(--tone-indigo-bg)"
+        iconColor="var(--tone-indigo-fg)"
         value={analytics.totalStudents}
-        valueColor="#3730a3"
+        valueColor="var(--tone-indigo-fg)"
         label="Students enrolled"
       />
 
       <StatCard
         icon={<PlayIcon />}
-        iconBg="#eaf3de"
-        iconColor="#3b6d11"
+        iconBg="var(--tone-green-bg)"
+        iconColor="var(--tone-green-fg)"
         value={analytics.totalSessions}
-        valueColor="#3b6d11"
+        valueColor="var(--tone-green-fg)"
         label="Practice sessions completed"
       />
 
       <StatCard
         icon={<TargetIcon />}
-        iconBg="#faeeda"
-        iconColor="#854f0b"
+        iconBg="var(--tone-amber-bg)"
+        iconColor="var(--tone-amber-fg)"
         value={`${analytics.averageCorrectRate}%`}
         valueColor={accuracyColor(analytics.averageCorrectRate)}
         label="Mean prediction accuracy"
@@ -126,10 +126,10 @@ export default function SummaryStats({ analytics }: SummaryStatsProps) {
 
       <StatCard
         icon={<WarningIcon />}
-        iconBg="#fcebeb"
-        iconColor="#a32d2d"
+        iconBg="var(--tone-red-bg)"
+        iconColor="var(--tone-red-fg)"
         value={topMisconceptionEntry ? formatCategory(topMisconceptionEntry[0]) : 'None yet'}
-        valueColor={topMisconceptionEntry ? '#a32d2d' : 'var(--color-text-muted)'}
+        valueColor={topMisconceptionEntry ? 'var(--tone-red-fg)' : 'var(--color-text-muted)'}
         valueSizeClass="text-xl"
         label="Top misconception this period"
       />

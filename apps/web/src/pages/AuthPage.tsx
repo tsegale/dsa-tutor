@@ -49,19 +49,19 @@ interface Pillar {
 
 const PILLARS: Pillar[] = [
   {
-    iconBg: '#4f46e5',
+    iconBg: 'var(--brand-pillar-indigo)',
     icon: <BrainIcon />,
     title: 'Socratic AI guidance',
     desc: 'Real-time misconception feedback powered by Claude, not generic hints',
   },
   {
-    iconBg: '#0f6e56',
+    iconBg: 'var(--brand-pillar-teal)',
     icon: <ArrowsExchangeIcon />,
     title: 'Active state manipulation',
     desc: 'Drag, swap, and execute array or tree operations directly on the canvas',
   },
   {
-    iconBg: '#854f0b',
+    iconBg: 'var(--brand-pillar-amber)',
     icon: <ChartLineIcon />,
     title: 'Adaptive scaffolding (ZPD)',
     desc: 'Hints fade automatically as your mastery score rises, support only where needed',
@@ -120,7 +120,7 @@ function LoginForm({ role }: { role: Role }) {
         />
       </div>
       {error && <p className="text-sm text-error">{error}</p>}
-      <Button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-[#3730a3] hover:bg-[#3730a3]/90">
+      <Button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-brand-indigo hover:bg-brand-indigo/90">
         {isSubmitting ? 'Logging in...' : 'Login'}
       </Button>
     </form>
@@ -197,7 +197,7 @@ function RegisterForm() {
         />
       </div>
       {error && <p className="text-sm text-error">{error}</p>}
-      <Button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-[#3730a3] hover:bg-[#3730a3]/90">
+      <Button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-brand-indigo hover:bg-brand-indigo/90">
         {isSubmitting ? 'Creating account...' : 'Register'}
       </Button>
     </form>
@@ -212,7 +212,7 @@ export default function AuthPage() {
     <div className="flex h-screen w-full">
       <div
         className="hidden flex-col justify-between p-8 text-white md:flex"
-        style={{ width: '45%', backgroundColor: '#3730a3' }}
+        style={{ width: '45%', backgroundColor: 'var(--brand-indigo)' }}
       >
         <DSATutorLogo variant="white" showTagline />
 
@@ -240,8 +240,8 @@ export default function AuthPage() {
                   {pillar.icon}
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium text-[#e0e7ff]">{pillar.title}</p>
-                  <p className="mt-0.5 text-[10px] leading-[1.35] text-[#a5b4fc]">{pillar.desc}</p>
+                  <p className="text-[11px] font-medium text-brand-on-indigo">{pillar.title}</p>
+                  <p className="mt-0.5 text-[10px] leading-[1.35] text-brand-on-indigo-muted">{pillar.desc}</p>
                 </div>
               </div>
             ))}
@@ -265,7 +265,7 @@ export default function AuthPage() {
                     className={cn(
                       'flex-1 rounded-md py-1.5 text-sm font-medium capitalize transition-colors',
                       role === option
-                        ? 'border-[0.5px] border-border bg-card text-[#3730a3]'
+                        ? 'border-[0.5px] border-border bg-card text-tone-indigo'
                         : 'border-[0.5px] border-transparent text-text-secondary',
                     )}
                   >
@@ -280,13 +280,13 @@ export default function AuthPage() {
             <TabsList className="w-full bg-transparent p-0">
               <TabsTrigger
                 value="login"
-                className="flex-1 rounded-none border-b-2 border-transparent bg-transparent text-text-secondary shadow-none data-[state=active]:border-[#3730a3] data-[state=active]:bg-transparent data-[state=active]:text-[#3730a3] data-[state=active]:shadow-none"
+                className="flex-1 rounded-none border-b-2 border-transparent bg-transparent text-text-secondary shadow-none data-[state=active]:border-tone-indigo data-[state=active]:bg-transparent data-[state=active]:text-tone-indigo data-[state=active]:shadow-none"
               >
                 Login
               </TabsTrigger>
               <TabsTrigger
                 value="register"
-                className="flex-1 rounded-none border-b-2 border-transparent bg-transparent text-text-secondary shadow-none data-[state=active]:border-[#3730a3] data-[state=active]:bg-transparent data-[state=active]:text-[#3730a3] data-[state=active]:shadow-none"
+                className="flex-1 rounded-none border-b-2 border-transparent bg-transparent text-text-secondary shadow-none data-[state=active]:border-tone-indigo data-[state=active]:bg-transparent data-[state=active]:text-tone-indigo data-[state=active]:shadow-none"
               >
                 Register
               </TabsTrigger>
@@ -301,7 +301,7 @@ export default function AuthPage() {
 
           <p className="mt-8 text-center text-[11px] text-text-muted">
             Forgot password?{' '}
-            <button type="button" className="font-medium text-[#3730a3] hover:underline">
+            <button type="button" className="font-medium text-tone-indigo hover:underline">
               Reset it
             </button>
           </p>

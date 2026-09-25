@@ -4,10 +4,10 @@ import { fetchAwardedBadgeIds, getCachedAwardedBadgeIds } from '@/services/badge
 import BadgeIcon from '@/components/ui/BadgeIcon'
 
 const TIER_BORDER: Record<BadgeTier, string> = {
-  bronze: '#CD7F32',
-  silver: '#A8A9AD',
-  gold: '#D4AF37',
-  platinum: '#8E9AAF',
+  bronze: 'var(--tier-bronze)',
+  silver: 'var(--tier-silver)',
+  gold: 'var(--tier-gold)',
+  platinum: 'var(--tier-platinum)',
 }
 
 function LockIcon() {
@@ -54,8 +54,8 @@ export default function BadgesSection() {
               <div
                 className="flex size-11 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isAwarded ? `${TIER_BORDER[badge.tier]}22` : 'var(--surface)',
-                  color: isAwarded ? TIER_BORDER[badge.tier] : '#94A3B8',
+                  backgroundColor: isAwarded ? `color-mix(in srgb, ${TIER_BORDER[badge.tier]} 13%, transparent)` : 'var(--surface)',
+                  color: isAwarded ? TIER_BORDER[badge.tier] : 'var(--tier-locked)',
                 }}
               >
                 <BadgeIcon icon={badge.icon} size={22} />

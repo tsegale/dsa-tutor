@@ -13,9 +13,9 @@ interface StudentSummaryDrawerProps {
 const ALGORITHM_NAME = 'Bubble Sort'
 
 const TREND_STYLE: Record<StudentSummaryResponse['scaffoldingTrend'], { label: string; bg: string; color: string }> = {
-  improving: { label: 'Trend: Improving', bg: '#d1fae5', color: '#065f46' },
-  stable: { label: 'Trend: Stable', bg: '#e0e7ff', color: '#3730a3' },
-  declining: { label: 'Trend: Declining', bg: '#fecaca', color: '#7f1d1d' },
+  improving: { label: 'Trend: Improving', bg: 'var(--tone-emerald-bg)', color: 'var(--tone-emerald-fg)' },
+  stable: { label: 'Trend: Stable', bg: 'var(--tone-indigo-soft-bg)', color: 'var(--tone-indigo-fg)' },
+  declining: { label: 'Trend: Declining', bg: 'var(--tone-rose-bg)', color: 'var(--tone-rose-fg)' },
   insufficient_data: { label: 'Trend: Not enough data', bg: 'var(--color-surface)', color: 'var(--color-text-muted)' },
 }
 
