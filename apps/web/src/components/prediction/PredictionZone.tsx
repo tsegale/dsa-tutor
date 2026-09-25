@@ -9,6 +9,7 @@ import type {
   PredictionRequest,
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
+import { useMisconceptionStore } from '@/store/useMisconceptionStore'
 import { submitPrediction, evaluatePrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
@@ -415,7 +416,17 @@ export default function PredictionZone({
     setPredictionResolved(true)
   }
 
-  function handleContinueAfterReveal() {
+  // Every post-resolution advance goes through here: a Quick Check this
+  // junction triggered is presented, and answered or skipped, before the
+  // run moves on, never on top of the next junction (Week 1, 1A.2).
+  function waitForRemediation() {
+    return useMisconceptionStore.getState().waitForRemediation()
+  }
+
+  async function handleContinueAfterReveal() {
+    const submissionToken = submissionTokenRef.current
+    await waitForRemediation()
+    if (submissionTokenRef.current !== submissionToken) return
     setSubmissionState('idle')
     setCurrentAnswer(null)
     setMistakeAnalysis(null)
@@ -494,6 +505,7 @@ export default function PredictionZone({
       // nothing left to discover.
       window.dispatchEvent(new CustomEvent(SHOW_EXPLANATION_LINK_EVENT))
       await wait(BOTTOM_OUT_ADVANCE_DELAY_MS)
+      await waitForRemediation()
       if (submissionTokenRef.current !== submissionToken) return
       setSubmissionState('idle')
       setCurrentAnswer(null)
@@ -618,6 +630,8 @@ export default function PredictionZone({
       setXpVisible(true)
       play('xp')
       await wait(500)
+      await waitForRemediation()
+      if (submissionTokenRef.current !== submissionToken) return
       stepForward()
       return
     }
@@ -900,7 +914,7 @@ export default function PredictionZone({
                           revealAnswer ? (
                             <button
                               type="button"
-                              onClick={handleContinueAfterReveal}
+                              onClick={() => void handleContinueAfterReveal()}
                               className="text-xs font-medium underline underline-offset-2"
                             >
                               Continue

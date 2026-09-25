@@ -413,6 +413,16 @@ export default function AlgorithmPage() {
   // actually safe to (see the RemediationModal render guard below).
   const [junctionRetryInProgress, setJunctionRetryInProgress] = useState(false)
 
+  // A Quick Check must never open over a junction the learner has not
+  // answered yet (Week 1, 1A.2). Mirrors PredictionZone's own isVisible.
+  const isPredictionRequiredHere = useAlgorithmStore(
+    (state) => state.snapshotArray[state.stepIndex]?.isPredictionRequired ?? false,
+  )
+  const isLiveJunctionUnresolved =
+    (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) &&
+    isPredictionRequiredHere &&
+    !predictionResolved
+
   // Guards against re-triggering the modal every time the learner steps
   // back to the final step and forward again within the same practice
   // run. Reset when a fresh run starts (stepIndex back to 0) so a genuine
@@ -546,6 +556,9 @@ export default function AlgorithmPage() {
     setScaffoldingReasoning(assessment.reasoning)
 
     if (sessionId) {
+      // Tracked so PredictionZone holds the run on this junction until any
+      // Quick Check this answer triggers has been presented (Week 1, 1A.2).
+      void useMisconceptionStore.getState().trackCheck(
       apiFetch<{ id: string }>('/api/v1/interactions', {
         method: 'POST',
         body: JSON.stringify({
@@ -574,7 +587,7 @@ export default function AlgorithmPage() {
             useAlgorithmStore.getState().snapshotArray[detail.stepIndex]?.dataStructureState ?? null,
         }),
       })
-        .then((interaction) => {
+        .then(async (interaction) => {
           // The response half of misconception handling (detection is
           // Phase 4's tile-derived ground-truth label) is scoped to the
           // three fully instrumented study topics - see
@@ -585,13 +598,13 @@ export default function AlgorithmPage() {
           const hintUsed = detail.hintsRequestedForStep > 0
 
           if (!detail.correct && detail.misconceptionCategory) {
-            void store.handleDetection(currentTopic.id, currentTopic.name, detail.misconceptionCategory, interaction.id)
+            await store.handleDetection(currentTopic.id, currentTopic.name, detail.misconceptionCategory, interaction.id)
           }
           // Order matters: handleDetection above may have just set
           // pendingRemediation, which makes this probe call a no-op for
           // the same interaction - the wrong answer that revealed a
           // misconception must never also count as a probe of it.
-          void store.handleProbe(
+          await store.handleProbe(
             currentTopic.id,
             currentTopic.name,
             interaction.id,
@@ -605,7 +618,8 @@ export default function AlgorithmPage() {
         .catch(() => {
           // Interaction logging is best-effort; it must never block the
           // learner's practice flow if the backend is unreachable.
-        })
+        }),
+      )
     }
 
     if (gatedLevel !== currentLevel) {
@@ -983,7 +997,7 @@ export default function AlgorithmPage() {
           error={sessionEndError}
         />
       )}
-      {pendingRemediation && !junctionRetryInProgress && (
+      {pendingRemediation && !junctionRetryInProgress && !isLiveJunctionUnresolved && (
         <RemediationModal
           payload={pendingRemediation.payload}
           onComplete={(outcome) => void completePendingRemediation(outcome)}

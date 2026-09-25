@@ -22,6 +22,9 @@ interface MisconceptionStoreState {
   activeEvents: MisconceptionEventDto[]
   pendingRemediation: PendingRemediation | null
   lastBottomedOutCategory: string | null
+  /** Detection/probe round trips started but not yet settled - any one of
+   * them may still set pendingRemediation. */
+  checksInFlight: number
 
   loadActiveEvents: (algorithmTopicId: string) => Promise<void>
   checkSessionStart: (algorithmTopicId: string) => Promise<void>
@@ -43,7 +46,19 @@ interface MisconceptionStoreState {
   tickJunctionForTopic: (algorithmTopicId: string) => void
   completePendingRemediation: (outcome: { correct: boolean | null; skipped: boolean }) => Promise<void>
   dismissBottomOut: () => void
+  /** Registers a detection/probe chain so waitForRemediation can hold the
+   * run until it settles. Returns the same promise. */
+  trackCheck: <T>(work: Promise<T>) => Promise<T>
+  /** Resolves once no Quick Check is pending. Waits up to
+   * CHECK_IN_FLIGHT_WAIT_MS for in-flight checks to settle first, then
+   * without limit for an open Quick Check to be answered or skipped, so the
+   * run never advances to the next junction underneath it. */
+  waitForRemediation: () => Promise<void>
 }
+
+// Long enough for the interaction write plus a detect/present round trip
+// on a warm API, short enough that a slow backend never stalls the run.
+export const CHECK_IN_FLIGHT_WAIT_MS = 3000
 
 function upsertEvent(events: MisconceptionEventDto[], updated: MisconceptionEventDto): MisconceptionEventDto[] {
   const withoutUpdated = events.filter((e) => e.id !== updated.id)
@@ -74,6 +89,7 @@ export const useMisconceptionStore = create<MisconceptionStoreState>((set, get) 
   activeEvents: [],
   pendingRemediation: null,
   lastBottomedOutCategory: null,
+  checksInFlight: 0,
 
   async loadActiveEvents(algorithmTopicId) {
     try {
@@ -158,5 +174,31 @@ export const useMisconceptionStore = create<MisconceptionStoreState>((set, get) 
 
   dismissBottomOut() {
     set({ lastBottomedOutCategory: null })
+  },
+
+  trackCheck(work) {
+    set((state) => ({ checksInFlight: state.checksInFlight + 1 }))
+    return work.finally(() => set((state) => ({ checksInFlight: state.checksInFlight - 1 })))
+  },
+
+  waitForRemediation() {
+    const deadline = Date.now() + CHECK_IN_FLIGHT_WAIT_MS
+    const isClear = () => {
+      const { pendingRemediation, checksInFlight } = get()
+      if (pendingRemediation) return false
+      return checksInFlight === 0 || Date.now() >= deadline
+    }
+    if (isClear()) return Promise.resolve()
+
+    return new Promise<void>((resolve) => {
+      const finish = () => {
+        if (!isClear()) return
+        unsubscribe()
+        clearTimeout(timer)
+        resolve()
+      }
+      const unsubscribe = useMisconceptionStore.subscribe(finish)
+      const timer = setTimeout(finish, CHECK_IN_FLIGHT_WAIT_MS)
+    })
   },
 }))
