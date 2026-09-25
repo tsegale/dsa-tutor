@@ -48,13 +48,13 @@ export default function BadgesSection() {
               key={badge.id}
               className="relative flex items-center gap-3 rounded-md border-2 bg-card p-4"
               style={{
-                borderColor: isAwarded ? TIER_BORDER[badge.tier] : '#E2E8F0',
+                borderColor: isAwarded ? TIER_BORDER[badge.tier] : 'var(--border)',
               }}
             >
               <div
                 className="flex size-11 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isAwarded ? `${TIER_BORDER[badge.tier]}22` : '#F8FAFC',
+                  backgroundColor: isAwarded ? `${TIER_BORDER[badge.tier]}22` : 'var(--surface)',
                   color: isAwarded ? TIER_BORDER[badge.tier] : '#94A3B8',
                 }}
               >

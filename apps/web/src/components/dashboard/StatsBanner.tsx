@@ -130,30 +130,30 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
     <div id="dashboard-stats-banner" className="flex gap-4 border-b border-border bg-surface px-6 py-4">
       <StatCard
         icon={<BrainIcon />}
-        iconBg="#eef2ff"
-        iconColor="#3730a3"
+        iconBg="var(--tone-indigo-bg)"
+        iconColor="var(--tone-indigo-fg)"
         value={`${overallMastery}%`}
-        valueColor="#3730a3"
+        valueColor="var(--tone-indigo-fg)"
         label="Mastery index"
         sublabel={mostEngagedTopic ? mostEngagedTopic.displayName : 'No topics started yet'}
       />
 
       <StatCard
         icon={<ChartLineIcon />}
-        iconBg="#faeeda"
-        iconColor="#854f0b"
+        iconBg="var(--tone-amber-bg)"
+        iconColor="var(--tone-amber-fg)"
         value={scaffoldingLevel}
-        valueColor="#854f0b"
+        valueColor="var(--tone-amber-fg)"
         label="Scaffolding level"
         sublabel={SCAFFOLDING_LABEL[scaffoldingLevel]}
       />
 
       <StatCard
         icon={resolvedCount > 0 ? <AlertTriangleIcon /> : <SearchIcon />}
-        iconBg={resolvedCount > 0 ? '#fcebeb' : '#f1f5f9'}
-        iconColor={resolvedCount > 0 ? '#a32d2d' : '#64748b'}
+        iconBg={resolvedCount > 0 ? 'var(--tone-red-bg)' : 'var(--tone-slate-bg)'}
+        iconColor={resolvedCount > 0 ? 'var(--tone-red-fg)' : 'var(--tone-slate-fg)'}
         value={resolvedCount}
-        valueColor={resolvedCount > 0 ? '#a32d2d' : '#64748b'}
+        valueColor={resolvedCount > 0 ? 'var(--tone-red-fg)' : 'var(--tone-slate-fg)'}
         label="Misconceptions resolved"
         sublabel={resolvedCount === 0 && inProgressCount === 0 ? 'None yet' : ' '}
         secondaryLine={inProgressCount > 0 ? `${inProgressCount} being worked on` : undefined}
@@ -161,10 +161,10 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
 
       <StatCard
         icon={<FlameIcon />}
-        iconBg="#eaf3de"
-        iconColor="#3b6d11"
+        iconBg="var(--tone-green-bg)"
+        iconColor="var(--tone-green-fg)"
         value={user.streakCount}
-        valueColor="#3b6d11"
+        valueColor="var(--tone-green-fg)"
         label="Day streak"
         sublabel="Practice daily"
       />

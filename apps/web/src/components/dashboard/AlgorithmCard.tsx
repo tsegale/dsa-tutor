@@ -25,8 +25,8 @@ function CompetencyBadge({ topic }: { topic: TopicDto }) {
 
   const style =
     topic.masteryPercent >= 80
-      ? { label: 'Independent mastery', bg: '#eaf3de', color: '#3b6d11' }
-      : { label: 'Fading scaffolding', bg: '#faeeda', color: '#854f0b' }
+      ? { label: 'Independent mastery', bg: 'var(--tone-green-bg)', color: 'var(--tone-green-fg)' }
+      : { label: 'Fading scaffolding', bg: 'var(--tone-amber-bg)', color: 'var(--tone-amber-fg)' }
 
   return (
     <span
@@ -146,7 +146,7 @@ export default function AlgorithmCard({ topic, onStart }: AlgorithmCardProps) {
           onClick={() => onStart(topic.name, 'PRACTICE')}
           aria-label={`Start learning ${topic.displayName}`}
           className={cn(
-            'w-full rounded-md border-[1.5px] border-[#3730a3] py-2 text-sm font-medium text-[#3730a3] transition-opacity',
+            'w-full rounded-md border-[1.5px] border-tone-indigo py-2 text-sm font-medium text-tone-indigo transition-opacity',
             'opacity-90 group-hover:opacity-100',
           )}
         >

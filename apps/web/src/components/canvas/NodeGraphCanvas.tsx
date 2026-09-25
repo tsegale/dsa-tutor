@@ -238,7 +238,9 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
                       width={24}
                       height={18}
                       rx={9}
-                      fill="#ffffff"
+                      // Knockout behind the weight must match the canvas card,
+                      // or dark mode paints light text on a white pill.
+                      fill="var(--card)"
                       stroke={EDGE_DEFAULT}
                       strokeWidth={1}
                     />

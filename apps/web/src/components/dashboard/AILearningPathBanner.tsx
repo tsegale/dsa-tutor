@@ -43,16 +43,16 @@ export default function AILearningPathBanner({ topics, onStart }: AILearningPath
   return (
     <section
       className="flex items-center gap-3 rounded-[10px] p-3.5"
-      style={{ backgroundColor: '#eef2ff', border: '0.5px solid #c7d2fe' }}
+      style={{ backgroundColor: 'var(--tone-indigo-bg)', border: '0.5px solid var(--tone-indigo-border)' }}
     >
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#3730a3] text-white">
         <SparklesIcon />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium tracking-wide text-[#4338ca] uppercase">
+        <p className="text-[10px] font-medium tracking-wide text-[#4338ca] uppercase dark:text-tone-indigo">
           AI learning path recommendation
         </p>
-        <p className="mt-0.5 text-xs leading-[1.6] text-[#3730a3]">{bodyText}</p>
+        <p className="mt-0.5 text-xs leading-[1.6] text-tone-indigo">{bodyText}</p>
       </div>
       <button
         type="button"

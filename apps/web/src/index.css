@@ -47,6 +47,19 @@
   --secondary-light: #fffbeb;
   --success-light: #f0fdf4;
   --error-light: #fef2f2;
+  /* Tone pairs (tint background + deep foreground) for badges, stat tiles
+     and banners that previously hard-coded these hexes inline. */
+  --tone-indigo-bg: #eef2ff;
+  --tone-indigo-fg: #3730a3;
+  --tone-indigo-border: #c7d2fe;
+  --tone-amber-bg: #faeeda;
+  --tone-amber-fg: #854f0b;
+  --tone-red-bg: #fcebeb;
+  --tone-red-fg: #a32d2d;
+  --tone-green-bg: #eaf3de;
+  --tone-green-fg: #3b6d11;
+  --tone-slate-bg: #f1f5f9;
+  --tone-slate-fg: #64748b;
 }
 
 .dark {
@@ -93,6 +106,17 @@
   --secondary-light: rgba(245, 158, 11, 0.15);
   --success-light: rgba(22, 163, 74, 0.18);
   --error-light: rgba(220, 38, 38, 0.18);
+  --tone-indigo-bg: rgba(99, 102, 241, 0.18);
+  --tone-indigo-fg: #a5b4fc;
+  --tone-indigo-border: rgba(165, 180, 252, 0.3);
+  --tone-amber-bg: rgba(245, 158, 11, 0.15);
+  --tone-amber-fg: #fcd34d;
+  --tone-red-bg: rgba(220, 38, 38, 0.18);
+  --tone-red-fg: #fca5a5;
+  --tone-green-bg: rgba(22, 163, 74, 0.18);
+  --tone-green-fg: #86efac;
+  --tone-slate-bg: #334155;
+  --tone-slate-fg: #cbd5e1;
 }
 
 @theme inline {
@@ -134,6 +158,9 @@
      staying visibly more muted than --color-text-secondary (see
      remediation doc 9's Verify block: axe check, serious or above). */
   --color-text-muted: var(--text-muted);
+  --color-tone-indigo: var(--tone-indigo-fg);
+  --color-tone-indigo-bg: var(--tone-indigo-bg);
+  --color-tone-indigo-border: var(--tone-indigo-border);
   --color-text-accent: #378add;
   --color-dark-background: #0f172a;
   --color-dark-surface: #1e293b;

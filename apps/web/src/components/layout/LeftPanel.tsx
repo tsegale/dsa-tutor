@@ -354,7 +354,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               <button
                 type="button"
                 onClick={handlePlayPause}
-                style={{ borderColor: '#3730a3', color: '#3730a3', fontSize: 12 }}
+                style={{ borderColor: 'var(--tone-indigo-fg)', color: 'var(--tone-indigo-fg)', fontSize: 12 }}
                 className="flex w-full items-center justify-center gap-1.5 rounded-md border py-2"
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
