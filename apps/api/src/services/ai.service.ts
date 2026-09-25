@@ -59,6 +59,8 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     xpAwarded: data.xpAwarded,
     counterfactualTrace: data.counterfactualTrace ?? '',
     aiGenerated: data.aiGenerated ?? true,
+    promptVersion: data.promptVersion ?? null,
+    aiModel: data.aiModel ?? null,
   }
 }
 

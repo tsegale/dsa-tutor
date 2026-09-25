@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from models.request_models import MisconceptionCategory, PredictionRequest, ScaffoldingLevel
 from models.response_models import PredictionEvaluateResponse, PredictionResponse
 from prompts.registry import get_algorithm_context
-from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
+from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE, PROMPT_VERSION
 from services.claude_service import (
     BoundedCall,
     CallMetadata,
@@ -22,6 +22,7 @@ from services.claude_service import (
     feedback_max_tokens,
     field_failure,
     has_self_correction_marker,
+    model_name,
     parse_feedback_json,
     request_timeout_seconds,
     sanitize_dashes,
@@ -1174,6 +1175,12 @@ def _collect_comparison_values(current_state: Any) -> set[int]:
 
 
 def _hint_leaks_comparison_value(hint: str, current_state: Any) -> bool:
+    """True when the hint names one of this step's compared values as a
+    number. Checks the step's actual values, not numerals in general.
+    Spelled-out values ("five") are forbidden by the HIGH prompt but not
+    matched here: number words collide with ordinary hint language ("the
+    two highlighted values" on a step comparing 2) far more often than a
+    model spells out a leak."""
     tokens = {int(match) for match in re.findall(r"\d+", hint)}
     return bool(tokens & _collect_comparison_values(current_state))
 
@@ -1376,6 +1383,12 @@ def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
     )
 
 
+def _stamped(response: PredictionResponse) -> PredictionResponse:
+    """Every prediction response names the prompt version and model it came
+    from - fallbacks included, since the attempt used that prompt."""
+    return response.model_copy(update={"prompt_version": PROMPT_VERSION, "ai_model": model_name})
+
+
 def _response_from_feedback(prep: _PreparedPrediction, feedback: dict[str, Any]) -> PredictionResponse:
     return PredictionResponse(
         correct=prep.correct,
@@ -1385,13 +1398,15 @@ def _response_from_feedback(prep: _PreparedPrediction, feedback: dict[str, Any])
         socratic_hint=feedback["socratic_hint"],
         xp_awarded=feedback.get("xp_awarded", 10 if prep.correct else 0),
         counterfactual_trace="" if prep.correct else feedback.get("counterfactual_trace", ""),
+        prompt_version=PROMPT_VERSION,
+        ai_model=model_name,
     )
 
 
 def _fallback_for(prep: _PreparedPrediction, request: PredictionRequest) -> PredictionResponse:
-    return get_fallback_prediction_response(
+    return _stamped(get_fallback_prediction_response(
         prep.correct, request.scaffolding_level, request.algorithm_name, prep.junction_type, prep.ground_truth,
-    )
+    ))
 
 
 def _log_prediction_failure(request: PredictionRequest, prep: _PreparedPrediction) -> None:
@@ -1596,6 +1611,8 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
         xp_awarded=10 if prep.correct else 0,
         counterfactual_trace=counterfactual,
         ai_generated=not fallback_fields,
+        prompt_version=PROMPT_VERSION,
+        ai_model=model_name,
     )
     yield final(outcome, body, fallback_fields, failure_reason)
 

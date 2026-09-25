@@ -580,6 +580,8 @@ export default function AlgorithmPage() {
           counterfactualText: detail.counterfactualText,
           aiMisconceptionCategory: detail.aiMisconceptionCategory,
           aiFailureReason: detail.aiFailureReason ?? null,
+          promptVersion: detail.promptVersion ?? null,
+          aiModel: detail.aiModel ?? null,
           hintIndexAtResolve: detail.hintIndexAtResolve,
           // So a human rater reviewing this interaction later (research
           // misconception export) can see what the student was actually

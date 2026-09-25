@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+from prompts.templates import PROMPT_VERSION
 from routers import predictions
 from services.claude_service import CallMetadata
 from services.feedback_stream import JsonStringFieldStreamer, SentenceGate
@@ -227,6 +228,14 @@ def test_both_endpoints_agree_on_the_verdict(monkeypatch, path):
     body = res.json() if path.endswith("/") else json.loads(res.text.strip().split("\n\n")[-1].split("data: ", 1)[1])["response"]
     assert body["correct"] is False
     assert body["socraticHint"] == VALID["socratic_hint"]
+    # Versioned so pre- and post-change interactions stay distinguishable.
+    assert body["promptVersion"] == PROMPT_VERSION
+    assert body["aiModel"] == predictions.model_name
+
+
+def test_a_fallback_response_is_versioned_too(monkeypatch):
+    _, final = run(monkeypatch, feedback(socratic_hint=" ".join(["word"] * 60)))
+    assert final["response"]["promptVersion"] == PROMPT_VERSION
 
 
 def test_a_stalled_generation_is_cut_off_at_the_wall_clock_ceiling(monkeypatch):

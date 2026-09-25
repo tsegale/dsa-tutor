@@ -25,6 +25,11 @@ class PredictionResponse(CamelModel):
     # lets the student (and the research data) distinguish AI-generated
     # feedback from a degraded response.
     ai_generated: bool = True
+    # Stamped by the router on every response (prompts.templates.PROMPT_VERSION
+    # and the pinned model), then stored on the interaction so data gathered
+    # under different prompt wording stays distinguishable.
+    prompt_version: str | None = None
+    ai_model: str | None = None
 
 
 class PredictionEvaluateResponse(CamelModel):

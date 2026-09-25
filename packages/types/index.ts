@@ -394,6 +394,9 @@ export interface PredictionResponse {
   counterfactualTrace: string
   /** True for a real model response, false for the rule-based fallback. */
   aiGenerated: boolean
+  /** The study prompt version and model this response came from. */
+  promptVersion?: string | null
+  aiModel?: string | null
 }
 
 /**

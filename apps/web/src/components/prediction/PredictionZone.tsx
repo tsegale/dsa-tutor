@@ -65,6 +65,9 @@ export interface PredictionOutcomeDetail {
   /** Why displayed feedback fell back (validator rule, "truncated",
    * "stream_disconnected", ...); null when everything shown was AI text. */
   aiFailureReason?: string | null
+  /** Prompt version and model the feedback came from, for the research log. */
+  promptVersion?: string | null
+  aiModel?: string | null
 }
 
 const CODE_EVAL_XP = 5
@@ -512,6 +515,8 @@ export default function PredictionZone({
       ...displayed.log,
       aiMisconceptionCategory: correct ? null : (response?.aiMisconceptionCategory ?? null),
       hintIndexAtResolve: attempt,
+      promptVersion: response?.promptVersion ?? null,
+      aiModel: response?.aiModel ?? null,
     })
 
     if (correct || submissionTokenRef.current !== submissionToken) return

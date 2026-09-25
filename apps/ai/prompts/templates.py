@@ -2,6 +2,17 @@ from langchain.prompts import PromptTemplate
 
 from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 
+# Recorded on every logged interaction (Interaction.promptVersion) so data
+# gathered under different prompt wording can be told apart. Bump it on ANY
+# change to a study prompt below, and add a line here. Study prompts freeze
+# at the end of Week 4, before the pilot; after that a change means
+# re-piloting (see CLAUDE.md).
+#   (null)          rows logged before versioning existed - treat as pilot data
+#   2026-09-25.1    HIGH socratic_hint: rule in <=10 words, exactly one
+#                   question, no values from the current step (digits or
+#                   spelled out), worked example
+PROMPT_VERSION = "2026-09-25.1"
+
 # Stable across every call regardless of algorithm, student or step - the
 # tutor persona and the JSON contract belong in the system prompt, not
 # repeated in every user turn. Anthropic also caches a stable system
@@ -71,10 +82,15 @@ schema:
 Calibrate every field to the scaffolding level given below - the level
 must change what you actually write, not just how much of it the client
 ends up displaying:
-- HIGH: name the specific invariant or rule this junction is testing (in
-  the abstract, using the pseudocode's own terms - never this step's
-  actual values), and end the socratic_hint with a question that asks
-  the student to apply that rule to what they're looking at themselves.
+- HIGH: the socratic_hint names the rule this junction tests in 10 words
+  or fewer, in the pseudocode's own terms, then asks exactly one question
+  that has the student apply that rule to what they are looking at. It
+  must contain no value from the current step - no array value, index or
+  comparison result from the state above, whether written as digits or
+  spelled out as words. Worked example of a passing HIGH socratic_hint for
+  a Bubble Sort swap decision (adapt the rule to this algorithm): Bubble
+  Sort swaps when the left value is larger. Which highlighted value should
+  move right?
 - MEDIUM: ask an open question about the consequence of the student's
   choice - "what happens next if..." - without naming the invariant
   outright.
@@ -186,6 +202,7 @@ __all__ = [
     "FEEDBACK_USER_TEMPLATE",
     "HINT_SYSTEM_PROMPT",
     "HINT_USER_TEMPLATE",
+    "PROMPT_VERSION",
     "BUBBLE_SORT_CONTEXT",
     "BUBBLE_SORT_PSEUDOCODE",
 ]
