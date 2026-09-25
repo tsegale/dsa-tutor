@@ -7,10 +7,11 @@ import type {
   CodeEvalResponse,
   HintRequest,
   PredictionRequest,
+  PredictionResponse,
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
 import { useMisconceptionStore } from '@/store/useMisconceptionStore'
-import { submitPrediction, evaluatePrediction, requestHint } from '@/api/predictions'
+import { submitPrediction, streamPrediction, evaluatePrediction, requestHint } from '@/api/predictions'
 import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
@@ -455,8 +456,27 @@ export default function PredictionZone({
     timeSpentSeconds: number,
     junctionType: CriticalJunctionType,
     junctionDifficulty: JunctionDifficulty,
+    verdictCorrect: boolean,
   ) {
-    const response = await submitPrediction(request)
+    // Streams the explanation into the feedback card as the model writes
+    // it (Week 1 addendum A2.4) - the verdict above is already shown, so
+    // this turns a ~5s wait into text appearing within about a second. The
+    // preview follows the same per-level rule as the final text (LOW shows
+    // one sentence, NONE shows none) and is overwritten below by the
+    // server-validated response, which swaps in the fallback if the
+    // streamed text failed validation.
+    const showPreview = !verdictCorrect && scaffoldingLevel !== ScaffoldingLevel.NONE
+    let response: PredictionResponse
+    try {
+      ;({ response } = await streamPrediction(request, (explanationSoFar) => {
+        if (!showPreview || submissionTokenRef.current !== submissionToken) return
+        setMistakeAnalysis(scaffoldingLevel === ScaffoldingLevel.LOW ? firstSentence(explanationSoFar) : explanationSoFar)
+      }))
+    } catch {
+      // The stream could not be opened or dropped before its final event.
+      // The JSON endpoint returns the same validated response, just not live.
+      response = await submitPrediction(request)
+    }
 
     onPredictionResult?.({
       correct: response.correct,
@@ -612,6 +632,7 @@ export default function PredictionZone({
       timeSpentSeconds,
       junctionType,
       junctionDifficulty,
+      evaluation.correct,
     )
 
     if (evaluation.correct) {

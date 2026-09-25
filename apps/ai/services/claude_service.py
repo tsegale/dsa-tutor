@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
@@ -238,6 +238,44 @@ async def attempt_text(prompt: str, system: str | None, *, retry_reason: str | N
     return sanitize_dashes(text.strip()), metadata
 
 
+async def stream_message(
+    prompt: str,
+    system: str | None,
+    *,
+    token_limit: int | None = None,
+) -> AsyncIterator[tuple[str, str | CallMetadata]]:
+    """Streams one call: yields ("text", chunk) as the model writes, then a
+    single ("done", CallMetadata) once the message is complete. Chunks are
+    dash-sanitised for display; the caller still parses and validates the
+    assembled text before treating any of it as final."""
+    start = time.monotonic()
+    async with client.messages.stream(
+        model=model_name,
+        max_tokens=token_limit or max_tokens,
+        temperature=temperature,
+        timeout=request_timeout_seconds,
+        system=system or "",
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        async for chunk in stream.text_stream:
+            yield "text", chunk
+        final = await stream.get_final_message()
+    yield "done", CallMetadata(
+        latency_ms=round((time.monotonic() - start) * 1000),
+        input_tokens=final.usage.input_tokens,
+        output_tokens=final.usage.output_tokens,
+        stop_reason=final.stop_reason,
+    )
+
+
+def parse_feedback_json(text: str) -> dict | None:
+    """The same parse attempt_feedback applies, for text assembled from a stream."""
+    try:
+        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text)))
+    except json.JSONDecodeError:
+        return None
+
+
 T = TypeVar("T")
 
 
@@ -258,10 +296,13 @@ async def call_with_bounded_retry(
     attempt: Callable[[str | None], Awaitable[tuple[T, CallMetadata]]],
     failure_of: Callable[[T], str | None],
     label: str,
+    *,
+    allow_retry: bool = True,
 ) -> BoundedCall[T]:
     """At most two calls: the first on the normal timeout, and one retry -
     only if the first fails validation - hard-capped at
-    retry_budget_seconds of wall clock. Exceptions from the first call
+    retry_budget_seconds of wall clock. allow_retry=False makes a failed
+    first call fall back immediately. Exceptions from the first call
     propagate so the caller's fallback handles them."""
     start = time.monotonic()
 
@@ -276,6 +317,9 @@ async def call_with_bounded_retry(
     reason = "truncated" if metadata.stop_reason == "max_tokens" else failure_of(first)
     if reason is None:
         return BoundedCall(first, 1, None, None, elapsed(), metadata.output_tokens)
+    if not allow_retry:
+        logger.warning("AI %s failed validation: reason=%s, falling back (no retry)", label, reason)
+        return BoundedCall(None, 1, None, reason, elapsed(), metadata.output_tokens)
 
     logger.info("AI %s retry: reason=%s", label, reason)
     try:

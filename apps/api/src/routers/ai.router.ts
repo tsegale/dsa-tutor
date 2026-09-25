@@ -3,6 +3,7 @@ import { authenticate, requireEducator, AuthRequest } from '../middleware/auth'
 import {
   proxyPrediction,
   proxyPredictionEvaluate,
+  relayPredictionStream,
   proxyHint,
   proxyFeynman,
   proxyChallenge,
@@ -23,6 +24,20 @@ router.post('/predictions', validate(S.ai.predictions), async (req: AuthRequest,
   } catch (err) {
     console.error('proxyPrediction failed:', err)
     res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
+  }
+})
+
+router.post('/predictions/stream', validate(S.ai.predictionsStream), async (req: AuthRequest, res: Response) => {
+  // Cancels the upstream AI call when the student leaves mid-stream.
+  const abort = new AbortController()
+  res.on('close', () => abort.abort())
+  try {
+    await relayPredictionStream(req.body, res, abort.signal)
+  } catch (err) {
+    console.error('relayPredictionStream failed:', err)
+    if (!res.headersSent) {
+      res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
+    }
   }
 })
 

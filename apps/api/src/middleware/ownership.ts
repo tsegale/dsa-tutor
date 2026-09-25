@@ -30,6 +30,10 @@ export const OWNERSHIP_EXEMPT: Record<string, { keys: string[]; reason: string }
     reason:
       'Forwarded to the stateless AI service only, never used to read or write data. The client sends "local-session" when it has no session.',
   },
+  'POST /api/v1/ai/predictions/stream': {
+    keys: ['sessionId'],
+    reason: 'Same as /ai/predictions - forwarded to the AI service, no data access.',
+  },
   'POST /api/v1/ai/predictions/evaluate': {
     keys: ['sessionId'],
     reason: 'Same as /ai/predictions - forwarded to the AI service, no data access.',

@@ -15,8 +15,27 @@ import type {
   ClassSummaryRequest,
   ClassSummaryResponse,
 } from '@dsa-tutor/types'
+import type { Response as ExpressResponse } from 'express'
 
 const AI_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
+
+// snake_case body shared by the JSON and streaming prediction proxies, so
+// the two can never send the AI service different requests.
+function toPredictionBody(request: PredictionRequest): string {
+  return JSON.stringify({
+    algorithm_name: request.algorithmName,
+    step_index: request.stepIndex,
+    current_state: request.currentState,
+    student_answer: request.studentAnswer,
+    error_history: request.errorHistory,
+    scaffolding_level: request.scaffoldingLevel,
+    session_id: request.sessionId,
+    junction_type: request.junctionType ?? null,
+    junction_difficulty: request.junctionDifficulty ?? null,
+    ground_truth_misconception: request.groundTruthMisconception ?? null,
+    pseudocode: request.pseudocode ?? null,
+  })
+}
 
 // The AI microservice's response models serialize with a camelCase alias
 // generator (see apps/ai/models/response_models.py), so the JSON it
@@ -27,19 +46,7 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
   const response = await fetch(`${AI_URL}/api/v1/predictions/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      algorithm_name: request.algorithmName,
-      step_index: request.stepIndex,
-      current_state: request.currentState,
-      student_answer: request.studentAnswer,
-      error_history: request.errorHistory,
-      scaffolding_level: request.scaffoldingLevel,
-      session_id: request.sessionId,
-      junction_type: request.junctionType ?? null,
-      junction_difficulty: request.junctionDifficulty ?? null,
-      ground_truth_misconception: request.groundTruthMisconception ?? null,
-      pseudocode: request.pseudocode ?? null,
-    }),
+    body: toPredictionBody(request),
   })
   if (!response.ok) throw new Error(`AI service error: ${response.status}`)
   const data = (await response.json()) as any
@@ -52,6 +59,54 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     xpAwarded: data.xpAwarded,
     counterfactualTrace: data.counterfactualTrace ?? '',
     aiGenerated: data.aiGenerated ?? true,
+  }
+}
+
+/**
+ * Relays the AI service's server-sent event stream (delta events with the
+ * explanation as it is written, then one final event carrying the full
+ * validated PredictionResponse) to the client unbuffered. The event
+ * payloads are already camelCase, so nothing is translated. Throws before
+ * any byte is written if the stream cannot be opened, so the route can
+ * still answer with a normal JSON error; once streaming has started, an
+ * upstream drop just ends the response.
+ */
+export async function relayPredictionStream(
+  request: PredictionRequest,
+  res: ExpressResponse,
+  signal: AbortSignal,
+): Promise<void> {
+  const upstream = await fetch(`${AI_URL}/api/v1/predictions/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: toPredictionBody(request),
+    signal,
+  })
+  if (!upstream.ok || !upstream.body) throw new Error(`AI stream error: ${upstream.status}`)
+
+  res.status(200).set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  })
+  res.flushHeaders()
+
+  const reader = upstream.body.getReader()
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      res.write(value)
+    }
+  } catch (err) {
+    // The client navigated away (signal aborted) or the AI service dropped
+    // the connection mid-stream. Headers are already sent, so all that is
+    // left is to end the response; the client treats a stream with no
+    // final event as a failure and falls back to the JSON endpoint.
+    if (!signal.aborted) console.error('relayPredictionStream dropped:', err)
+  } finally {
+    res.end()
   }
 }
 

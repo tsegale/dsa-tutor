@@ -122,6 +122,7 @@ const predictionBody = z.strictObject({
 export const ai = {
   predictions: { body: predictionBody },
   predictionsEvaluate: { body: predictionBody },
+  predictionsStream: { body: predictionBody },
   hints: {
     body: z.strictObject({
       algorithmName: nonEmpty(200),

@@ -1,9 +1,13 @@
+import json
 import logging
 import os
 import re
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Response
+from fastapi.responses import StreamingResponse
 
 from models.request_models import MisconceptionCategory, PredictionRequest, ScaffoldingLevel
 from models.response_models import PredictionEvaluateResponse, PredictionResponse
@@ -11,12 +15,17 @@ from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE
 from services.claude_service import (
     BoundedCall,
+    CallMetadata,
     attempt_feedback,
     call_with_bounded_retry,
     feedback_max_tokens,
     field_failure,
+    parse_feedback_json,
+    sanitize_dashes,
+    stream_message,
     uses_foreign_array_notation,
 )
+from services.feedback_stream import JsonStringFieldStreamer
 from services.fallback_service import get_fallback_prediction_response
 from services.feedback_cache import CACHE_ENABLED, feedback_cache, make_cache_key
 from services.misconception_classifier import classify_misconception
@@ -1233,15 +1242,17 @@ async def _get_validated_feedback(
     current_state: Any = None,
     pseudocode: str | None = None,
 ) -> BoundedCall[dict[str, Any] | None]:
-    """At most one retry, on a hard wall-clock budget (see
-    call_with_bounded_retry). result.value is None when the caller should
-    fall back."""
+    """One call, no retry: the A2 measurements showed a retry on its 4s
+    budget recovered 0 of 5 failures (a feedback call takes 5-7s), so it
+    only added latency before the same fallback. Streaming could not retry
+    invisibly anyway. result.value is None when the caller should fall back."""
     return await call_with_bounded_retry(
         lambda retry_reason: attempt_feedback(
             prompt, FEEDBACK_SYSTEM_PROMPT, retry_reason=retry_reason, token_limit=feedback_max_tokens
         ),
         lambda feedback: _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode),
         label="prediction",
+        allow_retry=False,
     )
 
 
@@ -1289,8 +1300,22 @@ def resolve_ai_misconception(correct: bool, feedback: dict[str, Any]) -> Misconc
         return None
 
 
-@router.post("/", response_model=PredictionResponse)
-async def submit_prediction(request: PredictionRequest, response: Response) -> PredictionResponse:
+@dataclass
+class _PreparedPrediction:
+    """Everything both prediction endpoints derive from a request before any
+    model call, so the JSON and streaming paths cannot drift apart."""
+
+    correct: bool
+    wrapper: dict
+    junction_type: str
+    pseudocode: str
+    prompt: str
+    cache_key: str
+    cached_feedback: dict[str, Any] | None
+    ground_truth: MisconceptionCategory | None
+
+
+def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
     correct = evaluate_answer(request)
 
     wrapper = request.current_state if isinstance(request.current_state, dict) else {}
@@ -1308,7 +1333,6 @@ async def submit_prediction(request: PredictionRequest, response: Response) -> P
         request.scaffolding_level.value,
         correct,
     )
-    cached_feedback = feedback_cache.get(cache_key) if CACHE_ENABLED else None
 
     prompt = FEEDBACK_USER_TEMPLATE.format(
         algorithm_context=algorithm_context,
@@ -1325,46 +1349,147 @@ async def submit_prediction(request: PredictionRequest, response: Response) -> P
         comparison_context=comparison_context,
     )
 
-    ground_truth_misconception = resolve_ground_truth_misconception(correct, request)
+    return _PreparedPrediction(
+        correct=correct,
+        wrapper=wrapper,
+        junction_type=junction_type,
+        pseudocode=pseudocode,
+        prompt=prompt,
+        cache_key=cache_key,
+        cached_feedback=feedback_cache.get(cache_key) if CACHE_ENABLED else None,
+        ground_truth=resolve_ground_truth_misconception(correct, request),
+    )
 
+
+def _response_from_feedback(prep: _PreparedPrediction, feedback: dict[str, Any]) -> PredictionResponse:
+    return PredictionResponse(
+        correct=prep.correct,
+        misconception_category=prep.ground_truth,
+        ai_misconception_category=resolve_ai_misconception(prep.correct, feedback),
+        consequence_explanation=feedback["consequence_explanation"],
+        socratic_hint=feedback["socratic_hint"],
+        xp_awarded=feedback.get("xp_awarded", 10 if prep.correct else 0),
+        counterfactual_trace="" if prep.correct else feedback.get("counterfactual_trace", ""),
+    )
+
+
+def _fallback_for(prep: _PreparedPrediction, request: PredictionRequest) -> PredictionResponse:
+    return get_fallback_prediction_response(
+        prep.correct, request.scaffolding_level, request.algorithm_name, prep.junction_type, prep.ground_truth,
+    )
+
+
+def _log_prediction_failure(request: PredictionRequest, prep: _PreparedPrediction) -> None:
+    logger.warning(
+        "AI prediction call failed for algorithm=%s junction_type=%s step_index=%s, falling back",
+        request.algorithm_name,
+        prep.junction_type,
+        request.step_index,
+        exc_info=True,
+    )
+
+
+@router.post("/", response_model=PredictionResponse)
+async def submit_prediction(request: PredictionRequest, response: Response) -> PredictionResponse:
+    """Non-streamed feedback. The web client streams by default (see
+    stream_prediction below) and only falls back to this endpoint when a
+    stream cannot be opened."""
+    prep = _prepare_prediction(request)
     try:
-        if cached_feedback is not None:
-            feedback = cached_feedback
+        if prep.cached_feedback is not None:
             _set_ai_headers(response, "cache")
-        else:
-            result = await _get_validated_feedback(prompt, correct, request.scaffolding_level, wrapper, pseudocode)
-            feedback = result.value
-            _set_ai_headers(response, "ai" if feedback is not None else "fallback", result)
-            if feedback is None:
-                return get_fallback_prediction_response(
-                    correct, request.scaffolding_level, request.algorithm_name, junction_type,
-                    ground_truth_misconception,
-                )
-            if CACHE_ENABLED:
-                feedback_cache.set(cache_key, feedback)
-        ai_misconception = resolve_ai_misconception(correct, feedback)
-        return PredictionResponse(
-            correct=correct,
-            misconception_category=ground_truth_misconception,
-            ai_misconception_category=ai_misconception,
-            consequence_explanation=feedback["consequence_explanation"],
-            socratic_hint=feedback["socratic_hint"],
-            xp_awarded=feedback.get("xp_awarded", 10 if correct else 0),
-            counterfactual_trace="" if correct else feedback.get("counterfactual_trace", ""),
-        )
+            return _response_from_feedback(prep, prep.cached_feedback)
+        result = await _get_validated_feedback(prep.prompt, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
+        _set_ai_headers(response, "ai" if result.value is not None else "fallback", result)
+        if result.value is None:
+            return _fallback_for(prep, request)
+        if CACHE_ENABLED:
+            feedback_cache.set(prep.cache_key, result.value)
+        return _response_from_feedback(prep, result.value)
     except Exception:
         _set_ai_headers(response, "error")
-        logger.warning(
-            "AI prediction call failed for algorithm=%s junction_type=%s step_index=%s, falling back",
-            request.algorithm_name,
-            junction_type,
-            request.step_index,
-            exc_info=True,
+        _log_prediction_failure(request, prep)
+        return _fallback_for(prep, request)
+
+
+def _sse(event: str, payload: dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+
+
+async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
+    """delta events carry consequence_explanation as the model writes it;
+    exactly one final event carries the validated PredictionResponse. The
+    streamed text is a preview only: the assembled response is validated
+    against the same _feedback_failure contract as the JSON endpoint, and
+    on failure final carries the rule-based fallback with replaced=true so
+    the client swaps the preview out. No retry - a retry would visibly
+    restart text the student is already reading."""
+    prep = _prepare_prediction(request)
+
+    def final(outcome: str, body: PredictionResponse, failure_reason: str | None = None, streamed: bool = False) -> str:
+        return _sse(
+            "final",
+            {
+                "outcome": outcome,
+                "failureReason": failure_reason,
+                "replaced": streamed and outcome != "ai",
+                "response": body.model_dump(by_alias=True, mode="json"),
+            },
         )
-        return get_fallback_prediction_response(
-            correct, request.scaffolding_level, request.algorithm_name, junction_type,
-            ground_truth_misconception,
+
+    if prep.cached_feedback is not None:
+        yield final("cache", _response_from_feedback(prep, prep.cached_feedback))
+        return
+
+    streamer = JsonStringFieldStreamer("consequence_explanation")
+    streamed = False
+    parts: list[str] = []
+    try:
+        metadata: CallMetadata | None = None
+        async for kind, value in stream_message(prep.prompt, FEEDBACK_SYSTEM_PROMPT, token_limit=feedback_max_tokens):
+            if kind == "done":
+                metadata = value  # type: ignore[assignment]
+                continue
+            parts.append(value)  # type: ignore[arg-type]
+            delta = streamer.feed(value)  # type: ignore[arg-type]
+            if delta:
+                streamed = True
+                yield _sse("delta", {"text": sanitize_dashes(delta)})
+
+        feedback = parse_feedback_json("".join(parts))
+        truncated = metadata is not None and metadata.stop_reason == "max_tokens"
+        reason = "truncated" if truncated else _feedback_failure(
+            feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode
         )
+        if metadata is not None:
+            logger.info(
+                "AI prediction stream: latency_ms=%s output_tokens=%s stop_reason=%s failure=%s",
+                metadata.latency_ms, metadata.output_tokens, metadata.stop_reason, reason,
+            )
+        if reason is not None or feedback is None:
+            logger.warning("AI prediction stream failed validation: reason=%s, falling back (no retry)", reason)
+            yield final("fallback", _fallback_for(prep, request), reason, streamed)
+            return
+        if CACHE_ENABLED:
+            feedback_cache.set(prep.cache_key, feedback)
+        yield final("ai", _response_from_feedback(prep, feedback), None, streamed)
+    except Exception:
+        _log_prediction_failure(request, prep)
+        yield final("error", _fallback_for(prep, request), "error", streamed)
+
+
+@router.post("/stream")
+async def stream_prediction(request: PredictionRequest) -> StreamingResponse:
+    return StreamingResponse(
+        _prediction_events(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            # Stops proxies (Railway's edge included) buffering the stream.
+            "X-Accel-Buffering": "no",
+            "X-AI-Build": os.getenv("RAILWAY_GIT_COMMIT_SHA", "local")[:7],
+        },
+    )
 
 
 @router.post("/evaluate", response_model=PredictionEvaluateResponse)
