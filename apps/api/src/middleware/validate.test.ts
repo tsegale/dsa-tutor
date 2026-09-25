@@ -21,6 +21,12 @@ vi.mock('../services/study.service', () => ({
   submitSus: vi.fn(),
   enrolParticipant: vi.fn(),
 }))
+// The ownership guard runs after validate(); user-1 owns session s1 here so
+// valid session requests reach the handler. Ownership itself is covered in
+// ownership.test.ts.
+vi.mock('../lib/prisma', () => ({
+  prisma: { session: { count: vi.fn(async ({ where }: { where: { id: string; userId: string } }) => (where.id === 's1' && where.userId === 'user-1' ? 1 : 0)) } },
+}))
 vi.mock('../services/session.service', () => ({
   createSession: vi.fn(),
   updateSession: vi.fn(),

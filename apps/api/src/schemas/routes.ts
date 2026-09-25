@@ -37,7 +37,7 @@ export const auth = {
 } satisfies Record<string, RequestSchema>
 
 // ------------------------------------------------------------ sessions
-const sessionIdParams = z.strictObject({ id })
+const sessionIdParams = z.strictObject({ sessionId: id })
 
 export const sessions = {
   create: {

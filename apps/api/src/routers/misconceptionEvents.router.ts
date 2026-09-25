@@ -15,11 +15,12 @@ import {
 import { getEducatorMisconceptionSummary } from '../services/misconceptionReport.service'
 import { validate, type BodyOf, type QueryOf } from '../middleware/validate'
 import * as S from '../schemas/routes'
+import { requireOwnership } from '../middleware/ownership'
 
 const router = Router()
 router.use(authenticate)
 
-router.post('/detect', validate(S.misconceptionEvents.detect), async (req: AuthRequest, res: Response) => {
+router.post('/detect', validate(S.misconceptionEvents.detect), requireOwnership({ in: 'body', key: 'detectedInteractionId' }), async (req: AuthRequest, res: Response) => {
   try {
     const { algorithmTopicId, category, detectedInteractionId } = req.body as BodyOf<typeof S.misconceptionEvents.detect>
     const event = await detectOrEscalate(req.userId!, algorithmTopicId, category, detectedInteractionId)
@@ -29,7 +30,7 @@ router.post('/detect', validate(S.misconceptionEvents.detect), async (req: AuthR
   }
 })
 
-router.post('/:eventId/remediations', validate(S.misconceptionEvents.presentRemediation), async (req: AuthRequest, res: Response) => {
+router.post('/:eventId/remediations', validate(S.misconceptionEvents.presentRemediation), requireOwnership({ in: 'params', key: 'eventId' }), async (req: AuthRequest, res: Response) => {
   try {
     const { taskType, level, payload } = req.body as BodyOf<typeof S.misconceptionEvents.presentRemediation>
     const remediation = await presentRemediation(req.userId!, req.params.eventId, taskType, level, payload)
@@ -44,7 +45,7 @@ router.post('/:eventId/remediations', validate(S.misconceptionEvents.presentReme
   }
 })
 
-router.patch('/remediations/:remediationId', validate(S.misconceptionEvents.completeRemediation), async (req: AuthRequest, res: Response) => {
+router.patch('/remediations/:remediationId', validate(S.misconceptionEvents.completeRemediation), requireOwnership({ in: 'params', key: 'remediationId' }), async (req: AuthRequest, res: Response) => {
   try {
     const { correct, skipped } = req.body as BodyOf<typeof S.misconceptionEvents.completeRemediation>
     const remediation = await completeRemediation(req.userId!, req.params.remediationId, {
@@ -62,7 +63,9 @@ router.patch('/remediations/:remediationId', validate(S.misconceptionEvents.comp
   }
 })
 
-router.post('/:eventId/probes', validate(S.misconceptionEvents.recordProbe), async (req: AuthRequest, res: Response) => {
+router.post('/:eventId/probes', validate(S.misconceptionEvents.recordProbe),
+  requireOwnership({ in: 'params', key: 'eventId' }, { in: 'body', key: 'interactionId' }),
+  async (req: AuthRequest, res: Response) => {
   try {
     const { interactionId, junctionType, optionCount, correct, hintUsed } = req.body as BodyOf<typeof S.misconceptionEvents.recordProbe>
     const result = await recordProbe(

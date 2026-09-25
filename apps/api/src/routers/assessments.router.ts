@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth'
 import { startAttempt, submitResponse, completeAttempt } from '../services/assessment.service'
 import { validate, type BodyOf } from '../middleware/validate'
 import * as S from '../schemas/routes'
+import { requireOwnership } from '../middleware/ownership'
 
 const router = Router()
 router.use(authenticate)
@@ -33,7 +34,7 @@ router.post('/:code/start', validate(S.assessments.start), async (req: AuthReque
   }
 })
 
-router.post('/attempts/:attemptId/responses', validate(S.assessments.submitResponse), async (req: AuthRequest, res: Response) => {
+router.post('/attempts/:attemptId/responses', validate(S.assessments.submitResponse), requireOwnership({ in: 'params', key: 'attemptId' }), async (req: AuthRequest, res: Response) => {
   try {
     const { itemId, response, timeSpentSeconds } = req.body as BodyOf<typeof S.assessments.submitResponse>
     // Server records the score; the client only ever gets an
@@ -55,7 +56,7 @@ router.post('/attempts/:attemptId/responses', validate(S.assessments.submitRespo
   }
 })
 
-router.post('/attempts/:attemptId/complete', validate(S.assessments.complete), async (req: AuthRequest, res: Response) => {
+router.post('/attempts/:attemptId/complete', validate(S.assessments.complete), requireOwnership({ in: 'params', key: 'attemptId' }), async (req: AuthRequest, res: Response) => {
   try {
     await completeAttempt(req.userId!, req.params.attemptId)
     res.json({ data: { completed: true }, error: null })

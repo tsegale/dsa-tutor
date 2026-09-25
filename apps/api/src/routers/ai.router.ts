@@ -1,5 +1,5 @@
 import { Router, Response } from 'express'
-import { authenticate, AuthRequest } from '../middleware/auth'
+import { authenticate, requireEducator, AuthRequest } from '../middleware/auth'
 import {
   proxyPrediction,
   proxyPredictionEvaluate,
@@ -76,7 +76,9 @@ router.post('/code-eval', validate(S.ai.codeEval), async (req: AuthRequest, res:
   }
 })
 
-router.post('/summaries/student', validate(S.ai.studentSummary), async (req: AuthRequest, res: Response) => {
+// Educator-only: these narrate a named student's or the whole class's
+// learning data for the educator dashboard, the only caller.
+router.post('/summaries/student', requireEducator, validate(S.ai.studentSummary), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyStudentSummary(req.body)
     res.json({ data: result, error: null })
@@ -86,7 +88,7 @@ router.post('/summaries/student', validate(S.ai.studentSummary), async (req: Aut
   }
 })
 
-router.post('/summaries/class', validate(S.ai.classSummary), async (req: AuthRequest, res: Response) => {
+router.post('/summaries/class', requireEducator, validate(S.ai.classSummary), async (req: AuthRequest, res: Response) => {
   try {
     const result = await proxyClassSummary(req.body)
     res.json({ data: result, error: null })
