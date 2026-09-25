@@ -778,7 +778,11 @@ export default function PredictionZone({
               // Code Editor Mode needs real room for a multi-line textarea,
               // language tabs and its own submit button - the 35% budget
               // that fits a single tile prompt comfortably clips it.
-              snapshot.predictionType === PredictionType.CODE_EDITOR ? 'h-[70%]' : 'h-[35%]',
+              // Every other type sizes to its content, from a 35% floor up
+              // to a 60% ceiling: a fixed 35% put BST's last tile 714px
+              // down, below the fold on a 1366x768 laptop, reachable only
+              // by scrolling this panel (Week 1, 1A.4).
+              snapshot.predictionType === PredictionType.CODE_EDITOR ? 'h-[70%]' : 'min-h-[35%] max-h-[60%]',
               'transition-colors duration-300',
               submissionState === 'correct' ? 'border-t-success' : 'border-t-[#f59e0b]',
             )}
