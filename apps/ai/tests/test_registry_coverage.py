@@ -18,7 +18,12 @@ GENERIC_PSEUDOCODE = "No pseudocode available."
 
 def _seeded_topic_names() -> list[str]:
     text = SEED_PATH.read_text(encoding="utf-8")
-    return re.findall(r"name:\s*'([^']+)'", text)
+    # Only the TOPICS array - seed.ts also declares BADGES with the same
+    # `name: '...'` shape, and badge slugs are not algorithm topics.
+    topics_block = re.search(r"const TOPICS = \[(.*?)\n\] as const", text, re.DOTALL)
+    if topics_block is None:
+        return []
+    return re.findall(r"name:\s*'([^']+)'", topics_block.group(1))
 
 
 SEEDED_TOPIC_NAMES = _seeded_topic_names()
