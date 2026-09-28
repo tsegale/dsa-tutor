@@ -113,7 +113,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'radix-sort':
       return radixSortEngine(defaultInput)
     case 'bst':
-      return bstInsertEngine(defaultInput)
+      return bstInsertEngine(defaultInput, { withCompletionCheck: true })
     case 'bst-search':
     case 'bst-delete':
     case 'tree-inorder':

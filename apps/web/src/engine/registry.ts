@@ -200,7 +200,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'bst',
     displayName: 'Binary Search Tree',
-    engineFunction: (input) => bstInsertEngine(input),
+    engineFunction: (input) => bstInsertEngine(input, { withCompletionCheck: true }),
     track: AlgorithmTrack.TREES,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'A tree where left children are smaller and right children are larger than the parent.',

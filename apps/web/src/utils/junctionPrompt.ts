@@ -13,6 +13,12 @@ export interface SearchAlgorithmState {
   foundIndex: number | null
 }
 
+/** The BST study topic's completion junction (bstInsertEngine's
+ * withCompletionCheck): an ALGORITHM_COMPLETE over a built tree. */
+export function isBstCompletionState(state: unknown): boolean {
+  return typeof state === 'object' && state !== null && 'root' in state && (state as { operation?: string }).operation === 'insert'
+}
+
 export function isInsertionSortSwapState(
   state: unknown,
 ): state is { array: number[]; currentKey: number; compareIndex: number } {
@@ -48,6 +54,9 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
       return 'The algorithm stopped before completing all passes. Why?'
 
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
+      if (isBstCompletionState(snapshot.dataStructureState)) {
+        return 'The tree is built. Which traversal would list its values in sorted order?'
+      }
       if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
         const state = snapshot.dataStructureState as SearchAlgorithmState
         return state.found

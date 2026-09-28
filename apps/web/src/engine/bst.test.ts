@@ -193,3 +193,29 @@ describe('bstDeleteEngine', () => {
     expect(snapshots.map((s) => s.stepIndex)).toEqual(snapshots.map((_, i) => i))
   })
 })
+
+describe('bstInsertEngine withCompletionCheck', () => {
+  it('leaves the default run unchanged', () => {
+    const plain = bstInsertEngine([8, 4, 12])
+    expect(plain.some((s) => s.criticalJunctionType === 'ALGORITHM_COMPLETE')).toBe(false)
+    expect(plain.at(-1)?.isFinalStep).toBe(true)
+  })
+
+  it('ends a built tree with one conceptual ALGORITHM_COMPLETE junction, then a single final step', () => {
+    const snapshots = bstInsertEngine([8, 4, 12], { withCompletionCheck: true })
+    const check = snapshots.at(-2)!
+    expect(check.criticalJunctionType).toBe('ALGORITHM_COMPLETE')
+    expect(check.junctionDifficulty).toBe('CONCEPTUAL')
+    expect(check.isPredictionRequired).toBe(true)
+    expect(snapshots.filter((s) => s.criticalJunctionType === 'ALGORITHM_COMPLETE')).toHaveLength(1)
+    expect(snapshots.filter((s) => s.isFinalStep)).toHaveLength(1)
+    expect(snapshots.at(-1)?.isFinalStep).toBe(true)
+    // The same tree as the plain run: only the ending differs.
+    expect(lastState(snapshots).root).toEqual(lastState(bstInsertEngine([8, 4, 12])).root)
+  })
+
+  it('asks nothing on an empty tree', () => {
+    const snapshots = bstInsertEngine([], { withCompletionCheck: true })
+    expect(snapshots.some((s) => s.isPredictionRequired)).toBe(false)
+  })
+})

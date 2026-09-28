@@ -51,6 +51,15 @@ const PROMPTS = {
       { id: 'discarded_cannot_hold', criterion: 'the discarded half cannot contain the target' },
     ],
   },
+  bstInOrderSorted: {
+    key: 'bst.in-order-sorted',
+    question: 'Why does visiting left subtree, node, then right subtree list the values in sorted order?',
+    rubric: [
+      { id: 'left_smaller', criterion: "every value in a node's left subtree is smaller than the node" },
+      { id: 'right_larger', criterion: "every value in a node's right subtree is larger than (or, for duplicates, equal to) the node" },
+      { id: 'recursive_order', criterion: 'applying left, node, right at every node therefore visits smaller values before larger ones throughout the tree' },
+    ],
+  },
   bstDeleteTwoChildren: {
     key: 'bst.delete-two-children',
     question: 'Why is the in-order successor a safe replacement for a node with two children?',
@@ -91,8 +100,10 @@ export function selfExplanationPromptFor(
     case 'binary-search':
       return type === CriticalJunctionType.ALGORITHM_COMPLETE ? PROMPTS.binarySearchComplete : null
     case 'bst':
-      // Both BST conceptual junctions are delete decisions; the pseudocode
-      // line says which case the learner just reasoned about.
+      // The insert run ends with the in-order question (bstInsertEngine's
+      // withCompletionCheck); the delete decisions are told apart by the
+      // pseudocode line the learner just reasoned about.
+      if (type === CriticalJunctionType.ALGORITHM_COMPLETE) return PROMPTS.bstInOrderSorted
       if (snapshot.pseudocodeLine === BST_LINE.DELETE_SUCCESSOR) return PROMPTS.bstDeleteTwoChildren
       if (snapshot.pseudocodeLine === BST_LINE.DELETE_SIMPLE) return PROMPTS.bstDeleteSimple
       return null

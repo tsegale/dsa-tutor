@@ -30,6 +30,15 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
         "here (the current position is empty). Ground the feedback in "
         "the exact target value and the current node's value (if any)."
     ),
+    # The BST study topic's closing conceptual junction (bstInsertEngine's
+    # withCompletionCheck on the web): which traversal gives sorted order.
+    "ALGORITHM_COMPLETE": (
+        "The tree is fully built and the student was asked which traversal "
+        "lists its values in sorted order. The answer is in-order (left "
+        "subtree, node, right subtree), because every left subtree holds "
+        "smaller values and every right subtree larger ones. Ground the "
+        "feedback in that ordering rule, not in any single value."
+    ),
 }
 
 BST_PSEUDOCODE = """

@@ -1,6 +1,6 @@
 import { CriticalJunctionType, MisconceptionCategory } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot, GraphAlgorithmState, GridAlgorithmState } from '@dsa-tutor/types'
-import { isInsertionSortSwapState, SEARCH_ALGORITHM_NAMES, type SearchAlgorithmState } from '@/utils/junctionPrompt'
+import { isBstCompletionState, isInsertionSortSwapState, SEARCH_ALGORITHM_NAMES, type SearchAlgorithmState } from '@/utils/junctionPrompt'
 import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLState } from '@/engine/avlTree'
@@ -118,6 +118,26 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       ])
 
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
+      if (isBstCompletionState(snapshot.dataStructureState)) {
+        return shuffleArray([
+          { id: 'correct', label: 'In-order: left subtree, then the node, then the right subtree', misconception: null },
+          {
+            id: 'wrong-1',
+            label: 'Pre-order: the node first, then its left and right subtrees',
+            misconception: MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION,
+          },
+          {
+            id: 'wrong-2',
+            label: 'Level-order: the root, then each level from left to right',
+            misconception: MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION,
+          },
+          {
+            id: 'wrong-3',
+            label: 'Reading the values back in the order they were inserted',
+            misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+          },
+        ])
+      }
       if (algorithmName === 'Counting Sort') {
         return shuffleArray([
           {

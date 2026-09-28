@@ -115,8 +115,17 @@ export const BST_DEFAULT_INSERT_VALUE = 20
  * ultimately inserted into), for every insertion. Duplicate values
  * follow the standard convention of going right. Never mutates its
  * own tree across calls - each call starts from an empty tree.
+ *
+ * withCompletionCheck appends one conceptual ALGORITHM_COMPLETE junction
+ * once the tree is built ("which traversal lists these values in sorted
+ * order?"). The BST study topic turns it on: every insertion decision is
+ * procedural, so without it the study topic had no conceptual junction at
+ * all - nothing always asked under worked-example fading, and no moment
+ * for a self-explanation (Week 2 2A/2B). Off by default, so callers that
+ * only need the tree (search/delete seeds, the registry) are unchanged.
  */
-export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
+export function bstInsertEngine(values: number[], options: { withCompletionCheck?: boolean } = {}): AlgorithmSnapshot[] {
+  const withCompletionCheck = (options.withCompletionCheck ?? false) && values.length > 0
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
   let root: BSTNode | null = null
@@ -195,9 +204,28 @@ export function bstInsertEngine(values: number[]): AlgorithmSnapshot[] {
       pseudocodeLine: PSEUDOCODE_LINE.CHECK_NULL,
       isPredictionRequired: false,
       state: { root, currentNode: newNode, targetValue: value, path, insertedValue: value, operation: 'insert' },
-      isFinalStep: isLastValue,
+      isFinalStep: isLastValue && !withCompletionCheck,
     })
   })
+
+  if (withCompletionCheck) {
+    push({
+      description: 'The tree is built. Which traversal would list its values in sorted order?',
+      pseudocodeLine: PSEUDOCODE_LINE.START,
+      isPredictionRequired: true,
+      state: { root, currentNode: null, targetValue: values[values.length - 1], path: [], operation: 'insert' },
+      criticalJunctionType: CriticalJunctionType.ALGORITHM_COMPLETE,
+      junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+    })
+    push({
+      description:
+        'An in-order traversal (left subtree, node, right subtree) lists the values in sorted order, because every left subtree holds smaller values and every right subtree larger ones.',
+      pseudocodeLine: PSEUDOCODE_LINE.START,
+      isPredictionRequired: false,
+      state: { root, currentNode: null, targetValue: values[values.length - 1], path: [], operation: 'insert' },
+      isFinalStep: true,
+    })
+  }
 
   if (values.length === 0) {
     push({

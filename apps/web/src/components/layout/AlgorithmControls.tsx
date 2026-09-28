@@ -535,7 +535,7 @@ function BSTControls({ slug }: { slug: string }) {
         Rebuilds the tree from scratch with this value inserted last - unrelated to the practice question above.
       </p>
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-      <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target]))}>
+      <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target], { withCompletionCheck: slug === 'bst' }))}>
         Insert
       </Button>
     </section>

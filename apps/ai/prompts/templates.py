@@ -16,7 +16,9 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   explanation starts sooner. Field wording unchanged.
 #   2026-09-28.1    Adds SELF_EXPLANATION_SYSTEM_PROMPT / USER_TEMPLATE
 #                   (Week 2 2B). Existing prompts unchanged.
-PROMPT_VERSION = "2026-09-28.1"
+#   2026-09-28.2    BST feedback guidance for the new ALGORITHM_COMPLETE
+#                   junction (in-order traversal gives sorted order).
+PROMPT_VERSION = "2026-09-28.2"
 
 # Grades a student's short self-explanation against a 2-3 item rubric that
 # the client sends with the authored question (apps/web/src/config/

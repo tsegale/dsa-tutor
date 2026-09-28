@@ -54,7 +54,7 @@ function engineForSlug(
     case 'heap-sort':
       return heapSortEngine(values)
     case 'bst':
-      return bstInsertEngine(values)
+      return bstInsertEngine(values, { withCompletionCheck: true })
     case 'floyd-warshall':
       // Floyd-Warshall operates on a fixed small graph, not a numeric
       // array - it's the only graph-track algorithm without its own
