@@ -42,13 +42,15 @@ function scoreColorClass(score: number): string {
   return 'bg-error'
 }
 
-function scoreTextColorClass(score: number): string {
+function scoreTextColorClass(score: number | null): string {
+  if (score === null) return 'text-text-secondary'
   if (score >= 75) return 'text-success'
   if (score >= 50) return 'text-secondary'
   return 'text-error'
 }
 
-function expressionForScore(score: number): 'happy' | 'neutral' | 'confused' {
+function expressionForScore(score: number | null): 'happy' | 'neutral' | 'confused' {
+  if (score === null) return 'confused'
   if (score >= 75) return 'happy'
   if (score >= 50) return 'neutral'
   return 'confused'
@@ -120,8 +122,21 @@ export default function FeynmanModal({
           timeSpentSeconds: Math.round((Date.now() - openedAtRef.current) / 1000),
           interactionType: 'FEYNMAN',
           scaffoldingLevelAtTime: scaffoldingLevel,
-          masteryScoreAtTime: finalResult.score,
-          aiGenerated: true,
+          // Left out when not graded (reused wording or no judgement), so a
+          // missing grade is never stored as a 0.
+          ...(finalResult.score !== null ? { masteryScoreAtTime: finalResult.score } : {}),
+          // Per-item results behind the score, keyed by concept label, and
+          // which rubric produced them (Week 2 2E).
+          promptKey: finalResult.rubricKey ? `feynman.${finalResult.rubricKey}` : null,
+          rubricResults:
+            finalResult.rubricResults.length > 0
+              ? finalResult.rubricResults.map((r) => ({ id: r.conceptLabel, met: r.met }))
+              : null,
+          rubricScore: finalResult.score,
+          aiGenerated: finalResult.aiGenerated,
+          aiFailureReason: finalResult.failureReason,
+          promptVersion: finalResult.promptVersion,
+          aiModel: finalResult.aiModel,
           feedbackText: finalResult.feedbackSummary || null,
           hintText: finalResult.followUpQuestion,
         }),
@@ -262,17 +277,19 @@ export default function FeynmanModal({
               {result.feedbackSummary}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary">
-                Explanation score: {result.score}/100
-              </span>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-surface dark:bg-dark-border">
-                <div
-                  className={cn('h-full rounded-full transition-all duration-500', scoreColorClass(result.score))}
-                  style={{ width: `${result.score}%` }}
-                />
+            {result.score !== null && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary">
+                  Explanation score: {result.score}/100
+                </span>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-surface dark:bg-dark-border">
+                  <div
+                    className={cn('h-full rounded-full transition-all duration-500', scoreColorClass(result.score))}
+                    style={{ width: `${result.score}%` }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {result.missingConcepts.length > 0 && (
               <div className="flex flex-col gap-1.5">

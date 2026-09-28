@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma'
 import type { EducatorAnalyticsDto } from '../dtos/analytics.dto'
-import { isScoredInteraction } from '../config/interactionTypes'
+import { feynmanScoreOf, isScoredInteraction } from '../config/interactionTypes'
 
 export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
   const [totalStudents, totalSessions, loggedInteractions, students] = await Promise.all([
@@ -94,7 +94,10 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       feynmanScores: [...loggedByStudent]
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .filter((i) => i.interactionType === 'FEYNMAN')
-        .map((i) => i.masteryScoreAtTime),
+        .flatMap((i) => {
+          const score = feynmanScoreOf(i)
+          return score === null ? [] : [score]
+        }),
       averageTimePerStep: allInteractions.length > 0 ? totalTimeSpent / allInteractions.length : 0,
     }
   })

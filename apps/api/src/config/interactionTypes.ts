@@ -28,3 +28,17 @@ export const SCORED_INTERACTION_TYPES: readonly InteractionType[] = ['PREDICTION
 export function isScoredInteraction(interaction: { interactionType: string }): boolean {
   return (SCORED_INTERACTION_TYPES as readonly string[]).includes(interaction.interactionType)
 }
+
+/**
+ * A FEYNMAN row's explanation score, or null if it was not graded. Rows
+ * from Week 2 2E on carry promptKey 'feynman.<rubric>' and a nullable
+ * rubricScore, where null means reused wording or no judgement - never a 0.
+ * Older rows only have masteryScoreAtTime.
+ */
+export function feynmanScoreOf(row: {
+  promptKey: string | null
+  rubricScore: number | null
+  masteryScoreAtTime: number
+}): number | null {
+  return row.promptKey?.startsWith('feynman.') ? row.rubricScore : row.masteryScoreAtTime
+}

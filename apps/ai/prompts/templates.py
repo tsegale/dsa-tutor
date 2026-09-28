@@ -24,7 +24,11 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   sentence from the case explanation (data is generated
 #                   on the client, Week 2 2D); BST delete-case context and
 #                   guidance for the new "how is it removed?" step.
-PROMPT_VERSION = "2026-09-28.4"
+#   2026-09-28.5    Feynman BST rubric replaced with the five study items
+#                   (ordering incl. equal-goes-right, insert from the root,
+#                   insert order sets shape, cost follows height, in-order
+#                   gives sorted order), Week 2 2E.
+PROMPT_VERSION = "2026-09-28.5"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one

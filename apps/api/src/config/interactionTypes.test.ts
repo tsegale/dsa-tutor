@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as S from '../schemas/routes'
-import { INTERACTION_TYPES, isScoredInteraction } from './interactionTypes'
+import { INTERACTION_TYPES, feynmanScoreOf, isScoredInteraction } from './interactionTypes'
 
 const workedStep = {
   sessionId: 's1',
@@ -58,5 +58,39 @@ describe('interaction types', () => {
     const answered = { ...workedStep, interactionType: 'COMPLEXITY_PREDICTION', predictionSubmitted: 'wrong-2', predictionCorrect: false }
     expect(S.interactions.create.body.safeParse(answered).success).toBe(true)
     expect(isScoredInteraction({ interactionType: 'COMPLEXITY_PREDICTION' })).toBe(true)
+  })
+})
+
+describe('feynmanScoreOf', () => {
+  it('leaves an ungraded explanation out instead of counting it as 0', () => {
+    expect(feynmanScoreOf({ promptKey: 'feynman.binary_search_tree', rubricScore: null, masteryScoreAtTime: 0 })).toBeNull()
+    expect(feynmanScoreOf({ promptKey: 'feynman.binary_search_tree', rubricScore: 60, masteryScoreAtTime: 60 })).toBe(60)
+  })
+
+  it('keeps a graded 0 and legacy rows as they were stored', () => {
+    expect(feynmanScoreOf({ promptKey: 'feynman.bubble_sort', rubricScore: 0, masteryScoreAtTime: 0 })).toBe(0)
+    expect(feynmanScoreOf({ promptKey: null, rubricScore: null, masteryScoreAtTime: 40 })).toBe(40)
+  })
+})
+
+describe('Feynman interaction rows', () => {
+  it('accept per-item results keyed by concept label and a null score', () => {
+    const row = {
+      ...workedStep,
+      interactionType: 'FEYNMAN',
+      predictionSubmitted: 'my explanation',
+      predictionCorrect: false,
+      promptKey: 'feynman.binary_search_tree',
+      rubricResults: [
+        { id: 'Left subtree smaller, right subtree larger (equal values go right)', met: true },
+        { id: 'Inserting by comparing from the root down to an empty spot', met: true },
+        { id: "Insert order decides the tree's shape", met: false },
+        { id: 'Cost depends on height: about log n balanced, n as a chain', met: false },
+        { id: 'In-order traversal gives sorted order', met: true },
+      ],
+      rubricScore: 60,
+    }
+    expect(S.interactions.create.body.safeParse(row).success).toBe(true)
+    expect(S.interactions.create.body.safeParse({ ...row, rubricResults: null, rubricScore: null, aiFailureReason: 'reused_wording' }).success).toBe(true)
   })
 })

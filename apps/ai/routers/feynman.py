@@ -5,7 +5,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from prompts.registry import get_algorithm_context
-from services.claude_service import call_claude_for_feedback
+from prompts.templates import PROMPT_VERSION
+from services.claude_service import call_claude_for_feedback, model_name
 
 router = APIRouter(prefix="/feynman", tags=["feynman"])
 logger = logging.getLogger(__name__)
@@ -30,7 +31,10 @@ class FeynmanRubricItemResult(BaseModel):
 
 
 class FeynmanResponse(BaseModel):
-    score: int
+    # Null when the explanation was not graded: reused on-screen wording, or
+    # the model's judgement was unavailable. A real 0 means graded, nothing
+    # met - the research data must be able to tell the two apart.
+    score: int | None
     feedback_summary: str
     follow_up_question: str | None
     missing_concepts: list[str]
@@ -38,6 +42,13 @@ class FeynmanResponse(BaseModel):
     # Per-concept results behind the score, so which concepts students
     # most often omit can be reported rather than just an aggregate number.
     rubric_results: list[FeynmanRubricItemResult] = []
+    # Which rubric graded it (a FEYNMAN_RUBRIC key, or "default"), and where
+    # the displayed text came from - logged on the interaction row.
+    rubric_key: str | None = None
+    ai_generated: bool = True
+    failure_reason: str | None = None
+    prompt_version: str = PROMPT_VERSION
+    ai_model: str | None = None
 
 
 def _normalize(algorithm_name: str) -> str:
@@ -124,10 +135,26 @@ _DFS_RUBRIC = [
     ("explains going as deep as possible before backtracking", "Going as deep as possible before backtracking"),
     ("mentions marking nodes visited to avoid revisiting", "Marking nodes visited so none are processed twice"),
 ]
+# Week 2 2E: the BST study topic's rubric, matching what its runs teach
+# (bst.ts: equal values go right; the completion junction asks for in-order).
 _BST_RUBRIC = [
-    ("mentions that left children are smaller and right children are larger", "Left children smaller, right children larger"),
-    ("explains comparing the target/inserted value against the current node to choose a direction", "Comparing against the current node to choose left or right"),
-    ("mentions that an inorder traversal of a BST visits values in sorted order", "Inorder traversal visits values in sorted order"),
+    (
+        "states the ordering invariant: every value in a node's left subtree is smaller and every value in its right "
+        "subtree is larger, including this tree's convention that a value equal to a node goes right",
+        "Left subtree smaller, right subtree larger (equal values go right)",
+    ),
+    (
+        "explains that insertion finds a leaf position by comparing the new value with nodes from the root downward, "
+        "going left or right at each one",
+        "Inserting by comparing from the root down to an empty spot",
+    ),
+    ("mentions that the order values are inserted in determines the shape of the tree", "Insert order decides the tree's shape"),
+    (
+        "explains that the cost of an operation depends on the tree's height: close to log n when balanced, up to n "
+        "when the tree degenerates into a chain",
+        "Cost depends on height: about log n balanced, n as a chain",
+    ),
+    ("mentions that an in-order traversal visits the values in sorted order", "In-order traversal gives sorted order"),
 ]
 FEYNMAN_RUBRIC.update(
     {
@@ -209,6 +236,37 @@ def _looks_copied_from_reference(student_explanation: str, reference_text: str) 
     return (len(overlap) / len(student_words)) >= OVERLAP_GAMING_THRESHOLD
 
 
+def _not_graded(feedback_summary: str, follow_up: str, failure_reason: str, rubric_key: str | None) -> FeynmanResponse:
+    return FeynmanResponse(
+        score=None,
+        feedback_summary=feedback_summary,
+        follow_up_question=follow_up,
+        missing_concepts=[],
+        is_complete=False,
+        rubric_results=[],
+        rubric_key=rubric_key,
+        ai_generated=False,
+        failure_reason=failure_reason,
+    )
+
+
+def _judgement_failure(rubric: list[tuple[str, str]], data: object) -> str | None:
+    """Names why a Feynman judgement cannot be scored, or None. A response
+    that does not judge every rubric concept is not evidence that the
+    concepts were missed, so it is never scored as a 0."""
+    if not isinstance(data, dict):
+        return "json_shape"
+    results = data.get("rubric_results")
+    if not isinstance(results, list):
+        return "rubric_results.shape"
+    returned = {r.get("concept_label") for r in results if isinstance(r, dict) and isinstance(r.get("met"), bool)}
+    if not {label for _criterion, label in rubric} <= returned:
+        return "rubric_results.labels"
+    if not isinstance(data.get("feedback_summary"), str) or not data["feedback_summary"].strip():
+        return "feedback_summary.empty"
+    return None
+
+
 def score_feynman_response(rubric: list[tuple[str, str]], data: dict) -> FeynmanResponse:
     """Turns the model's per-concept booleans into a score, completeness
     flag and missing-concepts list computed in code - the model is asked
@@ -243,26 +301,29 @@ def score_feynman_response(rubric: list[tuple[str, str]], data: dict) -> Feynman
     )
 
 
+def rubric_for(algorithm_name: str) -> tuple[str, list[tuple[str, str]]]:
+    key = _normalize(algorithm_name)
+    return (key, FEYNMAN_RUBRIC[key]) if key in FEYNMAN_RUBRIC else ("default", DEFAULT_RUBRIC)
+
+
 @router.post("/", response_model=FeynmanResponse)
 async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
     algorithm_context, pseudocode, _junction_guidance = get_algorithm_context(request.algorithm_name)
     reference_text = "\n".join([algorithm_context, pseudocode, *request.step_descriptions])
+    rubric_key, rubric = rubric_for(request.algorithm_name)
 
     if _looks_copied_from_reference(request.student_explanation, reference_text):
-        return FeynmanResponse(
-            score=0,
-            feedback_summary=(
-                "Hmm, that sounds a lot like the pseudocode and step descriptions I already saw on screen, "
-                "not something explained to me. Can you tell me in your own words instead, like you would to "
-                "a friend who has never coded before?"
-            ),
-            follow_up_question="Can you explain it again, but in your own words rather than the on-screen wording?",
-            missing_concepts=[],
-            is_complete=False,
-            rubric_results=[],
+        # Asked for their own words, and not scored at all: grading copied
+        # wording would reward reciting it, and a 0 would read as graded.
+        return _not_graded(
+            "Hmm, that sounds a lot like the pseudocode and step descriptions I already saw on screen, "
+            "not something explained to me. Can you tell me in your own words instead, like you would to "
+            "a friend who has never coded before?",
+            "Can you explain it again, but in your own words rather than the on-screen wording?",
+            "reused_wording",
+            rubric_key,
         )
 
-    rubric = FEYNMAN_RUBRIC.get(_normalize(request.algorithm_name), DEFAULT_RUBRIC)
     rubric_text = "\n".join(f'- {criterion} (concept label: "{label}")' for criterion, label in rubric)
 
     prompt = FEYNMAN_PROMPT.format(
@@ -272,16 +333,18 @@ async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
         rubric=rubric_text,
     )
 
+    fallback = (
+        "Sorry, I lost my train of thought there. Could you try explaining it again?",
+        "Can you explain it again from the beginning?",
+    )
     try:
         data, _metadata = await call_claude_for_feedback(prompt)
-        return score_feynman_response(rubric, data)
     except Exception as e:
         logger.warning(f"Feynman evaluation failed: {e}")
-        return FeynmanResponse(
-            score=0,
-            feedback_summary="I could not understand your explanation. Could you try again?",
-            follow_up_question="Can you explain it again from the beginning?",
-            missing_concepts=[],
-            is_complete=False,
-            rubric_results=[],
-        )
+        return _not_graded(*fallback, "error", rubric_key)
+    why = _judgement_failure(rubric, data)
+    if why:
+        logger.warning(f"Feynman judgement failed validation: {why}")
+        return _not_graded(*fallback, why, rubric_key)
+    result = score_feynman_response(rubric, data)
+    return result.model_copy(update={"rubric_key": rubric_key, "ai_model": model_name})

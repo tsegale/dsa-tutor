@@ -199,12 +199,17 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
   if (!response.ok) throw new Error(`AI feynman error: ${response.status}`)
   const data = (await response.json()) as any
   return {
-    score: data.score,
+    score: data.score ?? null,
     feedbackSummary: data.feedback_summary,
     followUpQuestion: data.follow_up_question ?? null,
     missingConcepts: data.missing_concepts ?? [],
     isComplete: data.is_complete,
     rubricResults: (data.rubric_results ?? []).map((r: any) => ({ conceptLabel: r.concept_label, met: r.met })),
+    rubricKey: data.rubric_key ?? null,
+    aiGenerated: data.ai_generated ?? false,
+    failureReason: data.failure_reason ?? null,
+    promptVersion: data.prompt_version ?? null,
+    aiModel: data.ai_model ?? null,
   }
 }
 

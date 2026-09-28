@@ -124,3 +124,118 @@ def test_looks_copied_does_not_flag_a_genuine_own_words_explanation():
 
 def test_looks_copied_handles_empty_explanation_safely():
     assert _looks_copied_from_reference("", "some reference text with plenty of words here") is False
+
+
+# ---------------------------------------------------------------- Week 2 2E
+
+import re  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from main import app  # noqa: E402
+from prompts.templates import PROMPT_VERSION  # noqa: E402
+from routers import feynman  # noqa: E402
+
+_STUDY_TOPICS_TS = Path(__file__).resolve().parents[2] / "api" / "src" / "config" / "studyTopics.ts"
+# What the web client actually sends as algorithm_name for each study topic
+# (the registry's displayName).
+_STUDY_TOPIC_DISPLAY_NAMES = {"bubble-sort": "Bubble Sort", "binary-search": "Binary Search", "bst": "Binary Search Tree"}
+
+
+def _study_topic_slugs_from_source() -> list[str]:
+    source = _STUDY_TOPICS_TS.read_text()
+    match = re.search(r"STUDY_TOPICS\s*=\s*\[([^\]]*)\]", source)
+    assert match, "STUDY_TOPICS not found in studyTopics.ts"
+    return re.findall(r"'([^']+)'", match.group(1))
+
+
+def test_every_slug_in_study_topics_ts_resolves_to_a_non_default_rubric():
+    # Read from the source of truth, so adding a study topic without a
+    # rubric fails here instead of silently grading it generically.
+    slugs = _study_topic_slugs_from_source()
+    assert slugs, "no study topics parsed"
+    for slug in slugs:
+        key, rubric = feynman.rubric_for(slug)
+        assert key != "default" and rubric != DEFAULT_RUBRIC, slug
+        display_key, display_rubric = feynman.rubric_for(_STUDY_TOPIC_DISPLAY_NAMES[slug])
+        assert display_rubric == rubric, f"{slug} and its display name grade differently"
+
+
+def test_bst_rubric_covers_the_five_ideas_the_plan_names():
+    labels = [label for _criterion, label in FEYNMAN_RUBRIC["binary_search_tree"]]
+    assert len(labels) == 5
+    criteria = " ".join(c for c, _l in FEYNMAN_RUBRIC["bst"])
+    for idea in ("equal to a node goes right", "from the root downward", "determines the shape", "log n", "in-order"):
+        assert idea in criteria, idea
+    # Labels are stored as rubric item ids on the interaction row (max 200).
+    assert all(len(label) <= 200 for label in labels)
+
+
+REQUEST = {
+    "algorithm_name": "Binary Search Tree",
+    "algorithm_context": "",
+    "student_explanation": "You start at the top and keep going left for smaller numbers and right for bigger or equal "
+    "ones until there is a free spot, and the shape depends on the order you put them in.",
+    "completion_context": "building a BST",
+    "session_id": "s",
+    "step_descriptions": [],
+}
+
+
+def _stub(monkeypatch, reply=None, error=None):
+    async def call(prompt, system=None, **_kwargs):
+        if error:
+            raise error
+        return reply, None
+
+    monkeypatch.setattr(feynman, "call_claude_for_feedback", call)
+
+
+def _post(body=None):
+    with TestClient(app) as client:
+        return client.post("/api/v1/feynman/", json=body or REQUEST).json()
+
+
+def _all_labels(met: set[int]):
+    return [
+        {"concept_label": label, "met": i in met}
+        for i, (_criterion, label) in enumerate(FEYNMAN_RUBRIC["binary_search_tree"])
+    ]
+
+
+def test_graded_explanation_reports_rubric_key_and_provenance(monkeypatch):
+    _stub(monkeypatch, {"rubric_results": _all_labels({0, 1, 2}), "feedback_summary": "Ok I think I get it.", "follow_up_question": "Why?"})
+    body = _post()
+    assert body["score"] == 60
+    assert body["rubric_key"] == "binary_search_tree"
+    assert body["ai_generated"] is True
+    assert body["prompt_version"] == PROMPT_VERSION
+    assert [r["met"] for r in body["rubric_results"]] == [True, True, True, False, False]
+
+
+def test_reused_wording_gets_a_follow_up_and_no_score(monkeypatch):
+    _stub(monkeypatch, error=AssertionError("the model must not be called for copied wording"))
+    copied = {**REQUEST, "student_explanation": "At node 8: is 4 smaller or larger? 4 inserted to the left of node 8.",
+              "step_descriptions": ["At node 8: is 4 smaller or larger?", "4 inserted to the left of node 8."]}
+    body = _post(copied)
+    assert body["score"] is None
+    assert body["failure_reason"] == "reused_wording"
+    assert body["ai_generated"] is False
+    assert "own words" in body["follow_up_question"]
+    assert body["rubric_results"] == []
+
+
+def test_a_judgement_missing_rubric_concepts_is_not_scored_as_zero(monkeypatch):
+    _stub(monkeypatch, {"rubric_results": _all_labels({0})[:2], "feedback_summary": "Hmm.", "follow_up_question": None})
+    body = _post()
+    assert body["score"] is None
+    assert body["failure_reason"] == "rubric_results.labels"
+
+
+def test_an_unavailable_model_is_not_scored_as_zero(monkeypatch):
+    _stub(monkeypatch, error=RuntimeError("credit balance too low"))
+    body = _post()
+    assert body["score"] is None
+    assert body["failure_reason"] == "error"
+    assert body["ai_generated"] is False

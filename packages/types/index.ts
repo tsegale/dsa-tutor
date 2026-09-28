@@ -502,14 +502,22 @@ export interface FeynmanRubricItemResult {
 }
 
 export interface FeynmanResponse {
-  score: number
+  /** Null when the explanation was not graded (reused on-screen wording,
+   * or the model's judgement was unavailable) - distinct from a graded 0. */
+  score: number | null
   feedbackSummary: string
   followUpQuestion: string | null
   missingConcepts: string[]
   isComplete: boolean
-  /** Per-concept results behind the score - empty when the anti-gaming
-   * check rejected the submission before grading. */
+  /** Per-concept results behind the score - empty when not graded. */
   rubricResults: FeynmanRubricItemResult[]
+  /** The AI service rubric that graded it, e.g. 'binary_search_tree'. */
+  rubricKey: string | null
+  aiGenerated: boolean
+  /** e.g. 'reused_wording', 'error', 'rubric_results.labels'. */
+  failureReason: string | null
+  promptVersion: string | null
+  aiModel: string | null
 }
 
 export const InteractionType = {
