@@ -19,12 +19,17 @@ export default function StepLog({ predictionResolved }: StepLogProps) {
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const visitedSteps = snapshotArray.slice(0, stepIndex + 1)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'nearest' })
+    // Scrolls only the log's own list. scrollIntoView also scrolls every
+    // scrollable ancestor - including overflow-x-hidden ones, which stay
+    // programmatically scrollable - and was sliding the whole right panel
+    // sideways, cutting off its left edge.
+    const list = listRef.current
+    if (list) list.scrollTop = list.scrollHeight
   }, [stepIndex])
 
   return (
@@ -35,7 +40,7 @@ export default function StepLog({ predictionResolved }: StepLogProps) {
       <div className="border-b border-border px-4 py-2">
         <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Step log</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-2">
         {visitedSteps.map((step, index) => {
           const isCurrent = index === stepIndex
           const isUnresolvedJunction = isCurrent && isLiveJunction && !predictionResolved
@@ -60,7 +65,6 @@ export default function StepLog({ predictionResolved }: StepLogProps) {
             </div>
           )
         })}
-        <div ref={bottomRef} />
       </div>
     </div>
   )
