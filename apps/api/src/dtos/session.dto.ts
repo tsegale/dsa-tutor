@@ -38,6 +38,9 @@ export interface SessionDto {
   endTime: string | null
   completed: boolean
   challengeExplanation: string | null
+  // Timing telemetry (Week 2 2F); null before 2F or before the first heartbeat.
+  wallClockSeconds: number | null
+  activeSeconds: number | null
   topic: {
     name: string
     displayName: string

@@ -12,6 +12,8 @@ function toSessionDto(session: any): SessionDto {
     endTime: session.endTime?.toISOString() ?? null,
     completed: session.completed,
     challengeExplanation: session.challengeExplanation ?? null,
+    wallClockSeconds: session.wallClockSeconds ?? null,
+    activeSeconds: session.activeSeconds ?? null,
     topic: {
       name: session.algorithmTopic.name,
       displayName: session.algorithmTopic.displayName,
