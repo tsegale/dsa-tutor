@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
-import type { ScaffoldingLevel } from '@dsa-tutor/types'
+import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -34,7 +33,6 @@ function engineForSlug(
   slug: string | undefined,
   values: number[],
   codeEditorMode: boolean,
-  scaffoldingLevel: ScaffoldingLevel,
   topMisconception: string | null,
 ): AlgorithmSnapshot[] {
   const target = getAlgorithmRegistryEntry(slug ?? '')?.defaultTarget ?? 9
@@ -69,7 +67,6 @@ function engineForSlug(
     default:
       return bubbleSortEngine(values, {
         codeEditorMode,
-        junctionDensity: getJunctionDensityForScaffoldingLevel(scaffoldingLevel),
         topMisconception,
       })
   }
@@ -201,7 +198,6 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   const codeEditorMode = useAlgorithmStore((state) => state.codeEditorMode)
   const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
-  const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const recentMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions)
 
   const [arrayInput, setArrayInput] = useState('')
@@ -225,7 +221,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
     setAlgorithm(
       displayName,
-      engineForSlug(algorithmSlug, parsed, codeEditorMode, scaffoldingLevel, topMisconceptionOf(recentMisconceptions)),
+      engineForSlug(algorithmSlug, parsed, codeEditorMode, topMisconceptionOf(recentMisconceptions)),
     )
   }
 
@@ -236,7 +232,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
     setAlgorithm(
       displayName,
-      engineForSlug(algorithmSlug, values, codeEditorMode, scaffoldingLevel, topMisconceptionOf(recentMisconceptions)),
+      engineForSlug(algorithmSlug, values, codeEditorMode, topMisconceptionOf(recentMisconceptions)),
     )
   }
 

@@ -9,7 +9,9 @@ import type {
   PredictionRequest,
   PredictionResponse,
 } from '@dsa-tutor/types'
-import { useAlgorithmStore, selectCurrentSnapshot, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
+import { workedStepNarration } from '@/utils/workedSteps'
+import WorkedStepNotice from './WorkedStepNotice'
 import { useMisconceptionStore } from '@/store/useMisconceptionStore'
 import {
   submitPrediction,
@@ -240,10 +242,17 @@ export default function PredictionZone({
   // dropped instead of painting over a UI they've since navigated past.
   const submissionTokenRef = useRef(0)
 
+  // Live junctions only: a worked step (Week 2 2A) is a junction candidate
+  // the learner watches, shown below as a "Watch this one" strip instead.
+  const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
+  const isWorkedStep = useAlgorithmStore(selectIsWorkedStep)
+  const workedNarration = useAlgorithmStore((state) =>
+    isWorkedStep ? workedStepNarration(state.snapshotArray, state.stepIndex) : null,
+  )
   const isVisible =
     (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) &&
     snapshot !== null &&
-    snapshot.isPredictionRequired
+    isLiveJunction
   const isHandsOnSwapDecision =
     mode === AlgorithmMode.HANDS_ON &&
     snapshot?.criticalJunctionType !== null &&
@@ -788,7 +797,6 @@ export default function PredictionZone({
         await wait(500)
         const {
           codeEditorMode,
-          scaffoldingLevel: currentScaffoldingLevel,
           recentMisconceptions,
           activeChallengeType,
           setAlgorithm: setAlg,
@@ -798,7 +806,6 @@ export default function PredictionZone({
           'Bubble Sort',
           bubbleSortEngine(result.resultingState, {
             codeEditorMode,
-            junctionDensity: getJunctionDensityForScaffoldingLevel(currentScaffoldingLevel),
             topMisconception: topMisconceptionOf(recentMisconceptions),
           }),
         )
@@ -825,6 +832,18 @@ export default function PredictionZone({
   return (
     <>
       <AnimatePresence>
+        {workedNarration && (
+          <motion.div
+            key="worked-step"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+            className="relative z-20 w-full shrink-0 px-[14px] py-[10px]"
+          >
+            <WorkedStepNotice narration={workedNarration} />
+          </motion.div>
+        )}
         {isVisible && snapshot && (
           <motion.div
             key="prediction-zone"

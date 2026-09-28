@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { RequestSchema } from '../middleware/validate'
+import { INTERACTION_TYPES } from '../config/interactionTypes'
 import {
   category,
   id,
@@ -71,8 +72,9 @@ export const interactions = {
     body: z.strictObject({
       sessionId: id,
       stepIndex: nonNegativeInt,
-      predictionSubmitted: longText,
-      predictionCorrect: z.boolean(),
+      // Null for rows that are not an answer, such as a WORKED_STEP.
+      predictionSubmitted: longText.nullable(),
+      predictionCorrect: z.boolean().nullable(),
       // Optional as well as nullable: it passes through two proxies before
       // reaching this body, and JSON.stringify drops an undefined value -
       // a strict required key here would silently lose study data.
@@ -83,7 +85,7 @@ export const interactions = {
       junctionDifficulty: junctionDifficulty.nullable().optional(),
       scaffoldingLevelAtTime: scaffoldingLevel.optional(),
       masteryScoreAtTime: z.number().optional(),
-      interactionType: z.enum(['PREDICTION', 'FEYNMAN']).optional(),
+      interactionType: z.enum(INTERACTION_TYPES).optional(),
       aiGenerated: z.boolean().optional(),
       feedbackText: longText.nullable().optional(),
       hintText: longText.nullable().optional(),

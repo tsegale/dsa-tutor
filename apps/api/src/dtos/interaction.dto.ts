@@ -1,8 +1,9 @@
 export interface CreateInteractionDto {
   sessionId: string
   stepIndex: number
-  predictionSubmitted: string
-  predictionCorrect: boolean
+  /** Null for rows that are not an answer (e.g. a WORKED_STEP). */
+  predictionSubmitted: string | null
+  predictionCorrect: boolean | null
   misconceptionCategory: string | null
   hintsRequested: number
   timeSpentSeconds: number

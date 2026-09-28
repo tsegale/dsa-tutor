@@ -1,26 +1,9 @@
 import { create } from 'zustand'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
-import { bubbleSortEngine, type JunctionDensity } from '../engine/bubbleSort'
-
-/** How often procedural junctions pause for a prediction, derived from the
- * learner's current scaffolding level - more support also means more
- * frequent checks for understanding, less means fewer interruptions.
- * Conceptual junctions always fire regardless (see JunctionDensity in
- * engine/bubbleSort.ts). Every array-sorting engine call site that reads
- * scaffoldingLevel from this store should derive density through here,
- * not duplicate the mapping. */
-export function getJunctionDensityForScaffoldingLevel(level: ScaffoldingLevel): JunctionDensity {
-  switch (level) {
-    case ScaffoldingLevel.HIGH:
-      return 'ALL'
-    case ScaffoldingLevel.MEDIUM:
-      return 'STANDARD'
-    case ScaffoldingLevel.LOW:
-    case ScaffoldingLevel.NONE:
-      return 'SPARSE'
-  }
-}
+import { bubbleSortEngine } from '../engine/bubbleSort'
+import { WORKED_STEP_DWELL_MS } from '@/config/pacing'
+import { endsSegment, isWorkedStep } from '@/utils/workedSteps'
 
 export interface AlgorithmStoreState {
   algorithmName: string
@@ -57,6 +40,14 @@ export interface AlgorithmStoreState {
   // CODE_EDITOR prediction instead of TILE_GRID. Toggling only affects
   // snapshots generated after the change, not the array already loaded.
   codeEditorMode: boolean
+  // Worked-example fading (Week 2 2A) is on for the study topics only;
+  // every other topic asks every junction, as before.
+  fadingEnabled: boolean
+  // The scaffolding level fading uses for the current segment. It only
+  // follows scaffoldingLevel at a segment boundary (a conceptual junction,
+  // i.e. the end of a Bubble Sort pass), before a run starts, and on a new
+  // run - so stepping down mid-session never changes demand mid-pass.
+  segmentScaffoldingLevel: ScaffoldingLevel
 
   stepForward: () => void
   stepBackward: () => void
@@ -78,6 +69,19 @@ export interface AlgorithmStoreState {
   setActiveChallengeType: (type: string | null) => void
   recordPredictionResult: (correct: boolean, hintsRequestedForStep: number) => void
   toggleCodeEditorMode: () => void
+  setFadingEnabled: (enabled: boolean) => void
+}
+
+/** A junction the learner must answer now - not one that runs as a worked
+ * step under the current segment's fading. The single definition every
+ * caller (auto-advance, playback, the prediction zone, the page) uses. */
+function isLiveJunctionAt(state: AlgorithmStoreState, index: number): boolean {
+  if (!state.snapshotArray[index]?.isPredictionRequired) return false
+  return !(state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel))
+}
+
+function isWorkedStepAt(state: AlgorithmStoreState, index: number): boolean {
+  return state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel)
 }
 
 const MAX_RECENT_MISCONCEPTIONS = 10
@@ -133,19 +137,20 @@ function scheduleNarrationAutoAdvance(get: () => AlgorithmStoreState) {
   const { mode, isPlaying, stepIndex, snapshotArray } = get()
   if (mode !== AlgorithmMode.PRACTICE || isPlaying) return
   if (stepIndex >= snapshotArray.length - 1) return
-  if (snapshotArray[stepIndex]?.isPredictionRequired) return
+  if (isLiveJunctionAt(get(), stepIndex)) return
 
+  // A worked step stays up long enough to read its narration; plain
+  // narration moves on almost immediately.
+  const delay = isWorkedStepAt(get(), stepIndex) ? WORKED_STEP_DWELL_MS : PRACTICE_AUTO_ADVANCE_DELAY_MS
   autoAdvanceTimer = setTimeout(() => {
     autoAdvanceTimer = null
     get().stepForward()
-  }, PRACTICE_AUTO_ADVANCE_DELAY_MS)
+  }, delay)
 }
 
 export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   algorithmName: 'Bubble Sort',
-  snapshotArray: bubbleSortEngine([5, 3, 1, 4, 2], {
-    junctionDensity: getJunctionDensityForScaffoldingLevel(ScaffoldingLevel.HIGH),
-  }),
+  snapshotArray: bubbleSortEngine([5, 3, 1, 4, 2]),
   stepIndex: 0,
   mode: AlgorithmMode.DEMO,
   scaffoldingLevel: ScaffoldingLevel.HIGH,
@@ -164,6 +169,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   sessionTotalPredictions: 0,
   sessionHintsRequested: 0,
   codeEditorMode: false,
+  fadingEnabled: false,
+  segmentScaffoldingLevel: ScaffoldingLevel.HIGH,
 
   // Advances the step index only. Pausing playback at a prediction step
   // is the playback interval's job (see startPlayback) - stepForward
@@ -176,9 +183,14 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   // makes a single manual step past a junction chain forward through the
   // narration that follows, instead of requiring one click per step.
   stepForward: () => {
-    const { stepIndex, snapshotArray } = get()
+    const { stepIndex, snapshotArray, scaffoldingLevel, segmentScaffoldingLevel } = get()
     if (stepIndex < snapshotArray.length - 1) {
-      set({ stepIndex: stepIndex + 1 })
+      set({
+        stepIndex: stepIndex + 1,
+        // Leaving a conceptual junction ends the segment: a level change
+        // made during it takes effect from here.
+        segmentScaffoldingLevel: endsSegment(snapshotArray, stepIndex) ? scaffoldingLevel : segmentScaffoldingLevel,
+      })
       scheduleNarrationAutoAdvance(get)
     }
   },
@@ -195,7 +207,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   resetAlgorithm: () => {
     clearPlaybackInterval()
     clearAutoAdvanceTimer()
-    set({ stepIndex: 0, isPlaying: false })
+    set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel }))
     scheduleNarrationAutoAdvance(get)
   },
 
@@ -217,6 +229,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       snapshotArray: snapshots,
       stepIndex: 0,
       isPlaying: false,
+      segmentScaffoldingLevel: get().scaffoldingLevel,
       // A freshly loaded array is not an AI challenge unless the caller
       // opts back in via setActiveChallengeType right after this call.
       activeChallengeType: null,
@@ -236,7 +249,14 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     set({ playbackSpeed: clamped })
   },
 
-  setScaffoldingLevel: (level) => set({ scaffoldingLevel: level }),
+  // Before a run starts (step 0) the segment level follows immediately, so
+  // the learner's real level - often loaded just after the algorithm - is
+  // in force from the first junction; mid-run it waits for the boundary.
+  setScaffoldingLevel: (level) =>
+    set((state) => ({
+      scaffoldingLevel: level,
+      segmentScaffoldingLevel: state.stepIndex === 0 ? level : state.segmentScaffoldingLevel,
+    })),
 
   setScaffoldingReasoning: (reasoning) => set({ scaffoldingReasoning: reasoning }),
 
@@ -270,7 +290,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       // ignores isPredictionRequired entirely and plays straight through
       // to the final snapshot.
       const isInteractiveMode = mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON
-      if (isInteractiveMode && currentSnapshot?.isPredictionRequired) {
+      if (isInteractiveMode && currentSnapshot && isLiveJunctionAt(get(), stepIndex)) {
         clearPlaybackInterval()
         set({ isPlaying: false })
         return
@@ -307,6 +327,11 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   },
 
   toggleCodeEditorMode: () => set((state) => ({ codeEditorMode: !state.codeEditorMode })),
+
+  setFadingEnabled: (enabled) => {
+    set({ fadingEnabled: enabled })
+    scheduleNarrationAutoAdvance(get)
+  },
 }))
 
 export const selectCurrentSnapshot = (state: AlgorithmStoreState): AlgorithmSnapshot | null =>
@@ -322,7 +347,13 @@ export const selectProgressPercent = (state: AlgorithmStoreState): number => {
   return Math.round((state.stepIndex / (state.snapshotArray.length - 1)) * 100)
 }
 
-export const selectIsPredictionStep = (state: AlgorithmStoreState): boolean => {
-  const snapshot = selectCurrentSnapshot(state)
-  return snapshot !== null && snapshot.isPredictionRequired && state.mode === AlgorithmMode.PRACTICE
-}
+export const selectIsPredictionStep = (state: AlgorithmStoreState): boolean =>
+  state.mode === AlgorithmMode.PRACTICE && isLiveJunctionAt(state, state.stepIndex)
+
+/** A junction the learner must answer now (worked steps excluded). */
+export const selectIsLiveJunction = (state: AlgorithmStoreState): boolean => isLiveJunctionAt(state, state.stepIndex)
+
+/** The current step is a worked demonstration in an interactive mode. */
+export const selectIsWorkedStep = (state: AlgorithmStoreState): boolean =>
+  (state.mode === AlgorithmMode.PRACTICE || state.mode === AlgorithmMode.HANDS_ON) &&
+  isWorkedStepAt(state, state.stepIndex)

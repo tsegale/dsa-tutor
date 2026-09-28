@@ -4,7 +4,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
-import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
 import { fetchStudyStatus } from '@/api/study'
@@ -254,9 +254,8 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
 
     case 'bubble-sort':
     default: {
-      const { scaffoldingLevel, recentMisconceptions } = useAlgorithmStore.getState()
+      const { recentMisconceptions } = useAlgorithmStore.getState()
       return bubbleSortEngine(defaultInput, {
-        junctionDensity: getJunctionDensityForScaffoldingLevel(scaffoldingLevel),
         topMisconception: topMisconceptionOf(recentMisconceptions),
       })
     }
@@ -414,14 +413,53 @@ export default function AlgorithmPage() {
   const [junctionRetryInProgress, setJunctionRetryInProgress] = useState(false)
 
   // A Quick Check must never open over a junction the learner has not
-  // answered yet (Week 1, 1A.2). Mirrors PredictionZone's own isVisible.
-  const isPredictionRequiredHere = useAlgorithmStore(
-    (state) => state.snapshotArray[state.stepIndex]?.isPredictionRequired ?? false,
-  )
+  // answered yet (Week 1, 1A.2). Mirrors PredictionZone's own isVisible;
+  // a worked step is not a live junction, so it never blocks one.
+  const isLiveJunctionHere = useAlgorithmStore(selectIsLiveJunction)
   const isLiveJunctionUnresolved =
     (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) &&
-    isPredictionRequiredHere &&
+    isLiveJunctionHere &&
     !predictionResolved
+
+  // Worked-example fading (Week 2 2A) covers the study topics only; every
+  // other topic keeps asking every junction.
+  const setFadingEnabled = useAlgorithmStore((state) => state.setFadingEnabled)
+  useEffect(() => {
+    setFadingEnabled((STUDY_TOPIC_SLUGS as readonly string[]).includes(algorithmNameParam ?? ''))
+  }, [algorithmNameParam, setFadingEnabled])
+
+  // Every worked step is logged once (Week 2 2A.4) so the worked-to-performed
+  // ratio is analysable per participant. Keyed by snapshot object: stepping
+  // back and forward over the same step never logs it twice, while a new run
+  // (a fresh snapshot array) logs its own.
+  const isWorkedStepHere = useAlgorithmStore(selectIsWorkedStep)
+  const loggedWorkedStepsRef = useRef(new WeakSet<object>())
+  useEffect(() => {
+    if (!isWorkedStepHere || !sessionId) return
+    const { snapshotArray: snapshots, stepIndex: index, segmentScaffoldingLevel } = useAlgorithmStore.getState()
+    const snapshot = snapshots[index]
+    if (!snapshot || loggedWorkedStepsRef.current.has(snapshot)) return
+    loggedWorkedStepsRef.current.add(snapshot)
+    apiFetch('/api/v1/interactions', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId,
+        stepIndex: index,
+        predictionSubmitted: null,
+        predictionCorrect: null,
+        misconceptionCategory: null,
+        hintsRequested: 0,
+        timeSpentSeconds: 0,
+        criticalJunctionType: snapshot.criticalJunctionType,
+        junctionDifficulty: snapshot.junctionDifficulty,
+        scaffoldingLevelAtTime: segmentScaffoldingLevel,
+        interactionType: 'WORKED_STEP',
+        aiGenerated: false,
+      }),
+    }).catch(() => {
+      // Research logging is best-effort; a failed write never blocks the run.
+    })
+  }, [isWorkedStepHere, stepIndex, sessionId])
 
   // Guards against re-triggering the modal every time the learner steps
   // back to the final step and forward again within the same practice

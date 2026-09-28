@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
+import WorkedStepNotice from '@/components/prediction/WorkedStepNotice'
+import { workedStepNarration } from '@/utils/workedSteps'
 import PseudocodePanel from '@/components/canvas/PseudocodePanel'
 import ComplexityPanel from '@/components/canvas/ComplexityPanel'
 import StepLog from './StepLog'
@@ -89,6 +91,11 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
   const correct = useAlgorithmStore((state) => state.sessionCorrectPredictions)
   const total = useAlgorithmStore((state) => state.sessionTotalPredictions)
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
+  const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
+  const isWorkedStep = useAlgorithmStore(selectIsWorkedStep)
+  const workedNarration = useAlgorithmStore((state) =>
+    isWorkedStep ? workedStepNarration(state.snapshotArray, state.stepIndex) : null,
+  )
 
   // Never show the snapshot's own narration description while a prediction
   // is pending - several engines' descriptions state the outcome of the
@@ -96,14 +103,18 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
   // they're being asked. getPromptForSnapshot is answer-safe.
   const guidanceText = !snapshot
     ? 'Load an algorithm to begin.'
-    : snapshot.isPredictionRequired && !predictionResolved
+    : isLiveJunction && !predictionResolved
       ? getPromptForSnapshot(snapshot, algorithmName)
       : snapshot.description
 
   return (
     <div className="rounded-md border border-border bg-card p-3">
       <p className="text-xs font-bold text-primary">Socratic guidance</p>
-      <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">{guidanceText}</p>
+      {workedNarration ? (
+        <WorkedStepNotice narration={workedNarration} className="mt-1.5" />
+      ) : (
+        <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">{guidanceText}</p>
+      )}
 
       <div className="mt-3 flex items-center gap-2">
         <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">

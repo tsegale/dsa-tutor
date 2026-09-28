@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAlgorithmStore, getJunctionDensityForScaffoldingLevel } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { generateChallenge } from '@/api/challenges'
@@ -50,7 +50,6 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
         sessionHintsRequested,
         sessionId,
         codeEditorMode,
-        scaffoldingLevel,
       } = useAlgorithmStore.getState()
 
       const correctRate =
@@ -73,7 +72,6 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
         'Bubble Sort',
         bubbleSortEngine(response.array, {
           codeEditorMode,
-          junctionDensity: getJunctionDensityForScaffoldingLevel(scaffoldingLevel),
           topMisconception: topMisconceptionOf(recentMisconceptions),
         }),
       )

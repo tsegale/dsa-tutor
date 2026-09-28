@@ -1,8 +1,9 @@
 import { prisma } from '../lib/prisma'
 import type { EducatorAnalyticsDto } from '../dtos/analytics.dto'
+import { isScoredInteraction } from '../config/interactionTypes'
 
 export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
-  const [totalStudents, totalSessions, interactions, students] = await Promise.all([
+  const [totalStudents, totalSessions, loggedInteractions, students] = await Promise.all([
     prisma.user.count({ where: { role: 'STUDENT' } }),
     prisma.session.count(),
     prisma.interaction.findMany({
@@ -18,6 +19,9 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     }),
   ])
 
+  // Answered junctions only: worked steps and Feynman explanations are logged
+  // too, but are not predictions and must not dilute accuracy.
+  const interactions = loggedInteractions.filter(isScoredInteraction)
   const correctCount = interactions.filter((i) => i.predictionCorrect).length
   const averageCorrectRate =
     interactions.length > 0 ? Math.round((correctCount / interactions.length) * 100) : 0
@@ -55,7 +59,8 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
   })
 
   const studentProgress = students.map((student) => {
-    const allInteractions = student.sessions.flatMap((s) => s.interactions)
+    const loggedByStudent = student.sessions.flatMap((s) => s.interactions)
+    const allInteractions = loggedByStudent.filter(isScoredInteraction)
     const correct = allInteractions.filter((i) => i.predictionCorrect).length
     const rate = allInteractions.length > 0 ? Math.round((correct / allInteractions.length) * 100) : 0
 
@@ -86,7 +91,10 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       hintsRequested: allInteractions.reduce((sum, i) => sum + i.hintsRequested, 0),
       misconceptionBreakdown: miscCounts,
       scaffoldingProgression: chronological.map((i) => i.scaffoldingLevelAtTime),
-      feynmanScores: chronological.filter((i) => i.interactionType === 'FEYNMAN').map((i) => i.masteryScoreAtTime),
+      feynmanScores: [...loggedByStudent]
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .filter((i) => i.interactionType === 'FEYNMAN')
+        .map((i) => i.masteryScoreAtTime),
       averageTimePerStep: allInteractions.length > 0 ? totalTimeSpent / allInteractions.length : 0,
     }
   })

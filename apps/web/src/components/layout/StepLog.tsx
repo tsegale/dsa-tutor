@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectIsLiveJunction } from '@/store/useAlgorithmStore'
 
 interface StepLogProps {
   /** Same answer-safety gate as SocraticGuidanceBox: false while the
@@ -18,6 +18,7 @@ interface StepLogProps {
 export default function StepLog({ predictionResolved }: StepLogProps) {
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const visitedSteps = snapshotArray.slice(0, stepIndex + 1)
@@ -37,7 +38,7 @@ export default function StepLog({ predictionResolved }: StepLogProps) {
       <div className="flex-1 overflow-y-auto p-2">
         {visitedSteps.map((step, index) => {
           const isCurrent = index === stepIndex
-          const isUnresolvedJunction = isCurrent && step.isPredictionRequired && !predictionResolved
+          const isUnresolvedJunction = isCurrent && isLiveJunction && !predictionResolved
           return (
             <div
               key={step.stepIndex}

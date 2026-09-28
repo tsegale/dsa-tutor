@@ -36,30 +36,12 @@ function computeAmbiguityThreshold(array: number[]): number {
   return Math.round(range * AMBIGUITY_RANGE_RATIO)
 }
 
-/**
- * How often procedural (non-conceptual) junctions pause for a prediction,
- * independent of how much support is shown once they do. Conceptual
- * junctions (PASS_COMPLETE, EARLY_TERMINATION, ALGORITHM_COMPLETE) always
- * fire regardless of density - fading applies only to the repeated,
- * potentially fatiguing per-comparison decisions.
- * - ALL: every comparison is a junction.
- * - STANDARD (default): the first comparison of each pass, plus any
- *   comparison whose values are genuinely close (see computeAmbiguityThreshold).
- *   This is the pre-existing behaviour, kept as the default so callers that
- *   don't pass an option see no change.
- * - SPARSE: only the first comparison of each pass - enough to keep teaching
- *   the pass structure without pausing on every close-but-not-ambiguous gap.
- */
-export type JunctionDensity = 'ALL' | 'STANDARD' | 'SPARSE'
-
 export interface BubbleSortOptions {
   codeEditorMode?: boolean
-  junctionDensity?: JunctionDensity
   /** The learner's most frequent recent misconception category (see
    * utils/junctionTargeting.ts's topMisconceptionOf). When it targets
-   * SWAP_DECISION, that junction fires even if density gating would
-   * have skipped it - fading should never skip past the learner's
-   * actual weak spot. */
+   * SWAP_DECISION, every comparison becomes a junction candidate, so the
+   * learner's actual weak spot is never skipped. */
   topMisconception?: string | null
 }
 
@@ -114,7 +96,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
  * Code Editor Mode only applies to the swap execution step.
  */
 export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {}): AlgorithmSnapshot[] {
-  const { codeEditorMode = false, junctionDensity = 'STANDARD', topMisconception = null } = options
+  const { codeEditorMode = false, topMisconception = null } = options
   const working = [...input]
   const n = working.length
   const ambiguityThreshold = computeAmbiguityThreshold(working)
@@ -164,22 +146,19 @@ export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {
       const right = working[i + 1]
       const needsSwap = left > right
 
-      // Critical Junction gating: only pause for a prediction when the
-      // decision is genuinely ambiguous (close values) or it's the
-      // pass's first comparison (teaches the pass structure). A large,
-      // obvious gap skips the prediction and just narrates. junctionDensity
-      // scales how readily that gate opens - see the JunctionDensity doc
-      // comment above for what each level means.
+      // Critical Junction candidates: the pass's first comparison (teaches
+      // the pass structure) and any genuinely ambiguous (close-valued)
+      // decision. A large, obvious gap just narrates. Which candidates the
+      // learner performs and which run as worked steps is decided at
+      // display time by scaffolding level (utils/workedSteps.ts, Week 2
+      // 2A) - it replaced the old per-level junction density here, so the
+      // snapshot array no longer depends on scaffolding at all.
       const isFirstComparisonOfPass = i === 0
       const isAmbiguous = Math.abs(left - right) <= ambiguityThreshold
-      const densityWantsJunction =
-        junctionDensity === 'ALL'
-          ? true
-          : junctionDensity === 'SPARSE'
-            ? isFirstComparisonOfPass
-            : isFirstComparisonOfPass || isAmbiguous
       const isSwapJunction =
-        densityWantsJunction || shouldForceJunction(topMisconception, CriticalJunctionType.SWAP_DECISION)
+        isFirstComparisonOfPass ||
+        isAmbiguous ||
+        shouldForceJunction(topMisconception, CriticalJunctionType.SWAP_DECISION)
 
       snapshots.push(
         makeSnapshot({

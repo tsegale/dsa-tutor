@@ -3,11 +3,10 @@ import { CriticalJunctionType, MisconceptionCategory } from '@dsa-tutor/types'
 /**
  * Maps a misconception category to the junction type(s) that most
  * directly exercise it. When the learner's top recent misconception maps
- * to the junction type about to fire, that junction is forced to fire
- * even when density-based fading (see JunctionDensity in engine/bubbleSort.ts)
- * would otherwise have skipped it - the whole point of fading is to stop
- * asking about things the learner already has, not to skip past their
- * actual weak spot.
+ * to the junction type about to fire, that junction is forced to become a
+ * candidate even where the engine's gate would otherwise just narrate it -
+ * the point of fading is to stop asking about things the learner already
+ * has, not to skip past their actual weak spot.
  */
 export const MISCONCEPTION_TARGET_JUNCTIONS: Partial<Record<MisconceptionCategory, CriticalJunctionType[]>> = {
   [MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION]: [

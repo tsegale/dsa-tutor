@@ -4,7 +4,7 @@ import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
 import { AlgorithmMode, CriticalJunctionType, CanvasType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
-import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
@@ -248,6 +248,9 @@ export default function ArrayCanvas({
 }: ArrayCanvasProps) {
   const storeSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const mode = useAlgorithmStore((state) => state.mode)
+  // A worked step (Week 2 2A) is a junction candidate the learner watches:
+  // no drag target, and its narration may be read aloud.
+  const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const legend = legendForContext(canvasType, algorithmSlug)
@@ -308,7 +311,7 @@ export default function ArrayCanvas({
   // (PASS_COMPLETE, EARLY_TERMINATION, ALGORITHM_COMPLETE) fall back to the
   // TILE_GRID input rendered by PredictionZone, same as Practice mode.
   const handsOnDragTarget =
-    !isMistakeMode && mode === AlgorithmMode.HANDS_ON ? getHandsOnDragTarget(snapshot ?? null) : null
+    !isMistakeMode && mode === AlgorithmMode.HANDS_ON && isLiveJunction ? getHandsOnDragTarget(snapshot ?? null) : null
   const isHandsOnSwapStep = handsOnDragTarget !== null
   // handsOnLeft/handsOnRight are the same two indices in screen (index)
   // order, used only for the dashed drop-zone box and drag distance - the
@@ -492,7 +495,7 @@ export default function ArrayCanvas({
   // Never read the outcome-revealing description while a prediction is
   // pending - a screen reader user must not hear the answer to the
   // question the prediction zone is asking.
-  const canvasNarration = snapshot.isPredictionRequired
+  const canvasNarration = snapshot.isPredictionRequired && isLiveJunction
     ? getPromptForSnapshot(snapshot, algorithmName)
     : snapshot.description
   const canvasLabel = `${algorithmName}, step ${snapshot.stepIndex + 1} of ${totalSteps}: ${canvasNarration}`

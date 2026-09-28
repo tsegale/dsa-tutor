@@ -89,6 +89,7 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
   const header = [
     'participantCode',
     'algorithm',
+    'interactionType',
     'junctionType',
     'correct',
     'ruleLabel',
@@ -107,6 +108,7 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
   const rows = interactions.map((interaction) => [
     interaction.session.user.participantCode ?? '',
     interaction.session.algorithmTopic.displayName,
+    interaction.interactionType,
     interaction.criticalJunctionType ?? '',
     String(interaction.predictionCorrect ?? ''),
     interaction.misconceptionCategory ?? '',

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma'
+import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
 import { STUDY_TOPICS } from '../config/studyTopics'
 import { isActiveParticipant } from './study.service'
 import type { TopicDto } from '../dtos/topic.dto'
@@ -19,7 +20,8 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
       orderBy: [{ track: 'asc' }, { order: 'asc' }],
     }),
     prisma.interaction.findMany({
-      where: { session: { userId, mode: 'PRACTICE' } },
+      // Answered junctions only - worked steps and Feynman rows are not predictions.
+      where: { session: { userId, mode: 'PRACTICE' }, interactionType: { in: [...SCORED_INTERACTION_TYPES] } },
       select: { predictionCorrect: true, session: { select: { algorithmTopicId: true } } },
     }),
   ])
