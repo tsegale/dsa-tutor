@@ -61,13 +61,15 @@ function toInteractionDto(interaction: {
   aiLatencyMs: number | null
   aiModel: string | null
   promptVersion: string | null
+  aiFailureReason: string | null
+  promptKey: string | null
 }): InteractionDto {
   return {
     id: interaction.id,
     sessionId: interaction.sessionId,
     stepIndex: interaction.stepIndex,
-    predictionSubmitted: interaction.predictionSubmitted ?? '',
-    predictionCorrect: interaction.predictionCorrect ?? false,
+    predictionSubmitted: interaction.predictionSubmitted,
+    predictionCorrect: interaction.predictionCorrect,
     misconceptionCategory: interaction.misconceptionCategory,
     hintsRequested: interaction.hintsRequested,
     timeSpentSeconds: interaction.timeSpentSeconds,
@@ -87,6 +89,8 @@ function toInteractionDto(interaction: {
     aiLatencyMs: interaction.aiLatencyMs,
     aiModel: interaction.aiModel,
     promptVersion: interaction.promptVersion,
+    aiFailureReason: interaction.aiFailureReason,
+    promptKey: interaction.promptKey,
   }
 }
 

@@ -43,8 +43,10 @@ export interface InteractionDto {
   id: string
   sessionId: string
   stepIndex: number
-  predictionSubmitted: string
-  predictionCorrect: boolean
+  // Null for rows that are not an answer (a worked step, a skipped
+  // self-explanation): "not applicable", never a false "wrong".
+  predictionSubmitted: string | null
+  predictionCorrect: boolean | null
   misconceptionCategory: string | null
   hintsRequested: number
   timeSpentSeconds: number
@@ -64,4 +66,6 @@ export interface InteractionDto {
   aiLatencyMs: number | null
   aiModel: string | null
   promptVersion: string | null
+  aiFailureReason: string | null
+  promptKey: string | null
 }
