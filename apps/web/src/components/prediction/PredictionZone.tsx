@@ -656,8 +656,14 @@ export default function PredictionZone({
         dataStructureState: snapshot.dataStructureState,
         activeIndices: snapshot.activeIndices,
         criticalJunctionType: snapshot.criticalJunctionType,
+        // The count question is graded against the run's own counter; the
+        // feedback needs that count to explain the student's estimate.
+        ...(junctionType === CriticalJunctionType.COMPLEXITY_PREDICTION && snapshot.metrics
+          ? { metrics: snapshot.metrics }
+          : {}),
       },
       studentAnswer: answer,
+      studentAnswerLabel: selectedTile?.label ?? null,
       errorHistory: [],
       scaffoldingLevel,
       pseudocode,

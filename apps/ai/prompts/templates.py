@@ -28,7 +28,11 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   (ordering incl. equal-goes-right, insert from the root,
 #                   insert order sets shape, cost follows height, in-order
 #                   gives sorted order), Week 2 2E.
-PROMPT_VERSION = "2026-09-28.5"
+#   2026-09-28.6    Feedback prompt shows the chosen tile's text with its id
+#                   (was the bare id, e.g. "wrong-2", so the model guessed
+#                   what was picked); COMPLEXITY_PREDICTION context now
+#                   states the run's measured count.
+PROMPT_VERSION = "2026-09-28.6"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one

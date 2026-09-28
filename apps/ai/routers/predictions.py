@@ -871,6 +871,16 @@ def evaluate_answer(request: PredictionRequest) -> bool:
     return False
 
 
+def answer_for_prompt(request: PredictionRequest) -> str | None:
+    """What the prompt shows as the student's answer: the chosen tile's text
+    with its id, or the bare id/free text when there is no label. Without the
+    text the model sees only "wrong-2" and has to invent what was picked."""
+    label = (request.student_answer_label or "").strip()
+    if not label:
+        return request.student_answer
+    return f'"{label}" (option id: {request.student_answer})'
+
+
 def build_comparison_context(junction_type: str, wrapper: dict, student_answer: str | None) -> str:
     """Names the exact values on screen so Claude's feedback is grounded
     in what the student actually saw, not generic. Only meaningful for
@@ -962,6 +972,15 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
             f"The element at index {left_pointer} (value {left_val}) was compared "
             f"against the pivot (value {pivot_val}). The student chose: {student_answer}."
         )
+
+    if junction_type == "COMPLEXITY_PREDICTION":
+        metrics = wrapper.get("metrics")
+        if isinstance(metrics, dict) and isinstance(metrics.get("comparisons"), int):
+            return (
+                f"This run made {metrics['comparisons']} comparisons on {metrics.get('n')} elements. "
+                f"The student estimated: {student_answer}."
+            )
+        return f"The student estimated: {student_answer}."
 
     if junction_type == "BST_DIRECTION" and isinstance(ds, dict) and ds.get("deleteCase"):
         current_node = ds.get("currentNode") or {}
@@ -1380,7 +1399,8 @@ def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
     wrapper = request.current_state if isinstance(request.current_state, dict) else {}
     junction_type = wrapper.get("criticalJunctionType") or request.junction_type or "SWAP_DECISION"
     junction_difficulty = request.junction_difficulty.value if request.junction_difficulty else "PROCEDURAL"
-    comparison_context = build_comparison_context(junction_type, wrapper, request.student_answer)
+    answer_text = answer_for_prompt(request)
+    comparison_context = build_comparison_context(junction_type, wrapper, answer_text)
     algorithm_context, registry_pseudocode, junction_guidance_map = get_algorithm_context(request.algorithm_name)
     pseudocode = request.pseudocode or registry_pseudocode
 
@@ -1398,7 +1418,7 @@ def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
         pseudocode=pseudocode,
         step_index=request.step_index,
         current_state=request.current_state,
-        student_answer=request.student_answer,
+        student_answer=answer_text,
         correct="correct" if correct else "incorrect",
         error_history=request.error_history,
         scaffolding_level=request.scaffolding_level.value,

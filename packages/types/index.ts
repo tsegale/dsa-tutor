@@ -382,6 +382,10 @@ export interface PredictionRequest {
    * label - the AI's own guess is reported separately as
    * PredictionResponse.aiMisconceptionCategory, never stored as fact. */
   groundTruthMisconception?: MisconceptionCategory | null
+  /** The chosen tile's label. Tile ids like 'wrong-2' say nothing about
+   * what the student picked, so feedback needs the text; grading never
+   * reads it. */
+  studentAnswerLabel?: string | null
   /** The Pseudocode tab's exact text for this algorithm (see
    * apps/web/src/utils/pseudocode.ts). The AI service quotes its variable
    * names and array notation instead of its own copy, so a hint can never

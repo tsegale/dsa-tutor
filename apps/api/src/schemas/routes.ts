@@ -126,6 +126,9 @@ const predictionBody = z.strictObject({
   junctionType: category.nullable().optional(),
   junctionDifficulty: junctionDifficulty.nullable().optional(),
   groundTruthMisconception: category.nullable().optional(),
+  // The chosen tile's text, so feedback can name what the student picked;
+  // grading still uses studentAnswer (the tile id) only.
+  studentAnswerLabel: shortText.nullable().optional(),
   pseudocode: longText.optional(),
 })
 

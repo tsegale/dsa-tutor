@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ScaffoldingLevel(str, Enum):
@@ -62,6 +62,10 @@ class PredictionRequest(BaseModel):
     # sent by the client so the model quotes the notation the student can
     # actually see. None falls back to the registry's copy.
     pseudocode: str | None = None
+    # The chosen tile's text. A tile id such as "wrong-2" says nothing about
+    # what the student picked, so the feedback prompt shows this alongside
+    # the id. Grading never reads it - evaluate_answer uses student_answer.
+    student_answer_label: str | None = Field(default=None, max_length=200)
 
 
 class HintRequest(BaseModel):
