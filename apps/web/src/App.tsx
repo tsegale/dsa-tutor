@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
@@ -7,27 +7,28 @@ import { getToken } from '@/api/auth'
 import { fetchStudyStatus } from '@/api/study'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { lazyWithReload } from '@/utils/chunkReload'
 import { useThemeStore } from '@/store/useThemeStore'
 
 // Route-level splitting: each page (and everything it alone depends on,
 // e.g. AlgorithmPage's canvas/D3/Pyodide code) ships as its own chunk
 // instead of all being bundled into the one script every visitor
 // downloads before first paint.
-const AuthPage = lazy(() => import('@/pages/AuthPage'))
-const Dashboard = lazy(() => import('@/pages/Dashboard'))
-const AlgorithmPage = lazy(() => import('@/pages/AlgorithmPage'))
-const EducatorDashboard = lazy(() => import('@/pages/EducatorDashboard'))
-const AssessmentPage = lazy(() => import('@/pages/AssessmentPage'))
-const ConsentPage = lazy(() => import('@/pages/ConsentPage'))
-const StudyJoinPage = lazy(() => import('@/pages/StudyJoinPage'))
-const SusPage = lazy(() => import('@/pages/SusPage'))
-const Showcase = lazy(() => import('@/pages/Showcase'))
-const CanvasTest = lazy(() => import('@/pages/CanvasTest'))
+const AuthPage = lazyWithReload(() => import('@/pages/AuthPage'))
+const Dashboard = lazyWithReload(() => import('@/pages/Dashboard'))
+const AlgorithmPage = lazyWithReload(() => import('@/pages/AlgorithmPage'))
+const EducatorDashboard = lazyWithReload(() => import('@/pages/EducatorDashboard'))
+const AssessmentPage = lazyWithReload(() => import('@/pages/AssessmentPage'))
+const ConsentPage = lazyWithReload(() => import('@/pages/ConsentPage'))
+const StudyJoinPage = lazyWithReload(() => import('@/pages/StudyJoinPage'))
+const SusPage = lazyWithReload(() => import('@/pages/SusPage'))
+const Showcase = lazyWithReload(() => import('@/pages/Showcase'))
+const CanvasTest = lazyWithReload(() => import('@/pages/CanvasTest'))
 // Was a static import even though GlobalOnboarding only ever renders it for
 // an authenticated user mid-tour - that pulled its framer-motion-animated
 // tree (WelcomeModal, SpotlightOverlay, OnboardingTooltip) into every page's
 // eager bundle, including the unauthenticated /auth screen.
-const OnboardingController = lazy(() => import('@/components/onboarding/OnboardingController'))
+const OnboardingController = lazyWithReload(() => import('@/components/onboarding/OnboardingController'))
 
 const queryClient = new QueryClient()
 
