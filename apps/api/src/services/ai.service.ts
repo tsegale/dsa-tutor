@@ -65,6 +65,7 @@ function toPredictionBody(request: PredictionRequest): string {
     junction_difficulty: request.junctionDifficulty ?? null,
     ground_truth_misconception: request.groundTruthMisconception ?? null,
     student_answer_label: request.studentAnswerLabel ?? null,
+    correct_answer_label: request.correctAnswerLabel ?? null,
     pseudocode: request.pseudocode ?? null,
   })
 }
@@ -175,6 +176,7 @@ export async function proxyPredictionEvaluate(request: PredictionRequest): Promi
       junction_difficulty: request.junctionDifficulty ?? null,
       ground_truth_misconception: request.groundTruthMisconception ?? null,
       student_answer_label: request.studentAnswerLabel ?? null,
+      correct_answer_label: request.correctAnswerLabel ?? null,
     }),
   })
   if (!response.ok) throw new Error(`AI service error: ${response.status}`)

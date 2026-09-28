@@ -12,6 +12,7 @@ import type {
 import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { workedStepNarration } from '@/utils/workedSteps'
 import WorkedStepNotice from './WorkedStepNotice'
+import { correctTileIdFor } from '@/utils/correctTile'
 import SelfExplanationDialog from './SelfExplanationDialog'
 import { offerableSelfExplanation } from '@/utils/selfExplanation'
 import type { SelfExplanationPrompt } from '@/config/selfExplanationPrompts'
@@ -664,6 +665,9 @@ export default function PredictionZone({
       },
       studentAnswer: answer,
       studentAnswerLabel: selectedTile?.label ?? null,
+      // What the feedback must not reveal while the student can try again
+      // (the AI service rejects a field containing it).
+      correctAnswerLabel: currentTiles.find((tile) => tile.id === correctTileIdFor(snapshot))?.label ?? null,
       errorHistory: [],
       scaffoldingLevel,
       pseudocode,

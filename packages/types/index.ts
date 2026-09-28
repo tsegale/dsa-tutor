@@ -386,6 +386,9 @@ export interface PredictionRequest {
    * what the student picked, so feedback needs the text; grading never
    * reads it. */
   studentAnswerLabel?: string | null
+  /** The right tile's label, used only by the AI service's output check so
+   * feedback never names the answer while the student can still retry. */
+  correctAnswerLabel?: string | null
   /** The Pseudocode tab's exact text for this algorithm (see
    * apps/web/src/utils/pseudocode.ts). The AI service quotes its variable
    * names and array notation instead of its own copy, so a hint can never

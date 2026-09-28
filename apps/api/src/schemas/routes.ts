@@ -129,6 +129,9 @@ const predictionBody = z.strictObject({
   // The chosen tile's text, so feedback can name what the student picked;
   // grading still uses studentAnswer (the tile id) only.
   studentAnswerLabel: shortText.nullable().optional(),
+  // The right tile's text: never sent to the model's output, only used to
+  // reject feedback that reveals it while the junction is unresolved.
+  correctAnswerLabel: shortText.nullable().optional(),
   pseudocode: longText.optional(),
 })
 

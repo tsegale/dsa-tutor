@@ -1,3 +1,4 @@
+import { hasPreLabelFixFeedback } from '../config/dataValidity'
 import { prisma } from '../lib/prisma'
 import { toCsv, parseCsv } from '../utils/csv'
 import { ACTIVE_PARTICIPANT_WHERE } from './study.service'
@@ -107,6 +108,10 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     'promptKey',
     'rubricScore',
     'rubricResults',
+    // True where the feedback shown was written before the model could see
+    // the option the student chose (see config/dataValidity.ts). The 12D.7
+    // purge deletes these; until then, exclude them from any analysis.
+    'feedbackPreLabelFix',
   ]
 
   const rows = interactions.map((interaction) => [
@@ -130,6 +135,7 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     interaction.promptKey ?? '',
     interaction.rubricScore !== null ? String(interaction.rubricScore) : '',
     interaction.rubricResults !== null ? JSON.stringify(interaction.rubricResults) : '',
+    String(hasPreLabelFixFeedback(interaction)),
   ])
 
   return toCsv(header, rows)

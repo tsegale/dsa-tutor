@@ -11,6 +11,7 @@ import {
   type ChallengeTopic,
 } from './challengeGenerators'
 import { getTilesForSnapshot } from './tileBuilder'
+import { correctTileIdFor } from './correctTile'
 import type { BSTNode, BSTState } from '@/engine/bst'
 
 const DISPLAY_NAME: Record<ChallengeTopic, string> = {
@@ -21,36 +22,12 @@ const DISPLAY_NAME: Record<ChallengeTopic, string> = {
 const SEEDS = [1, 7, 42, 1234, 99991]
 const DIFFICULTIES = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
 
-/**
- * The right tile id at a junction, worked out from the snapshot's own state
- * - an independent statement of each rule, so a case "exercising" a decision
- * is checked against the rule, not against the generator's own claim.
- */
+// The right tile, from the shared rule (correctTile.ts) - itself tested
+// against hand-worked states in correctTile.test.ts.
 function correctTileId(snapshot: AlgorithmSnapshot): string {
-  const ds = snapshot.dataStructureState
-  switch (snapshot.criticalJunctionType) {
-    case CriticalJunctionType.SWAP_DECISION: {
-      const array = ds as number[]
-      const [j, k] = snapshot.comparedIndices
-      return array[j] > array[k] ? 'swap' : 'no-swap'
-    }
-    case CriticalJunctionType.MIDPOINT_DECISION: {
-      const s = ds as { array: number[]; mid: number; target: number }
-      const value = s.array[s.mid]
-      return value === s.target ? 'found' : s.target < value ? 'search-left' : 'search-right'
-    }
-    case CriticalJunctionType.BST_DIRECTION: {
-      const s = ds as BSTState
-      if (s.deleteCase) return 'correct'
-      if (s.currentNode === null) {
-        if (s.insertionParentValue == null) return 'becomes-root'
-        return s.targetValue < s.insertionParentValue ? 'attach-left' : 'attach-right'
-      }
-      return s.targetValue < s.currentNode.value ? 'go-left' : 'go-right'
-    }
-    default:
-      return 'correct'
-  }
+  const id = correctTileIdFor(snapshot)
+  if (id === null) throw new Error(`no correct tile rule for ${snapshot.criticalJunctionType}`)
+  return id
 }
 
 /** Misconceptions a learner could be tagged with somewhere in this run: a wrong tile at an asked junction. */

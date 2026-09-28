@@ -48,10 +48,11 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     # Week 2 2C: once per study run, after ALGORITHM_COMPLETE.
     "COMPLEXITY_PREDICTION": (
         "The student estimated how many comparisons this whole run made; "
-        "the comparison context and current state give the measured count. "
+        "the comparison context gives the measured count for your reasoning "
+        "only - on a wrong estimate never state it, or any number that gives it away. "
         "Relate their estimate to the growth rate: each insert compares the new value with one node per level, so the total depends on the tree height - about log2 n per insert when balanced, up to n when the tree is a chain. A wrong estimate "
         "reflects a complexity misreading - explain which growth rate it "
-        "matches without simply restating the right number."
+        "matches, and ask what they would expect the formula to give."
     ),
 }
 

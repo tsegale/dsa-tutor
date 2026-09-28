@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot, MisconceptionCategory } from '@dsa-tutor/types'
-import { CriticalJunctionType } from '@dsa-tutor/types'
+import { correctTileIdFor } from '@/utils/correctTile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 
@@ -47,9 +47,8 @@ function XIcon() {
  * Which tile is the correct answer, used only to reveal it once the caller
  * has decided the answer should be shown (attempt cap reached, or the
  * learner explicitly asked) - never merely because the submission was
- * wrong. For SWAP_DECISION the correct tile depends on the current array
- * values; for conceptual junctions the shuffled display order never
- * changes the id, so the correct tile is always id 'correct'.
+ * wrong. See correctTileIdFor: state-dependent for swap, midpoint and BST
+ * direction junctions, id 'correct' for conceptual ones.
  */
 function isCorrectTile(
   tileId: string,
@@ -58,15 +57,7 @@ function isCorrectTile(
   revealAnswer: boolean,
 ): boolean {
   if (submissionState !== 'incorrect' || !revealAnswer) return false
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.SWAP_DECISION) {
-    const arr = snapshot.dataStructureState as number[]
-    const [i, j] = snapshot.activeIndices
-    const shouldSwap = arr[i] > arr[j]
-    return tileId === (shouldSwap ? 'swap' : 'no-swap')
-  }
-
-  return tileId === 'correct'
+  return tileId === (correctTileIdFor(snapshot) ?? 'correct')
 }
 
 export default function TileGrid({ prompt, options, onSelect, selectedId, submissionState, snapshot, revealAnswer }: TileGridProps) {

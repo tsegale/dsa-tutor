@@ -1,3 +1,5 @@
+import { CriticalJunctionType, type AlgorithmSnapshot } from '@dsa-tutor/types'
+
 /**
  * The comparison-count formula for a study topic, evaluated at n, shown on
  * the Complexity tab next to the run's measured count (Week 2 2C) - seeing
@@ -32,4 +34,14 @@ export function comparisonFormula(topicSlug: string | undefined, n: number): Eva
     default:
       return null
   }
+}
+
+/**
+ * Whether the Complexity tab must hide the run's measured count: on a run
+ * with a count question, up to and including that question, so switching
+ * tabs mid-question never gives the answer away.
+ */
+export function isRunCountHidden(snapshots: AlgorithmSnapshot[], stepIndex: number): boolean {
+  const questionIndex = snapshots.findIndex((s) => s.criticalJunctionType === CriticalJunctionType.COMPLEXITY_PREDICTION)
+  return questionIndex !== -1 && stepIndex <= questionIndex
 }

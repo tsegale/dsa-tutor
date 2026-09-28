@@ -49,10 +49,11 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     # Week 2 2C: once per study run, after ALGORITHM_COMPLETE.
     "COMPLEXITY_PREDICTION": (
         "The student estimated how many comparisons this whole run made; "
-        "the comparison context and current state give the measured count. "
+        "the comparison context gives the measured count for your reasoning "
+        "only - on a wrong estimate never state it, or any number that gives it away. "
         "Relate their estimate to the growth rate: Bubble Sort makes at most n(n-1)/2 comparisons (fewer when a pass with no swaps ends it early). A wrong estimate "
         "reflects a complexity misreading - explain which growth rate it "
-        "matches without simply restating the right number."
+        "matches, and ask what they would expect the formula to give."
     ),
 }
 

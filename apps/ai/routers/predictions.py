@@ -14,6 +14,7 @@ from models.request_models import MisconceptionCategory, PredictionRequest, Scaf
 from models.response_models import PredictionEvaluateResponse, PredictionResponse
 from prompts.registry import get_algorithm_context
 from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE, PROMPT_VERSION
+from services.answer_leak import build_leak_check
 from services.claude_service import (
     BoundedCall,
     CallMetadata,
@@ -1231,6 +1232,7 @@ def _feedback_field_failures(
     scaffolding_level: ScaffoldingLevel,
     current_state: Any = None,
     pseudocode: str | None = None,
+    leaks_answer: Callable[[str], bool] | None = None,
 ) -> dict[str, str]:
     """Judges each text field on its own against its prompt contract in
     FEEDBACK_SYSTEM_PROMPT, returning {field: rule} for the ones that fail.
@@ -1246,7 +1248,9 @@ def _feedback_field_failures(
     socratic_hint has a level-dependent word cap, and at HIGH must not plug
     in this step's actual comparison values - the point is for the student
     to apply the rule themselves. No field may use array notation the
-    pseudocode does not contain."""
+    pseudocode does not contain, and on a wrong answer no field may reveal
+    the right option or value (leaks_answer; see services/answer_leak.py) -
+    the student can still try again."""
     failures: dict[str, str] = {}
     for field in FEEDBACK_TEXT_FIELDS:
         text = feedback.get(field)
@@ -1259,6 +1263,8 @@ def _feedback_field_failures(
                 why = "leaks_value" if _hint_leaks_comparison_value(text, current_state) else None
         else:
             why = field_failure(text, max_sentences=2, allow_empty=correct)
+        if why is None and leaks_answer is not None and isinstance(text, str) and leaks_answer(text):
+            why = "answer_leak"
         if why is not None:
             failures[field] = why
     return failures
@@ -1270,6 +1276,7 @@ def _feedback_failure(
     scaffolding_level: ScaffoldingLevel,
     current_state: Any = None,
     pseudocode: str | None = None,
+    leaks_answer: Callable[[str], bool] | None = None,
 ) -> str | None:
     """Names the first contract rule a feedback response breaks, or None -
     what the logs, X-AI-Retry-Reason and the stream's failureReason report."""
@@ -1277,7 +1284,7 @@ def _feedback_failure(
         return "json_parse"
     if not isinstance(feedback, dict):
         return "json_shape"
-    failures = _feedback_field_failures(feedback, correct, scaffolding_level, current_state, pseudocode)
+    failures = _feedback_field_failures(feedback, correct, scaffolding_level, current_state, pseudocode, leaks_answer)
     for field in ("consequence_explanation", "socratic_hint", "counterfactual_trace"):
         if field in failures:
             return f"{field}.{failures[field]}"
@@ -1300,6 +1307,7 @@ async def _get_validated_feedback(
     scaffolding_level: ScaffoldingLevel,
     current_state: Any = None,
     pseudocode: str | None = None,
+    leaks_answer: Callable[[str], bool] | None = None,
 ) -> BoundedCall[dict[str, Any] | None]:
     """One call, no retry: the A2 measurements showed a retry on its 4s
     budget recovered 0 of 5 failures (a feedback call takes 5-7s), so it
@@ -1309,7 +1317,7 @@ async def _get_validated_feedback(
         lambda retry_reason: attempt_feedback(
             prompt, _feedback_system(), retry_reason=retry_reason, token_limit=feedback_max_tokens
         ),
-        lambda feedback: _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode),
+        lambda feedback: _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode, leaks_answer),
         label="prediction",
         allow_retry=False,
     )
@@ -1391,6 +1399,9 @@ class _PreparedPrediction:
     cache_key: str
     cached_feedback: dict[str, Any] | None
     ground_truth: MisconceptionCategory | None
+    # True for text that reveals the right answer; None on a correct answer
+    # (nothing left to give away) or when there is nothing to check against.
+    leaks_answer: Callable[[str], bool] | None = None
 
 
 def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
@@ -1437,7 +1448,18 @@ def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
         cache_key=cache_key,
         cached_feedback=feedback_cache.get(cache_key) if CACHE_ENABLED else None,
         ground_truth=resolve_ground_truth_misconception(correct, request),
+        leaks_answer=None if correct else build_leak_check(request.correct_answer_label, _correct_value(junction_type, wrapper)),
     )
+
+
+def _correct_value(junction_type: str, wrapper: dict) -> int | None:
+    """The right answer as a number, for junctions whose answer is one: the
+    run's measured count at the count question."""
+    if junction_type != "COMPLEXITY_PREDICTION":
+        return None
+    metrics = wrapper.get("metrics")
+    value = metrics.get("comparisons") if isinstance(metrics, dict) else None
+    return value if isinstance(value, int) else None
 
 
 def _stamped(response: PredictionResponse) -> PredictionResponse:
@@ -1486,7 +1508,9 @@ async def submit_prediction(request: PredictionRequest, response: Response) -> P
         if prep.cached_feedback is not None:
             _set_ai_headers(response, "cache")
             return _response_from_feedback(prep, prep.cached_feedback)
-        result = await _get_validated_feedback(prep.prompt, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
+        result = await _get_validated_feedback(
+            prep.prompt, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode, prep.leaks_answer
+        )
         _set_ai_headers(response, "ai" if result.value is not None else "fallback", result)
         if result.value is None:
             return _fallback_for(prep, request)
@@ -1503,15 +1527,18 @@ def _sse(event: str, payload: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
-def _sentence_check(pseudocode: str) -> Callable[[str], str | None]:
+def _sentence_check(pseudocode: str, leaks_answer: Callable[[str], bool] | None = None) -> Callable[[str], str | None]:
     """The explanation rules that can be judged one sentence at a time,
-    before the sentence is shown. The two-sentence cap is the gate's own."""
+    before the sentence is shown. The two-sentence cap is the gate's own.
+    A sentence revealing the right answer on a wrong attempt is never shown."""
 
     def check(sentence: str) -> str | None:
         if has_self_correction_marker(sentence):
             return "self_correction"
         if uses_foreign_array_notation(sentence, pseudocode):
             return "notation"
+        if leaks_answer is not None and leaks_answer(sentence):
+            return "answer_leak"
         return None
 
     return check
@@ -1573,7 +1600,7 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
         return
 
     streamer = JsonStringFieldStreamer("consequence_explanation")
-    gate = SentenceGate(_sentence_check(prep.pseudocode), max_sentences=2)
+    gate = SentenceGate(_sentence_check(prep.pseudocode, prep.leaks_answer), max_sentences=2)
     parts: list[str] = []
     metadata: CallMetadata | None = None
     stream_error: str | None = None
@@ -1629,7 +1656,9 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
     if not isinstance(feedback, dict):
         feedback = None
     field_failures = (
-        _feedback_field_failures(feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
+        _feedback_field_failures(
+            feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode, prep.leaks_answer
+        )
         if feedback is not None
         else {}
     )
@@ -1660,7 +1689,7 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
         else "truncated" if truncated
         else "json_parse" if feedback is None
         else f"consequence_explanation.{gate.failure}" if gate.failure
-        else _feedback_failure(feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode)
+        else _feedback_failure(feedback, prep.correct, request.scaffolding_level, prep.wrapper, prep.pseudocode, prep.leaks_answer)
     )
     outcome = stream_error if stream_error else "ai" if not fallback_fields else "partial"
     if metadata is not None:

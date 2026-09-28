@@ -32,7 +32,12 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   (was the bare id, e.g. "wrong-2", so the model guessed
 #                   what was picked); COMPLEXITY_PREDICTION context now
 #                   states the run's measured count.
-PROMPT_VERSION = "2026-09-28.6"
+#   2026-09-28.7    One rule for every junction: on a wrong answer, no field
+#                   states or paraphrases the correct option or value (the
+#                   count included); COMPLEXITY_PREDICTION guidance says the
+#                   measured count is for reasoning only. Output validator
+#                   rejects a field that does (answer_leak).
+PROMPT_VERSION = "2026-09-28.7"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one
@@ -113,6 +118,12 @@ notation in the Pseudocode block of the user message - it is what the
 student sees in the Pseudocode tab. If it writes arr[j] > arr[j+1], never
 write A[i - 1], A[i], or any other array name or index expression it does
 not contain.
+When the answer is incorrect the student can still try again, so no field
+may state, quote or paraphrase the correct option, and no field may give
+the correct value - including any measured count in the comparison
+context, which is there for your reasoning only. Explain what goes wrong
+with the option the student chose and point them at what to check, never
+at what to pick.
 
 Respond with ONLY valid JSON, no markdown code fences, matching exactly this
 schema, with the keys in exactly this order (consequence_explanation first -

@@ -6,7 +6,7 @@ import { bstInsertEngine } from './bst'
 import { complexityPredictionOptions } from './runMetrics'
 import { getTilesForSnapshot } from '@/utils/tileBuilder'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
-import { comparisonFormula } from '@/utils/complexityFormula'
+import { comparisonFormula, isRunCountHidden } from '@/utils/complexityFormula'
 import { isWorkedStep } from '@/utils/workedSteps'
 import { ScaffoldingLevel } from '@dsa-tutor/types'
 
@@ -88,5 +88,19 @@ describe('complexityPredictionOptions', () => {
     const { correct, wrong } = complexityPredictionOptions(5, 4)
     expect(new Set([correct, ...wrong]).size).toBe(4)
     expect(wrong).not.toContain(4)
+  })
+})
+
+describe('Complexity tab lock', () => {
+  it('hides the count before and during the count question, and shows it after', () => {
+    const run = bubbleSortEngine([5, 3, 1, 4, 2], { withComplexityPrediction: true })
+    const question = run.findIndex((s) => s.criticalJunctionType === CriticalJunctionType.COMPLEXITY_PREDICTION)
+    expect(isRunCountHidden(run, 0)).toBe(true)
+    expect(isRunCountHidden(run, question)).toBe(true)
+    expect(isRunCountHidden(run, question + 1)).toBe(false)
+  })
+
+  it('never hides it on a run without a count question', () => {
+    expect(isRunCountHidden(bubbleSortEngine([5, 3, 1, 4, 2]), 0)).toBe(false)
   })
 })

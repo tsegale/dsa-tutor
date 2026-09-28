@@ -1,8 +1,7 @@
 import { useParams } from 'react-router-dom'
-import { CriticalJunctionType } from '@dsa-tutor/types'
 import { cn } from '@/lib/utils'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
-import { comparisonFormula } from '@/utils/complexityFormula'
+import { comparisonFormula, isRunCountHidden } from '@/utils/complexityFormula'
 
 /**
  * The current run measured against its formula (Week 2 2C): "This run:
@@ -17,8 +16,7 @@ function RunMeasurement({ topicSlug }: { topicSlug: string | undefined }) {
   if (!current) return null
   const formula = comparisonFormula(topicSlug, current.n)
 
-  const questionIndex = snapshots.findIndex((s) => s.criticalJunctionType === CriticalJunctionType.COMPLEXITY_PREDICTION)
-  const countHidden = questionIndex !== -1 && stepIndex <= questionIndex
+  const countHidden = isRunCountHidden(snapshots, stepIndex)
   const second =
     current.swaps !== undefined
       ? `${current.swaps} swap${current.swaps === 1 ? '' : 's'}`

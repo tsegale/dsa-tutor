@@ -66,6 +66,10 @@ class PredictionRequest(BaseModel):
     # what the student picked, so the feedback prompt shows this alongside
     # the id. Grading never reads it - evaluate_answer uses student_answer.
     student_answer_label: str | None = Field(default=None, max_length=200)
+    # The right tile's text. Never shown to the model: only used to reject
+    # feedback that reveals it while the student can still try again
+    # (services/answer_leak.py).
+    correct_answer_label: str | None = Field(default=None, max_length=200)
 
 
 class HintRequest(BaseModel):
