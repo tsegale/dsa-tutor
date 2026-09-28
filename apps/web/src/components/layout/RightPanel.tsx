@@ -238,17 +238,21 @@ export default function RightPanel({
             onValueChange={(value) => onTabChange(Number(value))}
             className="flex h-full flex-col overflow-hidden"
           >
-            <TabsList id="right-panel-tabs">
-              <TabsTrigger value="1" className="px-[10px] py-2 text-[12px] tracking-normal">
+            {/* Four tabs are wider than the panel at laptop widths. The strip
+                scrolls itself; without that, focusing a tab made the browser
+                scroll the overflow-hidden Tabs root sideways to reveal it,
+                cutting off the whole panel's left edge. */}
+            <TabsList id="right-panel-tabs" className="w-full max-w-full shrink-0 justify-start overflow-x-auto">
+              <TabsTrigger value="1" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
                 AI Tutor
               </TabsTrigger>
-              <TabsTrigger value="2" className="px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="2" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
                 Pseudocode
               </TabsTrigger>
-              <TabsTrigger value="3" className="px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="3" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
                 Complexity
               </TabsTrigger>
-              <TabsTrigger value="4" className="px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="4" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
                 Step log
               </TabsTrigger>
             </TabsList>
