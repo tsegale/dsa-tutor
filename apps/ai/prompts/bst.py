@@ -40,7 +40,9 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     # withCompletionCheck on the web): which traversal gives sorted order.
     "ALGORITHM_COMPLETE": (
         "The tree is fully built and the student was asked which traversal "
-        "lists its values in sorted order. The answer is in-order (left "
+        "lists the values of any binary search tree in sorted order (asked of "
+        "every BST, since for some trees other orders happen to be sorted too). "
+        "The answer is in-order (left "
         "subtree, node, right subtree), because every left subtree holds "
         "smaller values and every right subtree larger ones. Ground the "
         "feedback in that ordering rule, not in any single value."

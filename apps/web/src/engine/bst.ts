@@ -237,7 +237,7 @@ function runBstInsert(values: number[], completionCheck: boolean): AlgorithmSnap
 
   if (withCompletionCheck) {
     push({
-      description: 'The tree is built. Which traversal would list its values in sorted order?',
+      description: 'The tree is built. Which traversal lists the values of any binary search tree in sorted order?',
       pseudocodeLine: PSEUDOCODE_LINE.START,
       isPredictionRequired: true,
       state: { root, currentNode: null, targetValue: values[values.length - 1], path: [], operation: 'insert' },

@@ -58,8 +58,11 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
       return snapshot.description
 
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
+      // Asked of every BST, not this one: for a chain built in ascending
+      // order, pre-order, level-order and insertion order also come out
+      // sorted, which would make four options right.
       if (isBstCompletionState(snapshot.dataStructureState)) {
-        return 'The tree is built. Which traversal would list its values in sorted order?'
+        return 'The tree is built. Which traversal lists the values of any binary search tree in sorted order?'
       }
       if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
         const state = snapshot.dataStructureState as SearchAlgorithmState

@@ -36,7 +36,9 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   states or paraphrases the correct option or value (the
 #                   count included); COMPLEXITY_PREDICTION guidance says the
 #                   measured count is for reasoning only. Output validator
-#                   rejects a field that does (answer_leak).
+#                   rejects a field that does (answer_leak). BST
+#                   ALGORITHM_COMPLETE guidance matches the question now
+#                   asked of every BST. (Folded into .7: .7 was never live.)
 PROMPT_VERSION = "2026-09-28.7"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model

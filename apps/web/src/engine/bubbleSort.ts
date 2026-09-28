@@ -217,45 +217,50 @@ export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {
 
     finalized = [lastUnsortedIndex, ...finalized]
 
-    snapshots.push(
-      makeSnapshot({
-        stepIndex: stepIndex++,
-        description: swappedThisPass
-          ? `Pass ${pass + 1} complete. Index ${lastUnsortedIndex} (value ${working[lastUnsortedIndex]}) is now in its final sorted position.`
-          : `Pass ${pass + 1} complete with no swaps. The array is already fully sorted.`,
-        pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
-        isPredictionRequired: false,
-        dataStructureState: working,
-        highlightIndices: finalized,
-      }),
-    )
+    const passNarration = makeSnapshot({
+      stepIndex: 0,
+      description: swappedThisPass
+        ? `Pass ${pass + 1} complete. Index ${lastUnsortedIndex} (value ${working[lastUnsortedIndex]}) is now in its final sorted position.`
+        : `Pass ${pass + 1} complete with no swaps. The array is already fully sorted.`,
+      pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
+      isPredictionRequired: false,
+      dataStructureState: working,
+      highlightIndices: finalized,
+    })
 
-    if (swappedThisPass) {
-      snapshots.push(
-        makeSnapshot({
-          stepIndex: stepIndex++,
-          description: `Pass ${pass + 1} is complete. What is now guaranteed about the array?`,
-          pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
-          isPredictionRequired: true,
-          dataStructureState: working,
-          highlightIndices: finalized,
-          criticalJunctionType: CriticalJunctionType.PASS_COMPLETE,
-          junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
-        }),
-      )
-    } else {
-      snapshots.push(
-        makeSnapshot({
-          stepIndex: stepIndex++,
-          description: 'No swaps occurred during this pass. Why did the algorithm stop early?',
-          pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
-          isPredictionRequired: true,
-          dataStructureState: working,
-          highlightIndices: finalized,
-          criticalJunctionType: CriticalJunctionType.EARLY_TERMINATION,
-          junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
-        }),
-      )
+    // No conceptual question after the final possible pass: with at most
+    // one element left unsorted, every distractor ("the entire array is now
+    // sorted", "the smallest element moved to the front") is guaranteed true
+    // and an early-stop question's premise ("stopped before completing all
+    // passes") is false. Asking would mark a right answer wrong.
+    const isFinalPossiblePass = pass === n - 2
+    const passQuestion = isFinalPossiblePass
+      ? null
+      : swappedThisPass
+        ? makeSnapshot({
+            stepIndex: 0,
+            description: `Pass ${pass + 1} is complete. What is now guaranteed about the array?`,
+            pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
+            isPredictionRequired: true,
+            dataStructureState: working,
+            highlightIndices: finalized,
+            criticalJunctionType: CriticalJunctionType.PASS_COMPLETE,
+            junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+          })
+        : makeSnapshot({
+            stepIndex: 0,
+            description: 'No swaps occurred during this pass. Why did the algorithm stop early?',
+            pseudocodeLine: PSEUDOCODE_LINE.OUTER_LOOP_END,
+            isPredictionRequired: true,
+            dataStructureState: working,
+            highlightIndices: finalized,
+            criticalJunctionType: CriticalJunctionType.EARLY_TERMINATION,
+            junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+          })
+
+    // The question comes before the narration that answers it.
+    for (const snapshot of passQuestion ? [passQuestion, passNarration] : [passNarration]) {
+      snapshots.push({ ...snapshot, stepIndex: stepIndex++ })
     }
 
     if (!swappedThisPass) {
@@ -263,18 +268,22 @@ export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {
     }
   }
 
-  snapshots.push(
-    makeSnapshot({
-      stepIndex: stepIndex++,
-      description: 'The array is fully sorted. What invariant proves that sorting is complete?',
-      pseudocodeLine: PSEUDOCODE_LINE.DONE,
-      isPredictionRequired: true,
-      dataStructureState: working,
-      highlightIndices: Array.from({ length: n }, (_, idx) => idx),
-      criticalJunctionType: CriticalJunctionType.ALGORITHM_COMPLETE,
-      junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
-    }),
-  )
+  // A single element (or none) is sorted before anything happens, so every
+  // option would "prove" it - no completion question there.
+  if (n > 1) {
+    snapshots.push(
+      makeSnapshot({
+        stepIndex: stepIndex++,
+        description: 'The array is fully sorted. What invariant proves that sorting is complete?',
+        pseudocodeLine: PSEUDOCODE_LINE.DONE,
+        isPredictionRequired: true,
+        dataStructureState: working,
+        highlightIndices: Array.from({ length: n }, (_, idx) => idx),
+        criticalJunctionType: CriticalJunctionType.ALGORITHM_COMPLETE,
+        junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
+      }),
+    )
+  }
 
   snapshots.push(
     makeSnapshot({

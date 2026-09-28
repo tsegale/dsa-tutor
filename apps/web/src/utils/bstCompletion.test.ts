@@ -13,7 +13,7 @@ const check = run[checkIndex]
 describe('BST study completion junction', () => {
   it('asks which traversal lists the values in sorted order', () => {
     expect(getPromptForSnapshot(check, 'Binary Search Tree')).toBe(
-      'The tree is built. Which traversal would list its values in sorted order?',
+      'The tree is built. Which traversal lists the values of any binary search tree in sorted order?',
     )
   })
 

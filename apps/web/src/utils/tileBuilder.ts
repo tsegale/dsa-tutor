@@ -38,6 +38,10 @@ function collectTreeValues(node: BSTNode | null): number[] {
   return [...collectTreeValues(node.left), node.value, ...collectTreeValues(node.right)]
 }
 
+// Every distractor here is an invalid removal for every tree in its case -
+// the option-uniqueness test checks each against the tree. (Options like
+// "replace it with its left child" or "the largest value in its right
+// subtree" are valid removals for some trees, so they are not used.)
 function deleteCaseTiles(deleteCase: 'leaf' | 'one-child' | 'two-children'): TileOption[] {
   if (deleteCase === 'two-children') {
     return [
@@ -51,30 +55,29 @@ function deleteCaseTiles(deleteCase: 'leaf' | 'one-child' | 'two-children'): Til
         label: 'Remove it and reattach both subtrees to its parent',
         misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
       },
-      { id: 'wrong-2', label: 'Replace it with its left child', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
       {
-        id: 'wrong-3',
-        label: 'Replace it with the largest value in its right subtree',
-        misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        id: 'wrong-2',
+        label: 'Delete it together with its right subtree',
+        misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
       },
+      { id: 'wrong-3', label: "Replace it with its parent's value", misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+    ]
+  }
+  if (deleteCase === 'leaf') {
+    return [
+      { id: 'correct', label: 'Remove it - there is nothing below it to keep', misconception: null },
+      { id: 'wrong-1', label: 'Remove its parent as well', misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
+      { id: 'wrong-2', label: 'Swap it with its parent, then remove it', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
     ]
   }
   return [
-    {
-      id: 'correct',
-      label: deleteCase === 'leaf' ? 'Remove it - there is nothing below it to keep' : 'Its only child takes its place',
-      misconception: null,
-    },
+    { id: 'correct', label: 'Its only child takes its place', misconception: null },
     {
       id: 'wrong-1',
       label: 'Remove it together with everything below it',
       misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
     },
-    {
-      id: 'wrong-2',
-      label: 'Swap it with its parent, then remove it',
-      misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
-    },
+    { id: 'wrong-2', label: 'Swap it with its parent, then remove it', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
   ]
 }
 
@@ -245,7 +248,17 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
         ])
       }
       if (SEARCH_ALGORITHM_NAMES.has(algorithmName)) {
-        const state = snapshot.dataStructureState as SearchAlgorithmState
+        const state = snapshot.dataStructureState as SearchAlgorithmState & { array?: number[] }
+        // "Every element was visited" is a true statement when the search
+        // probed every index (a 1- or 2-element binary search, a linear
+        // search that found its target last) - then it cannot be a wrong
+        // option, so a distractor that is false for every found search
+        // takes its place.
+        const probes =
+          snapshot.metrics?.visits ??
+          (algorithmName === 'Linear Search' && state.foundIndex !== null ? state.foundIndex + 1 : undefined)
+        const length = state.array?.length ?? 0
+        const everyIndexProbed = probes !== undefined ? probes >= length : length <= 2
         return state.found
           ? shuffleArray([
               {
@@ -253,11 +266,17 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
                 label: `The element at index ${state.foundIndex} was confirmed equal to the target`,
                 misconception: null,
               },
-              {
-                id: 'wrong-1',
-                label: 'Every element in the array was visited',
-                misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
-              },
+              everyIndexProbed
+                ? {
+                    id: 'wrong-1',
+                    label: 'The search kept going until the range was empty',
+                    misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+                  }
+                : {
+                    id: 'wrong-1',
+                    label: 'Every element in the array was visited',
+                    misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+                  },
               {
                 id: 'wrong-2',
                 label: 'The array became sorted during the search',
@@ -265,7 +284,7 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
               },
               {
                 id: 'wrong-3',
-                label: 'The target must appear at every index checked',
+                label: 'The target was matched at more than one index',
                 misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
               },
             ])
@@ -287,7 +306,7 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
               },
               {
                 id: 'wrong-3',
-                label: 'One comparison is enough to prove absence',
+                label: 'The range still had unchecked values when the search stopped',
                 misconception: MisconceptionCategory.BOUNDARY_CONDITION,
               },
             ])
@@ -299,9 +318,11 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
           label: 'Every element was visited the same number of times',
           misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
         },
+        // (Was "the first and last elements are in their correct positions",
+        // which proves a 2-element array sorted.)
         {
           id: 'wrong-2',
-          label: 'The first and last elements are in their correct positions',
+          label: 'Every element was compared at least once',
           misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
         },
         {

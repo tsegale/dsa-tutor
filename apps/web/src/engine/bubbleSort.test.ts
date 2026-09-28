@@ -36,20 +36,23 @@ describe('bubbleSortEngine', () => {
     expect(swaps.length).toBe(10) // n(n-1)/2 for n=5
   })
 
-  it('returns exactly 3 snapshots for a single element array (start, algorithm-complete junction, done)', () => {
+  // A single element is sorted before anything happens, so every option to
+  // "what proves it is sorted?" would be true - no question is asked.
+  it('returns exactly 2 snapshots for a single element array (start, done) and asks nothing', () => {
     const snapshots = bubbleSortEngine([42])
 
-    expect(snapshots.length).toBe(3)
-    expect(snapshots[1].criticalJunctionType).toBe('ALGORITHM_COMPLETE')
-    expect(snapshots[1].isPredictionRequired).toBe(true)
-    expect(snapshots[2].isPredictionRequired).toBe(false)
+    expect(snapshots.length).toBe(2)
+    expect(snapshots.some((s) => s.isPredictionRequired)).toBe(false)
+    expect(snapshots.some((s) => s.criticalJunctionType !== null)).toBe(false)
+    expect(snapshots[1].isFinalStep).toBe(true)
     expect(snapshots.some((s) => s.pseudocodeLine === PSEUDOCODE_SWAP)).toBe(false)
   })
 
-  it('returns exactly 3 snapshots for an empty array without throwing', () => {
+  it('returns exactly 2 snapshots for an empty array without throwing, and asks nothing', () => {
     const snapshots = bubbleSortEngine([])
 
-    expect(snapshots.length).toBe(3)
+    expect(snapshots.length).toBe(2)
+    expect(snapshots.some((s) => s.isPredictionRequired)).toBe(false)
     expect(snapshots[snapshots.length - 1].isFinalStep).toBe(true)
   })
 
@@ -129,7 +132,10 @@ describe('bubbleSortEngine', () => {
     }
   })
 
-  it('produces exactly one PASS_COMPLETE or EARLY_TERMINATION junction per completed pass', () => {
+  // Every completed pass gets one question, except the final possible pass
+  // (n - 1), where at most one element is left unsorted and every option
+  // would be true.
+  it('produces exactly one PASS_COMPLETE or EARLY_TERMINATION junction per completed pass but the final possible one', () => {
     const snapshots = bubbleSortEngine([5, 3, 1, 4, 2])
     const passNarrations = snapshots.filter(
       (s) => s.pseudocodeLine === PSEUDOCODE_OUTER_LOOP_END && !s.isPredictionRequired,
@@ -143,7 +149,15 @@ describe('bubbleSortEngine', () => {
       expect(step.isPredictionRequired).toBe(true)
       expect(step.junctionDifficulty).toBe('CONCEPTUAL')
     }
-    expect(passCompleteJunctions.length + earlyTerminationJunctions.length).toBe(passNarrations.length)
+    // [5,3,1,4,2] runs all 4 passes, so the fourth has no question.
+    expect(passNarrations.length).toBe(4)
+    expect(passCompleteJunctions.length + earlyTerminationJunctions.length).toBe(passNarrations.length - 1)
+    // Each question comes before the narration that answers it.
+    for (const step of passCompleteJunctions.concat(earlyTerminationJunctions)) {
+      const next = snapshots[snapshots.indexOf(step) + 1]
+      expect(next.pseudocodeLine).toBe(PSEUDOCODE_OUTER_LOOP_END)
+      expect(next.isPredictionRequired).toBe(false)
+    }
   })
 
   it('produces an EARLY_TERMINATION junction when sorting an already-sorted array', () => {
