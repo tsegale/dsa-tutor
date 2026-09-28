@@ -17,7 +17,9 @@ from prompts.templates import FEEDBACK_SYSTEM_PROMPT, FEEDBACK_USER_TEMPLATE, PR
 from services.claude_service import (
     BoundedCall,
     CallMetadata,
+    Prompt,
     attempt_feedback,
+    cached_text_block,
     call_with_bounded_retry,
     feedback_max_tokens,
     field_failure,
@@ -1258,7 +1260,7 @@ def _feedback_is_valid(
 
 
 async def _get_validated_feedback(
-    prompt: str,
+    prompt: Prompt,
     correct: bool,
     scaffolding_level: ScaffoldingLevel,
     current_state: Any = None,
@@ -1270,7 +1272,7 @@ async def _get_validated_feedback(
     invisibly anyway. result.value is None when the caller should fall back."""
     return await call_with_bounded_retry(
         lambda retry_reason: attempt_feedback(
-            prompt, FEEDBACK_SYSTEM_PROMPT, retry_reason=retry_reason, token_limit=feedback_max_tokens
+            prompt, _feedback_system(), retry_reason=retry_reason, token_limit=feedback_max_tokens
         ),
         lambda feedback: _feedback_failure(feedback, correct, scaffolding_level, current_state, pseudocode),
         label="prediction",
@@ -1322,6 +1324,25 @@ def resolve_ai_misconception(correct: bool, feedback: dict[str, Any]) -> Misconc
         return None
 
 
+# The feedback prompt is sent as cacheable blocks: the system prompt (the
+# same for every call) and the start of the user message up to this marker
+# (the same for every call on one algorithm: its context and pseudocode).
+# Everything from the marker on is per-call. Joined with the blank line the
+# split removes, the blocks are byte-identical to FEEDBACK_USER_TEMPLATE's
+# single-string rendering - caching changes cost and prefill time, not what
+# the model reads.
+_PER_CALL_MARKER = "\n\nCurrent step index:"
+
+
+def _feedback_system() -> Prompt:
+    return [cached_text_block(FEEDBACK_SYSTEM_PROMPT)]
+
+
+def _split_for_cache(prompt: str) -> Prompt:
+    cut = prompt.index(_PER_CALL_MARKER)
+    return [cached_text_block(prompt[:cut]), {"type": "text", "text": prompt[cut + 2 :]}]
+
+
 @dataclass
 class _PreparedPrediction:
     """Everything both prediction endpoints derive from a request before any
@@ -1331,7 +1352,7 @@ class _PreparedPrediction:
     wrapper: dict
     junction_type: str
     pseudocode: str
-    prompt: str
+    prompt: Prompt
     cache_key: str
     cached_feedback: dict[str, Any] | None
     ground_truth: MisconceptionCategory | None
@@ -1376,7 +1397,7 @@ def _prepare_prediction(request: PredictionRequest) -> _PreparedPrediction:
         wrapper=wrapper,
         junction_type=junction_type,
         pseudocode=pseudocode,
-        prompt=prompt,
+        prompt=_split_for_cache(prompt),
         cache_key=cache_key,
         cached_feedback=feedback_cache.get(cache_key) if CACHE_ENABLED else None,
         ground_truth=resolve_ground_truth_misconception(correct, request),
@@ -1487,16 +1508,29 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
     """
     prep = _prepare_prediction(request)
 
-    def final(outcome: str, body: PredictionResponse, fallback_fields: list[str], failure_reason: str | None) -> str:
-        return _sse(
-            "final",
-            {
-                "outcome": outcome,
-                "failureReason": failure_reason,
-                "fallbackFields": fallback_fields,
-                "response": body.model_dump(by_alias=True, mode="json"),
-            },
-        )
+    def final(
+        outcome: str,
+        body: PredictionResponse,
+        fallback_fields: list[str],
+        failure_reason: str | None,
+        metadata: CallMetadata | None = None,
+    ) -> str:
+        payload: dict[str, Any] = {
+            "outcome": outcome,
+            "failureReason": failure_reason,
+            "fallbackFields": fallback_fields,
+            "response": body.model_dump(by_alias=True, mode="json"),
+        }
+        if metadata is not None:
+            # Token and cache accounting for measurement; the client ignores it.
+            payload["diagnostics"] = {
+                "inputTokens": metadata.input_tokens,
+                "cacheWriteTokens": metadata.cache_creation_input_tokens,
+                "cacheReadTokens": metadata.cache_read_input_tokens,
+                "outputTokens": metadata.output_tokens,
+                "firstTokenMs": metadata.first_token_ms,
+            }
+        return _sse("final", payload)
 
     if prep.cached_feedback is not None:
         yield final("cache", _response_from_feedback(prep, prep.cached_feedback), [], None)
@@ -1513,7 +1547,7 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
     # connection open indefinitely (seen once in production at >120s).
     loop = asyncio.get_running_loop()
     deadline = loop.time() + request_timeout_seconds
-    events = stream_message(prep.prompt, FEEDBACK_SYSTEM_PROMPT, token_limit=feedback_max_tokens).__aiter__()
+    events = stream_message(prep.prompt, _feedback_system(), token_limit=feedback_max_tokens).__aiter__()
     try:
         while True:
             remaining = deadline - loop.time()
@@ -1595,8 +1629,11 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
     outcome = stream_error if stream_error else "ai" if not fallback_fields else "partial"
     if metadata is not None:
         logger.info(
-            "AI prediction stream: latency_ms=%s output_tokens=%s stop_reason=%s outcome=%s failure=%s fallback_fields=%s",
-            metadata.latency_ms, metadata.output_tokens, metadata.stop_reason, outcome, failure_reason, fallback_fields,
+            "AI prediction stream: latency_ms=%s first_token_ms=%s input_tokens=%s cache_write=%s cache_read=%s "
+            "output_tokens=%s stop_reason=%s outcome=%s failure=%s fallback_fields=%s",
+            metadata.latency_ms, metadata.first_token_ms, metadata.input_tokens, metadata.cache_creation_input_tokens,
+            metadata.cache_read_input_tokens, metadata.output_tokens, metadata.stop_reason, outcome, failure_reason,
+            fallback_fields,
         )
 
     if feedback is not None and failure_reason is None and CACHE_ENABLED:
@@ -1614,7 +1651,7 @@ async def _prediction_events(request: PredictionRequest) -> AsyncIterator[str]:
         prompt_version=PROMPT_VERSION,
         ai_model=model_name,
     )
-    yield final(outcome, body, fallback_fields, failure_reason)
+    yield final(outcome, body, fallback_fields, failure_reason, metadata)
 
 
 @router.post("/stream")
