@@ -22,6 +22,10 @@ export interface UpdateSessionDto {
   // Omitted entirely if the student skipped the survey.
   mentalEffort?: number
   confidence?: number
+  // Week 2 2F timing telemetry: seconds since session start, and seconds
+  // the tab was visible. Sent by a heartbeat and when the page is hidden.
+  wallClockSeconds?: number
+  activeSeconds?: number
 }
 
 export interface SessionDto {

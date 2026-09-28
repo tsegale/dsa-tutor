@@ -62,6 +62,10 @@ export const sessions = {
       correctPredictions: nonNegativeInt.optional(),
       mentalEffort: z.int().min(1).max(9).optional(),
       confidence: z.int().min(1).max(5).optional(),
+      // Timing telemetry (Week 2 2F); capped at a day so a stuck clock
+      // cannot write an absurd value.
+      wallClockSeconds: z.int().min(0).max(86_400).optional(),
+      activeSeconds: z.int().min(0).max(86_400).optional(),
     }),
   },
 } satisfies Record<string, RequestSchema>

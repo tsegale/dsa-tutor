@@ -167,7 +167,10 @@ export async function exportAssessmentsCsv(includePilot = false): Promise<string
 }
 
 /** One row per session from an active study participant, on a study topic
- * only. duration is in seconds, blank if the session was never ended. */
+ * only. duration is in seconds, blank if the session was never ended.
+ * wallClockSeconds/activeSeconds (Week 2 2F) come from the client's timing
+ * heartbeat, so they survive a closed tab that never sent endTime; active
+ * time excludes time the tab was hidden. Blank before 2F. */
 export async function exportSessionsCsv(includePilot = false): Promise<string> {
   const sessions = await prisma.session.findMany({
     where: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER },
@@ -178,7 +181,18 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
     orderBy: { startTime: 'asc' },
   })
 
-  const header = ['participantCode', 'algorithm', 'mode', 'durationSeconds', 'mentalEffort', 'confidence', 'susScore']
+  const header = [
+    'participantCode',
+    'algorithm',
+    'mode',
+    'durationSeconds',
+    'mentalEffort',
+    'confidence',
+    'susScore',
+    'startTime',
+    'wallClockSeconds',
+    'activeSeconds',
+  ]
 
   const rows = sessions.map((session) => {
     const durationSeconds = session.endTime
@@ -196,6 +210,9 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
       // the spec calls for it in sessions.csv specifically, which has no
       // separate per-participant row to hold it instead.
       session.user.susScore !== null ? String(session.user.susScore) : '',
+      session.startTime.toISOString(),
+      session.wallClockSeconds !== null ? String(session.wallClockSeconds) : '',
+      session.activeSeconds !== null ? String(session.activeSeconds) : '',
     ]
   })
 

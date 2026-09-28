@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
+import { CHALLENGES_PER_TOPIC, COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -76,9 +76,12 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
   // Hidden on every topic without a deterministic generator, rather than
   // loading data that means nothing for that structure.
   const supported = hasChallengeGenerator(topicSlug)
+  // Capped per topic session (Week 2 2F): each challenge is a full extra run.
+  const limitReached = useAlgorithmStore((state) => state.challengesStarted >= CHALLENGES_PER_TOPIC)
 
   async function handleGenerate() {
     if (!hasChallengeGenerator(topicSlug)) return
+    if (useAlgorithmStore.getState().challengesStarted >= CHALLENGES_PER_TOPIC) return
     setIsGenerating(true)
     setError(null)
     try {
@@ -155,7 +158,7 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
       variant="secondary"
       size="sm"
       onClick={handleGenerate}
-      disabled={isGenerating}
+      disabled={isGenerating || limitReached}
       // White text on the secondary (amber) background fails WCAG AA
       // contrast (~2.15:1) - the variant's own text-secondary-foreground
       // (near-black, ~8.7:1) already exists for exactly this background
@@ -177,6 +180,9 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
           <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent>No errors detected yet, generating a general challenge</TooltipContent>
         </Tooltip>
+      )}
+      {limitReached && (
+        <p className="text-xs text-text-muted dark:text-dark-text-secondary">Challenge limit reached for this topic.</p>
       )}
       {error && <p className="text-xs text-error">{error}</p>}
     </div>

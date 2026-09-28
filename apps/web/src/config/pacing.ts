@@ -35,3 +35,23 @@ export const SELF_EXPLANATION_MAX_PER_SESSION = 3
  * did this run make?" question after ALGORITHM_COMPLETE on each study run.
  */
 export const COMPLEXITY_JUNCTION_ENABLED = true
+
+/**
+ * AI Challenges (Week 2 2D): at most this many per topic session. Each is a
+ * full extra run, so it is the largest single addition to session length.
+ */
+export const CHALLENGES_PER_TOPIC = 2
+
+/**
+ * The tutor-time budget the study was planned around, across the three
+ * study topics. Not enforced - the timing telemetry below reports against
+ * it, and the pilot decides what to cut.
+ */
+export const STUDY_BUDGET_MINUTES = 30
+
+/**
+ * Timing telemetry (Week 2 2F): how often each topic session writes its
+ * wall-clock and active (tab visible) seconds. It is also written whenever
+ * the page is hidden, so a closed tab loses at most this much.
+ */
+export const TIMING_HEARTBEAT_MS = 60_000

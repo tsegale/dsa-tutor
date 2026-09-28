@@ -42,6 +42,7 @@ import { calculateMastery, gateScaffoldingReduction, RECENT_HINT_WINDOW, type Ma
 import { computeMistakePath } from '@/engine/mistakePath'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { topMisconceptionOf } from '@/utils/junctionTargeting'
+import { useTopicTiming } from '@/hooks/useTopicTiming'
 import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
 import { linearSearchEngine } from '@/engine/linearSearch'
 import { binarySearchEngine } from '@/engine/binarySearch'
@@ -945,6 +946,9 @@ export default function AlgorithmPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isImplemented, currentTopic, setSessionId])
+
+  // Wall-clock and active time for this topic session (Week 2 2F).
+  useTopicTiming(sessionId)
 
   useKeyboardShortcuts({
     onTabChange: setActiveTab,

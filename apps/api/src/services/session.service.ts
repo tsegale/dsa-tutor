@@ -49,6 +49,8 @@ export async function updateSession(
       ...(dto.challengeExplanation !== undefined && { challengeExplanation: dto.challengeExplanation }),
       ...(dto.mentalEffort !== undefined && { mentalEffort: dto.mentalEffort }),
       ...(dto.confidence !== undefined && { confidence: dto.confidence }),
+      ...(dto.wallClockSeconds !== undefined && { wallClockSeconds: dto.wallClockSeconds }),
+      ...(dto.activeSeconds !== undefined && { activeSeconds: dto.activeSeconds }),
     },
     include: { algorithmTopic: true },
   })

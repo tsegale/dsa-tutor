@@ -110,6 +110,13 @@ model Session {
   mentalEffort Int?
   confidence   Int?
 
+  // Week 2 2F timing telemetry, written by a heartbeat and again when the
+  // page is hidden, so it survives a closed tab that never sends endTime.
+  // wallClockSeconds counts from session start; activeSeconds only while
+  // the tab was visible. Null for sessions before 2F.
+  wallClockSeconds Int?
+  activeSeconds    Int?
+
   user           User           @relation(fields: [userId], references: [id])
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
   interactions   Interaction[]
