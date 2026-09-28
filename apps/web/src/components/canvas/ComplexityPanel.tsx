@@ -1,5 +1,53 @@
 import { useParams } from 'react-router-dom'
+import { CriticalJunctionType } from '@dsa-tutor/types'
 import { cn } from '@/lib/utils'
+import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { comparisonFormula } from '@/utils/complexityFormula'
+
+/**
+ * The current run measured against its formula (Week 2 2C): "This run:
+ * 10 comparisons, 7 swaps for n=5" next to "n(n-1)/2 = 10". On a run with
+ * a complexity-prediction question, the count stays hidden until that
+ * question has been answered - otherwise this tab would give it away.
+ */
+function RunMeasurement({ topicSlug }: { topicSlug: string | undefined }) {
+  const snapshots = useAlgorithmStore((state) => state.snapshotArray)
+  const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  const current = snapshots[stepIndex]?.metrics
+  if (!current) return null
+  const formula = comparisonFormula(topicSlug, current.n)
+
+  const questionIndex = snapshots.findIndex((s) => s.criticalJunctionType === CriticalJunctionType.COMPLEXITY_PREDICTION)
+  const countHidden = questionIndex !== -1 && stepIndex <= questionIndex
+  const second =
+    current.swaps !== undefined
+      ? `${current.swaps} swap${current.swaps === 1 ? '' : 's'}`
+      : current.visits !== undefined
+        ? `${current.visits} visited`
+        : null
+
+  return (
+    <div className="rounded-md border border-border bg-surface p-3" aria-live="polite">
+      <p className="text-xs font-bold text-primary">This run</p>
+      {countHidden ? (
+        <p className="mt-1 text-sm text-text-muted">The measured count appears once you have estimated it at the end of the run.</p>
+      ) : (
+        <p className="mt-1 font-mono text-sm text-text-primary">
+          {current.comparisons} comparison{current.comparisons === 1 ? '' : 's'}
+          {second ? `, ${second}` : ''} for n={current.n}
+        </p>
+      )}
+      {formula && (
+        <p className="mt-1 text-xs text-text-secondary">
+          <span className="font-mono">
+            {formula.expression} = {formula.value}
+          </span>{' '}
+          ({formula.note})
+        </p>
+      )}
+    </div>
+  )
+}
 
 interface ComplexityRow {
   best: string
@@ -531,6 +579,7 @@ export default function ComplexityPanel() {
 
   return (
     <div className="flex h-full flex-col gap-3 rounded-md border border-border bg-card p-4">
+      <RunMeasurement topicSlug={algorithmSlug} />
       {rows.map((row) => (
         <div key={row.label} className="flex items-center justify-between">
           <span className="text-sm text-text-secondary dark:text-dark-text-secondary">

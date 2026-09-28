@@ -32,4 +32,10 @@ describe('interaction types', () => {
     expect(isScoredInteraction({ interactionType: 'FEYNMAN' })).toBe(false)
     expect(INTERACTION_TYPES).toContain('WORKED_STEP')
   })
+
+  it('accepts and scores a complexity prediction, which is a graded answer', () => {
+    const answered = { ...workedStep, interactionType: 'COMPLEXITY_PREDICTION', predictionSubmitted: 'wrong-2', predictionCorrect: false }
+    expect(S.interactions.create.body.safeParse(answered).success).toBe(true)
+    expect(isScoredInteraction({ interactionType: 'COMPLEXITY_PREDICTION' })).toBe(true)
+  })
 })

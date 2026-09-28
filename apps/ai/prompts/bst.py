@@ -39,6 +39,14 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
         "smaller values and every right subtree larger ones. Ground the "
         "feedback in that ordering rule, not in any single value."
     ),
+    # Week 2 2C: once per study run, after ALGORITHM_COMPLETE.
+    "COMPLEXITY_PREDICTION": (
+        "The student estimated how many comparisons this whole run made; "
+        "the comparison context and current state give the measured count. "
+        "Relate their estimate to the growth rate: each insert compares the new value with one node per level, so the total depends on the tree height - about log2 n per insert when balanced, up to n when the tree is a chain. A wrong estimate "
+        "reflects a complexity misreading - explain which growth rate it "
+        "matches without simply restating the right number."
+    ),
 }
 
 BST_PSEUDOCODE = """

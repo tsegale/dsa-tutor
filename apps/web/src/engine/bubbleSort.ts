@@ -1,4 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { appendComplexityPrediction, withRunMetrics } from './runMetrics'
 import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 import { shouldForceJunction } from '../utils/junctionTargeting'
 
@@ -43,6 +44,8 @@ export interface BubbleSortOptions {
    * SWAP_DECISION, every comparison becomes a junction candidate, so the
    * learner's actual weak spot is never skipped. */
   topMisconception?: string | null
+  /** Append the COMPLEXITY_PREDICTION junction before the final step (Week 2 2C). */
+  withComplexityPrediction?: boolean
 }
 
 interface SnapshotParams {
@@ -96,7 +99,7 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
  * Code Editor Mode only applies to the swap execution step.
  */
 export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {}): AlgorithmSnapshot[] {
-  const { codeEditorMode = false, topMisconception = null } = options
+  const { codeEditorMode = false, topMisconception = null, withComplexityPrediction = false } = options
   const working = [...input]
   const n = working.length
   const ambiguityThreshold = computeAmbiguityThreshold(working)
@@ -285,5 +288,11 @@ export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {
     }),
   )
 
-  return snapshots
+  const measured = withRunMetrics(snapshots, n, {
+    isComparison: (s) => s.pseudocodeLine === PSEUDOCODE_LINE.COMPARISON,
+    isSwap: (s) => s.pseudocodeLine === PSEUDOCODE_LINE.SWAP,
+  })
+  return withComplexityPrediction
+    ? appendComplexityPrediction(measured, `This run sorted ${n} elements. Roughly how many comparisons did it make?`)
+    : measured
 }

@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
 import { motion } from 'framer-motion'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { AlgorithmMode, ScaffoldingLevel } from '@dsa-tutor/types'
+import { AlgorithmMode, CriticalJunctionType, ScaffoldingLevel } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
@@ -99,7 +100,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'linear-search':
       return linearSearchEngine(defaultInput, defaultTarget)
     case 'binary-search':
-      return binarySearchEngine(defaultInput, defaultTarget)
+      return binarySearchEngine(defaultInput, defaultTarget, { withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
     case 'merge-sort':
       return mergeSortEngine(defaultInput)
     case 'quick-sort':
@@ -113,7 +114,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'radix-sort':
       return radixSortEngine(defaultInput)
     case 'bst':
-      return bstInsertEngine(defaultInput, { withCompletionCheck: true })
+      return bstInsertEngine(defaultInput, { withCompletionCheck: true, withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
     case 'bst-search':
     case 'bst-delete':
     case 'tree-inorder':
@@ -256,6 +257,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     default: {
       const { recentMisconceptions } = useAlgorithmStore.getState()
       return bubbleSortEngine(defaultInput, {
+        withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED,
         topMisconception: topMisconceptionOf(recentMisconceptions),
       })
     }
@@ -608,6 +610,9 @@ export default function AlgorithmPage() {
           hintsRequested: detail.hintsRequestedForStep,
           timeSpentSeconds: detail.timeSpentSeconds,
           criticalJunctionType: detail.junctionType,
+          // The complexity question is its own analysable type (Week 2 2C).
+          interactionType:
+            detail.junctionType === CriticalJunctionType.COMPLEXITY_PREDICTION ? 'COMPLEXITY_PREDICTION' : 'PREDICTION',
           junctionDifficulty: detail.junctionDifficulty,
           scaffoldingLevelAtTime: currentLevel,
           masteryScoreAtTime: assessment.overallScore,

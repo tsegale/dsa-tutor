@@ -13,6 +13,7 @@ import type { KruskalState } from '@/engine/kruskal'
 import type { PrimState } from '@/engine/prim'
 import type { CycleDetectionState, ConnectedComponentsState } from '@/engine/graphProperties'
 import type { TileOption } from '@/components/prediction/TileGrid'
+import { complexityPredictionOptions } from '@/engine/runMetrics'
 
 /** Fisher-Yates shuffle so the correct tile isn't always in the same position. Tile ids never change, only display order. */
 function shuffleArray<T>(arr: T[]): T[] {
@@ -116,6 +117,23 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
           misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
         },
       ])
+
+    // Built from the run's own counter, so grading is deterministic: the
+    // measured count is 'correct'; every other count is a complexity
+    // misreading (Week 2 2C).
+    case CriticalJunctionType.COMPLEXITY_PREDICTION: {
+      if (!snapshot.metrics) return []
+      const { correct, wrong } = complexityPredictionOptions(snapshot.metrics.n, snapshot.metrics.comparisons)
+      const label = (count: number) => `${count} comparison${count === 1 ? '' : 's'}`
+      return shuffleArray([
+        { id: 'correct', label: label(correct), misconception: null },
+        ...wrong.map((count, i) => ({
+          id: `wrong-${i + 1}`,
+          label: label(count),
+          misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+        })),
+      ])
+    }
 
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
       if (isBstCompletionState(snapshot.dataStructureState)) {

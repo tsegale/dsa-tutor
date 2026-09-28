@@ -55,6 +55,9 @@ export const CriticalJunctionType = {
   PASS_COMPLETE: 'PASS_COMPLETE',
   EARLY_TERMINATION: 'EARLY_TERMINATION',
   ALGORITHM_COMPLETE: 'ALGORITHM_COMPLETE',
+  /** Once per study run, after ALGORITHM_COMPLETE (Week 2 2C): how many
+   * comparisons did this run make? Graded against the run's own counter. */
+  COMPLEXITY_PREDICTION: 'COMPLEXITY_PREDICTION',
   TARGET_CHECK: 'TARGET_CHECK',
   MIDPOINT_DECISION: 'MIDPOINT_DECISION',
   NEW_MINIMUM: 'NEW_MINIMUM',
@@ -325,6 +328,22 @@ export interface AlgorithmSnapshot {
    * so none of those engines need updating.
    */
   canvasType?: CanvasType
+  /**
+   * Cumulative work counters up to and including this step (Week 2 2C),
+   * so a run's measured cost can be shown against its complexity formula.
+   * Additive: set by the study-topic engines only; absent elsewhere.
+   */
+  metrics?: RunMetrics
+}
+
+export interface RunMetrics {
+  /** Input size. */
+  n: number
+  comparisons: number
+  /** Sorting engines. */
+  swaps?: number
+  /** Search and BST engines: elements or nodes examined. */
+  visits?: number
 }
 
 /**

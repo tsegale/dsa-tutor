@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -44,7 +45,7 @@ function engineForSlug(
     case 'linear-search':
       return linearSearchEngine(values, target)
     case 'binary-search':
-      return binarySearchEngine(values, target)
+      return binarySearchEngine(values, target, { withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
     case 'merge-sort':
       return mergeSortEngine(values)
     case 'quick-sort':
@@ -54,7 +55,7 @@ function engineForSlug(
     case 'heap-sort':
       return heapSortEngine(values)
     case 'bst':
-      return bstInsertEngine(values, { withCompletionCheck: true })
+      return bstInsertEngine(values, { withCompletionCheck: true, withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
     case 'floyd-warshall':
       // Floyd-Warshall operates on a fixed small graph, not a numeric
       // array - it's the only graph-track algorithm without its own
@@ -66,6 +67,7 @@ function engineForSlug(
     case 'bubble-sort':
     default:
       return bubbleSortEngine(values, {
+        withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED,
         codeEditorMode,
         topMisconception,
       })

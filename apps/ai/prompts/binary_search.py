@@ -35,6 +35,14 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
         "invariant is that the entire valid search space (low > high) "
         "was eliminated without a match."
     ),
+    # Week 2 2C: once per study run, after ALGORITHM_COMPLETE.
+    "COMPLEXITY_PREDICTION": (
+        "The student estimated how many comparisons this whole run made; "
+        "the comparison context and current state give the measured count. "
+        "Relate their estimate to the growth rate: Binary Search makes at most floor(log2 n) + 1 comparisons, because each one halves the range. A wrong estimate "
+        "reflects a complexity misreading - explain which growth rate it "
+        "matches without simply restating the right number."
+    ),
 }
 
 BINARY_SEARCH_PSEUDOCODE = """

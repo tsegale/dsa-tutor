@@ -1,4 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { appendComplexityPrediction, withRunMetrics } from './runMetrics'
 import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface BSTNode {
@@ -124,8 +125,28 @@ export const BST_DEFAULT_INSERT_VALUE = 20
  * for a self-explanation (Week 2 2A/2B). Off by default, so callers that
  * only need the tree (search/delete seeds, the registry) are unchanged.
  */
-export function bstInsertEngine(values: number[], options: { withCompletionCheck?: boolean } = {}): AlgorithmSnapshot[] {
-  const withCompletionCheck = (options.withCompletionCheck ?? false) && values.length > 0
+export function bstInsertEngine(
+  values: number[],
+  options: { withCompletionCheck?: boolean; withComplexityPrediction?: boolean } = {},
+): AlgorithmSnapshot[] {
+  // A node comparison is a BST_DIRECTION step at an existing node (not the
+  // empty slot where the value finally lands).
+  const atNode = (s: AlgorithmSnapshot) =>
+    s.criticalJunctionType === CriticalJunctionType.BST_DIRECTION && (s.dataStructureState as BSTState).currentNode !== null
+  const measured = withRunMetrics(runBstInsert(values, options.withCompletionCheck ?? false), values.length, {
+    isComparison: atNode,
+    isVisit: atNode,
+  })
+  return options.withComplexityPrediction
+    ? appendComplexityPrediction(
+        measured,
+        `Building this tree inserted ${values.length} values. Roughly how many comparisons did the inserts make in total?`,
+      )
+    : measured
+}
+
+function runBstInsert(values: number[], completionCheck: boolean): AlgorithmSnapshot[] {
+  const withCompletionCheck = completionCheck && values.length > 0
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
   let root: BSTNode | null = null

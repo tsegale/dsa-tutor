@@ -53,6 +53,10 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
     case CriticalJunctionType.EARLY_TERMINATION:
       return 'The algorithm stopped before completing all passes. Why?'
 
+    // The engine wrote an answer-safe question (it states n, never the count).
+    case CriticalJunctionType.COMPLEXITY_PREDICTION:
+      return snapshot.description
+
     case CriticalJunctionType.ALGORITHM_COMPLETE: {
       if (isBstCompletionState(snapshot.dataStructureState)) {
         return 'The tree is built. Which traversal would list its values in sorted order?'

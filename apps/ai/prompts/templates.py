@@ -18,7 +18,9 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   (Week 2 2B). Existing prompts unchanged.
 #   2026-09-28.2    BST feedback guidance for the new ALGORITHM_COMPLETE
 #                   junction (in-order traversal gives sorted order).
-PROMPT_VERSION = "2026-09-28.2"
+#   2026-09-28.3    Feedback guidance for COMPLEXITY_PREDICTION on the three
+#                   study topics (Week 2 2C).
+PROMPT_VERSION = "2026-09-28.3"
 
 # Grades a student's short self-explanation against a 2-3 item rubric that
 # the client sends with the authored question (apps/web/src/config/

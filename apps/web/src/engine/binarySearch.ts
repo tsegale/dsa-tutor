@@ -1,4 +1,5 @@
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { appendComplexityPrediction, withRunMetrics } from './runMetrics'
 import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 
 export interface BinarySearchState {
@@ -57,7 +58,24 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
  * sorted array, so the input is sorted internally before the search
  * begins - the caller never needs to pre-sort it. Never mutates `input`.
  */
-export function binarySearchEngine(input: number[], target: number): AlgorithmSnapshot[] {
+export function binarySearchEngine(
+  input: number[],
+  target: number,
+  options: { withComplexityPrediction?: boolean } = {},
+): AlgorithmSnapshot[] {
+  const measured = withRunMetrics(runBinarySearch(input, target), input.length, {
+    isComparison: (s) => s.criticalJunctionType === CriticalJunctionType.MIDPOINT_DECISION,
+    isVisit: (s) => s.criticalJunctionType === CriticalJunctionType.MIDPOINT_DECISION,
+  })
+  return options.withComplexityPrediction
+    ? appendComplexityPrediction(
+        measured,
+        `This search ran on ${input.length} sorted elements. How many comparisons with the target did it make?`,
+      )
+    : measured
+}
+
+function runBinarySearch(input: number[], target: number): AlgorithmSnapshot[] {
   const array = [...input].sort((a, b) => a - b)
   const n = array.length
   const snapshots: AlgorithmSnapshot[] = []

@@ -46,6 +46,14 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
         "pair is out of order. Ground the feedback in this invariant, "
         "not in any single comparison."
     ),
+    # Week 2 2C: once per study run, after ALGORITHM_COMPLETE.
+    "COMPLEXITY_PREDICTION": (
+        "The student estimated how many comparisons this whole run made; "
+        "the comparison context and current state give the measured count. "
+        "Relate their estimate to the growth rate: Bubble Sort makes at most n(n-1)/2 comparisons (fewer when a pass with no swaps ends it early). A wrong estimate "
+        "reflects a complexity misreading - explain which growth rate it "
+        "matches without simply restating the right number."
+    ),
 }
 
 BUBBLE_SORT_PSEUDOCODE = """1  procedure bubbleSort(A: list)

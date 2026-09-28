@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -71,6 +72,7 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
       setAlgorithm(
         'Bubble Sort',
         bubbleSortEngine(response.array, {
+          withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED,
           codeEditorMode,
           topMisconception: topMisconceptionOf(recentMisconceptions),
         }),

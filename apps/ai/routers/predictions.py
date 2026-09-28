@@ -693,11 +693,13 @@ def evaluate_answer(request: PredictionRequest) -> bool:
     junction_type = wrapper.get("criticalJunctionType")
     ds = wrapper.get("dataStructureState")
 
-    # PASS_COMPLETE / EARLY_TERMINATION / ALGORITHM_COMPLETE are always
-    # tile-based conceptual questions where the frontend uses tile id
-    # 'correct' for the right answer, regardless of which algorithm
-    # produced the junction.
-    if junction_type in ("PASS_COMPLETE", "EARLY_TERMINATION", "ALGORITHM_COMPLETE"):
+    # PASS_COMPLETE / EARLY_TERMINATION / ALGORITHM_COMPLETE /
+    # COMPLEXITY_PREDICTION are always tile-based conceptual questions where
+    # the frontend uses tile id 'correct' for the right answer, regardless of
+    # which algorithm produced the junction. COMPLEXITY_PREDICTION's tiles are
+    # built from the run's own comparison counter, so its grading is
+    # deterministic with no model involvement.
+    if junction_type in ("PASS_COMPLETE", "EARLY_TERMINATION", "ALGORITHM_COMPLETE", "COMPLEXITY_PREDICTION"):
         return request.student_answer == "correct"
 
     if junction_type == "SWAP_DECISION":

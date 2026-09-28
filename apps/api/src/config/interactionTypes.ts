@@ -3,7 +3,13 @@
  * kinds of logged activity alongside answered junctions; add each here and
  * decide whether it is scored.
  */
-export const INTERACTION_TYPES = ['PREDICTION', 'FEYNMAN', 'WORKED_STEP', 'SELF_EXPLANATION'] as const
+export const INTERACTION_TYPES = [
+  'PREDICTION',
+  'FEYNMAN',
+  'WORKED_STEP',
+  'SELF_EXPLANATION',
+  'COMPLEXITY_PREDICTION',
+] as const
 
 export type InteractionType = (typeof INTERACTION_TYPES)[number]
 
@@ -13,7 +19,8 @@ export type InteractionType = (typeof INTERACTION_TYPES)[number]
  * something the learner watched, not answered; counting it (or a Feynman
  * explanation) as a prediction would deflate every accuracy figure.
  */
-export const SCORED_INTERACTION_TYPES: readonly InteractionType[] = ['PREDICTION']
+// A complexity prediction is a graded conceptual junction, so it counts.
+export const SCORED_INTERACTION_TYPES: readonly InteractionType[] = ['PREDICTION', 'COMPLEXITY_PREDICTION']
 
 export function isScoredInteraction(interaction: { interactionType: string }): boolean {
   return (SCORED_INTERACTION_TYPES as readonly string[]).includes(interaction.interactionType)

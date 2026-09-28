@@ -29,3 +29,9 @@ export const WORKED_STEP_DWELL_MS = 4500
  * skipped ones - each costs the learner time even when skipped.
  */
 export const SELF_EXPLANATION_MAX_PER_SESSION = 3
+
+/**
+ * The COMPLEXITY_PREDICTION junction (Week 2 2C): one "how many comparisons
+ * did this run make?" question after ALGORITHM_COMPLETE on each study run.
+ */
+export const COMPLEXITY_JUNCTION_ENABLED = true
