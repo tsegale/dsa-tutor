@@ -22,3 +22,10 @@ export const PERFORM_ONE_IN: Record<ScaffoldingLevel, number> = {
 
 /** How long a worked step's narration stays up before the run moves on. */
 export const WORKED_STEP_DWELL_MS = 4500
+
+/**
+ * Self-explanation prompts (Week 2 2B): offered after a conceptual junction
+ * answered correctly first time, at most this many per session, counting
+ * skipped ones - each costs the learner time even when skipped.
+ */
+export const SELF_EXPLANATION_MAX_PER_SESSION = 3

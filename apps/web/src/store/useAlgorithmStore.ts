@@ -48,6 +48,10 @@ export interface AlgorithmStoreState {
   // i.e. the end of a Bubble Sort pass), before a run starts, and on a new
   // run - so stepping down mid-session never changes demand mid-pass.
   segmentScaffoldingLevel: ScaffoldingLevel
+  // Self-explanation prompts offered this session (Week 2 2B), skipped
+  // ones included; capped by SELF_EXPLANATION_MAX_PER_SESSION. Resets with
+  // each new session.
+  selfExplanationsOffered: number
 
   stepForward: () => void
   stepBackward: () => void
@@ -70,6 +74,7 @@ export interface AlgorithmStoreState {
   recordPredictionResult: (correct: boolean, hintsRequestedForStep: number) => void
   toggleCodeEditorMode: () => void
   setFadingEnabled: (enabled: boolean) => void
+  noteSelfExplanationOffered: () => void
 }
 
 /** A junction the learner must answer now - not one that runs as a worked
@@ -171,6 +176,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   codeEditorMode: false,
   fadingEnabled: false,
   segmentScaffoldingLevel: ScaffoldingLevel.HIGH,
+  selfExplanationsOffered: 0,
 
   // Advances the step index only. Pausing playback at a prediction step
   // is the playback interval's job (see startPlayback) - stepForward
@@ -260,7 +266,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   setScaffoldingReasoning: (reasoning) => set({ scaffoldingReasoning: reasoning }),
 
-  setSessionId: (id) => set({ sessionId: id }),
+  setSessionId: (id) => set({ sessionId: id, selfExplanationsOffered: 0 }),
 
   setUserId: (id) => set({ userId: id }),
 
@@ -327,6 +333,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   },
 
   toggleCodeEditorMode: () => set((state) => ({ codeEditorMode: !state.codeEditorMode })),
+
+  noteSelfExplanationOffered: () => set((state) => ({ selfExplanationsOffered: state.selfExplanationsOffered + 1 })),
 
   setFadingEnabled: (enabled) => {
     set({ fadingEnabled: enabled })

@@ -153,6 +153,13 @@ model Interaction {
   // Null when everything displayed was AI-generated. With aiGenerated and
   // predictionCorrect this gives the wrong-answer fallback rate.
   aiFailureReason         String?
+  // Rubric-graded rows (a SELF_EXPLANATION, Week 2 2B): which authored
+  // prompt, each criterion's result as [{ id, met }], and the percentage of
+  // criteria met, computed in code. Null for every other row, and null
+  // results/score when the judgement fell back (not evaluated, not failed).
+  promptKey               String?
+  rubricResults           Json?
+  rubricScore             Int?
 
   // Captured at submission time so a human rater reviewing an incorrect
   // interaction later (see MisconceptionRating) can see what the student

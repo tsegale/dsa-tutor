@@ -3,7 +3,7 @@
  * kinds of logged activity alongside answered junctions; add each here and
  * decide whether it is scored.
  */
-export const INTERACTION_TYPES = ['PREDICTION', 'FEYNMAN', 'WORKED_STEP'] as const
+export const INTERACTION_TYPES = ['PREDICTION', 'FEYNMAN', 'WORKED_STEP', 'SELF_EXPLANATION'] as const
 
 export type InteractionType = (typeof INTERACTION_TYPES)[number]
 

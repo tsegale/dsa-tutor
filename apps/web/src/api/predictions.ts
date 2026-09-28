@@ -4,6 +4,8 @@ import type {
   PredictionEvaluateResponse,
   PredictionRequest,
   PredictionResponse,
+  SelfExplanationRequest,
+  SelfExplanationResponse,
 } from '@dsa-tutor/types'
 import { apiFetch, apiRequest } from './client'
 import { parseSseEvents } from '@/utils/sse'
@@ -119,6 +121,13 @@ async function readPredictionStream(
 // the full explanation arrives via submitPrediction (remediation doc 12B.3).
 export async function evaluatePrediction(request: PredictionRequest): Promise<PredictionEvaluateResponse> {
   return apiFetch<PredictionEvaluateResponse>('/api/v1/ai/predictions/evaluate', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  })
+}
+
+export async function evaluateSelfExplanation(request: SelfExplanationRequest): Promise<SelfExplanationResponse> {
+  return apiFetch<SelfExplanationResponse>('/api/v1/ai/self-explanations', {
     method: 'POST',
     body: JSON.stringify(request),
   })

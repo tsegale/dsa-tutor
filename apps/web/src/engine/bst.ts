@@ -37,7 +37,7 @@ export interface BSTState {
 //   6: '  else: duplicate, ignore'
 //   7: 'delete: leaf or one child - replace node with its child (or null)'
 //   8: 'delete: two children - copy in-order successor value, delete successor'
-const PSEUDOCODE_LINE = {
+export const PSEUDOCODE_LINE = {
   START: 0,
   CHECK_NULL: 1,
   COMPARE_LESS: 2,

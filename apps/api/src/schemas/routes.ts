@@ -97,6 +97,9 @@ export const interactions = {
       aiModel: shortText.nullable().optional(),
       promptVersion: shortText.nullable().optional(),
       aiFailureReason: shortText.nullable().optional(),
+      promptKey: shortText.nullable().optional(),
+      rubricResults: z.array(z.strictObject({ id: shortText, met: z.boolean() })).max(5).nullable().optional(),
+      rubricScore: z.int().min(0).max(100).nullable().optional(),
       dataStructureStateSnapshot: z.unknown().optional(),
     }),
   },
@@ -126,6 +129,15 @@ export const ai = {
   predictions: { body: predictionBody },
   predictionsEvaluate: { body: predictionBody },
   predictionsStream: { body: predictionBody },
+  selfExplanation: {
+    body: z.strictObject({
+      algorithmName: nonEmpty(200),
+      promptKey: nonEmpty(100),
+      question: nonEmpty(400),
+      rubric: z.array(z.strictObject({ id: nonEmpty(60), criterion: nonEmpty(400) })).min(2).max(3),
+      studentResponse: nonEmpty(4000),
+    }),
+  },
   hints: {
     body: z.strictObject({
       algorithmName: nonEmpty(200),

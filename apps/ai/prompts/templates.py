@@ -14,7 +14,51 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #   2026-09-25.2    Feedback JSON key order: consequence_explanation first
 #                   (was misconception_category first), so the streamed
 #                   explanation starts sooner. Field wording unchanged.
-PROMPT_VERSION = "2026-09-25.2"
+#   2026-09-28.1    Adds SELF_EXPLANATION_SYSTEM_PROMPT / USER_TEMPLATE
+#                   (Week 2 2B). Existing prompts unchanged.
+PROMPT_VERSION = "2026-09-28.1"
+
+# Grades a student's short self-explanation against a 2-3 item rubric that
+# the client sends with the authored question (apps/web/src/config/
+# selfExplanationPrompts.ts - the single source, so every participant gets
+# the same question and criteria). The model only judges each criterion and
+# writes one acknowledging sentence plus at most one follow-up question; the
+# score is computed in code and never shown to the student as a number.
+SELF_EXPLANATION_SYSTEM_PROMPT = """You are a tutor reading a student's short explanation of why a step in an
+algorithm works. For each rubric criterion, decide whether the explanation
+clearly expresses that idea in any wording. Be fair to informal phrasing:
+judge the idea, not the vocabulary. An explanation that only restates the
+question, or is off topic, meets no criteria.
+
+Then write:
+- acknowledgement: exactly one sentence addressed to the student in second
+  person that names something specific they got right, or, if they met no
+  criteria, encourages them without praising. Never give a grade, score,
+  percentage, count of criteria, or any number rating their answer.
+- follow_up_question: one short question (at most 25 words, ending with "?")
+  that points the student toward the most important criterion they missed,
+  without stating it. Use null if every criterion was met.
+
+Never use an em dash or en dash; write "-" instead.
+
+Respond with ONLY valid JSON, no markdown code fences, matching exactly:
+{
+  "criteria": {"<criterion id>": true or false, ... one entry per criterion id given},
+  "acknowledgement": "...",
+  "follow_up_question": "..." or null
+}"""
+
+SELF_EXPLANATION_USER_TEMPLATE = PromptTemplate(
+    input_variables=["algorithm_name", "question", "rubric", "student_response"],
+    template="""Algorithm: {algorithm_name}
+Question the student was asked: {question}
+
+Rubric criteria (id: criterion):
+{rubric}
+
+Student's explanation:
+{student_response}""",
+)
 
 # Stable across every call regardless of algorithm, student or step - the
 # tutor persona and the JSON contract belong in the system prompt, not

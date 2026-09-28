@@ -12,6 +12,9 @@ import type {
 import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { workedStepNarration } from '@/utils/workedSteps'
 import WorkedStepNotice from './WorkedStepNotice'
+import SelfExplanationDialog from './SelfExplanationDialog'
+import { offerableSelfExplanation } from '@/utils/selfExplanation'
+import type { SelfExplanationPrompt } from '@/config/selfExplanationPrompts'
 import { useMisconceptionStore } from '@/store/useMisconceptionStore'
 import {
   submitPrediction,
@@ -446,6 +449,18 @@ export default function PredictionZone({
     setPredictionResolved(true)
   }
 
+  // A self-explanation prompt (Week 2 2B) the run is waiting on; resolved
+  // when the learner skips or continues.
+  const [selfExplanation, setSelfExplanation] = useState<{
+    prompt: SelfExplanationPrompt
+    snapshot: AlgorithmSnapshot
+    resolve: () => void
+  } | null>(null)
+
+  function askSelfExplanation(prompt: SelfExplanationPrompt, forSnapshot: AlgorithmSnapshot): Promise<void> {
+    return new Promise((resolve) => setSelfExplanation({ prompt, snapshot: forSnapshot, resolve }))
+  }
+
   // Every post-resolution advance goes through here: a Quick Check this
   // junction triggered is presented, and answered or skipped, before the
   // run moves on, never on top of the next junction (Week 1, 1A.2).
@@ -708,6 +723,19 @@ export default function PredictionZone({
       setXpVisible(true)
       play('xp')
       await wait(500)
+      // A conceptual junction answered right first time may earn one short
+      // "explain why" before the run moves on (capped per session).
+      const selfExplanationPrompt = offerableSelfExplanation({
+        topicSlug: algorithmSlug,
+        snapshot,
+        correct: true,
+        firstAttempt: attempt === 0,
+        offeredThisSession: useAlgorithmStore.getState().selfExplanationsOffered,
+      })
+      if (selfExplanationPrompt && submissionTokenRef.current === submissionToken) {
+        useAlgorithmStore.getState().noteSelfExplanationOffered()
+        await askSelfExplanation(selfExplanationPrompt, snapshot)
+      }
       await waitForRemediation()
       if (submissionTokenRef.current !== submissionToken) return
       stepForward()
@@ -831,6 +859,19 @@ export default function PredictionZone({
 
   return (
     <>
+      {selfExplanation && (
+        <SelfExplanationDialog
+          prompt={selfExplanation.prompt}
+          algorithmName={algorithmName}
+          level={scaffoldingLevel}
+          sessionId={sessionId}
+          snapshot={selfExplanation.snapshot}
+          onDone={() => {
+            selfExplanation.resolve()
+            setSelfExplanation(null)
+          }}
+        />
+      )}
       <AnimatePresence>
         {workedNarration && (
           <motion.div

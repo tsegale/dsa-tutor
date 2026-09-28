@@ -20,6 +20,7 @@ from routers import hints, predictions
 from routers.challenges import router as challenges_router
 from routers.code_eval import router as code_eval_router
 from routers.feynman import router as feynman_router
+from routers.self_explanation import router as self_explanation_router
 from routers.summaries import router as summaries_router
 from services.request_log import RequestIdMiddleware
 
@@ -42,6 +43,7 @@ app.include_router(feynman_router, prefix="/api/v1")
 app.include_router(challenges_router, prefix="/api/v1")
 app.include_router(code_eval_router, prefix="/api/v1")
 app.include_router(summaries_router, prefix="/api/v1")
+app.include_router(self_explanation_router, prefix="/api/v1")
 
 
 @app.get("/health", response_model=HealthResponse)

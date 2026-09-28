@@ -6,6 +6,8 @@ import type {
   HintResponse,
   FeynmanRequest,
   FeynmanResponse,
+  SelfExplanationRequest,
+  SelfExplanationResponse,
   ChallengeRequest,
   ChallengeResponse,
   CodeEvalRequest,
@@ -316,6 +318,23 @@ export async function proxyClassSummary(request: ClassSummaryRequest): Promise<C
     recommendedInterventions: data.recommended_interventions ?? [],
     curriculumAdjustment: data.curriculum_adjustment ?? null,
   }
+}
+
+// The AI service's response model is camelCase already (CamelModel).
+export async function proxySelfExplanation(request: SelfExplanationRequest): Promise<SelfExplanationResponse> {
+  const response = await aiFetch('/api/v1/self-explanations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      prompt_key: request.promptKey,
+      question: request.question,
+      rubric: request.rubric,
+      student_response: request.studentResponse,
+    }),
+  })
+  if (!response.ok) throw new Error(`AI self-explanation error: ${response.status}`)
+  return (await response.json()) as SelfExplanationResponse
 }
 
 export async function proxyHint(request: HintRequest): Promise<HintResponse> {

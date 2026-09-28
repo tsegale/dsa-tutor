@@ -103,6 +103,10 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     'aiGenerated',
     'aiFailureReason',
     'aiLatencyMs',
+    'promptVersion',
+    'promptKey',
+    'rubricScore',
+    'rubricResults',
   ]
 
   const rows = interactions.map((interaction) => [
@@ -122,6 +126,10 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     String(interaction.aiGenerated),
     interaction.aiFailureReason ?? '',
     interaction.aiLatencyMs !== null ? String(interaction.aiLatencyMs) : '',
+    interaction.promptVersion ?? '',
+    interaction.promptKey ?? '',
+    interaction.rubricScore !== null ? String(interaction.rubricScore) : '',
+    interaction.rubricResults !== null ? JSON.stringify(interaction.rubricResults) : '',
   ])
 
   return toCsv(header, rows)

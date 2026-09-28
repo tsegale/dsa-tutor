@@ -441,6 +441,30 @@ export interface HintResponse {
  * algorithm back to a simulated confused peer, which evaluates the
  * explanation against a concept rubric.
  */
+/** A short free-text explanation after a correctly answered conceptual
+ * junction (Week 2 2B). The question and rubric come from the authored
+ * prompt (apps/web/src/config/selfExplanationPrompts.ts). */
+export interface SelfExplanationRequest {
+  algorithmName: string
+  promptKey: string
+  question: string
+  rubric: Array<{ id: string; criterion: string }>
+  studentResponse: string
+}
+
+export interface SelfExplanationResponse {
+  /** Null when the judgement fell back: not evaluated, rather than failed. */
+  results: Array<{ id: string; met: boolean }> | null
+  /** Percentage of criteria met, computed in code. Never shown to the student. */
+  score: number | null
+  acknowledgement: string
+  followUpQuestion: string | null
+  aiGenerated: boolean
+  failureReason: string | null
+  promptVersion: string | null
+  aiModel: string | null
+}
+
 export interface FeynmanRequest {
   algorithmName: string
   algorithmContext: string

@@ -5,6 +5,7 @@ import {
   proxyPredictionEvaluate,
   relayPredictionStream,
   proxyHint,
+  proxySelfExplanation,
   proxyFeynman,
   proxyChallenge,
   proxyCodeEval,
@@ -38,6 +39,16 @@ router.post('/predictions/stream', validate(S.ai.predictionsStream), async (req:
     if (!res.headersSent) {
       res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
     }
+  }
+})
+
+router.post('/self-explanations', validate(S.ai.selfExplanation), async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await proxySelfExplanation(req.body)
+    res.json({ data: result, error: null })
+  } catch (err) {
+    console.error('proxySelfExplanation failed:', err)
+    res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
   }
 })
 
