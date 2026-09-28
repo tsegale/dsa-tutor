@@ -52,6 +52,10 @@ export interface AlgorithmStoreState {
   // ones included; capped by SELF_EXPLANATION_MAX_PER_SESSION. Resets with
   // each new session.
   selfExplanationsOffered: number
+  // AI Challenges started this session; seeds each challenge reproducibly
+  // (challengeSeed) so a logged attempt can be regenerated. Resets with
+  // each new session.
+  challengesStarted: number
 
   stepForward: () => void
   stepBackward: () => void
@@ -75,6 +79,7 @@ export interface AlgorithmStoreState {
   toggleCodeEditorMode: () => void
   setFadingEnabled: (enabled: boolean) => void
   noteSelfExplanationOffered: () => void
+  noteChallengeStarted: () => void
 }
 
 /** A junction the learner must answer now - not one that runs as a worked
@@ -177,6 +182,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   fadingEnabled: false,
   segmentScaffoldingLevel: ScaffoldingLevel.HIGH,
   selfExplanationsOffered: 0,
+  challengesStarted: 0,
 
   // Advances the step index only. Pausing playback at a prediction step
   // is the playback interval's job (see startPlayback) - stepForward
@@ -266,7 +272,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   setScaffoldingReasoning: (reasoning) => set({ scaffoldingReasoning: reasoning }),
 
-  setSessionId: (id) => set({ sessionId: id, selfExplanationsOffered: 0 }),
+  setSessionId: (id) => set({ sessionId: id, selfExplanationsOffered: 0, challengesStarted: 0 }),
 
   setUserId: (id) => set({ userId: id }),
 
@@ -335,6 +341,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   toggleCodeEditorMode: () => set((state) => ({ codeEditorMode: !state.codeEditorMode })),
 
   noteSelfExplanationOffered: () => set((state) => ({ selfExplanationsOffered: state.selfExplanationsOffered + 1 })),
+
+  noteChallengeStarted: () => set((state) => ({ challengesStarted: state.challengesStarted + 1 })),
 
   setFadingEnabled: (enabled) => {
     set({ fadingEnabled: enabled })

@@ -218,6 +218,10 @@ def _evaluate_digit_bucket(ds: dict, student_answer: str | None) -> bool:
 
 
 def _evaluate_bst_direction(ds: dict, student_answer: str | None) -> bool:
+    # At the node being deleted the question is how it is removed (see
+    # deleteCaseTiles in tileBuilder.ts), and the right tile is 'correct'.
+    if ds.get("deleteCase"):
+        return student_answer == "correct"
     current_node = ds.get("currentNode")
     target = ds.get("targetValue")
     if current_node is None:
@@ -957,6 +961,16 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
         return (
             f"The element at index {left_pointer} (value {left_val}) was compared "
             f"against the pivot (value {pivot_val}). The student chose: {student_answer}."
+        )
+
+    if junction_type == "BST_DIRECTION" and isinstance(ds, dict) and ds.get("deleteCase"):
+        current_node = ds.get("currentNode") or {}
+        case = {"leaf": "no children", "one-child": "one child", "two-children": "two children"}.get(
+            ds.get("deleteCase"), "unknown children"
+        )
+        return (
+            f"Node {current_node.get('value')} is being deleted and has {case}. "
+            f"The student was asked how it is removed and chose: {student_answer}."
         )
 
     if junction_type == "BST_DIRECTION" and isinstance(ds, dict):

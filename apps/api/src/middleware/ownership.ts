@@ -54,6 +54,7 @@ export const SHARED_IDS: Record<string, string> = {
   itemId: 'Assessment items are shared questions; the attempt they are answered in is ownership-checked.',
   code: 'Assessment codes name shared assessments; the attempt itself is per user.',
   studentId: 'Only accepted on the educator-only /ai/summaries/student route.',
+  caseId: 'Names a static challenge case (challengeGenerators.ts), not a stored record.',
 }
 
 type OwnershipCheck =(id: string, userId: string) => Promise<boolean>

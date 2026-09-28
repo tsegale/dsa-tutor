@@ -38,6 +38,46 @@ function collectTreeValues(node: BSTNode | null): number[] {
   return [...collectTreeValues(node.left), node.value, ...collectTreeValues(node.right)]
 }
 
+function deleteCaseTiles(deleteCase: 'leaf' | 'one-child' | 'two-children'): TileOption[] {
+  if (deleteCase === 'two-children') {
+    return [
+      {
+        id: 'correct',
+        label: 'Copy in its in-order successor (the smallest value in its right subtree), then remove that node',
+        misconception: null,
+      },
+      {
+        id: 'wrong-1',
+        label: 'Remove it and reattach both subtrees to its parent',
+        misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+      },
+      { id: 'wrong-2', label: 'Replace it with its left child', misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+      {
+        id: 'wrong-3',
+        label: 'Replace it with the largest value in its right subtree',
+        misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+      },
+    ]
+  }
+  return [
+    {
+      id: 'correct',
+      label: deleteCase === 'leaf' ? 'Remove it - there is nothing below it to keep' : 'Its only child takes its place',
+      misconception: null,
+    },
+    {
+      id: 'wrong-1',
+      label: 'Remove it together with everything below it',
+      misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+    },
+    {
+      id: 'wrong-2',
+      label: 'Swap it with its parent, then remove it',
+      misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+    },
+  ]
+}
+
 export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: string): TileOption[] {
   switch (snapshot.criticalJunctionType) {
     case CriticalJunctionType.SWAP_DECISION: {
@@ -367,7 +407,11 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
         currentNode: { value: number } | null
         targetValue: number
         insertionParentValue?: number | null
+        deleteCase?: 'leaf' | 'one-child' | 'two-children'
       }
+      // At the node being deleted the question is how it is removed, not
+      // which way to go - the correct tile is always id 'correct'.
+      if (s.deleteCase) return shuffleArray(deleteCaseTiles(s.deleteCase))
       // Reached the empty slot itself - there is no node left to compare
       // against, so this is never a left/right comparison. Asking one
       // anyway (with currentNode.value undefined) is what produced tiles

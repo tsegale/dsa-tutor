@@ -9,6 +9,9 @@ export const INTERACTION_TYPES = [
   'WORKED_STEP',
   'SELF_EXPLANATION',
   'COMPLEXITY_PREDICTION',
+  // One row per AI Challenge loaded (Week 2 2D): promptKey names the case
+  // and seed, misconceptionCategory the targeted category. Not an answer.
+  'CHALLENGE_ATTEMPT',
 ] as const
 
 export type InteractionType = (typeof INTERACTION_TYPES)[number]

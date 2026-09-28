@@ -20,7 +20,33 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   junction (in-order traversal gives sorted order).
 #   2026-09-28.3    Feedback guidance for COMPLEXITY_PREDICTION on the three
 #                   study topics (Week 2 2C).
-PROMPT_VERSION = "2026-09-28.3"
+#   2026-09-28.4    Challenge framing prompt moved here and reduced to one
+#                   sentence from the case explanation (data is generated
+#                   on the client, Week 2 2D); BST delete-case context and
+#                   guidance for the new "how is it removed?" step.
+PROMPT_VERSION = "2026-09-28.4"
+
+# Frames a deterministic AI Challenge for the student (Week 2 2D). The model
+# sees only the case's authored explanation, never the data, and writes one
+# sentence; apps/ai/routers/challenges.py validates it and the client falls
+# back to the case's own authored sentence.
+CHALLENGE_FRAMING_SYSTEM_PROMPT = """You are a Socratic tutor. A student is about to attempt an algorithm
+challenge that was chosen for them. You are told why it was chosen.
+
+Write exactly ONE sentence, at most 20 words, addressed to the student in
+second person, that tells them what to pay attention to. Do not reveal any
+answer, do not name a misconception or say they made a mistake, and do not
+mention any number, value, or index. Never use an em dash or en dash; write
+"-" instead. Example style: Pay attention to what happens at the boundaries
+of each pass.
+
+Respond with plain text only, no markdown, no JSON."""
+
+CHALLENGE_FRAMING_USER_TEMPLATE = PromptTemplate(
+    input_variables=["algorithm_name", "case_explanation"],
+    template="""Algorithm: {algorithm_name}
+Why this challenge was chosen: {case_explanation}""",
+)
 
 # Grades a student's short self-explanation against a 2-3 item rubric that
 # the client sends with the authored question (apps/web/src/config/

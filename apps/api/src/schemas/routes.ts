@@ -163,10 +163,8 @@ export const ai = {
   challenges: {
     body: z.strictObject({
       algorithmName: nonEmpty(200),
-      topMisconception: category.nullable(),
-      difficulty: shortText,
-      sessionHistory: z.record(z.string(), z.unknown()),
-      arraySize: z.int().min(1).max(50).optional(),
+      caseId: nonEmpty(60),
+      caseExplanation: nonEmpty(600),
     }),
   },
   codeEval: {

@@ -99,7 +99,15 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
     }
 
     case CriticalJunctionType.BST_DIRECTION: {
-      const s = snapshot.dataStructureState as { currentNode: { value: number } | null; targetValue: number }
+      const s = snapshot.dataStructureState as {
+        currentNode: { value: number } | null
+        targetValue: number
+        deleteCase?: 'leaf' | 'one-child' | 'two-children'
+      }
+      if (s.deleteCase) {
+        const children = { leaf: 'no children', 'one-child': 'one child', 'two-children': 'two children' }[s.deleteCase]
+        return `Deleting ${s.targetValue}, which has ${children}. How is it removed without breaking the tree's ordering?`
+      }
       // This tree's convention (matching bst.ts's own insert/search logic)
       // sends a value equal to the current node right, not left - stated
       // explicitly here so a student taught the opposite convention isn't

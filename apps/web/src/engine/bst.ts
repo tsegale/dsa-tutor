@@ -26,6 +26,12 @@ export interface BSTState {
    * so the tile builder and the backend evaluator can both word and grade
    * that step without ever referencing currentNode.value. */
   insertionParentValue?: number | null
+  /** Only set on the delete snapshot at the node being removed: which
+   * removal case applies. That step is a "how is it removed?" question,
+   * not a left/right comparison, so the tile builder and the backend
+   * evaluator key on this rather than asking go-left/go-right about a
+   * node equal to the target. */
+  deleteCase?: 'leaf' | 'one-child' | 'two-children'
 }
 
 // Indices match the pseudocode panel's bst array exactly:
@@ -406,10 +412,10 @@ export function bstDeleteEngine(root: BSTNode | null, target: number): Algorithm
     }
 
     push({
-      description: `${node.value} has two children. Its in-order successor is ${successor.value} (leftmost node of the right subtree).`,
+      description: `Found ${node.value}. It has two children, so both subtrees need a new parent. What replaces it?`,
       pseudocodeLine: PSEUDOCODE_LINE.DELETE_SUCCESSOR,
       isPredictionRequired: true,
-      state: { root: workingRoot, currentNode: node, targetValue: target, path, operation: 'delete' },
+      state: { root: workingRoot, currentNode: node, targetValue: target, path, operation: 'delete', deleteCase: 'two-children' },
       criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
       junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
     })
@@ -423,7 +429,7 @@ export function bstDeleteEngine(root: BSTNode | null, target: number): Algorithm
     node.value = successorValue
 
     push({
-      description: `${target} replaced by successor value ${successorValue}; the successor node is removed from its old position.`,
+      description: `${target} replaced by its in-order successor ${successorValue} (the leftmost node of its right subtree); the successor node is removed from its old position.`,
       pseudocodeLine: PSEUDOCODE_LINE.DELETE_SUCCESSOR,
       isPredictionRequired: false,
       state: { root: workingRoot, currentNode: node, targetValue: target, path, insertedValue: successorValue, operation: 'delete' },
@@ -434,11 +440,18 @@ export function bstDeleteEngine(root: BSTNode | null, target: number): Algorithm
     push({
       description:
         child === null
-          ? `${node.value} is a leaf node. It is simply removed.`
-          : `${node.value} has one child (${child.value}). The child takes its place.`,
+          ? `Found ${node.value}. It has no children. How is it removed?`
+          : `Found ${node.value}. It has one child. How is it removed?`,
       pseudocodeLine: PSEUDOCODE_LINE.DELETE_SIMPLE,
       isPredictionRequired: true,
-      state: { root: workingRoot, currentNode: node, targetValue: target, path, operation: 'delete' },
+      state: {
+        root: workingRoot,
+        currentNode: node,
+        targetValue: target,
+        path,
+        operation: 'delete',
+        deleteCase: child === null ? 'leaf' : 'one-child',
+      },
       criticalJunctionType: CriticalJunctionType.BST_DIRECTION,
       junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
     })
@@ -452,7 +465,10 @@ export function bstDeleteEngine(root: BSTNode | null, target: number): Algorithm
     }
 
     push({
-      description: `${target} removed from the tree.`,
+      description:
+        child === null
+          ? `${target} was a leaf, so it is simply removed.`
+          : `${target} had one child (${child.value}), which takes its place.`,
       pseudocodeLine: PSEUDOCODE_LINE.DELETE_SIMPLE,
       isPredictionRequired: false,
       state: { root: workingRoot, currentNode: null, targetValue: target, path, operation: 'delete' },

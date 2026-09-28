@@ -518,19 +518,22 @@ export const InteractionType = {
 } as const
 export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]
 
+/** The data is generated on the client (challengeGenerators.ts); the AI
+ * service only frames it in one sentence from the case's explanation. */
 export interface ChallengeRequest {
   algorithmName: string
-  topMisconception: string | null
-  difficulty: string
-  sessionHistory: Record<string, unknown>
-  arraySize?: number
+  caseId: string
+  caseExplanation: string
 }
 
 export interface ChallengeResponse {
-  array: number[]
-  challengeType: string
-  explanation: string
-  hintForStudent: string
+  /** Null when the model's sentence was unavailable or failed validation;
+   * the client then shows the case's own authored sentence. */
+  hintForStudent: string | null
+  aiGenerated: boolean
+  failureReason: string | null
+  promptVersion: string | null
+  aiModel: string | null
 }
 
 export interface CodeEvalRequest {

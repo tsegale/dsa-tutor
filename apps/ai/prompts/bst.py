@@ -28,7 +28,13 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     "BST_DIRECTION": (
         "The student was asked whether to go left, go right, or insert "
         "here (the current position is empty). Ground the feedback in "
-        "the exact target value and the current node's value (if any)."
+        "the exact target value and the current node's value (if any). "
+        "During a delete, the step at the node being removed instead asks "
+        "how it is removed: a leaf is simply removed, a node with one child "
+        "is replaced by that child, and a node with two children takes its "
+        "in-order successor's value (the smallest value in its right "
+        "subtree) before that successor node is removed, which keeps every "
+        "left subtree smaller and every right subtree larger."
     ),
     # The BST study topic's closing conceptual junction (bstInsertEngine's
     # withCompletionCheck on the web): which traversal gives sorted order.

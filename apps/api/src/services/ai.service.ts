@@ -208,28 +208,27 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
   }
 }
 
-// Like FeynmanResponse, the AI service's ChallengeResponse model is a
-// plain Pydantic BaseModel (no camelCase alias generator), so its JSON
-// comes back snake_case and needs explicit field mapping here.
+// The challenge data is generated on the client; this only asks the AI
+// service for the one framing sentence (Week 2 2D). Its response model is a
+// CamelModel, so the JSON is already camelCase.
 export async function proxyChallenge(request: ChallengeRequest): Promise<ChallengeResponse> {
   const response = await aiFetch('/api/v1/challenges/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       algorithm_name: request.algorithmName,
-      top_misconception: request.topMisconception,
-      difficulty: request.difficulty,
-      session_history: request.sessionHistory,
-      array_size: request.arraySize ?? 7,
+      case_id: request.caseId,
+      case_explanation: request.caseExplanation,
     }),
   })
   if (!response.ok) throw new Error(`AI challenge error: ${response.status}`)
-  const data = (await response.json()) as any
+  const data = (await response.json()) as ChallengeResponse
   return {
-    array: data.array,
-    challengeType: data.challenge_type,
-    explanation: data.explanation,
-    hintForStudent: data.hint_for_student,
+    hintForStudent: data.hintForStudent ?? null,
+    aiGenerated: data.aiGenerated,
+    failureReason: data.failureReason ?? null,
+    promptVersion: data.promptVersion ?? null,
+    aiModel: data.aiModel ?? null,
   }
 }
 
