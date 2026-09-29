@@ -141,6 +141,11 @@ const PROACTIVE_HINT_DELAY_MS = 25000
 const AUTO_RESET_DELAY_MS = 1200
 const BOTTOM_OUT_ADVANCE_DELAY_MS = 1500
 
+// How long an advance waits for this junction's earlier answers to finish
+// reporting (their feedback stream, then the interaction write that starts
+// misconception detection). Bounded so a stalled stream never holds the run.
+const OUTCOME_REPORT_WAIT_MS = 12000
+
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -243,6 +248,12 @@ export default function PredictionZone({
   const [codeSubmitting, setCodeSubmitting] = useState(false)
 
   const attemptCountRef = useRef(0)
+  // One per submission at this junction: resolves once that answer has been
+  // reported (onPredictionResult), which is when its misconception check
+  // starts. A wrong answer is reported only after its feedback stream ends,
+  // so a quick retry could otherwise advance before the check existed and
+  // the Quick Check would surface a junction late.
+  const outcomeReportsRef = useRef<Promise<void>[]>([])
   const proactiveHintFiredRef = useRef(false)
   // Bumped whenever the current attempt's feedback is dismissed or
   // superseded (a new submission, a step change, "Try again") - the slow
@@ -293,6 +304,7 @@ export default function PredictionZone({
     setCodeEvalPraise(null)
     setCodeSubmitting(false)
     attemptCountRef.current = 0
+    outcomeReportsRef.current = []
     proactiveHintFiredRef.current = false
     // algorithmName is also a dependency, not just stepIndex: when
     // setAlgorithm() swaps in a brand new snapshotArray on mount, it
@@ -471,7 +483,8 @@ export default function PredictionZone({
   // Every post-resolution advance goes through here: a Quick Check this
   // junction triggered is presented, and answered or skipped, before the
   // run moves on, never on top of the next junction (Week 1, 1A.2).
-  function waitForRemediation() {
+  async function waitForRemediation() {
+    await Promise.race([Promise.allSettled(outcomeReportsRef.current), wait(OUTCOME_REPORT_WAIT_MS)])
     return useMisconceptionStore.getState().waitForRemediation()
   }
 
@@ -525,6 +538,7 @@ export default function PredictionZone({
     junctionType: CriticalJunctionType,
     junctionDifficulty: JunctionDifficulty,
     verdictCorrect: boolean,
+    onReported: () => void,
   ) {
     // Streams the explanation into the feedback card (Week 1 addendum
     // A2.4): the verdict is already shown, so text appearing about a second
@@ -585,6 +599,7 @@ export default function PredictionZone({
       promptVersion: response?.promptVersion ?? null,
       aiModel: response?.aiModel ?? null,
     })
+    onReported()
 
     if (correct || submissionTokenRef.current !== submissionToken) return
 
@@ -712,6 +727,13 @@ export default function PredictionZone({
     // the AI call either.
     const xpAwarded = evaluation.correct ? 10 : 0
 
+    let markReported: () => void = () => {}
+    // Only a wrong answer can open or escalate a misconception (and so
+    // queue a Quick Check); holding on a correct answer's report would only
+    // delay the advance by its feedback stream.
+    if (!evaluation.correct) outcomeReportsRef.current.push(new Promise<void>((resolve) => (markReported = resolve)))
+    // Settles the report even if feedback fails before reaching
+    // onPredictionResult, so an advance never waits on it for nothing.
     void resolveRichFeedback(
       feedbackStream,
       request,
@@ -723,7 +745,8 @@ export default function PredictionZone({
       junctionType,
       junctionDifficulty,
       evaluation.correct,
-    )
+      () => markReported(),
+    ).finally(() => markReported())
 
     if (evaluation.correct) {
       play('correct')
