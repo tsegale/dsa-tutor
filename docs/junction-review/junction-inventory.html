@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Junction review - DSA Tutor</title>
+<style>
+  body { font-family: Georgia, "Times New Roman", serif; color: #111; margin: 24px; font-size: 11pt; }
+  h1 { font-size: 16pt; margin-bottom: 4px; }
+  h2 { font-size: 13pt; margin-top: 24px; }
+  p { max-width: 760px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #555; padding: 6px; vertical-align: top; text-align: left; }
+  th { background: #eee; }
+  ul { margin: 4px 0 0 16px; padding: 0; }
+  .muted { color: #555; font-size: 9pt; }
+  .num { text-align: center; width: 80px; }
+  .rate { width: 150px; }
+  .box { display: inline-block; width: 18px; height: 18px; border: 1px solid #111; margin-right: 3px; text-align: center; font-size: 9pt; line-height: 18px; }
+  .comment { margin-top: 8px; min-height: 48px; font-size: 9pt; color: #555; }
+  section { page-break-inside: avoid; }
+  @media print { body { margin: 12mm; } section { page-break-before: auto; } }
+</style>
+</head>
+<body>
+<h1>DSA Tutor - junction review</h1>
+<p>The platform pauses each algorithm at the decision points below (junctions) and asks the learner to predict the next step before it continues. For each junction, please rate its <strong>pedagogical significance</strong>: how important it is that a learner can make this decision correctly in order to understand the algorithm.</p>
+<p><strong>1</strong> not significant - <strong>2</strong> minor - <strong>3</strong> useful - <strong>4</strong> important - <strong>5</strong> essential. Please add a comment wherever a junction is missing something, is ambiguous, or should be dropped.</p>
+<p class="muted">Each row shows one real example of the junction from a representative run, with its options (the correct one marked), and how often it fires in that run. "Asked" counts differ by support level because, with full support, most routine steps are shown as worked examples rather than asked. Generated 2026-09-29.</p>
+<section>
+<h2>Bubble Sort</h2>
+<table>
+<thead><tr><th>#</th><th>Junction</th><th>What it tests</th><th>Example prompt and options</th><th>Fires per run</th><th>Significance (circle 1-5)</th></tr></thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong>SWAP_DECISION</strong><br><span class="muted">sort [5, 3, 1, 4, 2]</span></td>
+  <td>Whether an adjacent pair is out of order, and so whether it is swapped (the comparison rule).</td>
+  <td>The algorithm is comparing index 0 (value 5) and index 1 (value 3). What should happen next?<ul><li>Leave them</li><li>Swap them <strong>(correct)</strong></li></ul></td>
+  <td class="num">4<br><span class="muted">asked: 1 at full support, 4 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>PASS_COMPLETE</strong><br><span class="muted">sort [5, 3, 1, 4, 2]</span></td>
+  <td>What one completed pass guarantees: the largest remaining unsorted value is in its final place (the invariant).</td>
+  <td>This pass is now complete. What can we guarantee about the array?<ul><li>Every element was compared exactly once</li><li>The entire array is now sorted</li><li>The largest remaining unsorted element is now in its correct position <strong>(correct)</strong></li><li>The smallest element moved to the front</li></ul></td>
+  <td class="num">3<br><span class="muted">asked: 3 at full support, 3 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>ALGORITHM_COMPLETE</strong><br><span class="muted">sort [5, 3, 1, 4, 2]</span></td>
+  <td>What property proves the array is fully sorted: no adjacent pair is out of order.</td>
+  <td>Bubble Sort has finished. What proves the array is fully sorted?<ul><li>Every element was compared at least once</li><li>Every element was visited the same number of times</li><li>No adjacent pair is out of order anywhere in the array <strong>(correct)</strong></li><li>The total number of swaps equals the array length</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>COMPLEXITY_PREDICTION</strong><br><span class="muted">sort [5, 3, 1, 4, 2]</span></td>
+  <td>Estimating how many comparisons the finished run made, relating the count to the growth rate.</td>
+  <td>This run sorted 5 elements. Roughly how many comparisons did it make?<ul><li>10 comparisons <strong>(correct)</strong></li><li>12 comparisons</li><li>25 comparisons</li><li>4 comparisons</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>EARLY_TERMINATION</strong><br><span class="muted">sort [2, 1, 3, 4, 5]</span></td>
+  <td>Why a pass with no swaps means the array is sorted and the algorithm can stop.</td>
+  <td>The algorithm stopped before completing all passes. Why?<ul><li>Equal elements caused the loop to stop</li><li>No swaps were needed - the array was already in order <strong>(correct)</strong></li><li>The algorithm completed the maximum number of passes</li><li>The first element reached its correct position</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section>
+<h2>Binary Search</h2>
+<table>
+<thead><tr><th>#</th><th>Junction</th><th>What it tests</th><th>Example prompt and options</th><th>Fires per run</th><th>Significance (circle 1-5)</th></tr></thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong>MIDPOINT_DECISION</strong><br><span class="muted">search [1, 3, 5, 7, 9, 11, 15, 19] for 7</span><br><span class="muted">example from: search [1, 3, 5, 7, 9, 11, 15, 19] for 8</span></td>
+  <td>Comparing the target with the middle value to choose which half can still contain it.</td>
+  <td>The midpoint is index 3 (value 7), and the target is 8. What should happen next?<ul><li>7 equals 8 - target found</li><li>8 is larger - search the right half <strong>(correct)</strong></li><li>8 is smaller - search the left half</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 0 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>ALGORITHM_COMPLETE</strong><br><span class="muted">found</span><br><span class="muted">search [1, 3, 5, 7, 9, 11, 15, 19] for 7</span></td>
+  <td>What confirms the target was located: an equality check at the index found.</td>
+  <td>Binary Search has finished. What confirms the target was correctly located?<ul><li>Every element in the array was visited</li><li>The array became sorted during the search</li><li>The element at index 3 was confirmed equal to the target <strong>(correct)</strong></li><li>The target was matched at more than one index</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>COMPLEXITY_PREDICTION</strong><br><span class="muted">search [1, 3, 5, 7, 9, 11, 15, 19] for 7</span></td>
+  <td>Estimating how many comparisons the finished run made, relating the count to the growth rate.</td>
+  <td>This search ran on 8 sorted elements. How many comparisons with the target did it make?<ul><li>1 comparison <strong>(correct)</strong></li><li>24 comparisons</li><li>64 comparisons</li><li>7 comparisons</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>ALGORITHM_COMPLETE</strong><br><span class="muted">not found</span><br><span class="muted">search [1, 3, 5, 7, 9, 11, 15, 19] for 8</span></td>
+  <td>What confirms the target is absent: the whole search range was eliminated.</td>
+  <td>Binary Search has finished without finding the target. What confirms the search correctly covered the whole space?<ul><li>The array must be unsorted for the target to be missing</li><li>The entire valid search space was eliminated without a match <strong>(correct)</strong></li><li>The range still had unchecked values when the search stopped</li><li>The target could still be found by starting over</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section>
+<h2>Binary Search Tree</h2>
+<table>
+<thead><tr><th>#</th><th>Junction</th><th>What it tests</th><th>Example prompt and options</th><th>Fires per run</th><th>Significance (circle 1-5)</th></tr></thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong>BST_DIRECTION</strong><br><span class="muted">empty slot</span><br><span class="muted">insert 8, 4, 12, 2, 6, 10, 14</span></td>
+  <td>Where a new value attaches once an empty position is reached.</td>
+  <td>Reached an empty position. Where does 4 belong?<ul><li>Attach as the left child of node 8 <strong>(correct)</strong></li><li>Attach as the right child of node 8</li><li>Compare it against node 8 again</li></ul></td>
+  <td class="num">7<br><span class="muted">asked: 1 at full support, 7 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>BST_DIRECTION</strong><br><span class="muted">comparison</span><br><span class="muted">insert 8, 4, 12, 2, 6, 10, 14</span></td>
+  <td>Comparing a value with the current node to go left or right (equal values go right).</td>
+  <td>At node 8: is 4 smaller, or greater than or equal to it? (Equal values go right in this tree.)<ul><li>4 is greater than or equal to 8 - go right</li><li>4 is less than 8 - go left <strong>(correct)</strong></li><li>This position is empty - insert here</li></ul></td>
+  <td class="num">10<br><span class="muted">asked: 3 at full support, 10 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>ALGORITHM_COMPLETE</strong><br><span class="muted">insert 8, 4, 12, 2, 6, 10, 14</span></td>
+  <td>Which traversal lists any binary search tree in sorted order (in-order), from the ordering invariant.</td>
+  <td>The tree is built. Which traversal lists the values of any binary search tree in sorted order?<ul><li>In-order: left subtree, then the node, then the right subtree <strong>(correct)</strong></li><li>Level-order: the root, then each level from left to right</li><li>Pre-order: the node first, then its left and right subtrees</li><li>Reading the values back in the order they were inserted</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>COMPLEXITY_PREDICTION</strong><br><span class="muted">insert 8, 4, 12, 2, 6, 10, 14</span></td>
+  <td>Estimating how many comparisons the finished run made, relating the count to the growth rate.</td>
+  <td>Building this tree inserted 7 values. Roughly how many comparisons did the inserts make in total?<ul><li>10 comparisons <strong>(correct)</strong></li><li>20 comparisons</li><li>49 comparisons</li><li>6 comparisons</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>BST_DIRECTION</strong><br><span class="muted">removal</span><br><span class="muted">delete 4 from that tree</span></td>
+  <td>How a node is removed without breaking the ordering: leaf, one child, or in-order successor.</td>
+  <td>Deleting 4, which has two children. How is it removed without breaking the tree's ordering?<ul><li>Copy in its in-order successor (the smallest value in its right subtree), then remove that node <strong>(correct)</strong></li><li>Delete it together with its right subtree</li><li>Remove it and reattach both subtrees to its parent</li><li>Replace it with its parent's value</li></ul></td>
+  <td class="num">1<br><span class="muted">asked: 1 at full support, 1 at low</span></td>
+  <td class="rate"><span class="box">1</span><span class="box">2</span><span class="box">3</span><span class="box">4</span><span class="box">5</span><div class="comment">Comment:</div></td>
+</tr>
+</tbody>
+</table>
+</section>
+<p>Reviewer name: ____________________ &nbsp; Date: ____________ &nbsp; Signature: ____________________</p>
+</body>
+</html>
