@@ -834,6 +834,9 @@ export interface StudyConsentDetails {
   institution: string | null
   /** How long the data is kept and what happens to it afterwards. */
   dataRetention: string | null
-  /** Ethics approval reference or status, exactly as confirmed by the supervisor. */
+  /** Ethics approval status as shown to participants. */
   ethicsApproval: string | null
+  /** The approval reference once granted. Null keeps real enrolment locked:
+   * the status text above can say "pending", but nobody is enrolled on it. */
+  ethicsApprovalReference: string | null
 }

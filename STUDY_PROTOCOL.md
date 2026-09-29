@@ -34,9 +34,10 @@ Code: `apps/api/src/config/topicCompletion.ts`.
 ## Consent before enrolment - decided 2026-09-29
 
 No real (non-PILOT) participant can enrol until every consent detail in
-`packages/types/studyConsent.json` is confirmed: researcher name, institutional
-email, data retention, and the ethics approval line as confirmed by the
-supervisor. Only activity after consent is counted or exported.
+`packages/types/studyConsent.json` is filled in, including the ethics approval
+reference. The page states approval as pending until then, and the reference
+stays empty, which keeps real enrolment locked. Only activity after consent is
+counted or exported.
 
 Code: `apps/api/src/config/studyConsent.ts`, `apps/api/src/services/study.service.ts`,
 `apps/api/src/services/research.service.ts`.

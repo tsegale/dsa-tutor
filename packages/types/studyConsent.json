@@ -3,6 +3,7 @@
   "researcherEmail": "221355588@students.unam.na",
   "supervisorName": "Prof Mufeti",
   "institution": "University of Namibia",
-  "dataRetention": null,
-  "ethicsApproval": null
+  "dataRetention": "Your research data is stored securely on cloud servers in Europe, under your participant code only. It is used solely for this honours research project and its write-up, and results are reported only in aggregate, so no individual can be identified. The research data is kept for five years after the project ends, in line with standard university research practice, and then deleted. Your account details (name and email) are kept separate from the research data and are never included in it.",
+  "ethicsApproval": "This study is conducted as part of an honours research project at the University of Namibia, under the supervision of Prof Mufeti, and follows the University's research ethics requirements. Ethics approval is pending: no participant will be enrolled until it has been granted.",
+  "ethicsApprovalReference": null
 }

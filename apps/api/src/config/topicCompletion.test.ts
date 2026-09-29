@@ -17,9 +17,18 @@ describe('topic-completion rule', () => {
 
 describe('consent details', () => {
   it('are complete only when no detail is left as a placeholder', () => {
-    const full = { ...STUDY_CONSENT, researcherName: 'A', researcherEmail: 'a@unam.na', dataRetention: 'x', ethicsApproval: 'y' }
+    const full = {
+      ...STUDY_CONSENT,
+      researcherName: 'A',
+      researcherEmail: 'a@unam.na',
+      dataRetention: 'x',
+      ethicsApproval: 'y',
+      ethicsApprovalReference: 'REF-1',
+    }
     expect(consentDetailsComplete(full)).toBe(true)
     expect(consentDetailsComplete({ ...full, ethicsApproval: null })).toBe(false)
+    // Approval text saying "pending" is not enough to open real enrolment.
+    expect(consentDetailsComplete({ ...full, ethicsApprovalReference: null })).toBe(false)
     expect(consentDetailsComplete({ ...full, researcherEmail: '  ' })).toBe(false)
   })
 
