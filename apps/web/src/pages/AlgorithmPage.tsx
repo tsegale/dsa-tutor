@@ -358,7 +358,7 @@ export default function AlgorithmPage() {
   const { play } = useSoundEffects()
   const prefersReducedMotion = useReducedMotion()
 
-  const { data: topics = [] } = useQuery({
+  const { data: topics = [], isSuccess: topicsLoaded } = useQuery({
     queryKey: ['topics'],
     queryFn: () => apiFetch<AlgorithmTopicDTO[]>('/api/v1/topics'),
   })
@@ -381,9 +381,12 @@ export default function AlgorithmPage() {
   // StudyGate, so this is known before the first paint.
   const isClassic = isClassicTopic(studyStatus, algorithmNameParam)
   useEffect(() => {
-    if (!algorithmNameParam || !isImplemented || currentTopic || !isActiveParticipant) return
+    // Only once the topic list has loaded: while it is loading, topics is
+    // [] and currentTopic null for every page, so a direct load or refresh
+    // of a study topic used to bounce the participant to the dashboard.
+    if (!topicsLoaded || !algorithmNameParam || !isImplemented || currentTopic || !isActiveParticipant) return
     navigate('/?blocked=study', { replace: true })
-  }, [algorithmNameParam, isImplemented, currentTopic, isActiveParticipant, navigate])
+  }, [topicsLoaded, algorithmNameParam, isImplemented, currentTopic, isActiveParticipant, navigate])
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
