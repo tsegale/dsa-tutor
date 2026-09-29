@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { StackState } from '@/engine/stack'
 
@@ -76,7 +77,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
         <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
           <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
         </div>
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
           {progressPercent}%
         </span>
       </div>
@@ -121,7 +122,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
                   transition={
                     prefersReducedMotion
                       ? { duration: 0 }
-                      : { type: 'spring', stiffness: 380, damping: 22 }
+                      : CANVAS_SPRING
                   }
                 >
                   <rect

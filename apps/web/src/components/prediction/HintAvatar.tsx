@@ -45,7 +45,7 @@ function SpinnerRing() {
         cy="26"
         r="23"
         fill="none"
-        stroke="#F59E0B"
+        stroke="var(--color-ai)"
         strokeWidth={2}
         strokeDasharray="36 108"
         strokeLinecap="round"
@@ -81,7 +81,7 @@ export default function HintAvatar({
             transition={
               shouldPulse ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity } : { duration: 0.2 }
             }
-            className="relative flex size-11 items-center justify-center rounded-full bg-secondary-light text-secondary"
+            className="relative flex size-11 items-center justify-center rounded-full bg-ai-light text-ai-foreground"
           >
             <LightbulbIcon />
           </motion.button>
@@ -101,7 +101,7 @@ export default function HintAvatar({
           // the canvas bars.
           className={cn(
             'absolute bottom-[calc(100%+10px)] left-0 z-10 w-[280px] max-w-[280px] rounded-md',
-            'border-l-4 border-secondary bg-secondary-light p-4 shadow-md',
+            'border-l-4 border-ai bg-ai-light p-4 shadow-md',
           )}
         >
           <button
@@ -112,7 +112,7 @@ export default function HintAvatar({
           >
             x
           </button>
-          <p className="pr-4 font-sans text-[13px] italic text-secondary">{hint}</p>
+          <p className="pr-4 font-sans text-[13px] italic text-ai-foreground">{hint}</p>
         </motion.div>
       )}
     </motion.div>

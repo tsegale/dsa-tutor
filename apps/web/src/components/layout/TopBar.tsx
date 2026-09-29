@@ -101,7 +101,7 @@ export default function TopBar() {
           <div className="w-32">
             <ProgressBar />
           </div>
-          <span className="text-[11px] whitespace-nowrap text-text-muted dark:text-dark-text-secondary">
+          <span className="text-[11px] whitespace-nowrap tabular-nums text-text-muted dark:text-dark-text-secondary">
             Step {Math.min(stepIndex + 1, snapshotArray.length)} of {snapshotArray.length}
           </span>
         </div>

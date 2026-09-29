@@ -121,7 +121,7 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] text-text-muted dark:text-dark-text-secondary">
+        <span className="text-[11px] text-text-muted tabular-nums dark:text-dark-text-secondary">
           {total > 0 ? `${correct}/${total} correct (${accuracy}%)` : 'No predictions yet'}
         </span>
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-border">
@@ -130,8 +130,8 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
       </div>
 
       {hint && (
-        <div className="mt-3 rounded-md border-l-4 border-secondary bg-secondary-light p-2.5">
-          <p className="text-[13px] text-secondary italic">{hint}</p>
+        <div className="mt-3 rounded-md border-l-4 border-ai bg-ai-light p-2.5">
+          <p className="text-[13px] text-ai-foreground italic">{hint}</p>
         </div>
       )}
     </div>

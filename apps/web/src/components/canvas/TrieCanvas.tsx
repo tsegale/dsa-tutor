@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { TrieNode, TrieState } from '@/engine/trie'
 
@@ -127,7 +128,7 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
           <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
             <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
         </div>
         <div className="flex items-center gap-3">
           {LEGEND.map((item) => (
@@ -183,14 +184,12 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
             return (
               <motion.g
                 key={node.id}
-                layout
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                style={{ x, y }}
+                initial={{ opacity: 0, scale: 0, x, y }}
+                animate={{ opacity: 1, scale: 1, x, y }}
                 transition={
                   prefersReducedMotion
                     ? { duration: 0 }
-                    : { layout: { duration: 0.3, ease: 'easeInOut' }, default: { duration: 0.25, ease: 'backOut' } }
+                    : { x: CANVAS_SPRING, y: CANVAS_SPRING, default: { duration: 0.25, ease: 'backOut' } }
                 }
               >
                 <motion.rect

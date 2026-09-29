@@ -23,14 +23,14 @@ export default function ChallengeHintBanner() {
   if (!challengeHint) return null
 
   return (
-    <div className="absolute top-4 left-1/2 z-20 flex max-w-md -translate-x-1/2 items-center gap-2 rounded-md border border-secondary bg-secondary-light px-3 py-2 text-secondary shadow-md">
+    <div className="absolute top-4 left-1/2 z-20 flex max-w-md -translate-x-1/2 items-center gap-2 rounded-md border border-ai bg-ai-light px-3 py-2 text-ai-foreground shadow-md">
       <LightbulbIcon />
       <p className="text-[13px] italic">{challengeHint}</p>
       <button
         type="button"
         onClick={() => setChallengeHint(null)}
         aria-label="Dismiss hint"
-        className="ml-1 shrink-0 text-secondary/70 hover:text-secondary"
+        className="ml-1 shrink-0 text-ai-foreground/70 hover:text-ai-foreground"
       >
         <CloseIcon />
       </button>

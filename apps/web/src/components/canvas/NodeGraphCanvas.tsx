@@ -71,6 +71,9 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
   const mode = useAlgorithmStore((s) => s.mode)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as GraphAlgorithmState | undefined
+  const previousState = useAlgorithmStore((s) =>
+    s.stepIndex > 0 ? (s.snapshotArray[s.stepIndex - 1]?.dataStructureState as GraphAlgorithmState | undefined) : undefined,
+  )
 
   // Drag-to-reposition overrides, keyed by node id, in the same 0-1
   // normalised space as GraphNode.x/y. Separate from snapshot state
@@ -140,6 +143,17 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
     )
   }, [state])
 
+  // The edge relaxed on this step (4B.2): the node whose parent changed
+  // since the previous snapshot, with its new parent. Derived by diffing,
+  // since the "relaxed" snapshot itself carries no edge field.
+  const relaxedEdgeKey = useMemo(() => {
+    if (!state?.parents || !previousState?.parents) return null
+    for (const [to, from] of Object.entries(state.parents)) {
+      if (from && previousState.parents[to] !== from) return state.directed ? `${from}->${to}` : [from, to].sort().join('-')
+    }
+    return null
+  }, [state, previousState])
+
   const mstEdgeKeys = useMemo(() => {
     if (!state?.mstEdges) return new Set<string>()
     return new Set(state.mstEdges.map(([a, b]) => [a, b].sort().join('-')))
@@ -187,7 +201,7 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
           <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
             <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
         </div>
         <div className="flex items-center gap-3">
           {LEGEND.map((item) => (
@@ -262,6 +276,25 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
                   strokeDasharray={isCurrent ? '6 3' : undefined}
                   markerEnd={state.directed ? 'url(#arrowhead)' : undefined}
                 />
+                {edge.key === relaxedEdgeKey && (
+                  // Drawn on along the edge as its distance improves; keyed
+                  // by step so each relaxation replays it.
+                  <motion.line
+                    key={`relax-${stepIndex}`}
+                    x1={edge.x1}
+                    y1={edge.y1}
+                    x2={state.directed ? x2 : edge.x2}
+                    y2={state.directed ? y2 : edge.y2}
+                    // Active highlight, not the green of the final path:
+                    // a relaxation is an update, not the answer.
+                    stroke="var(--color-active)"
+                    strokeWidth={3}
+                    strokeDasharray={len}
+                    initial={prefersReducedMotion ? false : { strokeDashoffset: len }}
+                    animate={{ strokeDashoffset: 0 }}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.28, ease: 'easeOut' }}
+                  />
+                )}
                 {weighted && edge.weight !== undefined && (
                   <g>
                     <rect

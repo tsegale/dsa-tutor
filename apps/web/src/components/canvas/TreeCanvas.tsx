@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { CANVAS_SPRING, canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
 import FitToViewButton from './FitToViewButton'
@@ -171,6 +172,11 @@ export default function TreeCanvas({
     return result
   }, [layout])
 
+  const parentPosition = useMemo(
+    () => new Map(edges.map((edge) => [edge.childId, { x: edge.x1, y: edge.y1 }])),
+    [edges],
+  )
+
   // Content-fitted viewBox: origin and extent come from the tree's own
   // bounding box (padded), not the container. preserveAspectRatio scales
   // that box up or down to whatever space the canvas has, and centres it,
@@ -252,7 +258,7 @@ export default function TreeCanvas({
           <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
             <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
             {progressPercent}%
           </span>
         </div>
@@ -282,13 +288,18 @@ export default function TreeCanvas({
             const onPath = state.path.includes(edge.parentId) && state.path.includes(edge.childId)
             return (
               <g key={edge.key}>
-                <line x1={edge.x1} y1={edge.y1} x2={edge.x2} y2={edge.y2} stroke={DEFAULT_EDGE} strokeWidth={1.5} />
+                <motion.line
+                  initial={false}
+                  animate={{ x1: edge.x1, y1: edge.y1, x2: edge.x2, y2: edge.y2 }}
+                  transition={canvasMove(prefersReducedMotion)}
+                  stroke={DEFAULT_EDGE}
+                  strokeWidth={1.5}
+                />
                 {onPath && (
-                  <line
-                    x1={edge.x1}
-                    y1={edge.y1}
-                    x2={edge.x2}
-                    y2={edge.y2}
+                  <motion.line
+                    initial={false}
+                    animate={{ x1: edge.x1, y1: edge.y1, x2: edge.x2, y2: edge.y2 }}
+                    transition={canvasMove(prefersReducedMotion)}
                     stroke={PATH_EDGE}
                     strokeWidth={2}
                     strokeDasharray="6 3"
@@ -312,23 +323,26 @@ export default function TreeCanvas({
             const textFill = rbColor ? '#ffffff' : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
             const isUnbalanced = 'unbalancedNodeId' in state && state.unbalancedNodeId === node.id
             const balanceFactor = showBalanceFactor && 'balanceFactor' in node ? (node as AVLNode).balanceFactor : undefined
+            // The value just inserted enters from its parent - the last
+            // node it was compared against - and travels into its slot
+            // (4B.2). Every other new node (a fresh run's whole tree)
+            // appears in place.
+            const justInserted = state.operation === 'insert' && 'insertedValue' in state && state.insertedValue === node.value && isCurrent
+            const origin = (justInserted && parentPosition.get(node.id)) || { x, y }
 
             return (
               <motion.g
                 key={node.id}
-                layout
                 // `initial` only plays on this node's very first mount (a
-                // brand new id appearing, i.e. the value just inserted) -
-                // an already-mounted node re-renders via `animate` only,
-                // so this doesn't need to detect "is this an insert step"
-                // from the snapshot description.
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                style={{ x, y }}
+                // brand new id appearing) - an already-mounted node
+                // re-renders via `animate` only, springing to its new slot
+                // when the in-order layout shifts.
+                initial={{ opacity: 0, scale: 0.85, x: origin.x, y: origin.y }}
+                animate={{ opacity: 1, scale: 1, x, y }}
                 transition={
                   prefersReducedMotion
                     ? { duration: 0 }
-                    : { layout: { duration: 0.35, ease: 'easeInOut' }, default: { duration: 0.3, ease: 'backOut' } }
+                    : { x: CANVAS_SPRING, y: CANVAS_SPRING, scale: CANVAS_SPRING, default: { duration: 0.2, ease: 'easeOut' } }
                 }
               >
                 <motion.circle

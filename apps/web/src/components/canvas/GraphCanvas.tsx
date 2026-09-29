@@ -138,7 +138,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
           <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
             <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
             {progressPercent}%
           </span>
         </div>

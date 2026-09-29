@@ -41,7 +41,7 @@ export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvas
         <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
           <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
         </div>
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
+        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center overflow-auto pt-9">

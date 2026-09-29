@@ -9,7 +9,7 @@ interface FeynmanAvatarProps {
 export default function FeynmanAvatar({ expression, size = 56 }: FeynmanAvatarProps) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-secondary-light text-secondary"
+      className="flex shrink-0 items-center justify-center rounded-full bg-ai-light text-ai-foreground"
       style={{ width: size, height: size }}
     >
       <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 32 32" fill="none" aria-hidden="true">

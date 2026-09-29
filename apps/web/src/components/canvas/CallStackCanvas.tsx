@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { CallStackState } from '@/engine/recursionFactorial'
 
@@ -87,7 +88,7 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
                   transition={
                     prefersReducedMotion
                       ? { duration: 0 }
-                      : { type: 'spring', stiffness: 340, damping: 24 }
+                      : CANVAS_SPRING
                   }
                 >
                   <rect

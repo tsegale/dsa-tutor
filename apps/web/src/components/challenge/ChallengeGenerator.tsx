@@ -159,12 +159,10 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
       size="sm"
       onClick={handleGenerate}
       disabled={isGenerating || limitReached}
-      // White text on the secondary (amber) background fails WCAG AA
-      // contrast (~2.15:1) - the variant's own text-secondary-foreground
-      // (near-black, ~8.7:1) already exists for exactly this background
-      // and was being overridden for no visual reason (see remediation
-      // doc 9's Verify block: axe check, serious or above).
-      className="w-full gap-1.5"
+      // Cyan, the AI colour (4B.7). --ai-contrast is white on the light
+      // theme's deep cyan and near-black on the dark theme's bright cyan,
+      // both above 4.5:1 (remediation doc 9: axe, serious or above).
+      className="w-full gap-1.5 bg-ai text-ai-contrast hover:bg-ai/90"
     >
       {isGenerating ? <SpinnerIcon /> : <TargetIcon />}
       {isGenerating ? 'Generating...' : 'AI Challenge'}

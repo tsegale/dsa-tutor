@@ -105,7 +105,7 @@ export default function SelfExplanationDialog({ prompt, algorithmName, level, se
           </>
         ) : (
           <>
-            <div role="status" className="rounded-md bg-secondary-light p-3 text-sm text-text-primary">
+            <div role="status" className="rounded-md bg-ai-light p-3 text-sm text-text-primary">
               <p>{display?.acknowledgement}</p>
               {display?.followUpQuestion && <p className="mt-2 italic">{display.followUpQuestion}</p>}
             </div>

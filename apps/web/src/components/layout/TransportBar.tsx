@@ -122,7 +122,7 @@ export default function TransportBar() {
               className={cn(
                 'rounded-full px-2 py-0.5 font-mono text-[11px] tabular-nums',
                 playbackSpeed === speed
-                  ? 'bg-card text-primary shadow-sm dark:bg-dark-surface dark:text-dark-primary'
+                  ? 'bg-primary text-white shadow-sm dark:bg-dark-primary'
                   : 'text-text-muted hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary',
               )}
             >

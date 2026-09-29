@@ -38,7 +38,8 @@ const theme = EditorView.theme(
       backgroundColor: 'color-mix(in srgb, var(--color-primary) 45%, transparent)',
     },
     '&.cm-focused .cm-matchingBracket': { backgroundColor: 'rgba(148, 163, 184, 0.25)', outline: '1px solid var(--code-muted)' },
-    '&.cm-focused': { outline: 'none' },
+    // Same ring as the global focus-visible rule (index.css).
+    '&.cm-focused': { outline: '2px solid var(--color-primary)', outlineOffset: '2px' },
   },
   { dark: true },
 )

@@ -6,6 +6,7 @@ import { AlgorithmMode, CriticalJunctionType, CanvasType } from '@dsa-tutor/type
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
@@ -511,7 +512,7 @@ export default function ArrayCanvas({
         <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
           <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
         </div>
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
           {progressPercent}%
         </span>
       </div>
@@ -619,7 +620,7 @@ export default function ArrayCanvas({
           <motion.g
             key={bar.index}
             layout
-            transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: 'easeInOut' }}
+            transition={canvasMove(prefersReducedMotion)}
             style={isDraggableBar ? { x: barDragX } : undefined}
             className={cn(
               'bar-group group',
@@ -641,11 +642,12 @@ export default function ArrayCanvas({
               : {})}
           >
             {colours.glow && (
-              <rect
+              <motion.rect
                 x={displayX - 2}
-                y={bar.y}
+                initial={false}
+                animate={{ attrY: bar.y, height: bar.height }}
+                transition={canvasMove(prefersReducedMotion)}
                 width={bar.width + 4}
-                height={bar.height}
                 rx={8}
                 fill="none"
                 stroke={colours.glow}
@@ -657,11 +659,15 @@ export default function ArrayCanvas({
                 elements: 40% opacity" rule), not the whole group - the
                 value/index labels below stay fully legible regardless of
                 whether this bar is the active one this step. */}
-            <rect
+            {/* Height and top spring to the new value (4B.1), so a swap
+                visibly settles instead of jumping. attrY, not y: on SVG,
+                Framer Motion's y is a CSS translate, not the attribute. */}
+            <motion.rect
               x={displayX}
-              y={bar.y}
+              initial={false}
+              animate={{ attrY: bar.y, height: bar.height }}
+              transition={canvasMove(prefersReducedMotion)}
               width={bar.width}
-              height={bar.height}
               rx={4}
               opacity={displayOpacity}
               className="bar-group"
@@ -700,15 +706,17 @@ export default function ArrayCanvas({
             {/* On or just above the bar, horizontal, at readable size and
                 AA contrast - clamped so a tall (max-value) bar's label
                 never clips past the canvas's own top edge. */}
-            <text
+            <motion.text
               x={displayX + bar.width / 2}
-              y={Math.max(bar.y - 10, 16)}
+              initial={false}
+              animate={{ attrY: Math.max(bar.y - 10, 16) }}
+              transition={canvasMove(prefersReducedMotion)}
               textAnchor="middle"
               className="fill-text-primary text-[13px] font-semibold dark:fill-dark-text-primary"
               style={{ pointerEvents: 'none' }}
             >
               {bar.value}
-            </text>
+            </motion.text>
             <text
               x={displayX + bar.width / 2}
               y={height - 12}
@@ -769,7 +777,7 @@ export default function ArrayCanvas({
               fill="rgba(55, 48, 163, 0.15)"
               stroke="#3730a3"
               strokeWidth={2}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
+              transition={canvasMove(prefersReducedMotion)}
             />
             <motion.text
               layout
@@ -779,7 +787,7 @@ export default function ArrayCanvas({
               y={height - 4}
               textAnchor="middle"
               className="fill-active text-[11px] font-semibold"
-              transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
+              transition={canvasMove(prefersReducedMotion)}
             >
               {windowOverlay.sum !== null
                 ? `Window sum: ${windowOverlay.sum}`

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { LinkedListNode, LinkedListState } from '@/engine/singlyLinkedList'
 
@@ -134,7 +135,7 @@ export default function LinkedListCanvas({
           <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
             <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
             {progressPercent}%
           </span>
         </div>
@@ -254,15 +255,13 @@ export default function LinkedListCanvas({
               return (
                 <motion.g
                   key={node.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, scale: 0, x, y }}
+                  animate={{ opacity: 1, scale: 1, x, y }}
                   exit={{ opacity: 0, scale: 0 }}
-                  style={{ x, y }}
                   transition={
                     prefersReducedMotion
                       ? { duration: 0 }
-                      : { layout: { duration: 0.3, ease: 'easeInOut' }, default: { duration: 0.3, ease: 'backOut' } }
+                      : { x: CANVAS_SPRING, y: CANVAS_SPRING, default: { duration: 0.3, ease: 'backOut' } }
                   }
                 >
                   {isHead && (

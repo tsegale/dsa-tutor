@@ -63,7 +63,7 @@ function TypingIndicator() {
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
-          className="size-2 rounded-full bg-secondary"
+          className="size-2 rounded-full bg-ai"
           animate={prefersReducedMotion ? { scale: 1 } : { scale: [0.5, 1, 0.5] }}
           transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.4, ease: 'easeInOut' }}
         />
@@ -273,7 +273,7 @@ export default function FeynmanModal({
               </DialogTitle>
             </div>
 
-            <div className="rounded-md border-l-4 border-secondary bg-card p-3 text-[14px] text-text-primary italic dark:text-dark-text-primary">
+            <div className="rounded-md border-l-4 border-ai bg-card p-3 text-[14px] text-text-primary italic dark:text-dark-text-primary">
               {result.feedbackSummary}
             </div>
 
@@ -300,7 +300,7 @@ export default function FeynmanModal({
                   {result.missingConcepts.map((concept) => (
                     <span
                       key={concept}
-                      className="rounded-full bg-secondary-light px-2.5 py-0.5 text-xs text-secondary"
+                      className="rounded-full bg-ai-light px-2.5 py-0.5 text-xs text-ai-foreground"
                     >
                       {concept}
                     </span>

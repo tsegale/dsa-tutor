@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { HashTableState } from '@/engine/hashTable'
 
@@ -142,7 +143,7 @@ function OpenAddressingCanvas({
                 : '#94a3b8'
 
         return (
-          <motion.g key={i} layout transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}>
+          <motion.g key={i} layout transition={canvasMove(prefersReducedMotion)}>
             <rect x={x} y={40} width={cellWidth - 4} height={44} rx={4} fill={fill} stroke={entry || isFinalTarget || wasProbed || isDeleted ? 'none' : EMPTY_STROKE} strokeDasharray={entry || isFinalTarget || wasProbed || isDeleted ? undefined : '3 3'} />
             <text x={x + (cellWidth - 4) / 2} y={40 + 22} textAnchor="middle" dominantBaseline="central" style={{ fill: textFill, fontSize: isDeleted ? 9 : 12, fontWeight: 600 }}>
               {entry ? `${entry.key}` : isDeleted ? 'DELETED' : ''}

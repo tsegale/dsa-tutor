@@ -45,6 +45,14 @@
   --surface: #f8fafc;
   --primary-light: #eef2ff;
   --secondary-light: #fffbeb;
+  /* AI surfaces only (Week 4, 4B.7): hints, AI feedback, AI Challenge.
+     Amber stays for the canvas's "comparing" state and for prompts where
+     the system asks the student something; cyan means the AI is speaking.
+     --ai-foreground on --ai-light and white on --ai both clear 4.5:1. */
+  --ai: #0e7490;
+  --ai-foreground: #155e75;
+  --ai-light: #ecfeff;
+  --ai-contrast: #ffffff;
   --success-light: #f0fdf4;
   --error-light: #fef2f2;
   /* Tone pairs (tint background + deep foreground) for badges, stat tiles
@@ -155,6 +163,10 @@
   --surface: #1e293b;
   --primary-light: rgba(99, 102, 241, 0.18);
   --secondary-light: rgba(245, 158, 11, 0.15);
+  --ai: #22d3ee;
+  --ai-foreground: #67e8f9;
+  --ai-light: rgba(34, 211, 238, 0.12);
+  --ai-contrast: #0f172a;
   --success-light: rgba(22, 163, 74, 0.18);
   --error-light: rgba(220, 38, 38, 0.18);
   --tone-indigo-bg: rgba(99, 102, 241, 0.18);
@@ -202,6 +214,10 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary-hover: #d97706;
   --color-secondary-light: var(--secondary-light);
+  --color-ai: var(--ai);
+  --color-ai-foreground: var(--ai-foreground);
+  --color-ai-light: var(--ai-light);
+  --color-ai-contrast: var(--ai-contrast);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -281,6 +297,24 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Canvas numbers (bar values, indices, distances, weights) keep a fixed
+   digit width, so labels don't jitter as values change (4B.5). */
+svg text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One focus ring for every interactive element (Week 4, 4B.4). Unlayered
+   on purpose: unlayered rules outrank Tailwind's layered utilities, so this
+   also restores a visible ring on the many controls that set outline-none.
+   :focus-visible keeps it to keyboard focus, never mouse clicks. */
+:where(button, a, [role="button"], input, textarea, select):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.dark :where(button, a, [role="button"], input, textarea, select):focus-visible {
+  outline-color: var(--color-dark-primary);
 }
 
 /* tailwind-scrollbar-hide is a v3-style JS plugin and this project's

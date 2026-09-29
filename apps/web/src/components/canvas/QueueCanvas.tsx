@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { QueueState } from '@/engine/queue'
 
@@ -56,7 +57,7 @@ function LinearQueue({
           const fill = isFront ? FRONT_FILL : isRear ? REAR_FILL : FILLED_FILL
           const textFill = isFront ? FRONT_TEXT : isRear ? REAR_TEXT : FILLED_TEXT
           return (
-            <motion.g key={item.id} layout transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}>
+            <motion.g key={item.id} layout transition={canvasMove(prefersReducedMotion)}>
               <rect x={x} y={y} width={CELL_WIDTH} height={CELL_HEIGHT} rx={4} style={{ fill }} />
               <text x={x + CELL_WIDTH / 2} y={y + CELL_HEIGHT / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: textFill, fontSize: 14, fontWeight: 600 }}>
                 {item.value}
@@ -160,7 +161,7 @@ function CircularQueue({
         (() => {
           const { x, y } = cellPos(state.frontIndex)
           return (
-            <motion.g layout transition={{ duration: prefersReducedMotion ? 0 : 0.4 }}>
+            <motion.g layout transition={canvasMove(prefersReducedMotion)}>
               <polygon
                 points="0,-8 -7,6 7,6"
                 fill={FRONT_FILL}
@@ -177,7 +178,7 @@ function CircularQueue({
         (() => {
           const { x, y } = cellPos(state.rearIndex)
           return (
-            <motion.g layout transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: 'easeInOut' }}>
+            <motion.g layout transition={canvasMove(prefersReducedMotion)}>
               <polygon points="0,-8 -7,6 7,6" fill={REAR_FILL} transform={`translate(${x},${y + 44})`} />
               <text x={x} y={y + 60} textAnchor="middle" className="fill-secondary text-[10px] font-semibold">
                 rear
@@ -218,7 +219,7 @@ export default function QueueCanvas({ width = 600, height = 320, variant }: Queu
         <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
           <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
         </div>
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
           {progressPercent}%
         </span>
       </div>

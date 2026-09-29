@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot, MisconceptionCategory } from '@dsa-tutor/types'
 import { correctTileIdFor } from '@/utils/correctTile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
+import { CANVAS_SPRING } from '@/utils/motion'
 
 export interface TileOption {
   id: string
@@ -60,16 +62,49 @@ function isCorrectTile(
   return tileId === (correctTileIdFor(snapshot) ?? 'correct')
 }
 
+/** Number keys that pick a tile: 1-4, top row or numpad. */
+const MAX_KEYED_TILES = 4
+
+function tileIndexForKey(event: KeyboardEvent): number | null {
+  const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code)
+  if (!match) return null
+  const index = Number(match[1]) - 1
+  return index < MAX_KEYED_TILES ? index : null
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null
+  return !!el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)
+}
+
 export default function TileGrid({ prompt, options, onSelect, selectedId, submissionState, snapshot, revealAnswer }: TileGridProps) {
   const prefersReducedMotion = useReducedMotion()
-  const isHorizontal = options.length === 2
   const locked = submissionState !== 'idle'
+
+  // Number keys pick a tile while the grid is answerable (4B.3). Captured on
+  // window before useKeyboardShortcuts, whose 1-3 switch the right-panel
+  // tabs, so a keypress here selects an answer instead of changing tabs.
+  // Selecting only: submitting still takes the Submit button.
+  useEffect(() => {
+    if (locked) return
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.altKey || event.ctrlKey || event.metaKey || isTypingTarget(event.target)) return
+      if (document.querySelector('[role="dialog"]')) return
+      const index = tileIndexForKey(event)
+      if (index === null || index >= options.length) return
+      event.preventDefault()
+      event.stopPropagation()
+      onSelect(options[index].id)
+    }
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
+  }, [locked, options, onSelect])
 
   return (
     <div className="flex h-full flex-col justify-center gap-2">
       <p className="font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">{prompt}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: isHorizontal ? '1fr 1fr' : '1fr', gap: 8 }}>
-        {options.map((option) => {
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((option, index) => {
           const isSelected = option.id === selectedId
           const isSelectedCorrect = isSelected && submissionState === 'correct'
           const isSelectedIncorrect = isSelected && submissionState === 'incorrect'
@@ -83,17 +118,16 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
               type="button"
               disabled={locked}
               onClick={() => onSelect(option.id)}
+              aria-keyshortcuts={index < MAX_KEYED_TILES ? String(index + 1) : undefined}
+              // A wrong pick shakes briefly (160ms, 3px); nothing moves
+              // under reduced motion.
               animate={
-                isSelectedIncorrect && !prefersReducedMotion ? { x: [0, -4, 4, -4, 4, -4, 4, 0] } : { x: 0 }
+                isSelectedIncorrect && !prefersReducedMotion ? { x: [0, -3, 3, -3, 3, 0] } : { x: 0 }
               }
-              transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-              style={{
-                minHeight: isHorizontal ? 52 : 44,
-                padding: isHorizontal ? '10px 14px' : '8px 12px',
-                fontSize: isHorizontal ? 13 : 12,
-              }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
               className={cn(
-                'flex items-center justify-between gap-2 rounded-md border text-left transition-colors duration-300',
+                'flex min-h-[48px] items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-[13px] transition-[color,background-color,border-color,transform] duration-200',
+                !locked && 'hover:-translate-y-px active:translate-y-0 motion-reduce:hover:translate-y-0',
                 isSelectedCorrect || isRevealedCorrect
                   ? 'border-success bg-success-light text-success'
                   : isSelectedIncorrect
@@ -103,8 +137,27 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
                       : 'border-border bg-background text-text-primary dark:text-dark-text-primary',
               )}
             >
-              <span className="font-medium">{option.label}</span>
-              {(isSelectedCorrect || isRevealedCorrect) && <CheckIcon />}
+              <span className="flex items-center gap-2">
+                {index < MAX_KEYED_TILES && (
+                  <kbd
+                    aria-hidden="true"
+                    className="flex size-5 shrink-0 items-center justify-center rounded border border-border bg-surface font-mono text-[10px] text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary"
+                  >
+                    {index + 1}
+                  </kbd>
+                )}
+                <span className="font-medium">{option.label}</span>
+              </span>
+              {(isSelectedCorrect || isRevealedCorrect) && (
+                <motion.span
+                  initial={prefersReducedMotion ? false : { scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={prefersReducedMotion ? { duration: 0 } : CANVAS_SPRING}
+                  className="flex"
+                >
+                  <CheckIcon />
+                </motion.span>
+              )}
               {isSelectedIncorrect && <XIcon />}
             </motion.button>
           )
