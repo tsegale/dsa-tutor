@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { complexityJunctionEnabled, initialMode, isClassicTopic } from '@/utils/studyCondition'
 import { motion } from 'framer-motion'
+import { Group, Panel, useDefaultLayout, usePanelRef, type LayoutStorage } from 'react-resizable-panels'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, CriticalJunctionType, ScaffoldingLevel } from '@dsa-tutor/types'
@@ -14,6 +15,8 @@ import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT, REQUEST_SESSION_EXIT_EVENT } from '
 import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
+import WorkspaceSeparator from '@/components/layout/WorkspaceSeparator'
+import TransportBar from '@/components/layout/TransportBar'
 import FocusModeOverlay from '@/components/layout/FocusModeOverlay'
 import KeyboardShortcutsModal from '@/components/layout/KeyboardShortcutsModal'
 import PredictionZone, {
@@ -327,6 +330,28 @@ const INITIAL_MASTERY_METRICS: MasteryMetrics = {
   consecutiveCorrect: 0,
 }
 
+// Workspace layout persistence (4A.1). Storage can throw (private windows,
+// blocked site data); a failed read or write only loses the saved layout.
+const workspaceLayoutStorage: LayoutStorage = {
+  getItem(key) {
+    try {
+      return window.localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  setItem(key, value) {
+    try {
+      window.localStorage.setItem(key, value)
+    } catch {
+      // Not persisted this time; the layout still applies for this visit.
+    }
+  },
+}
+
+/** Collapsed side panels keep the existing 48px icon rail. */
+const COLLAPSED_RAIL_PX = 48
+
 export default function AlgorithmPage() {
   const { algorithmName: algorithmNameParam } = useParams<{ algorithmName: string }>()
   const [searchParams] = useSearchParams()
@@ -388,8 +413,19 @@ export default function AlgorithmPage() {
     navigate('/?blocked=study', { replace: true })
   }, [topicsLoaded, algorithmNameParam, isImplemented, currentTopic, isActiveParticipant, navigate])
 
+  // Mirrors of the panels' own collapsed state (set from Panel onResize),
+  // so LeftPanel/RightPanel render their rail or full content as before.
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
+  const leftPanelRef = usePanelRef()
+  const rightPanelRef = usePanelRef()
+  const workspaceLayout = useDefaultLayout({ id: 'dsa-workspace', storage: workspaceLayoutStorage })
+  const togglePanel = (ref: typeof leftPanelRef) => {
+    const panel = ref.current
+    if (!panel) return
+    if (panel.isCollapsed()) panel.expand()
+    else panel.collapse()
+  }
   const { isTooSmall, isCompact } = useLayoutBreakpoint()
   const [compactTab, setCompactTab] = useState<'canvas' | 'controls' | 'tutor'>('canvas')
   const [activeTab, setActiveTabRaw] = useState(1)
@@ -904,7 +940,7 @@ export default function AlgorithmPage() {
 
   function openExplanationTab() {
     setExplanationLinkVisible(false)
-    setRightCollapsed(false)
+    rightPanelRef.current?.expand()
     setActiveTab(1)
   }
 
@@ -1088,6 +1124,8 @@ export default function AlgorithmPage() {
         )}
       </div>
 
+      <TransportBar />
+
       <PredictionZone
         onSubmit={handlePredictionSubmit}
         onHintRequested={handleHintRequested}
@@ -1259,62 +1297,89 @@ export default function AlgorithmPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateRows: '56px 1fr',
-        // Literal 200px/280px expanded widths (matching LeftPanel/RightPanel's
-        // own EXPANDED_WIDTH constants) rather than `auto`, collapsing to
-        // 48px per side so the panel-collapse toggle still reclaims canvas
-        // space instead of leaving a dead gap in a fixed-width track.
-        gridTemplateColumns: `${leftCollapsed ? 48 : 200}px 1fr ${rightCollapsed ? 48 : 280}px`,
-        gridTemplateAreas: "'topbar topbar topbar' 'left canvas right'",
-        height: '100vh',
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ gridArea: 'topbar' }}>
+    <div className="flex h-screen w-full flex-col overflow-hidden">
+      <div className="h-14 shrink-0">
         <TopBar />
       </div>
 
-      <motion.div
-        style={{ gridArea: 'left', overflowY: 'auto' }}
-        animate={{ opacity: focusModeActive ? 0.1 : 1 }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
+      {/* Resizable workspace (4A.1): the same three panels, now in a
+          persisted, draggable group. Sizes are percentages of the width
+          except the 48px collapsed rails. */}
+      <Group
+        id="dsa-workspace"
+        defaultLayout={workspaceLayout.defaultLayout}
+        onLayoutChanged={workspaceLayout.onLayoutChanged}
+        className="min-h-0 flex-1"
       >
-        <LeftPanel
-          collapsed={leftCollapsed}
-          onToggle={() => setLeftCollapsed((c) => !c)}
-          difficulty={currentTopic?.difficulty ?? 'BEGINNER'}
-        />
-      </motion.div>
+        <Panel
+          id="left"
+          panelRef={leftPanelRef}
+          defaultSize="16"
+          minSize="12"
+          maxSize="24"
+          collapsible
+          collapsedSize={COLLAPSED_RAIL_PX}
+          onResize={() => setLeftCollapsed(leftPanelRef.current?.isCollapsed() ?? false)}
+        >
+          <motion.div
+            className="h-full overflow-y-auto"
+            animate={{ opacity: focusModeActive ? 0.1 : 1 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+          >
+            <LeftPanel
+              collapsed={leftCollapsed}
+              onToggle={() => togglePanel(leftPanelRef)}
+              difficulty={currentTopic?.difficulty ?? 'BEGINNER'}
+              fillParent
+            />
+          </motion.div>
+        </Panel>
 
-      <div style={{ gridArea: 'canvas', overflow: 'hidden', position: 'relative' }} data-canvas-area>
-        {canvasAreaChildren}
-      </div>
+        <WorkspaceSeparator />
 
-      <motion.div
-        style={{ gridArea: 'right', overflowY: 'auto' }}
-        animate={{ opacity: focusModeActive ? 0.1 : 1 }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
-      >
-        <RightPanel
-          collapsed={rightCollapsed}
-          onToggle={() => setRightCollapsed((c) => !c)}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          mistakeAnalysis={mistakeAnalysis}
-          mistakeHint={mistakeHint}
-          mistakeCounterfactual={mistakeCounterfactual}
-          onDismissMistake={() => {
-            setMistakeAnalysis(null)
-            setMistakeHint(null)
-            setMistakeCounterfactual(null)
-          }}
-          hint={hint}
-          predictionResolved={predictionResolved}
-        />
-      </motion.div>
+        <Panel id="canvas" minSize="45">
+          <div className="relative h-full overflow-hidden" data-canvas-area>
+            {canvasAreaChildren}
+          </div>
+        </Panel>
+
+        <WorkspaceSeparator />
+
+        <Panel
+          id="right"
+          panelRef={rightPanelRef}
+          defaultSize="24"
+          minSize="18"
+          maxSize="34"
+          collapsible
+          collapsedSize={COLLAPSED_RAIL_PX}
+          onResize={() => setRightCollapsed(rightPanelRef.current?.isCollapsed() ?? false)}
+        >
+          <motion.div
+            className="h-full overflow-y-auto"
+            animate={{ opacity: focusModeActive ? 0.1 : 1 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+          >
+            <RightPanel
+              collapsed={rightCollapsed}
+              onToggle={() => togglePanel(rightPanelRef)}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              mistakeAnalysis={mistakeAnalysis}
+              mistakeHint={mistakeHint}
+              mistakeCounterfactual={mistakeCounterfactual}
+              onDismissMistake={() => {
+                setMistakeAnalysis(null)
+                setMistakeHint(null)
+                setMistakeCounterfactual(null)
+              }}
+              hint={hint}
+              predictionResolved={predictionResolved}
+              fillParent
+            />
+          </motion.div>
+        </Panel>
+      </Group>
 
       {overlaysAndModals}
     </div>

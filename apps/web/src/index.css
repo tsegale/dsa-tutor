@@ -60,6 +60,17 @@
   --tone-green-fg: #3b6d11;
   --tone-slate-bg: #f1f5f9;
   --tone-slate-fg: #64748b;
+  /* Code editor (Code Mode): a fixed dark code surface in both themes, so
+     it needs no .dark variant. Syntax colours are 4.5:1 or better on it. */
+  --code-bg: #1e293b;
+  --code-fg: #f8fafc;
+  --code-gutter: #64748b;
+  --code-gutter-active: #cbd5e1;
+  --code-muted: #94a3b8;
+  --code-keyword: #a5b4fc;
+  --code-number: #fcd34d;
+  --code-string: #86efac;
+  --code-function: #7dd3fc;
   --tone-indigo-label: #4338ca;
   --tone-indigo-soft-bg: #e0e7ff;
   --tone-emerald-bg: #d1fae5;

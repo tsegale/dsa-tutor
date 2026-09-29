@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
+import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
+import FitToViewButton from './FitToViewButton'
 import type { BFSState } from '@/engine/bfs'
 
 interface GraphCanvasProps {
@@ -21,6 +23,8 @@ const TARGET_RING_RADIUS = 32
 // is resized or measured at 0 on first render.
 const VIEWBOX_WIDTH = 680
 const VIEWBOX_HEIGHT = 480
+
+const BASE_VIEW = { x: 0, y: 0, width: VIEWBOX_WIDTH, height: VIEWBOX_HEIGHT }
 
 const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
   A: { x: 340, y: 60 },
@@ -77,6 +81,8 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
     const newlyQueued = state.queue.filter((n) => !prevQueue.has(n))
     return newlyQueued.length === 1 ? { from: state.currentNode, to: newlyQueued[0] } : null
   }, [state, prevState])
+
+  const zoom = useViewBoxZoom(BASE_VIEW)
 
   const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
@@ -175,14 +181,17 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
         <svg
-          viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+          ref={zoom.svgRef}
+          viewBox={zoom.viewBox}
           preserveAspectRatio="none"
           width="100%"
           height="100%"
           role="img"
           aria-label={canvasLabel}
+          className={cn('touch-none select-none', zoom.zoomed && 'cursor-grab active:cursor-grabbing')}
+          {...zoom.handlers}
         >
           {edges.map((edge) => {
             const isFoundPathEdge = foundPathEdgeKeys.has(edge.key)
@@ -285,6 +294,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
             )
           })}
         </svg>
+        <FitToViewButton zoomed={zoom.zoomed} onFit={zoom.fit} />
       </div>
     </div>
   )

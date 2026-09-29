@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { CodeEvalResponse } from '@dsa-tutor/types'
 import { evaluateCode } from '@/api/codeEval'
 import { runSwapDecisionPython } from '@/utils/pyodideRunner'
-import { cn } from '@/lib/utils'
+import CodeMirrorEditor from './CodeMirrorEditor'
 
 interface CodeEditorInputProps {
   prompt: string
@@ -21,8 +21,6 @@ interface CodeEditorInputProps {
 // its answer as fact - exactly the defect this real sandbox replaces.
 const STARTER_CODE = 'if arr[j] > arr[j + 1]:\n    arr[j], arr[j + 1] = arr[j + 1], arr[j]'
 
-const MIN_LINES = 5
-
 export default function CodeEditorInput({
   prompt,
   stepDescription,
@@ -36,17 +34,6 @@ export default function CodeEditorInput({
   const [code, setCode] = useState(STARTER_CODE)
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const lineNumbersRef = useRef<HTMLDivElement>(null)
-
-  function handleScroll() {
-    if (lineNumbersRef.current && textareaRef.current) {
-      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop
-    }
-  }
-
-  const lineCount = Math.max(code.split('\n').length, MIN_LINES)
 
   async function handleSubmit() {
     setIsSubmitting(true)
@@ -86,31 +73,9 @@ export default function CodeEditorInput({
         <span className="border-b-2 border-primary text-sm font-medium text-primary">Python</span>
       </div>
 
-      <div
-        className={cn(
-          'flex min-h-0 flex-1 overflow-hidden rounded-md border bg-[#1e293b]',
-          syntaxError ? 'border-error' : 'border-border',
-        )}
-        style={{ minHeight: `${MIN_LINES * 1.7 + 1}em` }}
-      >
-        <div
-          ref={lineNumbersRef}
-          aria-hidden="true"
-          className="select-none overflow-hidden py-2 pr-2 pl-3 text-right font-mono text-[14px] leading-[1.7] text-slate-500"
-        >
-          {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i}>{i + 1}</div>
-          ))}
-        </div>
-        <textarea
-          ref={textareaRef}
-          value={code}
-          onChange={(event) => setCode(event.target.value)}
-          onScroll={handleScroll}
-          spellCheck={false}
-          rows={MIN_LINES}
-          className="min-w-0 flex-1 resize-none bg-transparent py-2 pr-3 font-mono text-[14px] leading-[1.7] text-[#f8fafc] outline-none"
-        />
+      {/* Five lines at the editor's 1.7 line height, plus padding. */}
+      <div className="flex min-h-[9.5em] flex-1">
+        <CodeMirrorEditor value={code} onChange={setCode} invalid={syntaxError !== null} ariaLabel="Python code for this step" />
       </div>
 
       {syntaxError && <p className="shrink-0 text-[12px] text-error">{syntaxError}</p>}

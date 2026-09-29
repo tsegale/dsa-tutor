@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
+import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
+import FitToViewButton from './FitToViewButton'
 import type { BSTNode, BSTState } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLNode, AVLState } from '@/engine/avlTree'
@@ -178,6 +180,11 @@ export default function TreeCanvas({
   const viewBoxY = -nodeRadius - VIEWBOX_PADDING
   const viewBoxWidth = maxX - minX + 2 * (nodeRadius + VIEWBOX_PADDING)
   const viewBoxHeight = maxDepth * LEVEL_HEIGHT + 2 * (nodeRadius + VIEWBOX_PADDING)
+  const baseView = useMemo(
+    () => ({ x: viewBoxX, y: viewBoxY, width: viewBoxWidth, height: viewBoxHeight }),
+    [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight],
+  )
+  const zoom = useViewBoxZoom(baseView)
 
   const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
 
@@ -259,14 +266,17 @@ export default function TreeCanvas({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden pt-8">
+      <div className="relative flex-1 overflow-hidden pt-8">
         <svg
+          ref={zoom.svgRef}
           width="100%"
           height="100%"
-          viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
+          viewBox={zoom.viewBox}
           preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label={canvasLabel}
+          className={cn('touch-none select-none', zoom.zoomed && 'cursor-grab active:cursor-grabbing')}
+          {...zoom.handlers}
         >
           {edges.map((edge) => {
             const onPath = state.path.includes(edge.parentId) && state.path.includes(edge.childId)
@@ -350,6 +360,7 @@ export default function TreeCanvas({
             )
           })}
         </svg>
+        <FitToViewButton zoomed={zoom.zoomed} onFit={zoom.fit} />
       </div>
 
       <div className="shrink-0 border-t border-border px-3 py-2 dark:border-dark-border">

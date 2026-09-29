@@ -19,7 +19,9 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
       if (useOnboardingStore.getState().showOnboarding) return
 
       const target = event.target as HTMLElement | null
-      if (target && TYPING_TAGS.has(target.tagName)) return
+      // contenteditable covers the Code Mode editor (CodeMirror), where
+      // Space and letters are code, not shortcuts.
+      if (target && (TYPING_TAGS.has(target.tagName) || target.isContentEditable)) return
 
       const store = useAlgorithmStore.getState()
 

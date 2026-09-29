@@ -27,9 +27,7 @@
   "components/dashboard/AILearningPathBanner.tsx": 3,
   "components/dashboard/AlgorithmCard.tsx": 4,
   "components/dashboard/TrackSection.tsx": 3,
-  "components/layout/LeftPanel.tsx": 2,
   "components/onboarding/WelcomeModal.tsx": 6,
-  "components/prediction/CodeEditorInput.tsx": 2,
   "components/prediction/HintAvatar.tsx": 1,
   "components/prediction/PredictionZone.tsx": 2,
   "components/ui/MasteryRing.tsx": 1

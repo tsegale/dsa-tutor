@@ -4,7 +4,6 @@ import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { useAuth } from '@/context/AuthContext'
-import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StudentAvatar } from '@/components/brand'
@@ -47,15 +46,6 @@ function EyeIcon({ active }: { active: boolean }) {
   )
 }
 
-function RefreshIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      <path d="M21 3v6h-6" />
-    </svg>
-  )
-}
-
 function BackToDashboardIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -77,7 +67,6 @@ export default function TopBar() {
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const toggleFocusMode = useAlgorithmStore((state) => state.toggleFocusMode)
-  const resetAlgorithm = useAlgorithmStore((state) => state.resetAlgorithm)
 
   // Looked up from the URL slug, not the store's algorithmName: an
   // AlgorithmPage effect overwrites algorithmName with the topic's
@@ -136,16 +125,6 @@ export default function TopBar() {
         </div>
 
         <ThemeToggle />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={resetAlgorithm} className="shrink-0 gap-1.5">
-              <RefreshIcon />
-              Reset
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Reset (R)</TooltipContent>
-        </Tooltip>
 
         <button
           type="button"

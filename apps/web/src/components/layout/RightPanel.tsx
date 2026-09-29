@@ -32,6 +32,9 @@ interface RightPanelProps {
    * with no rail/collapse toggle - there's no room for a docked rail once
    * the panel is a full-screen tab instead of a sidebar. */
   fullWidth?: boolean
+  /** Docked in a resizable workspace panel, which owns the width: fills
+   * it instead of animating its own, keeping the rail and collapse toggle. */
+  fillParent?: boolean
 }
 
 const EXPANDED_WIDTH = 280
@@ -147,6 +150,7 @@ export default function RightPanel({
   hint,
   predictionResolved,
   fullWidth = false,
+  fillParent = false,
 }: RightPanelProps) {
   // Classic (the study's plain visualiser) has no AI Tutor tab.
   const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
@@ -159,11 +163,11 @@ export default function RightPanel({
 
   return (
     <motion.div
-      animate={fullWidth ? undefined : { width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
+      animate={fullWidth || fillParent ? undefined : { width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       className={cn(
         'flex h-full flex-col overflow-hidden border-l border-border bg-card',
-        fullWidth && 'w-full',
+        (fullWidth || fillParent) && 'w-full',
       )}
       style={{ overflowX: 'hidden' }}
     >

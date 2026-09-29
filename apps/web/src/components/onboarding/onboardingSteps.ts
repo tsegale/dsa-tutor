@@ -39,9 +39,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: 4,
     title: 'Playback controls',
     description:
-      'Use these to move through the algorithm at your own pace. Step forward, step backward, or play it through automatically. You can also type your own array to visualise.',
-    targetId: 'left-panel',
-    position: 'right',
+      'Use these to move through the algorithm at your own pace. Step forward, step backward, or play it through automatically. The left panel is where you type your own array to visualise.',
+    targetId: 'transport-bar',
+    position: 'top',
     requiresAlgorithmPage: true,
   },
   {

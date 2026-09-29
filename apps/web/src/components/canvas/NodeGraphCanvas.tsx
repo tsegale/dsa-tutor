@@ -1,10 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import type { GraphAlgorithmState, GraphNode } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
+import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
+import FitToViewButton from './FitToViewButton'
 
 interface NodeGraphCanvasProps {
   width?: number
@@ -77,7 +79,17 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
   // resets when a new graph (different node id set) loads.
   const [dragOverrides, setDragOverrides] = useState<Record<string, { x: number; y: number }>>({})
   const dragNodeId = useRef<string | null>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const baseView = useMemo(() => ({ x: 0, y: 0, width, height }), [width, height])
+  const zoom = useViewBoxZoom(baseView)
+  const zoomSvgRef = zoom.svgRef
+  const setSvgRefs = useCallback(
+    (el: SVGSVGElement | null) => {
+      svgRef.current = el
+      zoomSvgRef(el)
+    },
+    [zoomSvgRef],
+  )
   const nodeIdSetKey = state ? state.nodes.map((n) => n.id).join(',') : ''
   const lastNodeIdSetKey = useRef(nodeIdSetKey)
   if (lastNodeIdSetKey.current !== nodeIdSetKey) {
@@ -141,8 +153,12 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
   function handlePointerMove(event: React.PointerEvent<SVGSVGElement>) {
     if (!dragNodeId.current || !svgRef.current) return
     const rect = svgRef.current.getBoundingClientRect()
-    const fx = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
-    const fy = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height))
+    // The pointer's fraction of the visible (possibly zoomed) window,
+    // mapped back to a fraction of the whole graph space.
+    const vx = (event.clientX - rect.left) / rect.width
+    const vy = (event.clientY - rect.top) / rect.height
+    const fx = Math.min(1, Math.max(0, (zoom.view.x + vx * zoom.view.width) / width))
+    const fy = Math.min(1, Math.max(0, (zoom.view.y + vy * zoom.view.height) / height))
     setDragOverrides((prev) => ({ ...prev, [dragNodeId.current!]: { x: fx, y: fy } }))
   }
 
@@ -185,16 +201,32 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
 
       <GraphStateStrip state={state} algorithmName={algorithmName} />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
         <svg
-          ref={svgRef}
-          viewBox={`0 0 ${width} ${height}`}
+          ref={setSvgRefs}
+          viewBox={zoom.viewBox}
           width="100%"
           height="100%"
           role="img"
           aria-label={canvasLabel}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
+          className={cn('touch-none select-none', zoom.zoomed && 'cursor-grab active:cursor-grabbing')}
+          // A press on a node (dragNodeId set by the node's own handler,
+          // which runs first) moves that node; anywhere else it pans.
+          onPointerDown={(event) => {
+            if (!dragNodeId.current) zoom.handlers.onPointerDown(event)
+          }}
+          onPointerMove={(event) => {
+            if (dragNodeId.current) handlePointerMove(event)
+            else zoom.handlers.onPointerMove(event)
+          }}
+          onPointerUp={(event) => {
+            handlePointerUp()
+            zoom.handlers.onPointerUp(event)
+          }}
+          onPointerCancel={(event) => {
+            handlePointerUp()
+            zoom.handlers.onPointerCancel(event)
+          }}
           onPointerLeave={handlePointerUp}
         >
           <defs>
@@ -272,6 +304,7 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
             />
           ))}
         </svg>
+        <FitToViewButton zoomed={zoom.zoomed} onFit={zoom.fit} />
       </div>
     </div>
   )
