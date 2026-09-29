@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getStudyStatus } from './study.service'
+import { isAfterConsent } from './research.service'
 
-const consentAt = new Date('2026-09-29T08:00:00Z')
-const sessionFindMany = vi.fn()
+// vi.mock is hoisted above the imports, so the services get this prisma.
+const { consentAt, sessionFindMany } = vi.hoisted(() => ({
+  consentAt: new Date('2026-09-29T08:00:00Z'),
+  sessionFindMany: vi.fn(),
+}))
 
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -10,9 +15,6 @@ vi.mock('../lib/prisma', () => ({
     session: { findMany: sessionFindMany },
   },
 }))
-
-const { getStudyStatus } = await import('./study.service')
-const { isAfterConsent } = await import('./research.service')
 
 describe('consent cut-off', () => {
   beforeEach(() => sessionFindMany.mockReset().mockResolvedValue([]))
