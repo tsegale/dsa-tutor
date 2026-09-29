@@ -726,7 +726,7 @@ export default function AlgorithmPage() {
             correct: detail.correct,
             hintUsed: detail.hintsRequestedForStep > 0,
             category: detail.misconceptionCategory,
-            firstAttempt: detail.hintIndexAtResolve === 0,
+            firstAttempt: detail.firstAttempt,
           })
         })
         .catch(() => {

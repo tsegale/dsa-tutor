@@ -15,6 +15,7 @@ import WorkedStepNotice from './WorkedStepNotice'
 import { correctTileIdFor } from '@/utils/correctTile'
 import SelfExplanationDialog from './SelfExplanationDialog'
 import { offerableSelfExplanation } from '@/utils/selfExplanation'
+import { isFirstAttempt } from '@/utils/attempts'
 import type { SelfExplanationPrompt } from '@/config/selfExplanationPrompts'
 import { useMisconceptionStore } from '@/store/useMisconceptionStore'
 import {
@@ -84,6 +85,8 @@ export interface PredictionOutcomeDetail {
   counterfactualText: string | null
   aiMisconceptionCategory: MisconceptionCategory | null
   hintIndexAtResolve: number
+  /** The learner's first answer at this junction, right or wrong (see isFirstAttempt). */
+  firstAttempt: boolean
   /** Why displayed feedback fell back (validator rule, "truncated",
    * "stream_disconnected", ...); null when everything shown was AI text. */
   aiFailureReason?: string | null
@@ -577,6 +580,7 @@ export default function PredictionZone({
       ...displayed.log,
       aiMisconceptionCategory: correct ? null : (response?.aiMisconceptionCategory ?? null),
       hintIndexAtResolve: attempt,
+      firstAttempt: isFirstAttempt(verdictCorrect, attempt),
       optionCount: currentTiles.length,
       promptVersion: response?.promptVersion ?? null,
       aiModel: response?.aiModel ?? null,
@@ -808,6 +812,9 @@ export default function PredictionZone({
       counterfactualText: null,
       aiMisconceptionCategory: null,
       hintIndexAtResolve: 0,
+      // Code submissions carry no misconception category, so the loop
+      // never acts on them either way.
+      firstAttempt: true,
       isCodeEval: true,
       codeEvalBuggyState:
         !result.isLogicallyCorrect && !result.hasSyntaxError && result.executeVisually && result.resultingState
