@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
@@ -258,6 +258,16 @@ export default function ArrayCanvas({
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
+  // Bars spring when a value changes, not when the canvas itself resizes
+  // (the prediction panel opening, a panel drag): there the whole layout
+  // shifts at once, and springing only the bars left them visibly out of
+  // step with their labels for a moment.
+  const lastSize = useRef({ width, height })
+  const canvasResized = lastSize.current.width !== width || lastSize.current.height !== height
+  useEffect(() => {
+    lastSize.current = { width, height }
+  }, [width, height])
+  const barMove = canvasMove(prefersReducedMotion || canvasResized)
 
   const [mistakeStepIndex, setMistakeStepIndex] = useState(0)
 
@@ -620,7 +630,7 @@ export default function ArrayCanvas({
           <motion.g
             key={bar.index}
             layout
-            transition={canvasMove(prefersReducedMotion)}
+            transition={barMove}
             style={isDraggableBar ? { x: barDragX } : undefined}
             className={cn(
               'bar-group group',
@@ -646,7 +656,7 @@ export default function ArrayCanvas({
                 x={displayX - 2}
                 initial={false}
                 animate={{ attrY: bar.y, height: bar.height }}
-                transition={canvasMove(prefersReducedMotion)}
+                transition={barMove}
                 width={bar.width + 4}
                 rx={8}
                 fill="none"
@@ -666,7 +676,7 @@ export default function ArrayCanvas({
               x={displayX}
               initial={false}
               animate={{ attrY: bar.y, height: bar.height }}
-              transition={canvasMove(prefersReducedMotion)}
+              transition={barMove}
               width={bar.width}
               rx={4}
               opacity={displayOpacity}
@@ -710,7 +720,7 @@ export default function ArrayCanvas({
               x={displayX + bar.width / 2}
               initial={false}
               animate={{ attrY: Math.max(bar.y - 10, 16) }}
-              transition={canvasMove(prefersReducedMotion)}
+              transition={barMove}
               textAnchor="middle"
               className="fill-text-primary text-[13px] font-semibold dark:fill-dark-text-primary"
               style={{ pointerEvents: 'none' }}
@@ -777,7 +787,7 @@ export default function ArrayCanvas({
               fill="rgba(55, 48, 163, 0.15)"
               stroke="#3730a3"
               strokeWidth={2}
-              transition={canvasMove(prefersReducedMotion)}
+              transition={barMove}
             />
             <motion.text
               layout
@@ -787,7 +797,7 @@ export default function ArrayCanvas({
               y={height - 4}
               textAnchor="middle"
               className="fill-active text-[11px] font-semibold"
-              transition={canvasMove(prefersReducedMotion)}
+              transition={barMove}
             >
               {windowOverlay.sum !== null
                 ? `Window sum: ${windowOverlay.sum}`
