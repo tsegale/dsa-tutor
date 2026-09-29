@@ -7,6 +7,11 @@
  * ids, so its feedback described an answer the student may not have chosen.
  * Rows with a null promptVersion predate versioning and are pilot data by
  * definition (CLAUDE.md), so they are marked too.
+ *
+ * The purge must also delete every PILOT- participant's data before real
+ * enrolment. PILOT-1's pre-test (2026-09-29) was answered by Claude as a
+ * system check - a perfect score that is not data. PILOT- codes are already
+ * excluded from every export by default (research.service participantWhere).
  */
 export const FEEDBACK_SEES_CHOSEN_OPTION_FROM = '2026-09-28.6'
 
