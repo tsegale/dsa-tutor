@@ -1,5 +1,14 @@
 # Deployment configuration
 
+## Regions
+
+Both Railway services (api and ai) run in **EU West (Amsterdam)**, next to the
+Supabase database (eu-west-2, London). They were in US West until 2026-09-29,
+which put every database query across the Atlantic: a status request with a few
+queries took a median 1,211 ms from Namibia before the move and 363 ms after.
+Keep the services in the same region as the database (Settings > Scale >
+Regions & Replicas).
+
 ## apps/api (Railway)
 
 Every variable in this table except REDIS_URL is required (the API logs any missing at
