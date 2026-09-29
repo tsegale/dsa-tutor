@@ -60,12 +60,12 @@ export default function AssessmentPage() {
     mutationFn: () => completeAssessment(attempt!.id),
     // The post-test is the last thing before the study's usability survey;
     // the pre-test just returns to the dashboard to start practice sessions.
-    // Completing the pre-test flips pretestRequired server-side - without
-    // invalidating first, StudyGate's cached ['study', 'status'] (staleTime
-    // 60s) would still show pretestRequired: true right after this
-    // navigate and bounce straight back to /assessment/pre.
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
+    // Completing the pre-test flips pretestRequired server-side. The fresh
+    // status must be in the cache before navigating - invalidating alone
+    // only starts a refetch, and StudyGate would read the cached
+    // pretestRequired: true and bounce straight back to /assessment/pre.
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['study', 'status'] })
       navigate(phase === 'post' ? '/sus' : '/', { replace: true })
     },
   })

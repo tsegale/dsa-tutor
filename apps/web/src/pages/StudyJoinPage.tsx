@@ -15,8 +15,10 @@ export default function StudyJoinPage() {
 
   const enrolMutation = useMutation({
     mutationFn: () => enrolInStudy(code),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
+    // The response is the new status: put it in the cache before navigating,
+    // so the consent page never reads the cached pre-enrolment status.
+    onSuccess: (status) => {
+      queryClient.setQueryData(['study', 'status'], status)
       navigate('/consent', { replace: true })
     },
   })

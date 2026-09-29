@@ -25,12 +25,12 @@ export default function ConsentPage() {
 
   const consentMutation = useMutation({
     mutationFn: recordConsent,
-    // Without invalidating first, StudyGate's own ['study', 'status'] read
-    // right after this navigate would still see the pre-consent, cached
-    // consentRequired: true (staleTime hasn't elapsed) and bounce straight
-    // back here - consent would appear to silently do nothing.
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
+    // StudyGate reads ['study', 'status'] the moment '/' renders. The fresh
+    // status must be in the cache BEFORE navigating: invalidating alone only
+    // starts a refetch, so the gate still saw the cached consentRequired:
+    // true and bounced straight back here (seen live, 2026-09-29).
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['study', 'status'] })
       navigate('/', { replace: true })
     },
   })
