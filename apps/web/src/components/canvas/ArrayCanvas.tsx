@@ -68,7 +68,7 @@ const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 // under both (remediation doc 12C.3).
 const PADDING = 60
 
-type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted'
+type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted' | 'eliminated'
 
 // neutral used to be a pale lavender (#c7c9e8) at 40% opacity, following
 // the "inactive elements: 40% opacity" convention - but no opacity over a
@@ -78,11 +78,14 @@ type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted'
 // tone instead, staying visually de-emphasised next to the saturated
 // comparing/swapping/sorted colours through hue and saturation rather
 // than transparency (see remediation doc 9.9).
+const NEUTRAL_FILL = '#8b90c9'
 const BAR_COLOURS: Record<BarState, { fill: string; opacity: number; glow?: string }> = {
-  neutral: { fill: '#8b90c9', opacity: 1.0 },
+  neutral: { fill: NEUTRAL_FILL, opacity: 1.0 },
   comparing: { fill: '#f59e0b', opacity: 1.0, glow: 'rgba(245,158,11,0.3)' },
   swapping: { fill: '#7c3aed', opacity: 1.0, glow: 'rgba(124,58,237,0.3)' },
   sorted: { fill: '#16a34a', opacity: 1.0 },
+  // Search only: out of the remaining range. The inactive 40% rule.
+  eliminated: { fill: NEUTRAL_FILL, opacity: 0.4 },
 }
 
 // The four colours (neutral/comparing/swapping/sorted) are reused across
@@ -90,29 +93,33 @@ const BAR_COLOURS: Record<BarState, { fill: string; opacity: number; glow?: stri
 // actually MEANS differs by algorithm - sorting calls a highlighted bar
 // "Sorted", sliding window calls the same green "Window". Same colour
 // slots, different words, keyed by algorithm/canvasType context.
-const DEFAULT_LEGEND: Record<BarState, string> = {
+const DEFAULT_LEGEND: Partial<Record<BarState, string>> = {
   neutral: 'Neutral',
   comparing: 'Comparing',
   swapping: 'Swapping',
   sorted: 'Sorted',
 }
-const SLIDING_WINDOW_LEGEND: Record<BarState, string> = {
+const SLIDING_WINDOW_LEGEND: Partial<Record<BarState, string>> = {
   neutral: 'Window',
   comparing: 'Current',
   swapping: 'Max window',
   sorted: 'Outside',
 }
-const JUMP_SEARCH_LEGEND: Record<BarState, string> = {
+const JUMP_SEARCH_LEGEND: Partial<Record<BarState, string>> = {
   neutral: 'Jump position',
   comparing: 'Backtrack range',
   swapping: 'Found',
   sorted: 'Unvisited',
 }
-const SEARCH_LEGEND: Record<BarState, string> = {
-  neutral: 'Current',
-  comparing: 'Eliminated',
-  swapping: 'Found',
-  sorted: 'Unvisited',
+// Search states come from the search's own state (the midpoint compared,
+// the eliminated range, the found index), not the sorting slots - the old
+// mapping labelled the compared midpoint "Eliminated" and the found element
+// "Unvisited", and never drew the eliminated range at all.
+const SEARCH_LEGEND: Partial<Record<BarState, string>> = {
+  comparing: 'Current',
+  eliminated: 'Eliminated',
+  sorted: 'Found',
+  neutral: 'Unvisited',
 }
 const SEARCH_ALGORITHM_SLUGS = new Set([
   'linear-search',
@@ -121,7 +128,7 @@ const SEARCH_ALGORITHM_SLUGS = new Set([
   'exponential-search',
 ])
 
-function legendForContext(canvasType: CanvasType, algorithmSlug: string | undefined): Record<BarState, string> {
+function legendForContext(canvasType: CanvasType, algorithmSlug: string | undefined): Partial<Record<BarState, string>> {
   if (canvasType === CanvasType.SLIDING_WINDOW) return SLIDING_WINDOW_LEGEND
   if (algorithmSlug === 'jump-search') return JUMP_SEARCH_LEGEND
   if (algorithmSlug && SEARCH_ALGORITHM_SLUGS.has(algorithmSlug)) return SEARCH_LEGEND
@@ -255,6 +262,7 @@ export default function ArrayCanvas({
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const legend = legendForContext(canvasType, algorithmSlug)
+  const isSearch = !!algorithmSlug && SEARCH_ALGORITHM_SLUGS.has(algorithmSlug)
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
@@ -308,6 +316,9 @@ export default function ArrayCanvas({
   }, [mistakePath, isMistakeMode])
 
   const snapshot = isMistakeMode ? mistakePath![mistakeStepIndex] : storeSnapshot
+  const eliminatedIndices = new Set<number>(
+    isSearch ? ((snapshot?.dataStructureState as { eliminated?: number[] } | undefined)?.eliminated ?? []) : [],
+  )
   const mistakeAffectedIndices = isMistakeMode
     ? new Set([
         ...mistakePath![mistakeStepIndex].activeIndices,
@@ -527,10 +538,14 @@ export default function ArrayCanvas({
         </span>
       </div>
       <div className="flex items-center gap-3">
-        {(['neutral', 'comparing', 'swapping', 'sorted'] as const).map((state) => (
+        {(Object.entries(legend) as [BarState, string][]).map(([state, label]) => (
           <div key={state} className="flex items-center gap-1">
-            <span className="size-2 rounded-sm" style={{ backgroundColor: BAR_COLOURS[state].fill }} aria-hidden="true" />
-            <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{legend[state]}</span>
+            <span
+              className="size-2 rounded-sm"
+              style={{ backgroundColor: BAR_COLOURS[state].fill, opacity: BAR_COLOURS[state].opacity }}
+              aria-hidden="true"
+            />
+            <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{label}</span>
           </div>
         ))}
       </div>
@@ -611,7 +626,9 @@ export default function ArrayCanvas({
             ? 'swapping'
             : isActive || isCompared
               ? 'comparing'
-              : 'neutral'
+              : eliminatedIndices.has(bar.index)
+                ? 'eliminated'
+                : 'neutral'
         const colours = BAR_COLOURS[barState]
 
         const barDragX = bar.index === handsOnLeft ? dragXLeft : bar.index === handsOnRight ? dragXRight : undefined
@@ -675,13 +692,15 @@ export default function ArrayCanvas({
             <motion.rect
               x={displayX}
               initial={false}
-              animate={{ attrY: bar.y, height: bar.height }}
-              transition={barMove}
+              // fill is animated with the geometry: on a motion.rect a
+              // changing style fill is not re-applied, which left every bar
+              // stuck on its first colour.
+              animate={{ attrY: bar.y, height: bar.height, fill: colours.fill }}
+              transition={{ attrY: barMove, height: barMove, fill: { duration: prefersReducedMotion ? 0 : 0.2 } }}
               width={bar.width}
               rx={4}
               opacity={displayOpacity}
               className="bar-group"
-              style={{ fill: colours.fill }}
             />
             {isMistakeAffected && (
               <rect
