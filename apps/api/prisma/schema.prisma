@@ -207,7 +207,9 @@ model MisconceptionRating {
   interactionId String
   raterCode     String
   label         String
-  createdAt     DateTime @default(now())
+  // When the label was given (named ratedAt per the 3D spec; mapped onto the
+  // original column, so no migration).
+  ratedAt       DateTime @default(now()) @map("createdAt")
 
   interaction Interaction @relation(fields: [interactionId], references: [id])
 

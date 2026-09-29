@@ -1,3 +1,4 @@
+import { RATING_LABELS } from '../config/misconceptionTaxonomy'
 import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
 import { conditionOfSession, isTopicComplete } from '../config/topicCompletion'
 import { conditionFor } from '../config/studyCondition'
@@ -33,6 +34,13 @@ export function isAfterConsent(at: Date, consentAt: Date | null): boolean {
  * a study topic only. Never includes name or email - only participantCode,
  * which is meaningless outside the study's own records. */
 export async function exportMisconceptionsCsv(includePilot = false): Promise<string> {
+  const { header, rows } = await misconceptionExportRows(includePilot)
+  return toCsv(header, rows)
+}
+
+/** The misconceptions export as a header and rows - also the population
+ * the rating sampler draws from (scripts/agreement.ts --sample). */
+export async function misconceptionExportRows(includePilot = false): Promise<{ header: string[]; rows: string[][] }> {
   const interactions = await prisma.interaction.findMany({
     where: {
       predictionCorrect: false,
@@ -57,6 +65,7 @@ export async function exportMisconceptionsCsv(includePilot = false): Promise<str
     'participantCode',
     'algorithm',
     'junctionType',
+    'junctionDifficulty',
     'serialisedState',
     'studentAnswer',
     'ruleLabel',
@@ -70,6 +79,7 @@ export async function exportMisconceptionsCsv(includePilot = false): Promise<str
     interaction.session.user.participantCode ?? '',
     interaction.session.algorithmTopic.displayName,
     interaction.criticalJunctionType ?? '',
+    interaction.junctionDifficulty ?? '',
     interaction.dataStructureStateSnapshot ? JSON.stringify(interaction.dataStructureStateSnapshot) : '',
     interaction.predictionSubmitted ?? '',
     interaction.misconceptionCategory ?? '',
@@ -78,7 +88,7 @@ export async function exportMisconceptionsCsv(includePilot = false): Promise<str
     String(interaction.aiGenerated),
   ])
 
-  return toCsv(header, rows)
+  return { header, rows }
 }
 
 /** One row per interaction (correct and incorrect both - "correct" is
@@ -342,23 +352,62 @@ export async function exportMisconceptionEventsCsv(includePilot = false): Promis
  * MisconceptionRating rows. Upserts on (interactionId, raterCode) so
  * re-importing a corrected CSV replaces, rather than duplicates, a
  * rater's earlier labels. */
+/** A rejected ratings file: every problem, by line, and nothing written. */
+export class RatingsImportError extends Error {
+  constructor(public readonly problems: string[]) {
+    super('INVALID_RATINGS')
+  }
+}
+
+/**
+ * Imports a CSV of interactionId, raterCode, label (other columns, such as
+ * the context columns of a rating sample, are ignored). All rows are
+ * checked first and the file is rejected as a whole if any row has an
+ * unknown or not-incorrect interaction id, a label outside the taxonomy
+ * (RATING_LABELS), a missing field, or a repeated (interactionId,
+ * raterCode). Only a clean file is written, in one transaction.
+ */
 export async function importMisconceptionRatings(csvText: string): Promise<{ imported: number }> {
   const rows = parseCsv(csvText)
-  let imported = 0
+  const problems: string[] = []
+  if (rows.length === 0) problems.push('The file has no rows')
 
-  for (const row of rows) {
-    const { interactionId, raterCode, label } = row
-    if (!interactionId || !raterCode || !label) continue
+  const ids = [...new Set(rows.map((row) => row.interactionId?.trim()).filter((id): id is string => !!id))]
+  const incorrect = new Set(
+    (await prisma.interaction.findMany({ where: { id: { in: ids }, predictionCorrect: false }, select: { id: true } })).map(
+      (interaction) => interaction.id,
+    ),
+  )
+  const seen = new Set<string>()
+  const clean: Array<{ interactionId: string; raterCode: string; label: string }> = []
+  rows.forEach((row, index) => {
+    const line = index + 2 // after the header line
+    const interactionId = row.interactionId?.trim() ?? ''
+    const raterCode = row.raterCode?.trim() ?? ''
+    const label = row.label?.trim().toUpperCase() ?? ''
+    if (!interactionId || !raterCode || !label) {
+      problems.push(`Line ${line}: interactionId, raterCode and label are all required`)
+      return
+    }
+    if (!incorrect.has(interactionId)) problems.push(`Line ${line}: ${interactionId} is not a known incorrect interaction`)
+    if (!RATING_LABELS.includes(label)) problems.push(`Line ${line}: "${label}" is not in the taxonomy`)
+    const key = `${interactionId}|${raterCode}`
+    if (seen.has(key)) problems.push(`Line ${line}: ${raterCode} rated ${interactionId} twice`)
+    seen.add(key)
+    clean.push({ interactionId, raterCode, label })
+  })
+  if (problems.length > 0) throw new RatingsImportError(problems)
 
-    await prisma.misconceptionRating.upsert({
-      where: { interactionId_raterCode: { interactionId, raterCode } },
-      create: { interactionId, raterCode, label },
-      update: { label },
-    })
-    imported++
-  }
-
-  return { imported }
+  await prisma.$transaction(
+    clean.map(({ interactionId, raterCode, label }) =>
+      prisma.misconceptionRating.upsert({
+        where: { interactionId_raterCode: { interactionId, raterCode } },
+        create: { interactionId, raterCode, label },
+        update: { label, ratedAt: new Date() },
+      }),
+    ),
+  )
+  return { imported: clean.length }
 }
 
 export interface AgreementRow {

@@ -7,6 +7,7 @@ import {
   exportSessionsCsv,
   exportMisconceptionEventsCsv,
   importMisconceptionRatings,
+  RatingsImportError,
 } from '../services/research.service'
 import { validate, type BodyOf } from '../middleware/validate'
 import * as S from '../schemas/routes'
@@ -70,7 +71,14 @@ router.post('/ratings', validate(S.research.ratings), async (req: AuthRequest, r
     const { csv } = req.body as BodyOf<typeof S.research.ratings>
     const result = await importMisconceptionRatings(csv)
     res.json({ data: result, error: null })
-  } catch {
+  } catch (err) {
+    if (err instanceof RatingsImportError) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'INVALID_RATINGS', message: 'The ratings file was rejected; nothing was imported', details: err.problems },
+      })
+      return
+    }
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to import ratings' } })
   }
 })
