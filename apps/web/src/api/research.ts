@@ -2,13 +2,14 @@ import { getToken } from './auth'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
-export type ResearchExportKind = 'interactions' | 'assessments' | 'sessions' | 'misconceptions'
+export type ResearchExportKind = 'interactions' | 'assessments' | 'sessions' | 'misconceptions' | 'misconception_events'
 
 const EXPORT_PATHS: Record<ResearchExportKind, string> = {
   interactions: '/api/v1/research/interactions.csv',
   assessments: '/api/v1/research/assessments.csv',
   sessions: '/api/v1/research/sessions.csv',
   misconceptions: '/api/v1/research/misconceptions.csv',
+  misconception_events: '/api/v1/research/misconception_events.csv',
 }
 
 // Export responses are raw CSV (Content-Type: text/csv), not the { data,

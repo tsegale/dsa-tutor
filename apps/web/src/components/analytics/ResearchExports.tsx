@@ -6,6 +6,8 @@ const EXPORTS: { kind: ResearchExportKind; label: string }[] = [
   { kind: 'assessments', label: 'Assessments' },
   { kind: 'sessions', label: 'Sessions' },
   { kind: 'misconceptions', label: 'Misconceptions' },
+  // The detect-remediate-reprobe loop (3C): one row per misconception event.
+  { kind: 'misconception_events', label: 'Misconception events' },
 ]
 
 function DownloadIcon() {
@@ -21,13 +23,13 @@ export default function ResearchExports() {
   const [pending, setPending] = useState<ResearchExportKind | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleDownload(kind: ResearchExportKind) {
+  async function handleDownload(kind: ResearchExportKind, label: string) {
     setPending(kind)
     setError(null)
     try {
       await downloadResearchExport(kind, includePilot)
     } catch {
-      setError(`Could not download the ${kind} export. Please try again.`)
+      setError(`Could not download the ${label.toLowerCase()} export. Please try again.`)
     } finally {
       setPending(null)
     }
@@ -58,7 +60,7 @@ export default function ResearchExports() {
             <button
               key={kind}
               type="button"
-              onClick={() => void handleDownload(kind)}
+              onClick={() => void handleDownload(kind, label)}
               disabled={pending !== null}
               className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
             >
