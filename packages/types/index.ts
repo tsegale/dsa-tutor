@@ -731,6 +731,9 @@ export interface StudyStatusDto {
   topicsCompleted: string[]
   /** A researcher opened the post-test without the rule being met. */
   posttestOverride: boolean
+  /** The one study topic this participant uses in Classic (the plain
+   * visualiser), fixed at enrolment. Null for non-participants. */
+  classicTopicSlug: string | null
 }
 
 /** An item as delivered to the student - never carries the correct answer. */

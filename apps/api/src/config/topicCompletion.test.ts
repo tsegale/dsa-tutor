@@ -3,10 +3,10 @@ import { isTopicComplete } from './topicCompletion'
 import { consentDetailsComplete, STUDY_CONSENT } from './studyConsent'
 
 describe('topic-completion rule', () => {
-  it('guided: needs the final step AND at least one conceptual junction answered', () => {
-    expect(isTopicComplete({ reachedFinalStep: true, conceptualJunctionsAnswered: 1 }, 'GUIDED')).toBe(true)
-    expect(isTopicComplete({ reachedFinalStep: true, conceptualJunctionsAnswered: 0 }, 'GUIDED')).toBe(false)
-    expect(isTopicComplete({ reachedFinalStep: false, conceptualJunctionsAnswered: 3 }, 'GUIDED')).toBe(false)
+  it('tutor: needs the final step AND at least one conceptual junction answered', () => {
+    expect(isTopicComplete({ reachedFinalStep: true, conceptualJunctionsAnswered: 1 }, 'TUTOR')).toBe(true)
+    expect(isTopicComplete({ reachedFinalStep: true, conceptualJunctionsAnswered: 0 }, 'TUTOR')).toBe(false)
+    expect(isTopicComplete({ reachedFinalStep: false, conceptualJunctionsAnswered: 3 }, 'TUTOR')).toBe(false)
   })
 
   it('classic: the final step alone (it has no junctions) - the documented asymmetry', () => {

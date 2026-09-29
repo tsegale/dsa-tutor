@@ -1,5 +1,6 @@
 import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
-import { CURRENT_STUDY_CONDITION, isTopicComplete } from '../config/topicCompletion'
+import { conditionOfSession, isTopicComplete } from '../config/topicCompletion'
+import { conditionFor } from '../config/studyCondition'
 import { hasPreLabelFixFeedback } from '../config/dataValidity'
 import { prisma } from '../lib/prisma'
 import { toCsv, parseCsv } from '../utils/csv'
@@ -43,8 +44,8 @@ export async function exportMisconceptionsCsv(includePilot = false): Promise<str
     include: {
       session: {
         include: {
-          user: { select: { participantCode: true, consentAt: true } },
-          algorithmTopic: { select: { displayName: true } },
+          user: { select: { participantCode: true, consentAt: true, classicTopicSlug: true } },
+          algorithmTopic: { select: { displayName: true, name: true } },
         },
       },
     },
@@ -89,8 +90,8 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     include: {
       session: {
         include: {
-          user: { select: { participantCode: true, consentAt: true } },
-          algorithmTopic: { select: { displayName: true } },
+          user: { select: { participantCode: true, consentAt: true, classicTopicSlug: true } },
+          algorithmTopic: { select: { displayName: true, name: true } },
         },
       },
     },
@@ -122,6 +123,10 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     // the option the student chose (see config/dataValidity.ts). The 12D.7
     // purge deletes these; until then, exclude them from any analysis.
     'feedbackPreLabelFix',
+    // Within-subject condition (Week 3 3B): the participant's Classic topic,
+    // and whether this row's topic was it, so gains split without a join.
+    'classicTopicSlug',
+    'condition',
   ]
 
   const rows = interactions.map((interaction) => [
@@ -146,6 +151,8 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     interaction.rubricScore !== null ? String(interaction.rubricScore) : '',
     interaction.rubricResults !== null ? JSON.stringify(interaction.rubricResults) : '',
     String(hasPreLabelFixFeedback(interaction)),
+    interaction.session.user.classicTopicSlug ?? '',
+    conditionFor(interaction.session.algorithmTopic.name, interaction.session.user.classicTopicSlug),
   ])
 
   return toCsv(header, rows)
@@ -161,22 +168,27 @@ export async function exportAssessmentsCsv(includePilot = false): Promise<string
     include: {
       attempt: {
         include: {
-          user: { select: { participantCode: true } },
+          user: { select: { participantCode: true, classicTopicSlug: true } },
           assessment: { select: { phase: true } },
         },
       },
-      item: { select: { conceptTag: true } },
+      item: { select: { conceptTag: true, topicSlug: true } },
     },
     orderBy: { submittedAt: 'asc' },
   })
 
-  const header = ['participantCode', 'phase', 'conceptTag', 'score']
+  // topicSlug and condition: the item's study topic, and whether that was
+  // this participant's Classic topic - pre/post gains split by condition.
+  const header = ['participantCode', 'phase', 'conceptTag', 'score', 'topicSlug', 'classicTopicSlug', 'condition']
 
   const rows = responses.map((response) => [
     response.attempt.user.participantCode ?? '',
     response.attempt.assessment.phase,
     response.item.conceptTag,
     response.score !== null ? String(response.score) : '',
+    response.item.topicSlug ?? '',
+    response.attempt.user.classicTopicSlug ?? '',
+    response.item.topicSlug ? conditionFor(response.item.topicSlug, response.attempt.user.classicTopicSlug) : '',
   ])
 
   return toCsv(header, rows)
@@ -198,9 +210,10 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
           consentAt: true,
           posttestOverrideAt: true,
           posttestOverrideIncompleteTopics: true,
+          classicTopicSlug: true,
         },
       },
-      algorithmTopic: { select: { displayName: true } },
+      algorithmTopic: { select: { displayName: true, name: true } },
       // Graded conceptual answers in this session - the second
       // topic-completion signal (config/topicCompletion.ts).
       _count: {
@@ -239,6 +252,8 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
     // topics were incomplete then.
     'posttestOverrideAt',
     'posttestOverrideIncompleteTopics',
+    'classicTopicSlug',
+    'condition',
   ]
 
   const rows = sessions.map((session) => {
@@ -265,11 +280,13 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
       String(
         isTopicComplete(
           { reachedFinalStep: session.reachedFinalStep, conceptualJunctionsAnswered: session._count.interactions },
-          CURRENT_STUDY_CONDITION,
+          conditionOfSession(session.mode),
         ),
       ),
       session.user.posttestOverrideAt?.toISOString() ?? '',
       session.user.posttestOverrideIncompleteTopics.join(';'),
+      session.user.classicTopicSlug ?? '',
+      conditionFor(session.algorithmTopic.name, session.user.classicTopicSlug),
     ]
   })
 

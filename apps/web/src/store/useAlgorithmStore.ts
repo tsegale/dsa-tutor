@@ -43,6 +43,11 @@ export interface AlgorithmStoreState {
   // Worked-example fading (Week 2 2A) is on for the study topics only;
   // every other topic asks every junction, as before.
   fadingEnabled: boolean
+  // Study Classic condition (Week 3 3B): this page is the participant's
+  // Classic topic - a plain visualiser. Runs as Demo mode, locked: no live
+  // junctions, no worked steps, and setMode is ignored, so no shortcut or
+  // link can reach a tutor mode. See utils/studyCondition.ts.
+  classicMode: boolean
   // The scaffolding level fading uses for the current segment. It only
   // follows scaffoldingLevel at a segment boundary (a conceptual junction,
   // i.e. the end of a Bubble Sort pass), before a run starts, and on a new
@@ -78,6 +83,7 @@ export interface AlgorithmStoreState {
   recordPredictionResult: (correct: boolean, hintsRequestedForStep: number) => void
   toggleCodeEditorMode: () => void
   setFadingEnabled: (enabled: boolean) => void
+  setClassicMode: (on: boolean) => void
   noteSelfExplanationOffered: () => void
   noteChallengeStarted: () => void
 }
@@ -86,12 +92,13 @@ export interface AlgorithmStoreState {
  * step under the current segment's fading. The single definition every
  * caller (auto-advance, playback, the prediction zone, the page) uses. */
 function isLiveJunctionAt(state: AlgorithmStoreState, index: number): boolean {
+  if (state.classicMode) return false
   if (!state.snapshotArray[index]?.isPredictionRequired) return false
   return !(state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel))
 }
 
 function isWorkedStepAt(state: AlgorithmStoreState, index: number): boolean {
-  return state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel)
+  return !state.classicMode && state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel)
 }
 
 const MAX_RECENT_MISCONCEPTIONS = 10
@@ -180,6 +187,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   sessionHintsRequested: 0,
   codeEditorMode: false,
   fadingEnabled: false,
+  classicMode: false,
   segmentScaffoldingLevel: ScaffoldingLevel.HIGH,
   selfExplanationsOffered: 0,
   challengesStarted: 0,
@@ -224,6 +232,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   },
 
   setMode: (mode) => {
+    // Locked in Classic: the participant's condition is not theirs to change.
+    if (get().classicMode) return
     // Preserves stepIndex: a student mid-run who switches modes (e.g.
     // Demo to Practice) keeps their place instead of silently losing
     // progress back to step 1 with no warning.
@@ -344,8 +354,14 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   noteChallengeStarted: () => set((state) => ({ challengesStarted: state.challengesStarted + 1 })),
 
+  setClassicMode: (on) => {
+    clearPlaybackInterval()
+    clearAutoAdvanceTimer()
+    set(on ? { classicMode: true, mode: AlgorithmMode.DEMO, isPlaying: false, fadingEnabled: false } : { classicMode: false })
+  },
+
   setFadingEnabled: (enabled) => {
-    set({ fadingEnabled: enabled })
+    set({ fadingEnabled: enabled && !get().classicMode })
     scheduleNarrationAutoAdvance(get)
   },
 }))

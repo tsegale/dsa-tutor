@@ -4,7 +4,8 @@ import { STUDY_TOPICS } from '../config/studyTopics'
 import type { StudyStatusDto } from '../dtos/study.dto'
 import { consentDetailsComplete } from '../config/studyConsent'
 import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
-import { CURRENT_STUDY_CONDITION, isTopicComplete } from '../config/topicCompletion'
+import { conditionOfSession, isTopicComplete } from '../config/topicCompletion'
+import { classicTopicFor } from '../config/studyCondition'
 
 const PRE_CODE = 'STUDY_PRE_V1'
 const POST_CODE = 'STUDY_POST_V1'
@@ -51,6 +52,7 @@ export async function completedStudyTopics(userId: string, consentAt: Date): Pro
     },
     select: {
       reachedFinalStep: true,
+      mode: true,
       algorithmTopic: { select: { name: true } },
       _count: {
         select: {
@@ -68,7 +70,9 @@ export async function completedStudyTopics(userId: string, consentAt: Date): Pro
   const completed = new Set<string>()
   for (const session of sessions) {
     const signals = { reachedFinalStep: session.reachedFinalStep, conceptualJunctionsAnswered: session._count.interactions }
-    if (isTopicComplete(signals, CURRENT_STUDY_CONDITION)) completed.add(session.algorithmTopic.name)
+    // Each session is judged by its own condition: Classic sessions need
+    // only the final step (they have no junctions).
+    if (isTopicComplete(signals, conditionOfSession(session.mode))) completed.add(session.algorithmTopic.name)
   }
   return STUDY_TOPICS.filter((topic) => completed.has(topic))
 }
@@ -76,7 +80,7 @@ export async function completedStudyTopics(userId: string, consentAt: Date): Pro
 export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { participantCode: true, consentAt: true, withdrawnAt: true, posttestOverrideAt: true },
+    select: { participantCode: true, consentAt: true, withdrawnAt: true, posttestOverrideAt: true, classicTopicSlug: true },
   })
   if (!user?.participantCode) {
     return {
@@ -88,6 +92,7 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
       posttestCompleted: false,
       topicsCompleted: [],
       posttestOverride: false,
+      classicTopicSlug: null,
     }
   }
 
@@ -104,6 +109,7 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
       posttestCompleted: false,
       topicsCompleted: [],
       posttestOverride: false,
+      classicTopicSlug: null,
     }
   }
 
@@ -134,6 +140,7 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
     posttestCompleted: !!postAttempt,
     topicsCompleted,
     posttestOverride: user.posttestOverrideAt !== null,
+    classicTopicSlug: user.classicTopicSlug,
   }
 }
 
@@ -188,7 +195,8 @@ export async function enrolParticipant(userId: string, rawCode: string): Promise
     throw new Error('CODE_TAKEN')
   }
 
-  await prisma.user.update({ where: { id: userId }, data: { participantCode: code } })
+  // The Classic topic is fixed here, once, and never re-rolled.
+  await prisma.user.update({ where: { id: userId }, data: { participantCode: code, classicTopicSlug: classicTopicFor(code) } })
   return getStudyStatus(userId)
 }
 

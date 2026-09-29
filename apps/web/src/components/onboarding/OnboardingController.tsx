@@ -3,6 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import SpotlightOverlay from './SpotlightOverlay'
 import OnboardingTooltip from './OnboardingTooltip'
 import { ONBOARDING_STEPS } from './onboardingSteps'
+import { useQuery } from '@tanstack/react-query'
+import { fetchStudyStatus } from '@/api/study'
+
+/**
+ * The tour explains the tutor (Practice mode, AI Tutor, AI Challenge), so it
+ * must run on a topic that has them. A participant whose Classic topic is
+ * bubble-sort would otherwise be shown tutor features on a page without
+ * them - confusing, and it would expose the difference between conditions.
+ */
+export function tourTopicFor(classicTopicSlug: string | null): string {
+  return classicTopicSlug === 'bubble-sort' ? 'binary-search' : 'bubble-sort'
+}
 
 interface OnboardingControllerProps {
   onComplete: () => void
@@ -16,6 +28,7 @@ const POST_NAVIGATION_SETTLE_MS = 300
 export default function OnboardingController({ onComplete }: OnboardingControllerProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { data: studyStatus } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus, staleTime: 60 * 1000 })
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   // While true, neither the spotlight nor the tooltip render - target and
@@ -69,7 +82,7 @@ export default function OnboardingController({ onComplete }: OnboardingControlle
     if (nextStep.requiresAlgorithmPage && onDashboard) {
       setIsTransitioning(true)
       pendingStepIndexRef.current = nextIndex
-      navigate('/algorithm/bubble-sort')
+      navigate(`/algorithm/${tourTopicFor(studyStatus?.classicTopicSlug ?? null)}`)
     } else {
       setCurrentStepIndex(nextIndex)
     }

@@ -35,6 +35,9 @@ enum Mode {
   FEYNMAN
   CODE
   CHALLENGE
+  // Study control condition (Week 3 3B): a plain visualiser on the
+  // participant's assigned Classic topic.
+  CLASSIC
 }
 
 enum ScaffoldingLevel {
@@ -60,6 +63,10 @@ model User {
   participantCode String?    @unique
   consentAt       DateTime?
   withdrawnAt     DateTime?
+  // The one study topic this participant uses in Classic (the within-subject
+  // control), set once at enrolment from the code's ordinal and never
+  // re-rolled - see apps/api/src/config/studyCondition.ts.
+  classicTopicSlug String?
   // Set when a researcher let the participant take the post-test without
   // meeting the topic-completion rule, with the topics still incomplete at
   // that moment - so the write-up can report how many needed it.
@@ -292,6 +299,9 @@ model AssessmentItem {
   correctOptionId String?
   conceptTag      String
   maxScore        Int      @default(1)
+  // Which study topic the item assesses, so gains split by condition
+  // (Classic vs tutor topic) without a join. Filled by the seed.
+  topicSlug       String?
 
   assessment Assessment           @relation(fields: [assessmentId], references: [id])
   responses  AssessmentResponse[]

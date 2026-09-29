@@ -10,7 +10,7 @@ export const longText = z.string().max(20_000)
 
 export const scaffoldingLevel = z.enum(['HIGH', 'MEDIUM', 'LOW', 'NONE'])
 // Mirrors the Prisma Mode enum.
-export const sessionMode = z.enum(['DEMO', 'PRACTICE', 'HANDS_ON', 'FEYNMAN', 'CODE', 'CHALLENGE'])
+export const sessionMode = z.enum(['DEMO', 'PRACTICE', 'HANDS_ON', 'FEYNMAN', 'CODE', 'CHALLENGE', 'CLASSIC'])
 export const junctionDifficulty = z.enum(['CONCEPTUAL', 'PROCEDURAL'])
 
 // Categories and junction types stay open strings: packages/types owns

@@ -29,7 +29,11 @@ describe('enrolment while the consent page still has placeholders', () => {
   it('still allows a pilot code, so the flow can be tested', async () => {
     db.user.findUnique.mockResolvedValue(null)
     await enrolParticipant('u1', 'pilot-2')
-    expect(db.user.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { participantCode: 'PILOT-2' } })
+    // The Classic topic is fixed at enrolment from the code's ordinal.
+    expect(db.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { participantCode: 'PILOT-2', classicTopicSlug: 'binary-search' },
+    })
   })
 })
 
@@ -49,9 +53,9 @@ describe('researcher post-test override', () => {
   it('records when it happened and which topics were still incomplete', async () => {
     db.user.findUnique.mockResolvedValue(participant)
     db.session.findMany.mockResolvedValue([
-      { reachedFinalStep: true, algorithmTopic: { name: 'bubble-sort' }, _count: { interactions: 2 } },
-      // Reached the end but answered no checkpoint: not complete.
-      { reachedFinalStep: true, algorithmTopic: { name: 'bst' }, _count: { interactions: 0 } },
+      { reachedFinalStep: true, mode: 'PRACTICE', algorithmTopic: { name: 'bubble-sort' }, _count: { interactions: 2 } },
+      // Reached the end but answered no checkpoint on a tutor topic: not complete.
+      { reachedFinalStep: true, mode: 'PRACTICE', algorithmTopic: { name: 'bst' }, _count: { interactions: 0 } },
     ])
     await overridePosttest('u1', ' 482913 ')
     const data = db.user.update.mock.calls[0][0].data

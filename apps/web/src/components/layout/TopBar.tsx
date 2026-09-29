@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
+import { conditionFeatures } from '@/utils/studyCondition'
 import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
@@ -71,6 +72,8 @@ export default function TopBar() {
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
+  // Classic (the study's plain visualiser) shows no mode tabs or support pill.
+  const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const focusModeActive = useAlgorithmStore((state) => state.focusModeActive)
   const toggleFocusMode = useAlgorithmStore((state) => state.toggleFocusMode)
@@ -95,12 +98,14 @@ export default function TopBar() {
           <span className="text-text-muted dark:text-dark-text-secondary">/</span>
           <span className="font-bold text-primary">{algorithmDisplayName}</span>
         </nav>
-        <ZPDScaffoldingPill />
+        {features.scaffoldingPill && <ZPDScaffoldingPill />}
       </div>
 
-      <div className="absolute left-1/2 -translate-x-1/2">
-        <ModeToggle />
-      </div>
+      {features.modeToggle && (
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <ModeToggle />
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <div className="flex shrink-0 items-center gap-2">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
+import { conditionFeatures } from '@/utils/studyCondition'
+import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -45,7 +46,7 @@ function engineForSlug(
     case 'linear-search':
       return linearSearchEngine(values, target)
     case 'binary-search':
-      return binarySearchEngine(values, target, { withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
+      return binarySearchEngine(values, target, { withComplexityPrediction: complexityJunctionEnabled() })
     case 'merge-sort':
       return mergeSortEngine(values)
     case 'quick-sort':
@@ -55,7 +56,7 @@ function engineForSlug(
     case 'heap-sort':
       return heapSortEngine(values)
     case 'bst':
-      return bstInsertEngine(values, { withCompletionCheck: true, withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
+      return bstInsertEngine(values, { withCompletionCheck: true, withComplexityPrediction: complexityJunctionEnabled() })
     case 'floyd-warshall':
       // Floyd-Warshall operates on a fixed small graph, not a numeric
       // array - it's the only graph-track algorithm without its own
@@ -67,7 +68,7 @@ function engineForSlug(
     case 'bubble-sort':
     default:
       return bubbleSortEngine(values, {
-        withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED,
+        withComplexityPrediction: complexityJunctionEnabled(),
         codeEditorMode,
         topMisconception,
       })
@@ -201,6 +202,8 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const codeEditorMode = useAlgorithmStore((state) => state.codeEditorMode)
   const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
   const recentMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions)
+  // Classic (the study's plain visualiser) has no AI tools or Code Mode.
+  const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
 
   const [arrayInput, setArrayInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
@@ -420,14 +423,17 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             Controls section (e.g. Dijkstra's contextual controls) can never
             push AI Tools out of view. */}
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
+          {features.aiChallenge && (
           <section id="ai-tools-section" className="flex flex-col gap-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
               AI Tools
             </h3>
             <ChallengeGenerator difficulty={difficulty} />
-            <FeynmanModeButton />
+            {features.feynman && <FeynmanModeButton />}
           </section>
+          )}
 
+          {features.codeMode && (
           <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
             <button
               id="code-mode-toggle"
@@ -456,6 +462,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               </span>
             </button>
           </section>
+          )}
 
           {!fullWidth && (
             <button

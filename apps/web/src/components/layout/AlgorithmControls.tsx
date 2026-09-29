@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
+import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { Button } from '@/components/ui/button'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
@@ -538,7 +538,7 @@ function BSTControls({ slug }: { slug: string }) {
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
       <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target], {
             withCompletionCheck: slug === 'bst',
-            withComplexityPrediction: slug === 'bst' && COMPLEXITY_JUNCTION_ENABLED,
+            withComplexityPrediction: slug === 'bst' && complexityJunctionEnabled(),
           }))}>
         Insert
       </Button>

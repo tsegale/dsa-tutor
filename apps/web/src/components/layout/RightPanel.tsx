@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { conditionFeatures } from '@/utils/studyCondition'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
@@ -147,6 +148,8 @@ export default function RightPanel({
   predictionResolved,
   fullWidth = false,
 }: RightPanelProps) {
+  // Classic (the study's plain visualiser) has no AI Tutor tab.
+  const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
   const pseudocodeLine = useAlgorithmStore((state) => selectCurrentSnapshot(state)?.pseudocodeLine ?? null)
 
   function expandToTab(tab: number) {
@@ -243,9 +246,11 @@ export default function RightPanel({
                 scroll the overflow-hidden Tabs root sideways to reveal it,
                 cutting off the whole panel's left edge. */}
             <TabsList id="right-panel-tabs" className="w-full max-w-full shrink-0 justify-start overflow-x-auto">
-              <TabsTrigger value="1" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
-                AI Tutor
-              </TabsTrigger>
+              {features.aiTutorTab && (
+                <TabsTrigger value="1" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+                  AI Tutor
+                </TabsTrigger>
+              )}
               <TabsTrigger value="2" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
                 Pseudocode
               </TabsTrigger>
@@ -256,6 +261,7 @@ export default function RightPanel({
                 Step log
               </TabsTrigger>
             </TabsList>
+            {features.aiTutorTab && (
             <TabsContent value="1" className="flex flex-1 flex-col gap-3 overflow-y-auto">
               <ScaffoldingFader />
               <MistakeAnalysisToast
@@ -267,6 +273,7 @@ export default function RightPanel({
               />
               <SocraticGuidanceBox hint={hint} predictionResolved={predictionResolved} />
             </TabsContent>
+            )}
             <TabsContent value="2" className="flex-1 overflow-y-auto">
               <PseudocodePanel />
             </TabsContent>

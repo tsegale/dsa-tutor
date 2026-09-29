@@ -4,7 +4,7 @@
  * both study conditions now so the difference between them is a documented
  * decision rather than something found during analysis.
  *
- * GUIDED (the tutor with prediction junctions): the participant reached the
+ * TUTOR (the tutor with prediction junctions): the participant reached the
  * final step of a Practice run for the topic AND answered at least one
  * conceptual junction (PASS_COMPLETE, EARLY_TERMINATION, ALGORITHM_COMPLETE,
  * COMPLEXITY_PREDICTION) in that session. Reaching the last step alone is not
@@ -13,7 +13,7 @@
  * so every guided participant meets them whatever their level: the bar is
  * the same across scaffolding conditions.
  *
- * CLASSIC (Week 3; animation with no junctions): reaching the final step of
+ * CLASSIC (the plain visualiser, config/studyCondition.ts): reaching the final step of
  * a run alone. Classic has no junctions to answer, so the guided rule cannot
  * apply - this asymmetry is deliberate, and the write-up must state it.
  *
@@ -25,10 +25,12 @@
  * override, which is recorded (User.posttestOverrideAt). Session.completed is
  * the session lifecycle (set on page close) and plays no part here.
  */
-export type StudyCondition = 'GUIDED' | 'CLASSIC'
+import type { StudyCondition } from './studyCondition'
 
-/** Every participant is GUIDED until Classic mode exists (Week 3). */
-export const CURRENT_STUDY_CONDITION: StudyCondition = 'GUIDED'
+/** A session's condition, from the mode the api recorded for it at creation. */
+export function conditionOfSession(mode: string): StudyCondition {
+  return mode === 'CLASSIC' ? 'CLASSIC' : 'TUTOR'
+}
 
 export interface TopicSessionSignals {
   reachedFinalStep: boolean

@@ -12,6 +12,10 @@ export const INTERACTION_TYPES = [
   // One row per AI Challenge loaded (Week 2 2D): promptKey names the case
   // and seed, misconceptionCategory the targeted category. Not an answer.
   'CHALLENGE_ATTEMPT',
+  // One row per step viewed on a Classic topic (Week 3 3B): stepIndex and
+  // timeSpentSeconds, no prediction. Time on task and steps viewed compare
+  // across conditions from this one table. Not an answer.
+  'VIEW_STEP',
 ] as const
 
 export type InteractionType = (typeof INTERACTION_TYPES)[number]

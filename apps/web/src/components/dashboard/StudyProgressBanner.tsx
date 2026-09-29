@@ -16,8 +16,9 @@ function CheckIcon() {
 
 /**
  * A study participant's progress toward the post-test, and the only way into
- * it. A topic counts once a Practice run reached its final step and at least
- * one checkpoint question was answered (apps/api/src/config/topicCompletion.ts).
+ * it. Completion follows apps/api/src/config/topicCompletion.ts (tutor: final
+ * step plus a conceptual answer; Classic: final step). The copy is worded to
+ * fit both, since conditions are never labelled to participants.
  * A researcher can open the post-test early with their PIN - the server
  * records that it happened, so the write-up can report it.
  */
@@ -66,7 +67,7 @@ export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) 
           </ul>
           {!status.posttestAvailable && (
             <p className="text-xs text-text-muted">
-              A topic is complete when you finish a Practice run and answer at least one checkpoint question.
+              A topic is complete when you work through a run to the end, answering any questions it asks.
             </p>
           )}
         </div>

@@ -1,3 +1,5 @@
+import { conditionFor } from '../config/studyCondition'
+import { isActiveParticipant } from './study.service'
 import { prisma } from '../lib/prisma'
 import type { CreateSessionDto, UpdateSessionDto, SessionDto } from '../dtos/session.dto'
 
@@ -23,12 +25,38 @@ function toSessionDto(session: any): SessionDto {
   }
 }
 
+/**
+ * The mode a session is recorded with. The server decides the study
+ * condition, not the browser: an active participant's Classic topic is
+ * always CLASSIC, and CLASSIC is never recorded anywhere else - so a
+ * session's mode is a trustworthy condition label for the analysis.
+ */
+export function recordedSessionMode(
+  requested: CreateSessionDto['mode'],
+  topicName: string,
+  participant: { classicTopicSlug: string | null; active: boolean },
+): CreateSessionDto['mode'] {
+  if (participant.active && conditionFor(topicName, participant.classicTopicSlug) === 'CLASSIC') return 'CLASSIC'
+  return requested === 'CLASSIC' ? 'PRACTICE' : requested
+}
+
 export async function createSession(userId: string, dto: CreateSessionDto): Promise<SessionDto> {
+  const [user, topic] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { participantCode: true, consentAt: true, withdrawnAt: true, classicTopicSlug: true },
+    }),
+    prisma.algorithmTopic.findUnique({ where: { id: dto.algorithmTopicId }, select: { name: true } }),
+  ])
+  const mode = recordedSessionMode(dto.mode, topic?.name ?? '', {
+    classicTopicSlug: user?.classicTopicSlug ?? null,
+    active: !!user && isActiveParticipant(user),
+  })
   const session = await prisma.session.create({
     data: {
       userId,
       algorithmTopicId: dto.algorithmTopicId,
-      mode: dto.mode,
+      mode,
       scaffoldingLevel: dto.scaffoldingLevel,
       startTime: new Date(),
     },

@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom'
+import { conditionFeatures } from '@/utils/studyCondition'
 import { cn } from '@/lib/utils'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { comparisonFormula, isRunCountHidden } from '@/utils/complexityFormula'
@@ -556,6 +557,7 @@ function XIcon() {
 
 export default function ComplexityPanel() {
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
+  const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
   const data = COMPLEXITY[algorithmSlug ?? '']
 
   if (!data) {
@@ -577,7 +579,8 @@ export default function ComplexityPanel() {
 
   return (
     <div className="flex h-full flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <RunMeasurement topicSlug={algorithmSlug} />
+      {/* Classic keeps the static table only - no measured counts. */}
+      {features.measuredCounts && <RunMeasurement topicSlug={algorithmSlug} />}
       {rows.map((row) => (
         <div key={row.label} className="flex items-center justify-between">
           <span className="text-sm text-text-secondary dark:text-dark-text-secondary">

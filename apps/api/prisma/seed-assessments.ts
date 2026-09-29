@@ -35,7 +35,21 @@ export async function seedAssessments(prisma: PrismaClient, { replaceItems }: { 
     })
 
     const existingItems = await prisma.assessmentItem.count({ where: { assessmentId: assessment.id } })
-    if (existingItems > 0 && !replaceItems) continue
+    if (existingItems > 0 && !replaceItems) {
+      // Items created before AssessmentItem.topicSlug existed get their topic
+      // filled in by order - only that column, never touching responses.
+      let order = 0
+      for (const bank of ITEM_BANK) {
+        for (let i = 0; i < bank.items.length; i++) {
+          order += 1
+          await prisma.assessmentItem.updateMany({
+            where: { assessmentId: assessment.id, order, topicSlug: null },
+            data: { topicSlug: bank.topicSlug },
+          })
+        }
+      }
+      continue
+    }
 
     // Items don't carry a natural per-topic unique key (order restarts at 1
     // for each topic, and a conceptTag like EDGE_SINGLE recurs across
@@ -64,6 +78,7 @@ export async function seedAssessments(prisma: PrismaClient, { replaceItems }: { 
             correctOptionId: item.correctOptionId,
             conceptTag: item.conceptTag,
             maxScore: item.maxScore,
+            topicSlug: bank.topicSlug,
           },
         })
       }

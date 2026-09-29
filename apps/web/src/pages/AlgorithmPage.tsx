@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { complexityJunctionEnabled, initialMode, isClassicTopic } from '@/utils/studyCondition'
 import { motion } from 'framer-motion'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -88,6 +88,30 @@ import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { cn } from '@/lib/utils'
 
+/** One VIEW_STEP interaction: a step viewed in Classic, with the time spent on it. */
+function logViewedStep(sessionId: string, stepIndex: number, elapsedMs: number) {
+  const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
+  apiFetch('/api/v1/interactions', {
+    method: 'POST',
+    keepalive: true,
+    body: JSON.stringify({
+      sessionId,
+      stepIndex,
+      predictionSubmitted: null,
+      predictionCorrect: null,
+      misconceptionCategory: null,
+      hintsRequested: 0,
+      timeSpentSeconds: Math.round(elapsedMs / 100) / 10,
+      criticalJunctionType: snapshot?.criticalJunctionType ?? null,
+      junctionDifficulty: snapshot?.junctionDifficulty ?? null,
+      interactionType: 'VIEW_STEP',
+      aiGenerated: false,
+    }),
+  }).catch(() => {
+    // Research logging is best-effort; a failed write never blocks the run.
+  })
+}
+
 function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
   const entry = getAlgorithmRegistryEntry(algorithmName)
   const defaultInput = entry?.defaultInput ?? [5, 3, 1, 4, 2]
@@ -101,7 +125,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'linear-search':
       return linearSearchEngine(defaultInput, defaultTarget)
     case 'binary-search':
-      return binarySearchEngine(defaultInput, defaultTarget, { withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
+      return binarySearchEngine(defaultInput, defaultTarget, { withComplexityPrediction: complexityJunctionEnabled() })
     case 'merge-sort':
       return mergeSortEngine(defaultInput)
     case 'quick-sort':
@@ -115,7 +139,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     case 'radix-sort':
       return radixSortEngine(defaultInput)
     case 'bst':
-      return bstInsertEngine(defaultInput, { withCompletionCheck: true, withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED })
+      return bstInsertEngine(defaultInput, { withCompletionCheck: true, withComplexityPrediction: complexityJunctionEnabled() })
     case 'bst-search':
     case 'bst-delete':
     case 'tree-inorder':
@@ -258,7 +282,7 @@ function loadAlgorithmEngine(algorithmName: string): AlgorithmSnapshot[] {
     default: {
       const { recentMisconceptions } = useAlgorithmStore.getState()
       return bubbleSortEngine(defaultInput, {
-        withComplexityPrediction: COMPLEXITY_JUNCTION_ENABLED,
+        withComplexityPrediction: complexityJunctionEnabled(),
         topMisconception: topMisconceptionOf(recentMisconceptions),
       })
     }
@@ -352,6 +376,10 @@ export default function AlgorithmPage() {
   // which would misleadingly suggest the algorithm just isn't built yet.
   const { data: studyStatus } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus, staleTime: 60 * 1000 })
   const isActiveParticipant = !!studyStatus?.isParticipant && !studyStatus.consentRequired && !studyStatus.withdrawn
+  // This page is the participant's Classic topic (Week 3 3B): the plain
+  // visualiser, never labelled as such. The status is already cached by
+  // StudyGate, so this is known before the first paint.
+  const isClassic = isClassicTopic(studyStatus, algorithmNameParam)
   useEffect(() => {
     if (!algorithmNameParam || !isImplemented || currentTopic || !isActiveParticipant) return
     navigate('/?blocked=study', { replace: true })
@@ -361,7 +389,12 @@ export default function AlgorithmPage() {
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const { isTooSmall, isCompact } = useLayoutBreakpoint()
   const [compactTab, setCompactTab] = useState<'canvas' | 'controls' | 'tutor'>('canvas')
-  const [activeTab, setActiveTab] = useState(1)
+  const [activeTab, setActiveTabRaw] = useState(1)
+  // Classic has no AI Tutor tab (1): anything asking for it gets Pseudocode.
+  const setActiveTab = useCallback((tab: number) => setActiveTabRaw(isClassic && tab === 1 ? 2 : tab), [isClassic])
+  useEffect(() => {
+    if (isClassic) setActiveTabRaw((tab) => (tab === 1 ? 2 : tab))
+  }, [isClassic])
 
   // Entering Practice or Hands-On forces the AI Tutor tab (1) - a student
   // who left Complexity or Pseudocode open in Demo mode should not have
@@ -427,6 +460,7 @@ export default function AlgorithmPage() {
   // Worked-example fading (Week 2 2A) covers the study topics only; every
   // other topic keeps asking every junction.
   const setFadingEnabled = useAlgorithmStore((state) => state.setFadingEnabled)
+  const setClassicMode = useAlgorithmStore((state) => state.setClassicMode)
   useEffect(() => {
     setFadingEnabled((STUDY_TOPIC_SLUGS as readonly string[]).includes(algorithmNameParam ?? ''))
   }, [algorithmNameParam, setFadingEnabled])
@@ -795,7 +829,9 @@ export default function AlgorithmPage() {
   const reachedFinalStepSentRef = useRef<string | null>(null)
   useEffect(() => {
     const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
-    if (!snapshot?.isFinalStep || mode !== AlgorithmMode.PRACTICE || !sessionId) return
+    if (!snapshot?.isFinalStep || !sessionId) return
+    // Practice runs count, and Classic runs (which play in Demo mode).
+    if (mode !== AlgorithmMode.PRACTICE && !isClassic) return
     if (reachedFinalStepSentRef.current === sessionId) return
     reachedFinalStepSentRef.current = sessionId
     apiFetch(`/api/v1/sessions/${sessionId}`, {
@@ -805,7 +841,30 @@ export default function AlgorithmPage() {
       // Allow a retry on the next final step if this write was lost.
       reachedFinalStepSentRef.current = null
     })
-  }, [stepIndex, mode, sessionId])
+  }, [stepIndex, mode, sessionId, isClassic])
+
+  // Logging parity (Week 3 3B.6): in Classic there are no predictions, so
+  // each step viewed is one VIEW_STEP row with the time spent on it. Time on
+  // task and steps viewed then compare across conditions from one table.
+  const viewedStepRef = useRef<{ index: number; since: number } | null>(null)
+  useEffect(() => {
+    if (!isClassic || !sessionId) {
+      viewedStepRef.current = null
+      return
+    }
+    const previous = viewedStepRef.current
+    const now = Date.now()
+    viewedStepRef.current = { index: stepIndex, since: now }
+    if (previous) logViewedStep(sessionId, previous.index, now - previous.since)
+  }, [isClassic, sessionId, stepIndex])
+  useEffect(() => {
+    return () => {
+      // The last step viewed, when the page closes.
+      const last = viewedStepRef.current
+      const activeSessionId = useAlgorithmStore.getState().sessionId
+      if (last && activeSessionId) logViewedStep(activeSessionId, last.index, Date.now() - last.since)
+    }
+  }, [])
 
   // AI Challenge completion bonus: award once per run when the learner
   // finishes a full sort in Practice Mode on an AI-generated array.
@@ -866,10 +925,15 @@ export default function AlgorithmPage() {
     // argues for - Demo is one explicit click away via the mode toggle or
     // an explicit ?mode=DEMO link, never the silent fallback (see
     // remediation doc 9.8).
-    const modeParam = searchParams.get('mode')
-    setMode(modeParam === 'DEMO' ? AlgorithmMode.DEMO : AlgorithmMode.PRACTICE)
+    // Classic ignores ?mode= entirely and locks the mode (see
+    // utils/studyCondition.ts), so no link reaches a tutor mode.
+    setClassicMode(isClassic)
+    if (!isClassic) setMode(initialMode(searchParams.get('mode'), false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isClassic])
+
+  // Leaving the page must not leave the store locked in Classic.
+  useEffect(() => () => setClassicMode(false), [setClassicMode])
 
   // Load the route's algorithm into the store on mount and whenever the
   // route param changes (e.g. navigating from one algorithm straight to
@@ -920,7 +984,7 @@ export default function AlgorithmPage() {
         })
         if (!cancelled) setSessionId(session.id)
 
-        if ((STUDY_TOPIC_SLUGS as readonly string[]).includes(currentTopic.name)) {
+        if ((STUDY_TOPIC_SLUGS as readonly string[]).includes(currentTopic.name) && !useAlgorithmStore.getState().classicMode) {
           // Catches the "left and didn't come back" abandonment path a
           // per-junction counter alone can't see, since nothing fires
           // while the student is elsewhere - see the doc's Abandon rule.
