@@ -1,3 +1,5 @@
+import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
+import { CURRENT_STUDY_CONDITION, isTopicComplete } from '../config/topicCompletion'
 import { hasPreLabelFixFeedback } from '../config/dataValidity'
 import { prisma } from '../lib/prisma'
 import { toCsv, parseCsv } from '../utils/csv'
@@ -189,8 +191,29 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
   const sessions = await prisma.session.findMany({
     where: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER },
     include: {
-      user: { select: { participantCode: true, susScore: true, consentAt: true } },
+      user: {
+        select: {
+          participantCode: true,
+          susScore: true,
+          consentAt: true,
+          posttestOverrideAt: true,
+          posttestOverrideIncompleteTopics: true,
+        },
+      },
       algorithmTopic: { select: { displayName: true } },
+      // Graded conceptual answers in this session - the second
+      // topic-completion signal (config/topicCompletion.ts).
+      _count: {
+        select: {
+          interactions: {
+            where: {
+              junctionDifficulty: 'CONCEPTUAL',
+              interactionType: { in: [...SCORED_INTERACTION_TYPES] },
+              predictionSubmitted: { not: null },
+            },
+          },
+        },
+      },
     },
     orderBy: { startTime: 'asc' },
   }).then((rows) => rows.filter((row) => isAfterConsent(row.startTime, row.user.consentAt)))
@@ -206,6 +229,16 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
     'startTime',
     'wallClockSeconds',
     'activeSeconds',
+    // Topic-completion rule (config/topicCompletion.ts): both signals, and
+    // whether this session met the rule for the participant's condition.
+    'reachedFinalStep',
+    'conceptualJunctionsAnswered',
+    'topicCompleteBySession',
+    // Per participant, repeated on every row like susScore: when a
+    // researcher opened the post-test without the rule met, and which
+    // topics were incomplete then.
+    'posttestOverrideAt',
+    'posttestOverrideIncompleteTopics',
   ]
 
   const rows = sessions.map((session) => {
@@ -227,6 +260,16 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
       session.startTime.toISOString(),
       session.wallClockSeconds !== null ? String(session.wallClockSeconds) : '',
       session.activeSeconds !== null ? String(session.activeSeconds) : '',
+      String(session.reachedFinalStep),
+      String(session._count.interactions),
+      String(
+        isTopicComplete(
+          { reachedFinalStep: session.reachedFinalStep, conceptualJunctionsAnswered: session._count.interactions },
+          CURRENT_STUDY_CONDITION,
+        ),
+      ),
+      session.user.posttestOverrideAt?.toISOString() ?? '',
+      session.user.posttestOverrideIncompleteTopics.join(';'),
     ]
   })
 

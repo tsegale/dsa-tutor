@@ -12,6 +12,7 @@ import TrackSection from '../components/dashboard/TrackSection'
 import StatsBanner from '../components/dashboard/StatsBanner'
 import BadgesSection from '../components/dashboard/BadgesSection'
 import AILearningPathBanner from '../components/dashboard/AILearningPathBanner'
+import StudyProgressBanner from '../components/dashboard/StudyProgressBanner'
 import WelcomeModal from '../components/onboarding/WelcomeModal'
 import { EmptyStateIllustration } from '../components/brand'
 
@@ -116,6 +117,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
+                <StudyProgressBanner topics={topics} />
                 <AILearningPathBanner topics={topics} onStart={handleStart} />
 
                 {trackOrder.map((track) => {

@@ -26,6 +26,8 @@ export interface UpdateSessionDto {
   // the tab was visible. Sent by a heartbeat and when the page is hidden.
   wallClockSeconds?: number
   activeSeconds?: number
+  // A Practice run in this session reached its final step (topic-completion signal).
+  reachedFinalStep?: true
 }
 
 export interface SessionDto {

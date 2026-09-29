@@ -789,6 +789,24 @@ export default function AlgorithmPage() {
     }
   }, [stepIndex])
 
+  // Topic-completion signal (apps/api/src/config/topicCompletion.ts): a
+  // Practice run in this session reached its final step. Sent once per
+  // session; the server only ever sets it to true. Demo runs never count.
+  const reachedFinalStepSentRef = useRef<string | null>(null)
+  useEffect(() => {
+    const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
+    if (!snapshot?.isFinalStep || mode !== AlgorithmMode.PRACTICE || !sessionId) return
+    if (reachedFinalStepSentRef.current === sessionId) return
+    reachedFinalStepSentRef.current = sessionId
+    apiFetch(`/api/v1/sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reachedFinalStep: true }),
+    }).catch(() => {
+      // Allow a retry on the next final step if this write was lost.
+      reachedFinalStepSentRef.current = null
+    })
+  }, [stepIndex, mode, sessionId])
+
   // AI Challenge completion bonus: award once per run when the learner
   // finishes a full sort in Practice Mode on an AI-generated array.
   useEffect(() => {

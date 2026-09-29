@@ -60,6 +60,11 @@ model User {
   participantCode String?    @unique
   consentAt       DateTime?
   withdrawnAt     DateTime?
+  // Set when a researcher let the participant take the post-test without
+  // meeting the topic-completion rule, with the topics still incomplete at
+  // that moment - so the write-up can report how many needed it.
+  posttestOverrideAt               DateTime?
+  posttestOverrideIncompleteTopics String[]  @default([])
 
   // SUS (System Usability Scale) - one submission per participant, taken
   // once at the very end of the study (after the post-test), not per
@@ -116,6 +121,13 @@ model Session {
   // the tab was visible. Null for sessions before 2F.
   wallClockSeconds Int?
   activeSeconds    Int?
+
+  // True once a Practice run in this session reached its final step. One of
+  // the two signals the topic-completion rule reads (with the count of
+  // conceptual junctions answered, derived from Interaction rows) - see
+  // apps/api/src/config/topicCompletion.ts. Separate from `completed`, which
+  // is only the session lifecycle (set when the page closes).
+  reachedFinalStep Boolean @default(false)
 
   user           User           @relation(fields: [userId], references: [id])
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])

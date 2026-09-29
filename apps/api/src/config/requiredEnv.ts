@@ -18,6 +18,7 @@ export const REQUIRED_PRODUCTION_ENV = [
   'AI_SERVICE_URL',
   'ALLOWED_ORIGINS',
   'STUDY_ENROLMENT_CODES',
+  'STUDY_RESEARCHER_PIN',
 ] as const
 
 /** Names of required variables that are unset or blank. */

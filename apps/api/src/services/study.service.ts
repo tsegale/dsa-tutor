@@ -1,6 +1,10 @@
+import { timingSafeEqual } from 'crypto'
 import { prisma } from '../lib/prisma'
 import { STUDY_TOPICS } from '../config/studyTopics'
 import type { StudyStatusDto } from '../dtos/study.dto'
+import { consentDetailsComplete } from '../config/studyConsent'
+import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
+import { CURRENT_STUDY_CONDITION, isTopicComplete } from '../config/topicCompletion'
 
 const PRE_CODE = 'STUDY_PRE_V1'
 const POST_CODE = 'STUDY_POST_V1'
@@ -31,10 +35,48 @@ export const ACTIVE_PARTICIPANT_WHERE = {
   withdrawnAt: null as Date | null,
 }
 
+/**
+ * The study topics this participant has completed under the topic-completion
+ * rule (config/topicCompletion.ts), counting only sessions started after
+ * consent. Signals: Session.reachedFinalStep, and the graded conceptual
+ * answers stored in that session's Interaction rows.
+ */
+export async function completedStudyTopics(userId: string, consentAt: Date): Promise<string[]> {
+  const sessions = await prisma.session.findMany({
+    where: {
+      userId,
+      algorithmTopic: { name: { in: [...STUDY_TOPICS] } },
+      startTime: { gte: consentAt },
+      reachedFinalStep: true,
+    },
+    select: {
+      reachedFinalStep: true,
+      algorithmTopic: { select: { name: true } },
+      _count: {
+        select: {
+          interactions: {
+            where: {
+              junctionDifficulty: 'CONCEPTUAL',
+              interactionType: { in: [...SCORED_INTERACTION_TYPES] },
+              predictionSubmitted: { not: null },
+            },
+          },
+        },
+      },
+    },
+  })
+  const completed = new Set<string>()
+  for (const session of sessions) {
+    const signals = { reachedFinalStep: session.reachedFinalStep, conceptualJunctionsAnswered: session._count.interactions }
+    if (isTopicComplete(signals, CURRENT_STUDY_CONDITION)) completed.add(session.algorithmTopic.name)
+  }
+  return STUDY_TOPICS.filter((topic) => completed.has(topic))
+}
+
 export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { participantCode: true, consentAt: true, withdrawnAt: true },
+    select: { participantCode: true, consentAt: true, withdrawnAt: true, posttestOverrideAt: true },
   })
   if (!user?.participantCode) {
     return {
@@ -44,6 +86,8 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
       pretestRequired: false,
       posttestAvailable: false,
       posttestCompleted: false,
+      topicsCompleted: [],
+      posttestOverride: false,
     }
   }
 
@@ -58,28 +102,20 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
       pretestRequired: true,
       posttestAvailable: false,
       posttestCompleted: false,
+      topicsCompleted: [],
+      posttestOverride: false,
     }
   }
 
-  const [preAttempt, postAttempt, completedTopics] = await Promise.all([
+  const consentAt = user.consentAt
+  const [preAttempt, postAttempt, topicsCompleted] = await Promise.all([
     prisma.assessmentAttempt.findFirst({
       where: { userId, assessment: { code: PRE_CODE }, completedAt: { not: null } },
     }),
     prisma.assessmentAttempt.findFirst({
       where: { userId, assessment: { code: POST_CODE }, completedAt: { not: null } },
     }),
-    prisma.session.findMany({
-      where: {
-        userId,
-        completed: true,
-        algorithmTopic: { name: { in: [...STUDY_TOPICS] } },
-        // Only practice after consent counts toward the post-test: sessions
-        // from before enrolling are not study sessions.
-        startTime: { gte: user.consentAt },
-      },
-      select: { algorithmTopicId: true },
-      distinct: ['algorithmTopicId'],
-    }),
+    completedStudyTopics(userId, consentAt),
   ])
 
   return {
@@ -92,8 +128,12 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
     withdrawn: !isActiveParticipant(user),
     consentRequired: false,
     pretestRequired: !preAttempt,
-    posttestAvailable: completedTopics.length >= STUDY_TOPICS.length,
+    // The completion rule gates the post-test, but never hard-blocks it: a
+    // researcher override (recorded) opens it too.
+    posttestAvailable: topicsCompleted.length >= STUDY_TOPICS.length || user.posttestOverrideAt !== null,
     posttestCompleted: !!postAttempt,
+    topicsCompleted,
+    posttestOverride: user.posttestOverrideAt !== null,
   }
 }
 
@@ -101,6 +141,11 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
  * stored - trimmed and uppercased, so "p01" and "P01" are the same claim. */
 export function normalizeParticipantCode(raw: string): string {
   return raw.trim().toUpperCase()
+}
+
+/** Pilot codes (PILOT-1, ...) are excluded from research exports by default. */
+export function isPilotCode(code: string): boolean {
+  return normalizeParticipantCode(code).startsWith('PILOT-')
 }
 
 /** Parses the comma-separated allowlist of codes a researcher has actually
@@ -125,6 +170,12 @@ export async function enrolParticipant(userId: string, rawCode: string): Promise
   if (!code || !parseEnrolmentAllowlist(process.env.STUDY_ENROLMENT_CODES ?? '').has(code)) {
     throw new Error('INVALID_CODE')
   }
+  // No real participant is enrolled against a consent page with placeholders
+  // on it (no researcher email, no ethics approval line). Pilot codes are
+  // allowed, so the flow can be tested before the page is final.
+  if (!isPilotCode(code) && !consentDetailsComplete()) {
+    throw new Error('ENROLMENT_NOT_OPEN')
+  }
 
   const [self, claimedBy] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true } }),
@@ -139,6 +190,43 @@ export async function enrolParticipant(userId: string, rawCode: string): Promise
 
   await prisma.user.update({ where: { id: userId }, data: { participantCode: code } })
   return getStudyStatus(userId)
+}
+
+/**
+ * Lets a participant who has not met the topic-completion rule take the
+ * post-test, when the researcher running the session confirms it with the
+ * researcher PIN (STUDY_RESEARCHER_PIN). In a one-shot lab session a
+ * participant stuck on a definitional edge case would otherwise be lost
+ * data. Records when, and which topics were still incomplete. Idempotent.
+ */
+export async function overridePosttest(userId: string, pin: string): Promise<StudyStatusDto> {
+  const expected = process.env.STUDY_RESEARCHER_PIN ?? ''
+  if (!expected.trim()) throw new Error('OVERRIDE_NOT_CONFIGURED')
+  if (!pinMatches(pin, expected)) throw new Error('WRONG_PIN')
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { participantCode: true, consentAt: true, withdrawnAt: true, posttestOverrideAt: true },
+  })
+  if (!user?.participantCode || !user.consentAt || user.withdrawnAt) throw new Error('NOT_A_PARTICIPANT')
+  if (!user.posttestOverrideAt) {
+    const completed = await completedStudyTopics(userId, user.consentAt)
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        posttestOverrideAt: new Date(),
+        posttestOverrideIncompleteTopics: STUDY_TOPICS.filter((topic) => !completed.includes(topic)),
+      },
+    })
+  }
+  return getStudyStatus(userId)
+}
+
+/** Constant-time comparison, so response timing says nothing about the PIN. */
+function pinMatches(given: string, expected: string): boolean {
+  const a = Buffer.from(given.trim())
+  const b = Buffer.from(expected.trim())
+  return a.length === b.length && timingSafeEqual(a, b)
 }
 
 /** Idempotent: consenting twice just keeps the original timestamp. */

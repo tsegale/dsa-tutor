@@ -26,3 +26,11 @@ export function submitSus(responses: number[]) {
     body: JSON.stringify({ responses }),
   })
 }
+
+/** Researcher-only: opens the post-test without the topic-completion rule met (recorded). */
+export function overridePosttest(pin: string) {
+  return apiFetch<StudyStatusDto>('/api/v1/study/posttest-override', {
+    method: 'POST',
+    body: JSON.stringify({ pin }),
+  })
+}

@@ -3,6 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchStudyStatus, recordConsent } from '@/api/study'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
+import { STUDY_CONSENT, consentDetailsComplete } from '@/utils/studyConsent'
+
+/** A consent detail, or a visible placeholder where it has not been confirmed yet. */
+function Detail({ value, placeholder }: { value: string | null; placeholder: string }) {
+  if (value?.trim()) return <>{value}</>
+  return <span className="rounded bg-secondary-light px-1 font-medium text-secondary">[{placeholder}]</span>
+}
 
 function ConsentPageHeader() {
   return (
@@ -73,13 +80,34 @@ export default function ConsentPage() {
 
       <main className="mx-auto max-w-2xl px-6 py-12">
         <h1 className="mb-2 text-xl font-bold text-text-primary">Before you start: research consent</h1>
+        {!consentDetailsComplete() && (
+          <p className="mb-4 rounded-md border border-secondary bg-secondary-light p-3 text-sm text-text-primary">
+            Draft: some details below are still being confirmed. This page is for piloting only - no real
+            participant is enrolled until every detail is final.
+          </p>
+        )}
         <p className="mb-6 text-sm text-text-secondary">
           You've been enrolled as a participant in a study evaluating this platform, run as part of a
-          final-year Computer Science research project at the University of Namibia. Please read the
-          following before continuing.
+          final-year Computer Science research project at the <Detail value={STUDY_CONSENT.institution} placeholder="institution" />.
+          Please read the following before continuing.
         </p>
 
         <div className="mb-6 flex flex-col gap-4 rounded-md border border-border bg-card p-5 text-sm text-text-primary">
+          <div>
+            <h2 className="mb-1 font-semibold">Who is running this study</h2>
+            <p className="text-text-secondary">
+              <Detail value={STUDY_CONSENT.researcherName} placeholder="researcher name" />, supervised by{' '}
+              <Detail value={STUDY_CONSENT.supervisorName} placeholder="supervisor" />. Contact:{' '}
+              {STUDY_CONSENT.researcherEmail ? (
+                <a href={`mailto:${STUDY_CONSENT.researcherEmail}`} className="text-primary underline">
+                  {STUDY_CONSENT.researcherEmail}
+                </a>
+              ) : (
+                <Detail value={null} placeholder="institutional email" />
+              )}
+              .
+            </p>
+          </div>
           <div>
             <h2 className="mb-1 font-semibold">What you'll be doing</h2>
             <p className="text-text-secondary">
@@ -90,29 +118,44 @@ export default function ConsentPage() {
           <div>
             <h2 className="mb-1 font-semibold">What is recorded</h2>
             <p className="text-text-secondary">
-              Your predictions and answers during practice, the hints and feedback you're shown, your
-              pre/post-test responses, and your self-reported effort and confidence ratings. Data is
-              linked to a participant code, not your name or email, in every research export.
+              Your interactions are logged: your predictions and answers during practice, the hints and
+              feedback you're shown, how long each step takes, your pre/post-test responses, and your
+              self-reported effort and confidence ratings.
+            </p>
+          </div>
+          <div>
+            <h2 className="mb-1 font-semibold">Use of an AI service</h2>
+            <p className="text-text-secondary">
+              To generate feedback, your answers and anything you write - explanations in your own words,
+              short written reflections, and any code - are sent to Anthropic, a third-party AI provider, for
+              processing. Your name and email address are never sent.
+            </p>
+          </div>
+          <div>
+            <h2 className="mb-1 font-semibold">How your data is identified</h2>
+            <p className="text-text-secondary">
+              Your data is stored under a participant code, not your name or email. No research export
+              contains your name or email.
+            </p>
+          </div>
+          <div>
+            <h2 className="mb-1 font-semibold">What happens to the data afterwards</h2>
+            <p className="text-text-secondary">
+              <Detail value={STUDY_CONSENT.dataRetention} placeholder="how long the data is kept, and what happens to it" />
             </p>
           </div>
           <div>
             <h2 className="mb-1 font-semibold">Your right to withdraw</h2>
             <p className="text-text-secondary">
-              Participation is voluntary. You can withdraw from the study at any time from your account
-              menu, without giving a reason. Withdrawing removes your data from every research export
-              going forward, but does not delete your account or stop you using the platform.
+              Participation is voluntary. You can withdraw at any time, with no consequence and without
+              giving a reason, from your account menu. Withdrawing removes your data from every research
+              export going forward, but does not delete your account or stop you using the platform.
             </p>
           </div>
           <div>
-            <h2 className="mb-1 font-semibold">Questions</h2>
-            {/* Placeholder contact - replace with the actual, ethics-approved
-                researcher contact before running real sessions. */}
+            <h2 className="mb-1 font-semibold">Ethics approval</h2>
             <p className="text-text-secondary">
-              Contact the research team at{' '}
-              <a href="mailto:research@dsatutor.com" className="text-primary underline">
-                research@dsatutor.com
-              </a>{' '}
-              with any questions about this study.
+              <Detail value={STUDY_CONSENT.ethicsApproval} placeholder="ethics approval status - to be confirmed by the supervisor" />
             </p>
           </div>
         </div>

@@ -64,6 +64,8 @@ export const sessions = {
       confidence: z.int().min(1).max(5).optional(),
       // Timing telemetry (Week 2 2F); capped at a day so a stuck clock
       // cannot write an absurd value.
+      // Only ever set to true: a run reaching its final step cannot be undone.
+      reachedFinalStep: z.literal(true).optional(),
       wallClockSeconds: z.int().min(0).max(86_400).optional(),
       activeSeconds: z.int().min(0).max(86_400).optional(),
     }),
@@ -255,6 +257,7 @@ export const study = {
   // Exactly ten 1-5 Likert answers. study.service re-checks this, which is
   // intentional: the service rule does not depend on this edge check.
   sus: { body: z.strictObject({ responses: z.array(z.int().min(1).max(5)).length(10) }) },
+  posttestOverride: { body: z.strictObject({ pin: nonEmpty(50) }) },
 } satisfies Record<string, RequestSchema>
 
 // ------------------------------------------------ misconception events

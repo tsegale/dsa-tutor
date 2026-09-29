@@ -727,6 +727,10 @@ export interface StudyStatusDto {
   pretestRequired: boolean
   posttestAvailable: boolean
   posttestCompleted: boolean
+  /** Study topics completed under the topic-completion rule, after consent. */
+  topicsCompleted: string[]
+  /** A researcher opened the post-test without the rule being met. */
+  posttestOverride: boolean
 }
 
 /** An item as delivered to the student - never carries the correct answer. */
@@ -810,4 +814,26 @@ export interface EducatorMisconceptionSummaryRow {
   persistent: number
   abandoned: number
   medianJunctionsToResolution: number | null
+}
+
+/**
+ * What the consent page tells participants - the values live in
+ * studyConsent.json (read by both the web page and the api; the api cannot
+ * load runtime values from this .ts file). Every null is a detail that must
+ * be confirmed before real enrolment: the api refuses non-PILOT codes until
+ * none are left, and the page shows each one as a visible placeholder. Do
+ * not invent any of them - the ethics approval line comes from the
+ * supervisor (decided 2026-09-29).
+ */
+export interface StudyConsentDetails {
+  /** Researcher's name as it should appear to participants. */
+  researcherName: string | null
+  /** Institutional (UNAM) address - not a personal one. */
+  researcherEmail: string | null
+  supervisorName: string | null
+  institution: string | null
+  /** How long the data is kept and what happens to it afterwards. */
+  dataRetention: string | null
+  /** Ethics approval reference or status, exactly as confirmed by the supervisor. */
+  ethicsApproval: string | null
 }

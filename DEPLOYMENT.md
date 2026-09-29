@@ -29,6 +29,7 @@ and `.env.example` in sync.
 | AI_SERVICE_URL | AI microservice URL | Railway AI service domain |
 | ALLOWED_ORIGINS | CORS allowed origins | Vercel frontend domain |
 | STUDY_ENROLMENT_CODES | Researcher-issued participant codes, comma-separated | e.g. P01,...,P12,PILOT-1,PILOT-2 |
+| STUDY_RESEARCHER_PIN | Researcher-only PIN that lets a participant take the post-test without meeting the topic-completion rule (recorded) | Choose one; never give it to participants |
 
 ## apps/ai (Railway)
 
