@@ -1105,7 +1105,7 @@ export default function AlgorithmPage() {
         </motion.div>
 
         <ChallengeHintBanner />
-        {openMisconceptionForTopic && <OpenMisconceptionIndicator category={openMisconceptionForTopic.category} />}
+        {openMisconceptionForTopic && <OpenMisconceptionIndicator category={openMisconceptionForTopic.category} topicSlug={currentTopic?.name} />}
 
         {focusModeActive && (
           <div className="absolute right-4 bottom-4 z-20 rounded-full bg-active px-3 py-1.5 text-xs font-medium text-white shadow-md">

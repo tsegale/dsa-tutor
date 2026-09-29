@@ -22,7 +22,7 @@ export default function BottomOutModal({ category, algorithmTopicSlug, onAcknowl
           <div>
             <p className="text-xs font-semibold tracking-wide text-secondary uppercase">Here's how it works</p>
             <h2 className="mt-1 text-base font-semibold text-text-primary">
-              Let's settle {getStudentLanguageLabel(category)} before moving on.
+              Let's settle {getStudentLanguageLabel(category, algorithmTopicSlug)} before moving on.
             </h2>
           </div>
           <p className="rounded-md bg-primary-light p-3 text-sm text-text-primary">

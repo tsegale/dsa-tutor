@@ -115,8 +115,24 @@ const STUDENT_LANGUAGE_LABELS: Partial<Record<MisconceptionCategory, string>> = 
   [MisconceptionCategory.COMPLEXITY_MISATTRIBUTION]: 'how many comparisons this takes',
 }
 
-export function getStudentLanguageLabel(category: string): string {
-  return STUDENT_LANGUAGE_LABELS[category as MisconceptionCategory] ?? 'a recent question'
+// Where the default wording is written from one topic's point of view and
+// would mislead on another (a "pass" on binary search, say).
+const TOPIC_LABELS: Record<string, Partial<Record<MisconceptionCategory, string>>> = {
+  'bubble-sort': {
+    [MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION]: 'when a pair is out of order',
+  },
+  'binary-search': {
+    [MisconceptionCategory.INVARIANT_MISAPPLICATION]: 'what stays true about the search range',
+    [MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION]: 'why the array must already be sorted',
+  },
+  bst: {
+    [MisconceptionCategory.INVARIANT_MISAPPLICATION]: "what the tree's ordering guarantees",
+  },
+}
+
+export function getStudentLanguageLabel(category: string, topicSlug?: string): string {
+  const byTopic = topicSlug ? TOPIC_LABELS[topicSlug]?.[category as MisconceptionCategory] : undefined
+  return byTopic ?? STUDENT_LANGUAGE_LABELS[category as MisconceptionCategory] ?? 'a recent question'
 }
 
 export function getProbingJunctions(category: string): CriticalJunctionType[] {
