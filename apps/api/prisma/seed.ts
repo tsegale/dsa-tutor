@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { seedAssessments } from './seed-assessments'
 
 const prisma = new PrismaClient()
 
@@ -135,6 +136,10 @@ async function main() {
       create: badge,
     })
   }
+
+  // The study's pre/post-test instrument (additive only - never touches
+  // items once they exist, so it is safe on every startup).
+  await seedAssessments(prisma, { replaceItems: false })
 
   console.log('Seed complete.')
 }
