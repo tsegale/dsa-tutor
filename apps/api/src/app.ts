@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { errorHandler } from './middleware/errorHandler'
 import { requestId } from './lib/requestContext'
+import { missingProductionEnv } from './config/requiredEnv'
 import authRouter from './routers/auth.router'
 import sessionsRouter from './routers/sessions.router'
 import interactionsRouter from './routers/interactions.router'
@@ -27,8 +28,11 @@ app.use(
 app.use(requestId)
 app.use(express.json())
 
+// Reports unset required variables by name (never values), so an
+// incomplete deploy is visible with one curl.
 app.get('/health', (req, res) => {
-  res.json({ data: { status: 'ok' }, error: null })
+  const missingEnv = missingProductionEnv()
+  res.json({ data: { status: 'ok', config: missingEnv.length === 0 ? 'complete' : 'incomplete', missingEnv }, error: null })
 })
 
 app.use('/api/v1/auth', authRouter)

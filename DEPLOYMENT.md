@@ -2,9 +2,16 @@
 
 ## apps/api (Railway)
 
+Every variable in this table except REDIS_URL is required (the API logs any missing at
+startup, and `GET /health` lists them). Railway does not pick up variables from
+`.env.example` - add each one by hand in the service's Variables tab. The list
+in code is `apps/api/src/config/requiredEnv.ts`; a test keeps it, this table
+and `.env.example` in sync.
+
 | Variable | Purpose | Where to get it |
 |---|---|---|
 | DATABASE_URL | PostgreSQL connection | Supabase > Settings > Database > URI |
+| DIRECT_URL | PostgreSQL connection for migrations | Supabase Session Pooler URI (see below) |
 | REDIS_URL | Redis connection (not yet read by any code path - see note below) | Upstash > Database > Redis URL |
 | JWT_SECRET | Token signing key | Generate: openssl rand -hex 32 |
 | JWT_EXPIRES_IN | Token lifetime | Set to 7d |
@@ -12,6 +19,7 @@
 | NODE_ENV | Environment | Set to production |
 | AI_SERVICE_URL | AI microservice URL | Railway AI service domain |
 | ALLOWED_ORIGINS | CORS allowed origins | Vercel frontend domain |
+| STUDY_ENROLMENT_CODES | Researcher-issued participant codes, comma-separated | e.g. P01,...,P12,PILOT-1,PILOT-2 |
 
 ## apps/ai (Railway)
 

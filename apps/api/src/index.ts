@@ -2,10 +2,18 @@ import 'dotenv/config'
 import { execSync } from 'child_process'
 import path from 'path'
 import app from './app'
+import { missingProductionEnv } from './config/requiredEnv'
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 
 if (process.env.NODE_ENV === 'production') {
+  // Railway variables are set by hand; a missing one fails quietly (an
+  // empty enrolment allowlist rejects every code), so say so loudly.
+  const missing = missingProductionEnv()
+  if (missing.length > 0) {
+    console.error(`Missing required environment variables: ${missing.join(', ')} - see DEPLOYMENT.md`)
+  }
+
   try {
     // cwd must be apps/api (one level up from this compiled file's own
     // dist/ directory), not the workspace root - npx run from the root
