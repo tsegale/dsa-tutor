@@ -156,7 +156,8 @@ export default function ConsentPage() {
             <h2 className="mb-1 font-semibold">Ethics approval</h2>
             <p className="text-text-secondary">
               <Detail value={STUDY_CONSENT.ethicsApproval} placeholder="ethics approval status - to be confirmed by the supervisor" />
-              {STUDY_CONSENT.ethicsApprovalReference && <> Approval reference: {STUDY_CONSENT.ethicsApprovalReference}.</>}
+              {' '}Approval reference:{' '}
+              <Detail value={STUDY_CONSENT.ethicsApprovalReference} placeholder="to be added once approval is granted" />
             </p>
           </div>
           <div>
