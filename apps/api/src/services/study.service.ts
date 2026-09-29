@@ -73,6 +73,9 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
         userId,
         completed: true,
         algorithmTopic: { name: { in: [...STUDY_TOPICS] } },
+        // Only practice after consent counts toward the post-test: sessions
+        // from before enrolling are not study sessions.
+        startTime: { gte: user.consentAt },
       },
       select: { algorithmTopicId: true },
       distinct: ['algorithmTopicId'],

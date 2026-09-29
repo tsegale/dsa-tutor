@@ -18,6 +18,14 @@ export function participantWhere(includePilot: boolean) {
 
 const STUDY_TOPIC_FILTER = { name: { in: [...STUDY_TOPICS] } }
 
+/** Only data recorded after the participant consented is study data. An
+ * account can practise before enrolling (and did, 2026-09-29: the first
+ * pilot account carried a week of pre-consent testing), and exporting that
+ * would be data collected without consent. */
+export function isAfterConsent(at: Date, consentAt: Date | null): boolean {
+  return consentAt !== null && at.getTime() >= consentAt.getTime()
+}
+
 /** One row per incorrect interaction from an active study participant, on
  * a study topic only. Never includes name or email - only participantCode,
  * which is meaningless outside the study's own records. */
@@ -33,13 +41,13 @@ export async function exportMisconceptionsCsv(includePilot = false): Promise<str
     include: {
       session: {
         include: {
-          user: { select: { participantCode: true } },
+          user: { select: { participantCode: true, consentAt: true } },
           algorithmTopic: { select: { displayName: true } },
         },
       },
     },
     orderBy: { createdAt: 'asc' },
-  })
+  }).then((rows) => rows.filter((row) => isAfterConsent(row.createdAt, row.session.user.consentAt)))
 
   const header = [
     'interactionId',
@@ -79,13 +87,13 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     include: {
       session: {
         include: {
-          user: { select: { participantCode: true } },
+          user: { select: { participantCode: true, consentAt: true } },
           algorithmTopic: { select: { displayName: true } },
         },
       },
     },
     orderBy: { createdAt: 'asc' },
-  })
+  }).then((rows) => rows.filter((row) => isAfterConsent(row.createdAt, row.session.user.consentAt)))
 
   const header = [
     'participantCode',
@@ -181,11 +189,11 @@ export async function exportSessionsCsv(includePilot = false): Promise<string> {
   const sessions = await prisma.session.findMany({
     where: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER },
     include: {
-      user: { select: { participantCode: true, susScore: true } },
+      user: { select: { participantCode: true, susScore: true, consentAt: true } },
       algorithmTopic: { select: { displayName: true } },
     },
     orderBy: { startTime: 'asc' },
-  })
+  }).then((rows) => rows.filter((row) => isAfterConsent(row.startTime, row.user.consentAt)))
 
   const header = [
     'participantCode',
@@ -232,12 +240,12 @@ export async function exportMisconceptionEventsCsv(includePilot = false): Promis
   const events = await prisma.misconceptionEvent.findMany({
     where: { user: participantWhere(includePilot), algorithmTopic: STUDY_TOPIC_FILTER },
     include: {
-      user: { select: { participantCode: true } },
+      user: { select: { participantCode: true, consentAt: true } },
       algorithmTopic: { select: { displayName: true } },
       probes: { select: { optionCount: true } },
     },
     orderBy: { detectedAt: 'asc' },
-  })
+  }).then((rows) => rows.filter((row) => isAfterConsent(row.detectedAt, row.user.consentAt)))
 
   const header = [
     'participantCode',
