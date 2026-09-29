@@ -1,3 +1,4 @@
+import { checkStaleEventsOnSessionStart } from './misconceptionEvent.service'
 import { conditionFor } from '../config/studyCondition'
 import { isActiveParticipant } from './study.service'
 import { prisma } from '../lib/prisma'
@@ -62,6 +63,10 @@ export async function createSession(userId: string, dto: CreateSessionDto): Prom
     },
     include: { algorithmTopic: true },
   })
+  // Any session start may abandon events left on other topics (3C.3). Done
+  // here, not by the client, so Classic and non-study sessions count too.
+  // Best-effort: a failure here must never stop the session starting.
+  await checkStaleEventsOnSessionStart(userId, dto.algorithmTopicId).catch(() => undefined)
   return toSessionDto(session)
 }
 

@@ -59,6 +59,9 @@ export interface PredictionOutcomeDetail {
   timeSpentSeconds: number
   junctionType: CriticalJunctionType
   junctionDifficulty: JunctionDifficulty
+  /** How many answer options were on screen (0 for free input or code) -
+   * the misconception resolve rule needs it (2 options vs 3 or more). */
+  optionCount?: number
   /** True when this submission hit the attempt cap and had its answer
    * revealed automatically - the research-data signal for "this junction
    * was never solved independently", distinct from a correct answer
@@ -574,6 +577,7 @@ export default function PredictionZone({
       ...displayed.log,
       aiMisconceptionCategory: correct ? null : (response?.aiMisconceptionCategory ?? null),
       hintIndexAtResolve: attempt,
+      optionCount: currentTiles.length,
       promptVersion: response?.promptVersion ?? null,
       aiModel: response?.aiModel ?? null,
     })

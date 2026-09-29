@@ -1,3 +1,5 @@
+import { isAfterConsent, participantWhere } from './research.service'
+import { STUDY_TOPICS } from '../config/studyTopics'
 import { prisma } from '../lib/prisma'
 
 export interface EventForReport {
@@ -92,10 +94,14 @@ export function misconceptionReportToMarkdown(rows: CategoryReportRow[]): string
   return [header, divider, ...body].join('\n')
 }
 
-async function fetchAllEventsForReport(): Promise<EventForReport[]> {
+/** The report is study data: active participants only (PILOT- codes only
+ * when asked), study topics only, and events detected after consent - the
+ * same rules as the research exports. */
+async function fetchAllEventsForReport(includePilot = false): Promise<EventForReport[]> {
   const events = await prisma.misconceptionEvent.findMany({
-    include: { probes: { select: { optionCount: true } } },
-  })
+    where: { user: participantWhere(includePilot), algorithmTopic: { name: { in: [...STUDY_TOPICS] } } },
+    include: { probes: { select: { optionCount: true } }, user: { select: { consentAt: true } } },
+  }).then((rows) => rows.filter((row) => isAfterConsent(row.detectedAt, row.user.consentAt)))
   return events.map((e) => ({
     category: e.category,
     status: e.status,
@@ -105,8 +111,8 @@ async function fetchAllEventsForReport(): Promise<EventForReport[]> {
 }
 
 /** apps/api/scripts/misconception-report.ts prints this as markdown. */
-export async function getMisconceptionReport(): Promise<CategoryReportRow[]> {
-  return computeMisconceptionReport(await fetchAllEventsForReport())
+export async function getMisconceptionReport(includePilot = false): Promise<CategoryReportRow[]> {
+  return computeMisconceptionReport(await fetchAllEventsForReport(includePilot))
 }
 
 export interface EducatorMisconceptionSummaryRow {

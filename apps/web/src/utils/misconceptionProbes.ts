@@ -5,45 +5,72 @@ import { CriticalJunctionType, MisconceptionCategory } from '@dsa-tutor/types'
 export const STUDY_TOPIC_SLUGS = ['bubble-sort', 'binary-search', 'bst'] as const
 export type StudyTopicSlug = (typeof STUDY_TOPIC_SLUGS)[number]
 
-export type RemediationTaskType = 'MICRO_PREDICTION' | 'TRACE_COMPLETION' | 'COUNTEREXAMPLE' | 'SELF_EXPLANATION'
-
-// A synthetic probe identifier for the one category (COMPLEXITY_MISATTRIBUTION)
-// whose probe is not a canvas critical junction at all - ComplexityPanel's
-// own comparison-count prediction. Not a CriticalJunctionType value.
-export const COMPLEXITY_PREDICTION_PROBE = 'COMPLEXITY_PREDICTION' as const
+// L1 is always a MICRO_PREDICTION and L3 a WORKED_EXAMPLE; a category's own
+// remediation type (below) is its level-2 task. SELF_EXPLANATION stays in
+// the union only because rows logged before Week 3 carry it.
+export type RemediationTaskType = 'MICRO_PREDICTION' | 'TRACE_COMPLETION' | 'COUNTEREXAMPLE' | 'WORKED_EXAMPLE' | 'SELF_EXPLANATION'
 
 interface ProbeMapping {
-  probingJunctions: Array<CriticalJunctionType | typeof COMPLEXITY_PREDICTION_PROBE>
-  remediationTaskType: RemediationTaskType
+  probingJunctions: CriticalJunctionType[]
+  remediationTaskType: 'TRACE_COMPLETION' | 'COUNTEREXAMPLE'
 }
 
-// Only the categories that have a probing junction reachable from one of
-// the three study-scope algorithms - ORDER_OF_OPERATIONS, POINTER_CONFUSION
-// and BASE_CASE_OMISSION belong to algorithms (linked lists, recursion)
-// outside STUDY_TOPICS, so they are deliberately not covered here.
-//
-// TRAVERSAL_ORDER_CONFUSION's junctions (NEXT_NODE_SELECTION, VISIT_NODE)
-// are not currently emitted by apps/web/src/engine/bst.ts, which only ever
-// produces BST_DIRECTION - they belong to the separate tree-traversal
-// topics, which are not in STUDY_TOPICS. The mapping is kept (matching the
-// coverage test's "every category has a response path" requirement) but is
-// dormant in practice for the current bst engine; it would activate if a
-// traversal topic were ever added to STUDY_TOPICS.
+/**
+ * For each category the study topics' answer tiles can tag a learner with
+ * (apps/web/src/utils/tileBuilder.ts): which junction types probe it - the
+ * ones whose tiles can reveal it again - and the level-2 remediation type
+ * that addresses it. misconceptionProbes.test.ts derives the produced
+ * categories from real runs, so a tile tagged with an unmapped category, or
+ * a category with no probing junction that can reveal it, fails the build.
+ *
+ * OFF_BY_ONE and STABILITY_CONFUSION are not produced by any study tile
+ * today (the code-eval path can still label them), so they keep a mapping
+ * for completeness.
+ */
 export const MISCONCEPTION_PROBE_MAP: Partial<Record<MisconceptionCategory, ProbeMapping>> = {
+  // Over-swapping: the bubble "Swap them" tile.
+  [MisconceptionCategory.ORDER_OF_OPERATIONS]: {
+    probingJunctions: [CriticalJunctionType.SWAP_DECISION],
+    remediationTaskType: 'COUNTEREXAMPLE',
+  },
+  // Under-swapping ("Leave them"), a BST value in the wrong subtree or an
+  // "insert here" at a full node, and ordering read as insertion order.
+  [MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION]: {
+    probingJunctions: [
+      CriticalJunctionType.SWAP_DECISION,
+      CriticalJunctionType.BST_DIRECTION,
+      CriticalJunctionType.ALGORITHM_COMPLETE,
+    ],
+    remediationTaskType: 'COUNTEREXAMPLE',
+  },
   [MisconceptionCategory.COMPARISON_DIRECTION]: {
-    probingJunctions: [CriticalJunctionType.SWAP_DECISION, CriticalJunctionType.MIDPOINT_DECISION],
-    remediationTaskType: 'MICRO_PREDICTION',
+    probingJunctions: [
+      CriticalJunctionType.SWAP_DECISION,
+      CriticalJunctionType.MIDPOINT_DECISION,
+      CriticalJunctionType.BST_DIRECTION,
+      CriticalJunctionType.PASS_COMPLETE,
+    ],
+    remediationTaskType: 'COUNTEREXAMPLE',
   },
   [MisconceptionCategory.INVARIANT_MISAPPLICATION]: {
-    probingJunctions: [CriticalJunctionType.PASS_COMPLETE, CriticalJunctionType.ALGORITHM_COMPLETE],
-    remediationTaskType: 'SELF_EXPLANATION',
+    probingJunctions: [
+      CriticalJunctionType.PASS_COMPLETE,
+      CriticalJunctionType.EARLY_TERMINATION,
+      CriticalJunctionType.ALGORITHM_COMPLETE,
+      CriticalJunctionType.BST_DIRECTION,
+    ],
+    remediationTaskType: 'COUNTEREXAMPLE',
   },
   [MisconceptionCategory.PREMATURE_TERMINATION]: {
-    probingJunctions: [CriticalJunctionType.EARLY_TERMINATION],
+    probingJunctions: [
+      CriticalJunctionType.PASS_COMPLETE,
+      CriticalJunctionType.EARLY_TERMINATION,
+      CriticalJunctionType.ALGORITHM_COMPLETE,
+    ],
     remediationTaskType: 'COUNTEREXAMPLE',
   },
   [MisconceptionCategory.BOUNDARY_CONDITION]: {
-    probingJunctions: [CriticalJunctionType.MIDPOINT_DECISION],
+    probingJunctions: [CriticalJunctionType.MIDPOINT_DECISION, CriticalJunctionType.ALGORITHM_COMPLETE],
     remediationTaskType: 'TRACE_COMPLETION',
   },
   [MisconceptionCategory.OFF_BY_ONE]: {
@@ -52,31 +79,22 @@ export const MISCONCEPTION_PROBE_MAP: Partial<Record<MisconceptionCategory, Prob
   },
   [MisconceptionCategory.STABILITY_CONFUSION]: {
     probingJunctions: [CriticalJunctionType.SWAP_DECISION],
-    remediationTaskType: 'MICRO_PREDICTION',
-  },
-  [MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION]: {
-    // SWAP_DECISION is included alongside BST_DIRECTION: bubble sort's own
-    // "leave them" distractor tile (see PredictionZone.tsx's SWAP_DECISION
-    // case) is tagged with this exact category too, for the same reason -
-    // leaving two out-of-order elements untouched violates the sortedness
-    // property the algorithm is meant to guarantee, whichever data
-    // structure the mistake happens in. Caught by live-testing this loop:
-    // without this, that real, common tile answer created an event with
-    // no reachable probe or remediation for bubble sort.
-    probingJunctions: [CriticalJunctionType.BST_DIRECTION, CriticalJunctionType.SWAP_DECISION],
     remediationTaskType: 'COUNTEREXAMPLE',
   },
+  // The BST completion question (pre-order and level-order tiles).
   [MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION]: {
-    probingJunctions: [CriticalJunctionType.NEXT_NODE_SELECTION, CriticalJunctionType.VISIT_NODE],
-    remediationTaskType: 'TRACE_COMPLETION',
+    probingJunctions: [CriticalJunctionType.ALGORITHM_COMPLETE],
+    remediationTaskType: 'COUNTEREXAMPLE',
   },
-  // ComplexityPanel's own comparison-count predictions are a separate
-  // feature with no interaction/junction record today, so this category is
-  // mapped for coverage but has no live probe wiring in this pass (see the
-  // misconception state machine's own notes).
+  // The count question (Week 2 2C) and the complexity-flavoured completion
+  // and pass tiles.
   [MisconceptionCategory.COMPLEXITY_MISATTRIBUTION]: {
-    probingJunctions: [COMPLEXITY_PREDICTION_PROBE],
-    remediationTaskType: 'MICRO_PREDICTION',
+    probingJunctions: [
+      CriticalJunctionType.COMPLEXITY_PREDICTION,
+      CriticalJunctionType.PASS_COMPLETE,
+      CriticalJunctionType.ALGORITHM_COMPLETE,
+    ],
+    remediationTaskType: 'TRACE_COMPLETION',
   },
 }
 
@@ -85,7 +103,8 @@ export const COVERED_MISCONCEPTION_CATEGORIES = Object.keys(MISCONCEPTION_PROBE_
 // Never show the internal category string to a student - the algorithm
 // page's open-event indicator names the concept in plain language instead.
 const STUDENT_LANGUAGE_LABELS: Partial<Record<MisconceptionCategory, string>> = {
-  [MisconceptionCategory.COMPARISON_DIRECTION]: 'when to swap',
+  [MisconceptionCategory.ORDER_OF_OPERATIONS]: 'when to leave a pair alone',
+  [MisconceptionCategory.COMPARISON_DIRECTION]: 'which way a comparison goes',
   [MisconceptionCategory.INVARIANT_MISAPPLICATION]: "what's guaranteed after a pass",
   [MisconceptionCategory.PREMATURE_TERMINATION]: 'when it’s safe to stop early',
   [MisconceptionCategory.BOUNDARY_CONDITION]: 'the edges of the search range',
@@ -100,9 +119,7 @@ export function getStudentLanguageLabel(category: string): string {
   return STUDENT_LANGUAGE_LABELS[category as MisconceptionCategory] ?? 'a recent question'
 }
 
-export function getProbingJunctions(
-  category: string,
-): Array<CriticalJunctionType | typeof COMPLEXITY_PREDICTION_PROBE> {
+export function getProbingJunctions(category: string): CriticalJunctionType[] {
   return MISCONCEPTION_PROBE_MAP[category as MisconceptionCategory]?.probingJunctions ?? []
 }
 

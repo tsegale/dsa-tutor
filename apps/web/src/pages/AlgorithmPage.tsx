@@ -30,8 +30,8 @@ import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
 import RemediationModal from '@/components/prediction/RemediationModal'
 import BottomOutModal from '@/components/prediction/BottomOutModal'
 import OpenMisconceptionIndicator from '@/components/prediction/OpenMisconceptionIndicator'
-import { useMisconceptionStore } from '@/store/useMisconceptionStore'
-import { STUDY_TOPIC_SLUGS, getJunctionOptionCount } from '@/utils/misconceptionProbes'
+import { junctionInstanceKey, useMisconceptionStore } from '@/store/useMisconceptionStore'
+import { STUDY_TOPIC_SLUGS } from '@/utils/misconceptionProbes'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -677,27 +677,21 @@ export default function AlgorithmPage() {
           // three fully instrumented study topics - see
           // apps/web/src/utils/misconceptionProbes.ts.
           if (!currentTopic || !(STUDY_TOPIC_SLUGS as readonly string[]).includes(currentTopic.name)) return
-          const store = useMisconceptionStore.getState()
-          const optionCount = getJunctionOptionCount(detail.junctionType)
-          const hintUsed = detail.hintsRequestedForStep > 0
-
-          if (!detail.correct && detail.misconceptionCategory) {
-            await store.handleDetection(currentTopic.id, currentTopic.name, detail.misconceptionCategory, interaction.id)
-          }
-          // Order matters: handleDetection above may have just set
-          // pendingRemediation, which makes this probe call a no-op for
-          // the same interaction - the wrong answer that revealed a
-          // misconception must never also count as a probe of it.
-          await store.handleProbe(
-            currentTopic.id,
-            currentTopic.name,
-            interaction.id,
-            detail.junctionType,
-            optionCount,
-            detail.correct,
-            hintUsed,
-          )
-          store.tickJunctionForTopic(currentTopic.id)
+          // Detect, escalate or probe - once per junction instance, on the
+          // first attempt only (see useMisconceptionStore).
+          const state = useAlgorithmStore.getState().snapshotArray[detail.stepIndex]?.dataStructureState ?? null
+          await useMisconceptionStore.getState().handleJunctionOutcome({
+            algorithmTopicId: currentTopic.id,
+            algorithmTopicSlug: currentTopic.name,
+            interactionId: interaction.id,
+            junctionType: detail.junctionType,
+            instanceKey: junctionInstanceKey(detail.junctionType, detail.stepIndex, state),
+            optionCount: detail.optionCount || 2,
+            correct: detail.correct,
+            hintUsed: detail.hintsRequestedForStep > 0,
+            category: detail.misconceptionCategory,
+            firstAttempt: detail.hintIndexAtResolve === 0,
+          })
         })
         .catch(() => {
           // Interaction logging is best-effort; it must never block the
@@ -1137,6 +1131,7 @@ export default function AlgorithmPage() {
       {pendingRemediation && !junctionRetryInProgress && !isLiveJunctionUnresolved && (
         <RemediationModal
           payload={pendingRemediation.payload}
+          onShown={() => useMisconceptionStore.getState().markPresented()}
           onComplete={(outcome) => void completePendingRemediation(outcome)}
         />
       )}

@@ -76,11 +76,11 @@ describe('shouldAbandonByJunctionCount', () => {
 })
 
 describe('shouldAbandonBySessionGap', () => {
-  it('does not abandon after only one completed session since detection', () => {
+  it('does not abandon after only one session elsewhere since the student was last on the topic', () => {
     expect(shouldAbandonBySessionGap(1)).toBe(false)
   })
 
-  it('abandons after two completed sessions since detection with no resolution', () => {
+  it('abandons after two sessions elsewhere without returning to the topic', () => {
     expect(shouldAbandonBySessionGap(2)).toBe(true)
   })
 })

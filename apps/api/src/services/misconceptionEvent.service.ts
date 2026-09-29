@@ -101,6 +101,13 @@ export function evaluateProbe(input: ProbeEvaluationInput): ProbeEvaluationResul
   }
 }
 
+/** A repeat detection on an event already open: the same misconception
+ * shown again, so it escalates exactly like a wrong probe - progress
+ * resets, and the third escalation is the bottom-out. */
+export function evaluateRepeatDetection(event: { consecutiveCorrect: number; remediationCount: number }): ProbeEvaluationResult {
+  return evaluateProbe({ ...event, optionCount: 2, correct: false, hintUsed: false })
+}
+
 export function nextRemediationLevel(remediationCount: number): number {
   return remediationCount + 1
 }
@@ -109,8 +116,11 @@ export function shouldAbandonByJunctionCount(junctionsSinceDetection: number): b
   return junctionsSinceDetection > ABANDON_JUNCTION_THRESHOLD
 }
 
-export function shouldAbandonBySessionGap(completedSessionsSinceDetection: number): boolean {
-  return completedSessionsSinceDetection >= ABANDON_SESSION_GAP
+/** "The topic is left and not returned to within two sessions": the count
+ * is of sessions started (on any other topic) since the student last had a
+ * session on the event's topic. Returning to the topic keeps it alive. */
+export function shouldAbandonBySessionGap(sessionsElsewhereSinceLastOnTopic: number): boolean {
+  return sessionsElsewhereSinceLastOnTopic >= ABANDON_SESSION_GAP
 }
 
 // --- Orchestration (Prisma-touching) ---
@@ -120,7 +130,12 @@ const ACTIVE_STATUSES = ['OPEN', 'REMEDIATED']
 /** Creates a new OPEN event, or escalates the existing OPEN/REMEDIATED
  * event for this (user, topic, category) instead of creating a second
  * one - enforced here since Prisma has no portable partial-unique index
- * for "unique while status is OPEN or REMEDIATED". */
+ * for "unique while status is OPEN or REMEDIATED". A repeat detection
+ * escalates like a wrong probe (evaluateRepeatDetection), including the
+ * bottom-out. Once an event is PERSISTENT the bottom-out has been given, so
+ * the same misconception on the same topic is not re-opened as a new event
+ * (that would double-count detections for RQ2); the persistent event is
+ * returned unchanged. */
 export async function detectOrEscalate(
   userId: string,
   algorithmTopicId: string,
@@ -132,11 +147,22 @@ export async function detectOrEscalate(
   })
 
   if (existing) {
+    const evaluation = evaluateRepeatDetection(existing)
     return prisma.misconceptionEvent.update({
       where: { id: existing.id },
-      data: { remediationCount: { increment: 1 } },
+      data: {
+        consecutiveCorrect: evaluation.consecutiveCorrect,
+        remediationCount: evaluation.remediationCount,
+        status: evaluation.status,
+        bottomedOut: evaluation.bottomedOut,
+      },
     })
   }
+
+  const persistent = await prisma.misconceptionEvent.findFirst({
+    where: { userId, algorithmTopicId, category, status: 'PERSISTENT' },
+  })
+  if (persistent) return persistent
 
   return prisma.misconceptionEvent.create({
     data: { userId, algorithmTopicId, category, detectedInteractionId, status: 'OPEN' },
@@ -243,19 +269,29 @@ export async function incrementJunctionsSinceDetection(userId: string, algorithm
   }
 }
 
-/** Called when a new session starts on a topic - catches the "left and
- * didn't come back" abandonment path the per-junction counter above can't
- * see, since no junctions fire at all while the student is elsewhere. */
+/** Called whenever a session starts, on any topic (session.service's
+ * createSession) - catches the "left and didn't come back" abandonment path
+ * the per-junction counter above can't see, since no junctions fire on a
+ * topic while the student is elsewhere. For each active event on another
+ * topic: if two or more sessions have started since the student's last
+ * session on the event's topic, it was left and not returned to within two
+ * sessions, so it is ABANDONED (never counted as resolved or persistent). */
 export async function checkStaleEventsOnSessionStart(userId: string, algorithmTopicId: string) {
   const activeEvents = await prisma.misconceptionEvent.findMany({
-    where: { userId, algorithmTopicId, status: { in: ACTIVE_STATUSES } },
+    where: { userId, status: { in: ACTIVE_STATUSES }, NOT: { algorithmTopicId } },
   })
 
   for (const event of activeEvents) {
-    const completedSessionsSinceDetection = await prisma.session.count({
-      where: { userId, algorithmTopicId, completed: true, startTime: { gt: event.detectedAt } },
+    const lastOnTopic = await prisma.session.findFirst({
+      where: { userId, algorithmTopicId: event.algorithmTopicId },
+      orderBy: { startTime: 'desc' },
+      select: { startTime: true },
     })
-    if (shouldAbandonBySessionGap(completedSessionsSinceDetection)) {
+    const since = lastOnTopic?.startTime ?? event.detectedAt
+    const sessionsElsewhere = await prisma.session.count({
+      where: { userId, startTime: { gt: since }, NOT: { algorithmTopicId: event.algorithmTopicId } },
+    })
+    if (shouldAbandonBySessionGap(sessionsElsewhere)) {
       await prisma.misconceptionEvent.update({ where: { id: event.id }, data: { status: 'ABANDONED' } })
     }
   }

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHECK_IN_FLIGHT_WAIT_MS, useMisconceptionStore } from './useMisconceptionStore'
 import type { RemediationPayload } from '@/utils/remediationTasks'
 
-const pending = { eventId: 'e1', remediationId: 'r1', payload: {} as RemediationPayload }
+// A task chosen but not yet shown (it is recorded on the server when shown).
+const pending = { eventId: 'e1', remediationId: null, payload: {} as RemediationPayload }
 
 async function settled(promise: Promise<void>): Promise<boolean> {
   let done = false
