@@ -5,16 +5,8 @@ import OnboardingTooltip from './OnboardingTooltip'
 import { ONBOARDING_STEPS } from './onboardingSteps'
 import { useQuery } from '@tanstack/react-query'
 import { fetchStudyStatus } from '@/api/study'
+import { tourTopicFor } from '@/utils/studyCondition'
 
-/**
- * The tour explains the tutor (Practice mode, AI Tutor, AI Challenge), so it
- * must run on a topic that has them. A participant whose Classic topic is
- * bubble-sort would otherwise be shown tutor features on a page without
- * them - confusing, and it would expose the difference between conditions.
- */
-export function tourTopicFor(classicTopicSlug: string | null): string {
-  return classicTopicSlug === 'bubble-sort' ? 'binary-search' : 'bubble-sort'
-}
 
 interface OnboardingControllerProps {
   onComplete: () => void

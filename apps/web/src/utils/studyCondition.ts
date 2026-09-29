@@ -93,3 +93,13 @@ export function initialMode(modeParam: string | null, classic: boolean): Algorit
 export function complexityJunctionEnabled(): boolean {
   return COMPLEXITY_JUNCTION_ENABLED && !useAlgorithmStore.getState().classicMode
 }
+
+/**
+ * The onboarding tour explains the tutor (Practice mode, AI Tutor, AI
+ * Challenge), so it must run on a topic that has them. A participant whose
+ * Classic topic is bubble-sort would otherwise be shown tutor features on a
+ * page without them - confusing, and it would expose the conditions.
+ */
+export function tourTopicFor(classicTopicSlug: string | null): string {
+  return classicTopicSlug === 'bubble-sort' ? 'binary-search' : 'bubble-sort'
+}

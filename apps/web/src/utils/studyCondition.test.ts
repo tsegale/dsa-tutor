@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { AlgorithmMode, type StudyStatusDto } from '@dsa-tutor/types'
-import { complexityJunctionEnabled, conditionFeatures, initialMode, isClassicTopic } from './studyCondition'
+import { complexityJunctionEnabled, conditionFeatures, initialMode, isClassicTopic, tourTopicFor } from './studyCondition'
 import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 
@@ -100,8 +100,7 @@ describe('the store in Classic', () => {
 })
 
 describe('onboarding tour', () => {
-  it('runs on a tutor topic, never on the participant Classic topic', async () => {
-    const { tourTopicFor } = await import('@/components/onboarding/OnboardingController')
+  it('runs on a tutor topic, never on the participant Classic topic', () => {
     expect(tourTopicFor('bubble-sort')).toBe('binary-search')
     expect(tourTopicFor('binary-search')).toBe('bubble-sort')
     expect(tourTopicFor(null)).toBe('bubble-sort')
