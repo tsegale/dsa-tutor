@@ -159,6 +159,21 @@ export default function ConsentPage() {
               {STUDY_CONSENT.ethicsApprovalReference && <> Approval reference: {STUDY_CONSENT.ethicsApprovalReference}.</>}
             </p>
           </div>
+          <div>
+            <h2 className="mb-1 font-semibold">Questions</h2>
+            <p className="text-text-secondary">
+              For any questions about this study, or to withdraw, contact{' '}
+              <Detail value={STUDY_CONSENT.researcherName} placeholder="researcher name" /> at{' '}
+              {STUDY_CONSENT.researcherEmail ? (
+                <a href={`mailto:${STUDY_CONSENT.researcherEmail}`} className="text-primary underline">
+                  {STUDY_CONSENT.researcherEmail}
+                </a>
+              ) : (
+                <Detail value={null} placeholder="institutional email" />
+              )}
+              .
+            </p>
+          </div>
         </div>
 
         {consentMutation.isError && (
