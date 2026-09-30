@@ -28,6 +28,6 @@
   "components/dashboard/AlgorithmCard.tsx": 4,
   "components/dashboard/TrackSection.tsx": 3,
   "components/onboarding/WelcomeModal.tsx": 6,
-  "components/prediction/PredictionZone.tsx": 2,
+  "components/prediction/PredictionZone.tsx": 1,
   "components/ui/MasteryRing.tsx": 1
 }

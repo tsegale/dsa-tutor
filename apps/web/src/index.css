@@ -128,7 +128,9 @@
   --card-foreground: #f8fafc;
   --popover: #1e293b;
   --popover-foreground: #f8fafc;
-  --primary: #6366f1;
+  /* Fills (buttons, chips) with white text: #585ce8 gives 5.1:1. Indigo text
+     on dark surfaces uses --tone-indigo-fg instead (rule below). */
+  --primary: #585ce8;
   --primary-foreground: #f8fafc;
   --secondary: #fbbf24;
   --secondary-foreground: #0f172a;
@@ -243,6 +245,7 @@
      remediation doc 9's Verify block: axe check, serious or above). */
   --color-text-muted: var(--text-muted);
   --color-tone-indigo: var(--tone-indigo-fg);
+  --color-tone-amber: var(--tone-amber-fg);
   --color-tone-indigo-bg: var(--tone-indigo-bg);
   --color-tone-indigo-border: var(--tone-indigo-border);
   --color-tone-indigo-label: var(--tone-indigo-label);
@@ -255,7 +258,7 @@
   --color-dark-background: #0f172a;
   --color-dark-surface: #1e293b;
   --color-dark-border: #334155;
-  --color-dark-primary: #6366f1;
+  --color-dark-primary: #585ce8;
   --color-dark-secondary: #fbbf24;
   --color-dark-text-primary: #f8fafc;
   --color-dark-text-secondary: #cbd5e1;
@@ -303,6 +306,17 @@
    digit width, so labels don't jitter as values change (4B.5). */
 svg text {
   font-variant-numeric: tabular-nums;
+}
+
+/* Dark-mode indigo text (Week 4 accessibility pass). No one indigo works
+   for both jobs on a dark surface: white text on an indigo fill needs a dark
+   indigo, indigo text on the dark card needs a light one (#6366f1 measured
+   3.27:1 there). Fills keep --primary; text is redirected to
+   --tone-indigo-fg (7.3:1). Unlayered, so it outranks the utilities. */
+.dark .text-primary,
+.dark .text-dark-primary,
+.dark .dark\:text-dark-primary {
+  color: var(--tone-indigo-fg);
 }
 
 /* One focus ring for every interactive element (Week 4, 4B.4). Unlayered

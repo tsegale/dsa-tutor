@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
+import LargerScreenNotice from '@/components/layout/LargerScreenNotice'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../api/client'
@@ -35,6 +37,7 @@ function DashboardSkeleton() {
 
 export default function Dashboard() {
   const { user, refreshUser } = useAuth()
+  const { isTooSmall } = useLayoutBreakpoint()
   const navigate = useNavigate()
   const { showWelcomeModal, closeWelcomeModal, startTour, completeOnboarding } = useOnboarding()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -72,6 +75,9 @@ export default function Dashboard() {
     navigate(`/algorithm/${topicName}?mode=${mode}`)
   }
 
+  if (isTooSmall) {
+    return <LargerScreenNotice reason="The curriculum, progress and learning path need more room than this screen provides." />
+  }
   if (isLoading) return <DashboardSkeleton />
 
   const trackOrder: AlgorithmTrack[] = [

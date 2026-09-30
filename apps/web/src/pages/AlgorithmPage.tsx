@@ -16,6 +16,7 @@ import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
 import WorkspaceSeparator from '@/components/layout/WorkspaceSeparator'
+import LargerScreenNotice from '@/components/layout/LargerScreenNotice'
 import TransportBar from '@/components/layout/TransportBar'
 import FocusModeOverlay from '@/components/layout/FocusModeOverlay'
 import KeyboardShortcutsModal from '@/components/layout/KeyboardShortcutsModal'
@@ -1185,17 +1186,7 @@ export default function AlgorithmPage() {
   )
 
   if (isTooSmall) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center gap-3 bg-background px-6 text-center">
-        <span className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
-          DSA Tutor needs a larger screen
-        </span>
-        <p className="max-w-xs text-sm text-text-muted dark:text-dark-text-secondary">
-          The algorithm canvas, controls, and AI tutor panel need more room than this screen provides. Please switch
-          to a tablet, laptop, or desktop to continue.
-        </p>
-      </div>
-    )
+    return <LargerScreenNotice reason="The algorithm canvas, controls, and AI tutor panel need more room than this screen provides." />
   }
 
   if (isCompact) {

@@ -1016,7 +1016,7 @@ export default function PredictionZone({
                     transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
                     className="flex min-w-0 flex-1 flex-col"
                   >
-                    <span className="mb-1 text-[10px] font-semibold tracking-wide text-[#92400e] uppercase">
+                    <span className="mb-1 text-[10px] font-semibold tracking-wide text-tone-amber uppercase">
                       Predict the next step
                     </span>
                     <p className="mb-1.5 text-[13px] font-bold text-text-primary dark:text-dark-text-primary">

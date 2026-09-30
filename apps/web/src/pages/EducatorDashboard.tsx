@@ -14,9 +14,12 @@ import ClassSummaryCard from '../components/analytics/ClassSummaryCard'
 import StudentSummaryDrawer from '../components/analytics/StudentSummaryDrawer'
 import ResearchExports from '../components/analytics/ResearchExports'
 import ServiceHealth from '../components/analytics/ServiceHealth'
+import LargerScreenNotice from '../components/layout/LargerScreenNotice'
+import { useLayoutBreakpoint } from '../hooks/useLayoutBreakpoint'
 
 export default function EducatorDashboard() {
   const { user } = useAuth()
+  const { isTooSmall } = useLayoutBreakpoint()
   const [selectedStudent, setSelectedStudent] = useState<EducatorAnalyticsDto['studentProgress'][0] | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -58,6 +61,9 @@ export default function EducatorDashboard() {
     )
   }
 
+  if (isTooSmall) {
+    return <LargerScreenNotice reason="The class analytics tables and heatmap need more room than this screen provides." />
+  }
   if (isLoading) return <EducatorDashboardSkeleton />
 
   if (isError) {
