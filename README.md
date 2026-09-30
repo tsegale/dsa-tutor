@@ -6,6 +6,8 @@ A data structures and algorithms tutor that stops the algorithm at the moments t
 
 Built as a final-year Computer Science research project at the University of Namibia, and instrumented to measure whether it works.
 
+![Practice mode: a wrong prediction gets AI feedback and a counterfactual trace, the retry is right, and a Quick Check follows up on the misconception](docs/media/practice-mode.gif)
+
 **Live:** https://dsa-tutor-web.vercel.app. Use **Try the demo without an account** on the login page: it creates a temporary account for one day, with a capped AI allowance, that never counts as study data.
 
 **API reference:** generated from the live route table at `/api/v1/docs` on the api ([production](https://api-production-5c1d5.up.railway.app/api/v1/docs)).
