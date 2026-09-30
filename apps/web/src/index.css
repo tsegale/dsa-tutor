@@ -137,7 +137,8 @@
   --muted: #1e293b;
   --muted-foreground: #cbd5e1;
   --accent: #1e293b;
-  --accent-foreground: #6366f1;
+  /* Text on the dark accent surface: #6366f1 measured 3.27:1, #a5b4fc 7.3:1. */
+  --accent-foreground: #a5b4fc;
   --destructive: #dc2626;
   --border: #334155;
   --input: #334155;
@@ -152,7 +153,7 @@
   --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #0f172a;
   --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #6366f1;
+  --sidebar-accent-foreground: #a5b4fc;
   --sidebar-border: #334155;
   --sidebar-ring: #6366f1;
   /* Same values as the dark-text-primary/secondary tokens the existing
