@@ -323,12 +323,13 @@ svg text {
 /* One focus ring for every interactive element (Week 4, 4B.4). Unlayered
    on purpose: unlayered rules outrank Tailwind's layered utilities, so this
    also restores a visible ring on the many controls that set outline-none.
-   :focus-visible keeps it to keyboard focus, never mouse clicks. */
-:where(button, a, [role="button"], input, textarea, select):focus-visible {
+   :focus-visible keeps it to keyboard focus, never mouse clicks. Tab panels
+   and the workspace's resize handles are focusable too, so they get it. */
+:where(button, a, [role="button"], [role="tab"], [role="tabpanel"], [role="separator"], input, textarea, select):focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
-.dark :where(button, a, [role="button"], input, textarea, select):focus-visible {
+.dark :where(button, a, [role="button"], [role="tab"], [role="tabpanel"], [role="separator"], input, textarea, select):focus-visible {
   outline-color: var(--color-dark-primary);
 }
 
