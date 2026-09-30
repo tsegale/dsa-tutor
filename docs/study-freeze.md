@@ -69,4 +69,6 @@ Implemented in `apps/api/src/services/misconceptionEvent.service.ts` (the rules)
 
 ## Post-freeze fixes
 
-None yet.
+| Date | Commit | Fix | Study impact | Pilot re-check |
+| --- | --- | --- | --- | --- |
+| 2026-09-30 | `fix(web): load Pyodide from the npm package root` | Code Mode's Python runtime was requested from a `/full/` path that does not exist on jsDelivr's npm mirror, so every Code Mode run failed; and the stale-chunk reload guard reloaded the page on that third-party failure, hiding the error. The runtime now loads from the package root (a test pins it to the installed version), and the guard reloads only for the app's own chunks. | No prompt, scoring, item or junction change. Code Mode submissions could not have produced data before this fix, so none is affected. | Code Mode click-through in production after the deploy; add to the Week 5 pilot checks. |

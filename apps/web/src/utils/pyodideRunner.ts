@@ -1,11 +1,13 @@
 import type { PyodideInterface } from 'pyodide'
 
 // Pinned to the exact installed `pyodide` npm package version so the JS
-// loader and the WASM/stdlib assets it fetches can never mismatch. Served
-// from jsdelivr's npm mirror (a direct copy of the published package,
-// not a curated build) rather than committing ~13MB of binary WASM/zip
-// assets to this repo.
-const PYODIDE_INDEX_URL = 'https://cdn.jsdelivr.net/npm/pyodide@314.0.7/full/'
+// loader and the WASM/stdlib assets it fetches can never mismatch (a test
+// checks this). Served from jsdelivr's npm mirror (a direct copy of the
+// published package) rather than committing ~13MB of binary WASM/zip
+// assets to this repo. The npm package keeps its files at the package
+// root; the /full/ directory exists only on Pyodide's own CDN, and pointing
+// here at /full/ made every Code Mode run fail until 2026-09-30.
+export const PYODIDE_INDEX_URL = 'https://cdn.jsdelivr.net/npm/pyodide@314.0.7/'
 
 let pyodidePromise: Promise<PyodideInterface> | null = null
 

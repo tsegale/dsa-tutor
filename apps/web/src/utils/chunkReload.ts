@@ -31,6 +31,16 @@ export function reloadOnceForStaleChunk(now: number = Date.now(), reload: () => 
 }
 
 /**
+ * Whether a failed dynamic import was one of this app's own chunks (worth a
+ * reload after a deploy) rather than a third-party URL such as a CDN.
+ * The failure message names the URL; a relative or same-origin one is ours.
+ */
+export function isOwnChunkFailure(message: string, origin: string): boolean {
+  const url = message.match(/https?:\/\/\S+/)?.[0]
+  return !url || url.startsWith(origin)
+}
+
+/**
  * React.lazy that recovers from a stale chunk by reloading once. Use for
  * every route-level code-split import.
  */

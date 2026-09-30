@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { reloadOnceForStaleChunk } from './chunkReload'
+import { isOwnChunkFailure, reloadOnceForStaleChunk } from './chunkReload'
 
 describe('reloadOnceForStaleChunk', () => {
   let store: Map<string, string>
@@ -47,5 +47,18 @@ describe('reloadOnceForStaleChunk', () => {
     })
     const reload = vi.fn()
     expect(reloadOnceForStaleChunk(100_000, reload)).toBe(true)
+  })
+})
+
+describe('isOwnChunkFailure', () => {
+  const origin = 'https://dsa-tutor-web.vercel.app'
+
+  it('treats our own chunks as a stale deploy worth one reload', () => {
+    expect(isOwnChunkFailure('Failed to fetch dynamically imported module: https://dsa-tutor-web.vercel.app/assets/AlgorithmPage-abc.js', origin)).toBe(true)
+    expect(isOwnChunkFailure('Unable to preload CSS for /assets/index-abc.css', origin)).toBe(true)
+  })
+
+  it('leaves a third-party failure alone, so the error surfaces instead of a reload', () => {
+    expect(isOwnChunkFailure('Failed to fetch dynamically imported module: https://cdn.jsdelivr.net/npm/pyodide@314.0.7/full/pyodide.asm.mjs', origin)).toBe(false)
   })
 })
