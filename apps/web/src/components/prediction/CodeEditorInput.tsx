@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CodeEvalResponse } from '@dsa-tutor/types'
 import { evaluateCode } from '@/api/codeEval'
-import { runSwapDecisionPython } from '@/utils/pyodideRunner'
+import { preloadPyodide, pyodideStatus, runSwapDecisionPython } from '@/utils/pyodideRunner'
 import CodeMirrorEditor from './CodeMirrorEditor'
 
 interface CodeEditorInputProps {
@@ -34,13 +34,27 @@ export default function CodeEditorInput({
   const [code, setCode] = useState(STARTER_CODE)
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loadingRuntime, setLoadingRuntime] = useState(false)
+
+  // Backstop for the Code Mode toggle's preload (a page opened with Code
+  // Mode already on reaches here first).
+  useEffect(() => {
+    preloadPyodide()
+  }, [])
 
   async function handleSubmit() {
     setIsSubmitting(true)
+    setLoadingRuntime(pyodideStatus() !== 'ready')
     onLoadingChange(true)
     setSyntaxError(null)
     try {
       const execution = await runSwapDecisionPython(code, currentArrayState, activeIndices[0])
+      setLoadingRuntime(false)
+      if (execution.runtimeUnavailable) {
+        // Nothing ran: not graded, not logged as an answer.
+        setSyntaxError('Python could not load, so your code was not run. Check your connection and press Run again.')
+        return
+      }
       const result = await evaluateCode({
         algorithmName,
         currentArrayState,
@@ -59,6 +73,7 @@ export default function CodeEditorInput({
       onSubmit(result, code)
     } finally {
       setIsSubmitting(false)
+      setLoadingRuntime(false)
       onLoadingChange(false)
     }
   }
@@ -90,7 +105,7 @@ export default function CodeEditorInput({
         disabled={isSubmitting || code.trim().length === 0}
         className="mt-auto flex w-full shrink-0 items-center justify-center rounded-md bg-primary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {isSubmitting ? 'Running...' : 'Run my code'}
+        {isSubmitting ? (loadingRuntime ? 'Loading Python (first time only)...' : 'Running...') : 'Run my code'}
       </button>
     </div>
   )

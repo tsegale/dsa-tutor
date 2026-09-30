@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { conditionFeatures } from '@/utils/studyCondition'
 import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { useParams } from 'react-router-dom'
+import { preloadPyodide } from '@/utils/pyodideRunner'
 import { motion } from 'framer-motion'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
@@ -137,6 +138,12 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const recentMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions)
   // Classic (the study's plain visualiser) has no AI tools or Code Mode.
   const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
+
+  // Code Mode on: fetch the Python runtime now, in the background, so the
+  // first code question does not wait on a ~13MB download.
+  useEffect(() => {
+    if (codeEditorMode && features.codeMode) preloadPyodide()
+  }, [codeEditorMode, features.codeMode])
 
   const [arrayInput, setArrayInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)

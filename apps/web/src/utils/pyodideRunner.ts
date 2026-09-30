@@ -9,13 +9,50 @@ import type { PyodideInterface } from 'pyodide'
 // here at /full/ made every Code Mode run fail until 2026-09-30.
 export const PYODIDE_INDEX_URL = 'https://cdn.jsdelivr.net/npm/pyodide@314.0.7/'
 
+export type PyodideStatus = 'idle' | 'loading' | 'ready' | 'failed'
+
 let pyodidePromise: Promise<PyodideInterface> | null = null
+let status: PyodideStatus = 'idle'
+
+/** Where the Python runtime is: the button label says "loading" until ready. */
+export function pyodideStatus(): PyodideStatus {
+  return status
+}
 
 function getPyodide(): Promise<PyodideInterface> {
   if (!pyodidePromise) {
-    pyodidePromise = import('pyodide').then(({ loadPyodide }) => loadPyodide({ indexURL: PYODIDE_INDEX_URL }))
+    status = 'loading'
+    pyodidePromise = import('pyodide')
+      .then(({ loadPyodide }) => loadPyodide({ indexURL: PYODIDE_INDEX_URL }))
+      .then((pyodide) => {
+        status = 'ready'
+        return pyodide
+      })
+      .catch((error: unknown) => {
+        // Not cached: the next run tries again instead of failing forever.
+        status = 'failed'
+        pyodidePromise = null
+        throw error
+      })
   }
   return pyodidePromise
+}
+
+/**
+ * Starts downloading the runtime (~13MB) in the background, so it is ready
+ * by the first code question instead of making the student wait ~40s on a
+ * slow connection at "Run my code". Called when Code Mode is switched on.
+ */
+export function preloadPyodide(): void {
+  getPyodide().catch(() => {
+    // Surfaced by the next run, which retries the load.
+  })
+}
+
+/** Test seam: forget the loaded runtime. */
+export function resetPyodideForTests(): void {
+  pyodidePromise = null
+  status = 'idle'
 }
 
 export interface PythonExecutionResult {
@@ -24,6 +61,9 @@ export interface PythonExecutionResult {
   resultingState: number[] | null
   /** Raw Python error message (syntax or runtime), or null on success. */
   errorMessage: string | null
+  /** The Python runtime itself could not load (network, CDN). Nothing ran,
+   * so this is not the student's error and must not be graded as one. */
+  runtimeUnavailable?: boolean
 }
 
 /**
@@ -37,8 +77,18 @@ export interface PythonExecutionResult {
  * ordinary prompt text.
  */
 export async function runSwapDecisionPython(code: string, arr: number[], j: number): Promise<PythonExecutionResult> {
+  let pyodide: PyodideInterface
   try {
-    const pyodide = await getPyodide()
+    pyodide = await getPyodide()
+  } catch (error) {
+    return {
+      hasSyntaxError: false,
+      resultingState: null,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      runtimeUnavailable: true,
+    }
+  }
+  try {
     pyodide.globals.set('arr', pyodide.toPy([...arr]))
     pyodide.globals.set('j', j)
     await pyodide.runPythonAsync(code)
