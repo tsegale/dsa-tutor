@@ -4,6 +4,9 @@ import { errorHandler } from './middleware/errorHandler'
 import { requestId } from './lib/requestContext'
 import { missingProductionEnv } from './config/requiredEnv'
 import { checkAiService, checkDatabase } from './services/ops.service'
+import { buildOpenApi, docsPage } from './lib/openapi'
+import { validate } from './middleware/validate'
+import * as S from './schemas/routes'
 import authRouter from './routers/auth.router'
 import sessionsRouter from './routers/sessions.router'
 import interactionsRouter from './routers/interactions.router'
@@ -55,6 +58,18 @@ app.use('/api/v1/assessments', assessmentsRouter)
 app.use('/api/v1/research', researchRouter)
 app.use('/api/v1/study', studyRouter)
 app.use('/api/v1/misconception-events', misconceptionEventsRouter)
+
+// OpenAPI spec generated from the live route table and zod schemas (4D.3).
+// Built once, on first request, when every router is registered.
+const API_VERSION = '1.0.0'
+let openApiSpec: Record<string, unknown> | null = null
+app.get('/api/v1/docs/openapi.json', validate(S.docs.spec), (_req, res) => {
+  openApiSpec ??= buildOpenApi(app, API_VERSION)
+  res.json(openApiSpec)
+})
+app.get('/api/v1/docs', validate(S.docs.page), (_req, res) => {
+  res.type('html').send(docsPage('/api/v1/docs/openapi.json'))
+})
 
 app.use(errorHandler)
 

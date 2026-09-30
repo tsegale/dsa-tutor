@@ -246,6 +246,12 @@ export const research = {
   ops: none,
 } satisfies Record<string, RequestSchema>
 
+// ---------------------------------------------------------------- docs
+export const docs = {
+  spec: none,
+  page: none,
+} satisfies Record<string, RequestSchema>
+
 // --------------------------------------------------------------- study
 export const study = {
   status: none,
