@@ -2,7 +2,6 @@ import { apiFetch } from '@/api/client'
 import { BADGE_DEFINITIONS, type BadgeCheckStats } from '@/data/badges'
 
 const AWARDED_BADGES_KEY = 'dsa-tutor-awarded-badges'
-const BADGE_XP_AWARD = 50
 
 export interface AwardedBadgeDto {
   id: string
@@ -62,12 +61,7 @@ export async function checkAndAwardBadges(
       // no XP, no toast, just bring the local cache in line.
       if (!result.newlyAwarded) break
 
-      await apiFetch('/api/v1/auth/xp', {
-        method: 'POST',
-        body: JSON.stringify({ amount: BADGE_XP_AWARD }),
-      }).catch(() => {
-        // XP persistence is best-effort; the award itself already landed.
-      })
+      // The badge award itself added its XP on the server (4D.5).
       onBadgeEarned(badge.id)
     } catch {
       // Server unreachable - fall back to a local-only award rather than

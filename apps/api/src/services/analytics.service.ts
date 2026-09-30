@@ -3,14 +3,16 @@ import type { EducatorAnalyticsDto } from '../dtos/analytics.dto'
 import { feynmanScoreOf, isScoredInteraction } from '../config/interactionTypes'
 
 export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
+  // Demo accounts (4D.6) are visitors trying the app, not students.
   const [totalStudents, totalSessions, loggedInteractions, students] = await Promise.all([
-    prisma.user.count({ where: { role: 'STUDENT' } }),
-    prisma.session.count(),
+    prisma.user.count({ where: { role: 'STUDENT', isDemo: false } }),
+    prisma.session.count({ where: { user: { isDemo: false } } }),
     prisma.interaction.findMany({
+      where: { session: { user: { isDemo: false } } },
       include: { session: { include: { algorithmTopic: true } } },
     }),
     prisma.user.findMany({
-      where: { role: 'STUDENT' },
+      where: { role: 'STUDENT', isDemo: false },
       include: {
         sessions: {
           include: { interactions: true },

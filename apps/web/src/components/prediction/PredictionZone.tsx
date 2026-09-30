@@ -27,7 +27,6 @@ import {
   type StreamedPrediction,
 } from '@/api/predictions'
 import { resolveDisplayedFeedback, disconnectedFeedback, type DisplayedFeedback } from '@/utils/displayedFeedback'
-import { apiFetch } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -95,7 +94,9 @@ export interface PredictionOutcomeDetail {
   aiModel?: string | null
 }
 
-const CODE_EVAL_XP = 5
+// Matches the server's award for any correct answer (apps/api config/xp.ts):
+// a Code Mode answer is logged as a PREDICTION row like any other.
+const CODE_EVAL_XP = 10
 
 interface PredictionZoneProps {
   onSubmit: (answer: string) => void
@@ -753,13 +754,6 @@ export default function PredictionZone({
       setSubmissionState('correct')
       setPredictionResolved(true)
       addXP(xpAwarded)
-      apiFetch('/api/v1/auth/xp', {
-        method: 'POST',
-        body: JSON.stringify({ amount: xpAwarded }),
-      }).catch(() => {
-        // XP persistence is best-effort; the local session XP already
-        // reflects the award regardless of whether this call lands.
-      })
       setXpAmount(xpAwarded)
       setXpVisible(true)
       play('xp')
@@ -857,10 +851,6 @@ export default function PredictionZone({
       setPredictionResolved(true)
       setCodeEvalPraise(result.correctiveHint)
       addXP(CODE_EVAL_XP)
-      apiFetch('/api/v1/auth/xp', { method: 'POST', body: JSON.stringify({ amount: CODE_EVAL_XP }) }).catch(() => {
-        // XP persistence is best-effort; the local session XP already
-        // reflects the award regardless of whether this call lands.
-      })
       setXpAmount(CODE_EVAL_XP)
       setXpVisible(true)
       play('xp')

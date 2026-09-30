@@ -13,10 +13,14 @@ import {
   proxyClassSummary,
 } from '../services/ai.service'
 import { validate } from '../middleware/validate'
+import { demoAiQuota } from '../middleware/demo'
 import * as S from '../schemas/routes'
 
 const router = Router()
 router.use(authenticate)
+// Demo accounts get a fixed number of model calls (4D.6). evaluate is the
+// deterministic verdict, which never calls the model, so it is not counted.
+router.use((req: AuthRequest, res, next) => (req.path === '/predictions/evaluate' ? next() : demoAiQuota(req, res, next)))
 
 router.post('/predictions', validate(S.ai.predictions), async (req: AuthRequest, res: Response) => {
   try {

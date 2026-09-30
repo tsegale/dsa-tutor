@@ -39,7 +39,10 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   rejects a field that does (answer_leak). BST
 #                   ALGORITHM_COMPLETE guidance matches the question now
 #                   asked of every BST. (Folded into .7: .7 was never live.)
-PROMPT_VERSION = "2026-09-28.7"
+#   2026-09-30.1    Feedback JSON no longer asks for xp_awarded: XP is
+#                   derived by the api from the logged interaction (Week 4
+#                   4D.5), so the model has one less field to get wrong.
+PROMPT_VERSION = "2026-09-30.1"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one
@@ -174,8 +177,7 @@ the student sees it as it is written):
   "misconception_category": one of "OFF_BY_ONE", "ORDER_OF_OPERATIONS",
     "STRUCTURAL_PROPERTY_VIOLATION", "POINTER_CONFUSION",
     "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION", or null if the
-    answer was correct or no misconception is evident,
-  "xp_awarded": an integer, 10 if correct, 0 if incorrect
+    answer was correct or no misconception is evident
 }
 
 Calibrate every field to the scaffolding level given below - the level

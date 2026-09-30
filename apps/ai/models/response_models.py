@@ -19,7 +19,6 @@ class PredictionResponse(CamelModel):
     ai_misconception_category: MisconceptionCategory | None = None
     consequence_explanation: str
     socratic_hint: str
-    xp_awarded: int
     counterfactual_trace: str = ""
     # True for a real model response, false for the rule-based fallback -
     # lets the student (and the research data) distinguish AI-generated

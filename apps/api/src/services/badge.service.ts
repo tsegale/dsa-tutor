@@ -1,3 +1,4 @@
+import { XP } from '../config/xp'
 import { prisma } from '../lib/prisma'
 
 export interface AwardedBadgeDto {
@@ -36,6 +37,10 @@ export async function awardBadge(userId: string, badgeName: string): Promise<{ n
     return { newlyAwarded: false }
   }
 
-  await prisma.userBadge.create({ data: { userId, badgeId: badge.id } })
+  // The badge row is unique per user, so its XP can only ever be awarded once.
+  await prisma.$transaction([
+    prisma.userBadge.create({ data: { userId, badgeId: badge.id } }),
+    prisma.user.update({ where: { id: userId }, data: { xpTotal: { increment: XP.BADGE } } }),
+  ])
   return { newlyAwarded: true }
 }

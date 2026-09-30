@@ -113,6 +113,9 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
         }, CHALLENGE_HINT_VISIBLE_MS)
       }
 
+      // The api awards a challenge's XP from its CHALLENGE_ATTEMPT row
+      // (apps/api config/xp.ts); this keeps the session total in step.
+      useAlgorithmStore.getState().addXP(10)
       if (sessionId) {
         apiFetch('/api/v1/interactions', {
           method: 'POST',

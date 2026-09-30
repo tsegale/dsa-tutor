@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { login, register } from '@/api/auth'
+import { login, register, startDemo } from '@/api/auth'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import { DSATutorLogo } from '@/components/brand'
@@ -67,6 +67,39 @@ const PILLARS: Pillar[] = [
     desc: 'Hints fade automatically as your mastery score rises, support only where needed',
   },
 ]
+
+// For reviewers and visitors (4D.6): straight in, no registration. Demo
+// accounts never join the study and have a capped AI allowance.
+function TryDemo() {
+  const navigate = useNavigate()
+  const { refreshUser } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const [isStarting, setIsStarting] = useState(false)
+
+  async function handleClick() {
+    setError(null)
+    setIsStarting(true)
+    try {
+      await startDemo()
+      await refreshUser()
+      navigate('/')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start the demo')
+      setIsStarting(false)
+    }
+  }
+
+  return (
+    <div className="mt-8 border-t border-border pt-6 text-center">
+      <p className="mb-2 text-[11px] text-text-muted">Just looking?</p>
+      <Button type="button" variant="outline" className="w-full" onClick={() => void handleClick()} disabled={isStarting}>
+        {isStarting ? 'Starting...' : 'Try the demo without an account'}
+      </Button>
+      <p className="mt-2 text-[11px] text-text-muted">A temporary account for one day. It never counts as study data.</p>
+      {error && <p className="mt-2 text-xs text-error">{error}</p>}
+    </div>
+  )
+}
 
 function LoginForm({ role }: { role: Role }) {
   const navigate = useNavigate()
@@ -298,6 +331,8 @@ export default function AuthPage() {
               <RegisterForm />
             </TabsContent>
           </Tabs>
+
+          <TryDemo />
 
           <p className="mt-8 text-center text-[11px] text-text-muted">
             Forgot password?{' '}

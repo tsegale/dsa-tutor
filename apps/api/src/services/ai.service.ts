@@ -89,7 +89,6 @@ export async function proxyPrediction(request: PredictionRequest): Promise<Predi
     aiMisconceptionCategory: data.aiMisconceptionCategory ?? null,
     consequenceExplanation: data.consequenceExplanation,
     socraticHint: data.socraticHint,
-    xpAwarded: data.xpAwarded,
     counterfactualTrace: data.counterfactualTrace ?? '',
     aiGenerated: data.aiGenerated ?? true,
     promptVersion: data.promptVersion ?? null,

@@ -3,6 +3,7 @@ import cors from 'cors'
 import { errorHandler } from './middleware/errorHandler'
 import { requestId } from './lib/requestContext'
 import { missingProductionEnv } from './config/requiredEnv'
+import { checkAiService, checkDatabase } from './services/ops.service'
 import authRouter from './routers/auth.router'
 import sessionsRouter from './routers/sessions.router'
 import interactionsRouter from './routers/interactions.router'
@@ -28,11 +29,19 @@ app.use(
 app.use(requestId)
 app.use(express.json())
 
-// Reports unset required variables by name (never values), so an
-// incomplete deploy is visible with one curl.
-app.get('/health', (req, res) => {
+// Reports unset required variables by name (never values), and whether the
+// database and AI service answer, so an incomplete or broken deploy is
+// visible with one curl. Always 200 while the api itself is up: Railway uses
+// this as the api's healthcheck, and an AI outage must not get a healthy api
+// restarted. "degraded" names what is wrong instead.
+app.get('/health', async (req, res) => {
   const missingEnv = missingProductionEnv()
-  res.json({ data: { status: 'ok', config: missingEnv.length === 0 ? 'complete' : 'incomplete', missingEnv }, error: null })
+  const [database, aiService] = await Promise.all([checkDatabase(), checkAiService()])
+  const status = database === 'ok' && aiService === 'ok' ? 'ok' : 'degraded'
+  res.json({
+    data: { status, config: missingEnv.length === 0 ? 'complete' : 'incomplete', missingEnv, database, aiService },
+    error: null,
+  })
 })
 
 app.use('/api/v1/auth', authRouter)

@@ -415,7 +415,6 @@ export interface PredictionResponse {
   aiMisconceptionCategory: MisconceptionCategory | null
   consequenceExplanation: string
   socraticHint: string
-  xpAwarded: number
   /** Two-sentence trace of what would happen if the wrong answer were applied. Empty when correct. */
   counterfactualTrace: string
   /** True for a real model response, false for the rule-based fallback. */

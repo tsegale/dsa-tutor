@@ -1,4 +1,5 @@
 import { getToken } from './auth'
+import { apiFetch } from './client'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
@@ -31,4 +32,29 @@ export async function downloadResearchExport(kind: ResearchExportKind, includePi
   a.download = `${kind}.csv`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+/** Operational health for the educator dashboard (Week 4 4D.4). */
+export interface OpsReport {
+  database: 'ok' | 'unreachable'
+  aiService: 'ok' | 'unreachable'
+  ai: {
+    since: string
+    calls: number
+    cacheHitRate: number | null
+    cacheReadShare: number | null
+    latencyMsP50: number | null
+    latencyMsP95: number | null
+  } | null
+  fallback: {
+    windowDays: number
+    wrongAnswersWithFeedback: number
+    fallbacks: number
+    rate: number | null
+    byReason: Array<{ reason: string; count: number }>
+  }
+}
+
+export function getOpsReport(): Promise<OpsReport> {
+  return apiFetch<OpsReport>('/api/v1/research/ops')
 }

@@ -1,11 +1,21 @@
 import { Router, Request, Response } from 'express'
-import { register, login } from '../services/auth.service'
+import { register, login, createDemoAccount } from '../services/auth.service'
+import { demoCreationLimit } from '../middleware/demo'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
-import { validate, type BodyOf } from '../middleware/validate'
+import { validate } from '../middleware/validate'
 import * as S from '../schemas/routes'
 
 const router = Router()
+
+// "Try the demo" (4D.6): a throwaway account with no password, rate limited.
+router.post('/demo', demoCreationLimit, validate(S.auth.demo), async (_req: Request, res: Response) => {
+  try {
+    res.status(201).json({ data: await createDemoAccount(), error: null })
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Could not start a demo' } })
+  }
+})
 
 router.post('/register', validate(S.auth.register), async (req: Request, res: Response) => {
   try {
@@ -52,20 +62,6 @@ router.get('/me', authenticate, validate(S.auth.me), async (req: AuthRequest, re
     res.json({ data: user, error: null })
   } catch {
     res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
-  }
-})
-
-router.post('/xp', authenticate, validate(S.auth.xp), async (req: AuthRequest, res: Response) => {
-  try {
-    const { amount } = req.body as BodyOf<typeof S.auth.xp>
-    const user = await prisma.user.update({
-      where: { id: req.userId },
-      data: { xpTotal: { increment: amount } },
-      select: { xpTotal: true },
-    })
-    res.json({ data: user, error: null })
-  } catch {
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update XP' } })
   }
 })
 

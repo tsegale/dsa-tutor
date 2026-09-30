@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from anthropic import APITimeoutError, AsyncAnthropic
+from services import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ class CallMetadata:
 def _metadata(usage, started: float, stop_reason: str | None, first_token_ms: int | None = None) -> CallMetadata:
     # getattr: the cache fields are absent on responses that never touched
     # the cache, and on older SDK response models.
-    return CallMetadata(
+    metadata = CallMetadata(
         latency_ms=round((time.monotonic() - started) * 1000),
         input_tokens=usage.input_tokens,
         output_tokens=usage.output_tokens,
@@ -97,6 +98,8 @@ def _metadata(usage, started: float, stop_reason: str | None, first_token_ms: in
         cache_read_input_tokens=getattr(usage, "cache_read_input_tokens", None) or 0,
         first_token_ms=first_token_ms,
     )
+    metrics.record_call(metadata.latency_ms, metadata.cache_read_input_tokens, metadata.cache_creation_input_tokens)
+    return metadata
 
 
 def has_self_correction_marker(text: str) -> bool:

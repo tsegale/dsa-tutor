@@ -185,9 +185,14 @@ export async function enrolParticipant(userId: string, rawCode: string): Promise
   }
 
   const [self, claimedBy] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true, isDemo: true } }),
     prisma.user.findUnique({ where: { participantCode: code }, select: { id: true } }),
   ])
+  // A demo account is throwaway and shared-feeling by design; its activity
+  // must never become study data (4D.6).
+  if (self?.isDemo) {
+    throw new Error('DEMO_ACCOUNT')
+  }
   if (self?.participantCode) {
     throw new Error('ALREADY_ENROLLED')
   }

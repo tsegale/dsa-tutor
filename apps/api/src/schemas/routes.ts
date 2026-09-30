@@ -31,10 +31,7 @@ export const auth = {
   },
   login: { body: z.strictObject({ email: nonEmpty(254), password: nonEmpty(200) }) },
   me: none,
-  // Capped at 100: the largest single award the client makes is 50 (the
-  // badge bonus). Without a ceiling any signed-in user could grant
-  // themselves unlimited XP.
-  xp: { body: z.strictObject({ amount: z.int().min(1).max(100) }) },
+  demo: none,
 } satisfies Record<string, RequestSchema>
 
 // ------------------------------------------------------------ sessions
@@ -246,6 +243,7 @@ export const research = {
   export: exportQuery,
   // CSV uploads can be large; express.json's own body limit still applies.
   ratings: { body: z.strictObject({ csv: z.string().trim().min(1) }) },
+  ops: none,
 } satisfies Record<string, RequestSchema>
 
 // --------------------------------------------------------------- study

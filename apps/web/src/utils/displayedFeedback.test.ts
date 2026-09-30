@@ -8,7 +8,6 @@ const wrong: PredictionResponse = {
   aiMisconceptionCategory: null,
   consequenceExplanation: 'Skipping the swap leaves 7 before 3. The larger value stays left.',
   socraticHint: 'Which highlighted value is larger?',
-  xpAwarded: 0,
   counterfactualTrace: 'The array stays [7, 3].',
   aiGenerated: true,
 }

@@ -43,6 +43,13 @@ export async function login(email: string, password: string) {
   return result
 }
 
+/** "Try the demo" (4D.6): a throwaway account, no password, one-day token. */
+export async function startDemo() {
+  const result = await apiFetch<AuthResult>('/api/v1/auth/demo', { method: 'POST', body: JSON.stringify({}) })
+  localStorage.setItem('dsa-tutor-token', result.token)
+  return result
+}
+
 export function logout() {
   localStorage.removeItem('dsa-tutor-token')
 }

@@ -58,7 +58,6 @@ def get_fallback_prediction_response(
         ai_misconception_category=None,
         consequence_explanation=FALLBACK_EXPLANATION_TEMPLATE.format(algorithm_name=algorithm_name),
         socratic_hint=_neutral_hint(scaffolding_level, algorithm_name, junction_type),
-        xp_awarded=10 if correct else 0,
         counterfactual_trace=(
             "" if correct else FALLBACK_COUNTERFACTUAL_TEMPLATE.format(algorithm_name=algorithm_name)
         ),

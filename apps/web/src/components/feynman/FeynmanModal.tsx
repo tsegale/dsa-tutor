@@ -102,12 +102,7 @@ export default function FeynmanModal({
     setXpAwarded(amount)
     addXP(amount)
     play('xp')
-    apiFetch('/api/v1/auth/xp', {
-      method: 'POST',
-      body: JSON.stringify({ amount }),
-    }).catch(() => {
-      // Best-effort: local session XP already reflects the award.
-    })
+    // Persisted by the api from the FEYNMAN interaction logged below (4D.5).
 
     if (sessionId) {
       apiFetch('/api/v1/interactions', {

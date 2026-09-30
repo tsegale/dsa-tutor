@@ -4,7 +4,7 @@ import uuid
 
 logger = logging.getLogger("request")
 
-_SKIP_PATHS = {"/health"}
+_SKIP_PATHS = {"/health", "/metrics"}
 
 
 class RequestIdMiddleware:
@@ -30,7 +30,10 @@ class RequestIdMiddleware:
         request_id = headers.get(b"x-request-id", b"").decode("latin-1")[:100] or uuid.uuid4().hex
         start = time.monotonic()
         state = {"status": None, "done": False}
-        logger.info("request start id=%s method=%s path=%s", request_id, scope.get("method"), scope.get("path"))
+        logger.info(
+            "request start id=%s method=%s path=%s", request_id, scope.get("method"), scope.get("path"),
+            extra={"request_id": request_id, "event": "request_start", "path": scope.get("path")},
+        )
 
         async def send_with_id(message) -> None:
             if message["type"] == "http.response.start":
@@ -39,16 +42,18 @@ class RequestIdMiddleware:
             await send(message)
             if message["type"] == "http.response.body" and not message.get("more_body", False):
                 state["done"] = True
+                ms = round((time.monotonic() - start) * 1000)
                 logger.info(
-                    "request end id=%s status=%s ms=%d",
-                    request_id, state["status"], round((time.monotonic() - start) * 1000),
+                    "request end id=%s status=%s ms=%d", request_id, state["status"], ms,
+                    extra={"request_id": request_id, "event": "request_end", "status": state["status"], "ms": ms},
                 )
 
         try:
             await self.app(scope, receive, send_with_id)
         finally:
             if not state["done"]:
+                ms = round((time.monotonic() - start) * 1000)
                 logger.warning(
-                    "request aborted id=%s status=%s ms=%d",
-                    request_id, state["status"], round((time.monotonic() - start) * 1000),
+                    "request aborted id=%s status=%s ms=%d", request_id, state["status"], ms,
+                    extra={"request_id": request_id, "event": "request_aborted", "status": state["status"], "ms": ms},
                 )

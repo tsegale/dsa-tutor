@@ -73,7 +73,6 @@ def test_a_wrong_answer_fails_a_leaking_field_as_answer_leak():
         "counterfactual_trace": "If the run had made 4 comparisons, it would not match the pseudocode for n equal to 2.",
         "socratic_hint": "Bubble Sort makes at most n(n-1)/2 comparisons. What does that give here?",
         "misconception_category": "COMPLEXITY_MISATTRIBUTION",
-        "xp_awarded": 0,
     }
     failures = _feedback_field_failures(feedback, prep.correct, ScaffoldingLevel.HIGH, prep.wrapper, None, prep.leaks_answer)
     assert failures == {"consequence_explanation": "answer_leak"}

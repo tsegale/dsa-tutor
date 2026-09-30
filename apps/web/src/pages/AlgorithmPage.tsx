@@ -543,11 +543,6 @@ export default function AlgorithmPage() {
   // new completion can trigger it again.
   const feynmanShownRef = useRef(false)
 
-  // Guards against re-awarding the AI Challenge completion bonus every
-  // time the learner steps back to the final step and forward again.
-  // Reset alongside feynmanShownRef when a fresh run starts.
-  const challengeXpAwardedRef = useRef(false)
-
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
   const predictionStatsRef = useRef({ correct: 0, total: 0, hints: 0, selfCorrections: 0 })
@@ -852,7 +847,6 @@ export default function AlgorithmPage() {
   useEffect(() => {
     if (stepIndex === 0) {
       feynmanShownRef.current = false
-      challengeXpAwardedRef.current = false
     }
   }, [stepIndex])
 
@@ -898,24 +892,6 @@ export default function AlgorithmPage() {
       if (last && activeSessionId) logViewedStep(activeSessionId, last.index, Date.now() - last.since)
     }
   }, [])
-
-  // AI Challenge completion bonus: award once per run when the learner
-  // finishes a full sort in Practice Mode on an AI-generated array.
-  useEffect(() => {
-    const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
-    const { activeChallengeType } = useAlgorithmStore.getState()
-    if (!snapshot?.isFinalStep || mode !== AlgorithmMode.PRACTICE || !activeChallengeType || challengeXpAwardedRef.current) {
-      return
-    }
-    challengeXpAwardedRef.current = true
-    const { addXP } = useAlgorithmStore.getState()
-    addXP(10)
-    play('xp')
-    apiFetch('/api/v1/auth/xp', { method: 'POST', body: JSON.stringify({ amount: 10 }) }).catch(() => {
-      // XP persistence is best-effort; the local session total already
-      // reflects the award regardless of whether it lands server-side.
-    })
-  }, [stepIndex, mode, play])
 
   // Feynman Technique mode: when the learner completes a full run in
   // Practice Mode, give the completion animation a beat to finish, then
@@ -984,7 +960,6 @@ export default function AlgorithmPage() {
     setMistakeCounterfactual(null)
     setHint(null)
     feynmanShownRef.current = false
-    challengeXpAwardedRef.current = false
     predictionStatsRef.current = { correct: 0, total: 0, hints: 0, selfCorrections: 0 }
     lastAttemptRef.current = null
     // eslint-disable-next-line react-hooks/exhaustive-deps

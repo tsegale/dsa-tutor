@@ -22,7 +22,6 @@ VALID = {
     "consequence_explanation": "Skipping the swap leaves 7 before 3.",
     "counterfactual_trace": "The array stays [7, 3]. The 7 remains at index 0.",
     "socratic_hint": "Which highlighted value is larger?",
-    "xp_awarded": 0,
 }
 
 

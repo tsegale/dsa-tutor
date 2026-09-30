@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma'
 import type { CreateInteractionDto, InteractionDto } from '../dtos/interaction.dto'
+import { xpForInteraction } from '../config/xp'
 
 export async function logInteraction(dto: CreateInteractionDto): Promise<InteractionDto> {
   const interaction = await prisma.interaction.create({
@@ -33,6 +34,13 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       dataStructureStateSnapshot: dto.dataStructureStateSnapshot ?? undefined,
     },
   })
+  // XP follows from the row just written (4D.5), to the session's owner -
+  // the router has already checked the caller owns the session.
+  const xp = xpForInteraction(interaction)
+  if (xp > 0) {
+    const { userId } = await prisma.session.findUniqueOrThrow({ where: { id: dto.sessionId }, select: { userId: true } })
+    await prisma.user.update({ where: { id: userId }, data: { xpTotal: { increment: xp } } })
+  }
   return toInteractionDto(interaction)
 }
 

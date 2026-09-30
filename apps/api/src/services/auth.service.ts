@@ -1,7 +1,31 @@
+import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
 import type { RegisterDto, LoginDto, AuthResponseDto } from '../dtos/auth.dto'
+
+/**
+ * A throwaway "Try the demo" account (4D.6): a random unusable password, a
+ * one-day token carrying the demo claim, and never a study participant
+ * (enrolment refuses it) or a row in educator analytics.
+ */
+export async function createDemoAccount(): Promise<AuthResponseDto> {
+  const id = randomUUID()
+  const user = await prisma.user.create({
+    data: {
+      email: `demo-${id}@demo.dsatutor.invalid`,
+      passwordHash: await bcrypt.hash(randomUUID(), 12),
+      name: 'Demo visitor',
+      role: 'STUDENT',
+      isDemo: true,
+    },
+  })
+  const token = jwt.sign({ userId: user.id, role: user.role, demo: true }, process.env.JWT_SECRET!, { expiresIn: '1d' })
+  return {
+    token,
+    user: { id: user.id, email: user.email, name: user.name, role: user.role, xpTotal: user.xpTotal, streakCount: user.streakCount },
+  }
+}
 
 export async function register(dto: RegisterDto): Promise<AuthResponseDto> {
   const existing = await prisma.user.findUnique({ where: { email: dto.email } })

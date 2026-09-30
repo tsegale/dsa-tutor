@@ -10,6 +10,7 @@ import {
   RatingsImportError,
 } from '../services/research.service'
 import { validate, type BodyOf } from '../middleware/validate'
+import { opsReport } from '../services/ops.service'
 import * as S from '../schemas/routes'
 
 const router = Router()
@@ -63,6 +64,16 @@ router.get('/misconception_events.csv', validate(S.research.export), async (req:
     sendCsv(res, 'misconception_events.csv', await exportMisconceptionEventsCsv(includePilotFlag(req)))
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to export misconception events' } })
+  }
+})
+
+// Operational health for the educator dashboard (4D.4): reachability, AI
+// latency and cache hit rate, and the wrong-answer fallback rate.
+router.get('/ops', validate(S.research.ops), async (_req: AuthRequest, res: Response) => {
+  try {
+    res.json({ data: await opsReport(), error: null })
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to build the ops report' } })
   }
 })
 

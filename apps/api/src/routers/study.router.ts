@@ -23,6 +23,10 @@ router.post('/enrol', validate(S.study.enrol), async (req: AuthRequest, res: Res
     res.json({ data: status, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : ''
+    if (message === 'DEMO_ACCOUNT') {
+      res.status(403).json({ data: null, error: { code: 'DEMO_ACCOUNT', message: 'Demo accounts cannot join the study. Register an account first.' } })
+      return
+    }
     if (message === 'INVALID_CODE') {
       res.status(400).json({ data: null, error: { code: 'INVALID_CODE', message: 'That code is not recognised' } })
       return
