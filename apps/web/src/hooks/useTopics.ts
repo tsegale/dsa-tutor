@@ -16,5 +16,8 @@ export function useTopics() {
     queryKey: ['topics'],
     queryFn: () => apiFetch<TopicDto[]>('/api/v1/topics'),
     staleTime: 30 * 1000,
+    // One retry covers a blip; the default three, with backoff, held the
+    // skeleton for about seven seconds before the error state could show.
+    retry: 1,
   })
 }

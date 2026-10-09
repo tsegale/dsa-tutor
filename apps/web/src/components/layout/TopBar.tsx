@@ -3,6 +3,7 @@ import { conditionFeatures } from '@/utils/studyCondition'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { getTrack, trackPath } from '@/data/tracks'
+import { useStudyScope } from '@/hooks/useStudyScope'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
@@ -50,8 +51,10 @@ export default function TopBar() {
   // display name once the topics API call resolves, so a registry lookup
   // keyed on that field would fail here and leave the track blank.
   const registryEntry = getAlgorithmRegistryEntry(algorithmSlug ?? '')
+  // A study participant has no track pages (see useStudyScope).
+  const { restricted } = useStudyScope()
   const algorithmDisplayName = registryEntry?.displayName ?? algorithmName
-  const crumbs = registryEntry
+  const crumbs = registryEntry && !restricted
     ? [
         { label: 'Home', to: '/' },
         { label: getTrack(registryEntry.track).name, to: trackPath(registryEntry.track) },

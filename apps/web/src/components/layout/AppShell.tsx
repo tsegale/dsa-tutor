@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
+import { useStudyScope } from '@/hooks/useStudyScope'
 import { fetchStudyStatus, withdrawFromStudy } from '@/api/study'
 import { TRACKS, topicPath } from '@/data/tracks'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
@@ -148,6 +149,7 @@ function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
   const queryClient = useQueryClient()
   const { user, logout } = useAuth()
   const { isTooSmall } = useLayoutBreakpoint()
+  const { restricted } = useStudyScope()
   // Launches the walkthrough directly rather than resetting onboarding,
   // which would reopen the welcome modal first (remediation doc 9.7).
   const { startTour } = useOnboarding()
@@ -180,11 +182,12 @@ function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
           {isTooSmall && (
             <>
               <DropdownMenuItem onSelect={() => go('/')}>Home</DropdownMenuItem>
-              {TRACKS.map((track) => (
-                <DropdownMenuItem key={track.slug} onSelect={() => go(`/track/${track.slug}`)}>
-                  {track.name}
-                </DropdownMenuItem>
-              ))}
+              {!restricted &&
+                TRACKS.map((track) => (
+                  <DropdownMenuItem key={track.slug} onSelect={() => go(`/track/${track.slug}`)}>
+                    {track.name}
+                  </DropdownMenuItem>
+                ))}
               <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
             </>
           )}
@@ -246,6 +249,7 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const { restricted } = useStudyScope()
   const inWorkspace = Boolean(onNavigate)
   const go = useCallback((to: string) => (onNavigate ? onNavigate(to) : navigate(to)), [navigate, onNavigate])
 
@@ -264,6 +268,14 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
 
   return (
     <ShellNavigation.Provider value={go}>
+      {!inWorkspace && (
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-sm focus:bg-surface focus:px-3 focus:py-2 focus:text-small focus:text-ink focus:shadow-e2"
+        >
+          Skip to main content
+        </a>
+      )}
       <header className="relative z-30 flex h-14 w-full shrink-0 items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <a
@@ -282,7 +294,9 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
               <NavLink to="/" active={pathname === '/'}>
                 Home
               </NavLink>
-              <TracksMenu active={pathname.startsWith('/track/')} />
+              {/* A study participant's three topics sit in three tracks; one-topic
+                  track pages would look broken, so Home lists them instead. */}
+              {!restricted && <TracksMenu active={pathname.startsWith('/track/')} />}
               <NavLink to="/progress" active={pathname === '/progress'}>
                 Progress
               </NavLink>
@@ -339,7 +353,7 @@ export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: Reac
   return (
     <div className="flex min-h-screen flex-col bg-paper">
       <AppTopBar crumbs={crumbs} />
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 md:px-gutter">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 outline-none md:px-gutter [&_h1]:outline-none">
         {crumbs.length > 1 && (
           <div className="mb-6">
             <BreadcrumbForPage crumbs={crumbs} />
