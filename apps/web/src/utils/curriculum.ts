@@ -119,3 +119,9 @@ export function relativeDay(iso: string, now: Date = new Date()): string {
   if (days < 14) return `${days} days ago`
   return then.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
+
+/** The track-page action for a topic: Start it, Continue it, or Review it once complete. */
+export function topicAction(topic: Pick<TopicDto, 'masteryPercent'>): 'Start' | 'Continue' | 'Review' {
+  if (topic.masteryPercent === 0) return 'Start'
+  return isTopicComplete(topic) ? 'Review' : 'Continue'
+}
