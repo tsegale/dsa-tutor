@@ -50,8 +50,10 @@ const BASE_TOKENS: { token: string; className: string }[] = [
   { token: 'ink', className: 'bg-ink' },
   { token: 'ink-2', className: 'bg-ink-2' },
   { token: 'ink-3', className: 'bg-ink-3' },
+  { token: 'ink-placeholder', className: 'bg-ink-placeholder' },
   { token: 'rule', className: 'bg-rule' },
   { token: 'rule-strong', className: 'bg-rule-strong' },
+  { token: 'rule-control', className: 'bg-rule-control' },
   { token: 'brand', className: 'bg-brand' },
   { token: 'brand-hover', className: 'bg-brand-hover' },
   { token: 'brand-soft', className: 'bg-brand-soft' },
@@ -339,7 +341,7 @@ export default function Showcase() {
             <ol className="flex flex-col divide-y divide-rule">
               {['Compare index 0 and 1', 'Swap 5 and 3', 'Compare index 1 and 2', 'No swap', 'Compare index 2 and 3', 'Swap 8 and 1'].map((line, i) => (
                 <li key={i} className="flex gap-3 py-row text-small text-ink">
-                  <span className="text-mono-sm text-ink-3">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-mono-sm text-ink-2">{String(i + 1).padStart(2, '0')}</span>
                   {line}
                 </li>
               ))}

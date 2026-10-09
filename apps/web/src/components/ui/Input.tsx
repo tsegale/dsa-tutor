@@ -2,13 +2,14 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-// 36px controls on --radius-sm with a --rule border. Focus is the global
+// 36px controls on --radius-sm with a --rule-control border (3:1, unlike
+// --rule, so the boundary of the control is visible). Focus is the global
 // brand outline in index.css; nothing here restyles it. An error replaces
 // the border colour and renders its message below, linked through
 // aria-describedby so a screen reader reads it with the field.
 
 const CONTROL =
-  "w-full rounded-sm border border-rule bg-surface px-3 text-small text-ink transition-[border-color] duration-quick placeholder:text-ink-3 hover:border-rule-strong disabled:cursor-not-allowed disabled:bg-surface-sunk disabled:text-ink-3 aria-invalid:border-destructive"
+  "w-full rounded-sm border border-rule-control bg-surface px-3 text-small text-ink transition-[border-color] duration-quick placeholder:text-ink-placeholder hover:border-ink-2 disabled:cursor-not-allowed disabled:bg-surface-sunk disabled:text-ink-3 aria-invalid:border-destructive"
 
 function ErrorIcon() {
   return (

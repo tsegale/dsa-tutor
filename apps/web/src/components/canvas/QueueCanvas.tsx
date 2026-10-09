@@ -150,7 +150,7 @@ function CircularQueue({
               stroke={item ? 'none' : EMPTY_STROKE}
               strokeDasharray={item ? undefined : '3 3'}
             />
-            <text x={cellSize / 2} y={cellSize / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: item ? 'var(--state-current-ink)' : 'var(--ink-3)', fontSize: 13, fontWeight: 600 }}>
+            <text x={cellSize / 2} y={cellSize / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: item ? 'var(--state-current-ink)' : 'var(--ink-2)', fontSize: 13, fontWeight: 600 }}>
               {item ? item.value : slot}
             </text>
           </motion.g>
