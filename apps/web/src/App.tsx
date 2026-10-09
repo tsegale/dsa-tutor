@@ -7,6 +7,7 @@ import { getToken } from '@/api/auth'
 import { fetchStudyStatus } from '@/api/study'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 import { lazyWithReload } from '@/utils/chunkReload'
 import { useThemeStore } from '@/store/useThemeStore'
 
@@ -177,6 +178,8 @@ export default function App() {
             </Suspense>
             <GlobalOnboarding />
           </BrowserRouter>
+          {/* One toast region for the whole app, styled to the tokens. */}
+          <Toaster position="bottom-right" />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
