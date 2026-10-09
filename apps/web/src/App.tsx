@@ -16,7 +16,7 @@ import { useThemeStore } from '@/store/useThemeStore'
 // instead of all being bundled into the one script every visitor
 // downloads before first paint.
 const AuthPage = lazyWithReload(() => import('@/pages/AuthPage'))
-const Dashboard = lazyWithReload(() => import('@/pages/Dashboard'))
+const Home = lazyWithReload(() => import('@/pages/Home'))
 const AlgorithmPage = lazyWithReload(() => import('@/pages/AlgorithmPage'))
 const TrackPage = lazyWithReload(() => import('@/pages/TrackPage'))
 const ProgressPage = lazyWithReload(() => import('@/pages/ProgressPage'))
@@ -130,7 +130,7 @@ export default function App() {
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <Home />
                     </ProtectedRoute>
                   }
                 />

@@ -12,7 +12,6 @@
   "components/canvas/ArrayCanvas.tsx": 1,
   "components/canvas/NodeGraphCanvas.tsx": 3,
   "components/canvas/TreeCanvas.tsx": 2,
-  "components/dashboard/AILearningPathBanner.tsx": 3,
   "components/dashboard/AlgorithmCard.tsx": 4,
   "components/dashboard/TrackSection.tsx": 3,
   "components/onboarding/WelcomeModal.tsx": 6,

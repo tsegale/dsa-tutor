@@ -13,7 +13,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     title: 'Welcome to DSA Tutor',
     description:
       'This platform teaches Data Structures and Algorithms by making you predict what happens at each step - not just watch. You learn by doing, not observing.',
-    targetId: 'dashboard-stats-banner',
+    targetId: 'home-continue',
     position: 'bottom',
     requiresAlgorithmPage: false,
   },

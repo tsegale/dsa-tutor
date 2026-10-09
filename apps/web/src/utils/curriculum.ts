@@ -75,3 +75,47 @@ export function trackProgress(topics: readonly Pick<TopicDto, 'masteryPercent'>[
   const complete = topics.filter(isTopicComplete).length
   return { total: topics.length, complete, percent: topics.length ? Math.round((complete / topics.length) * 100) : 0 }
 }
+
+type Pickable = Pick<TopicDto, 'name' | 'track' | 'isLocked' | 'masteryPercent'>
+
+/**
+ * The topic a track card names as "next": the first unlocked topic not yet
+ * started, else the first unlocked one not yet complete, else none (the
+ * track is done, or everything left is locked).
+ */
+export function nextTopicIn<T extends Pickable>(trackTopics: readonly T[]): T | null {
+  const open = trackTopics.filter((topic) => !topic.isLocked)
+  return open.find((topic) => topic.masteryPercent === 0) ?? open.find((topic) => !isTopicComplete(topic)) ?? null
+}
+
+export type ContinueTarget<T> =
+  | { kind: 'continue'; topic: T; startTime: string }
+  | { kind: 'start'; topic: T }
+  | { kind: 'done' }
+
+/**
+ * What Home's one prominent card offers. The latest unfinished session wins
+ * if its topic is still one this user can see and open. Otherwise, start the
+ * first open, incomplete topic in curriculum order (for a new learner, the
+ * first Foundations topic; for a study participant, their first study topic).
+ */
+export function pickContinue<T extends Pickable>(
+  topics: readonly T[],
+  latest: { startTime: string; topic: { name: string } } | null | undefined,
+): ContinueTarget<T> {
+  const resumable = latest ? topics.find((topic) => topic.name === latest.topic.name && !topic.isLocked) : undefined
+  if (resumable && latest) return { kind: 'continue', topic: resumable, startTime: latest.startTime }
+  const next = orderTopics(topics).find((topic) => !topic.isLocked && !isTopicComplete(topic))
+  return next ? { kind: 'start', topic: next } : { kind: 'done' }
+}
+
+/** "today", "yesterday", "3 days ago", or a date beyond a fortnight. */
+export function relativeDay(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso)
+  const startOf = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const days = Math.round((startOf(now) - startOf(then)) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 14) return `${days} days ago`
+  return then.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+}
