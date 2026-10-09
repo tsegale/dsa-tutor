@@ -62,27 +62,27 @@ function Spinner({ className }: { className?: string }) {
   )
 }
 
-function Button({
-  className,
-  variant = "primary",
-  size = "md",
-  asChild = false,
-  loading = false,
-  disabled,
-  children,
-  ...props
-}: React.ComponentProps<"button"> &
+type ButtonProps = React.ComponentPropsWithoutRef<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
     /** Replaces the label with a spinner. The label stays in the layout
      * (invisible), so the button keeps its width. Ignored with asChild. */
     loading?: boolean
-  }) {
+  }
+
+// forwardRef because this is React 18: a plain function component drops the
+// ref, and Radix needs it whenever a Button is a Trigger child (asChild).
+// Without it a Dialog cannot return focus to the button that opened it, and
+// a Tooltip has no element to anchor to.
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant = "primary", size = "md", asChild = false, loading = false, disabled, children, ...props },
+  ref
+) {
   const classes = cn(buttonVariants({ variant, size, className }))
 
   if (asChild) {
     return (
-      <Slot.Root data-slot="button" data-variant={variant} data-size={size} className={classes} {...props}>
+      <Slot.Root ref={ref} data-slot="button" data-variant={variant} data-size={size} className={classes} {...props}>
         {children}
       </Slot.Root>
     )
@@ -93,6 +93,7 @@ function Button({
   // disabled attribute, whose styling would grey the button out.
   return (
     <button
+      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -115,6 +116,6 @@ function Button({
       )}
     </button>
   )
-}
+})
 
 export { Button, buttonVariants, Spinner }
