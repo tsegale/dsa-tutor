@@ -14,11 +14,29 @@ export function apiRequest(path: string, options: RequestInit = {}): Promise<Res
   })
 }
 
+/**
+ * A request the server answered with an error. Carries the HTTP status so a
+ * caller can tell "the server rejected this" (a 401: the token is invalid)
+ * from "the request never got a proper answer" (a dropped connection
+ * throws a TypeError from fetch, never an ApiError).
+ */
+export class ApiError extends Error {
+  readonly status: number
+  readonly code: string | null
+
+  constructor(message: string, status: number, code: string | null) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await apiRequest(path, options)
   const data = await response.json()
   if (!response.ok || data.error) {
-    throw new Error(data.error?.message ?? 'API error')
+    throw new ApiError(data.error?.message ?? 'API error', response.status, data.error?.code ?? null)
   }
   return data.data as T
 }

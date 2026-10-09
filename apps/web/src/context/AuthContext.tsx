@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { getToken, logout as apiLogout } from '../api/auth'
-import { apiFetch } from '../api/client'
+import { ApiError, apiFetch } from '../api/client'
 import type { UserProfile } from '@dsa-tutor/types'
 
 interface AuthContextType {
@@ -37,8 +37,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = await apiFetch<UserProfile>('/api/v1/auth/me')
         setUser(profile)
         return profile
-      } catch {
-        apiLogout()
+      } catch (error) {
+        // Sign out only when the server rejected the token. A dropped
+        // connection or a 5xx said nothing about the token, and clearing it
+        // there signed people out on every network blip: the next request
+        // went out without a token, so a retry could never succeed.
+        if (error instanceof ApiError && error.status === 401) apiLogout()
         return null
       } finally {
         setIsLoading(false)
