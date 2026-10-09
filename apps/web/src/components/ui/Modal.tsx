@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { IconButton } from "@/components/ui/IconButton"
+import { useRestoreFocus } from "@/hooks/useRestoreFocus"
 
 // The composed modal: --radius-lg, --e3, at most 85vh with the body scrolling
 // between a fixed header and footer. Radix supplies the behaviour the spec
@@ -33,6 +34,10 @@ function CloseIcon() {
 }
 
 function Modal({ open, onOpenChange, trigger, title, description, footer, size = "md", className, children }: ModalProps) {
+  // Radix returns focus only to a Trigger; this covers modals opened from
+  // state too (see the hook).
+  const restoreFocus = useRestoreFocus()
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
@@ -40,6 +45,8 @@ function Modal({ open, onOpenChange, trigger, title, description, footer, size =
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           data-slot="modal"
+          onOpenAutoFocus={restoreFocus.onOpenAutoFocus}
+          onCloseAutoFocus={restoreFocus.onCloseAutoFocus}
           // Radix wires aria-describedby to Description when there is one;
           // an explicit undefined tells it no description is intended.
           {...(description ? {} : { "aria-describedby": undefined })}
