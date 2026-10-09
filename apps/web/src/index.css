@@ -23,13 +23,18 @@
 
   /* Canvas state palette: visualisations only. Colour inside a canvas
      means algorithm state and nothing else. Swap is magenta, not violet,
-     so no state collides with the brand hue. Each *-ink is the text colour
-     that clears contrast on that fill (white or ink, whichever is higher). */
+     so no state collides with the brand hue. Every fill clears 3:1 against
+     --surface and --paper in both themes (WCAG 1.4.11, graphical objects).
+     Each *-ink is the text colour that clears 4.5:1 on that fill.
+     Error is split: --state-error is a fill only (marks, strokes, washes);
+     anything carrying text, and text itself, uses --state-error-text, with
+     --state-error-ink on top. Nothing wears text on --state-error. */
   /* Spec value #94a1b8 is 2.6:1 on --surface; #8793a7 is the same hue at
      3.1:1, keeping the 3:1 non-text minimum (remediation doc 9.9). */
   --state-neutral: #8793a7;
   --state-neutral-ink: #12151c;
-  --state-compare: #d98a00;
+  /* Spec #d98a00 was 2.77:1 on --surface; #cc8200 is the same hue at 3.1:1. */
+  --state-compare: #cc8200;
   --state-compare-ink: #12151c;
   --state-swap: #c2255c;
   --state-swap-ink: #ffffff;
@@ -38,6 +43,7 @@
   --state-current: #0b84d8;
   --state-current-ink: #12151c;
   --state-error: #d64545;
+  --state-error-text: #c62828;
   --state-error-ink: #ffffff;
 
   /* Elevation (Design Phase 1C). */
@@ -194,6 +200,7 @@
   --state-current: #3ba7f0;
   --state-current-ink: #0c0f15;
   --state-error: #f06a6a;
+  --state-error-text: #f4a0a0;
   --state-error-ink: #0c0f15;
 
   --e1: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.04);
@@ -301,6 +308,7 @@
   --color-state-current: var(--state-current);
   --color-state-current-ink: var(--state-current-ink);
   --color-state-error: var(--state-error);
+  --color-state-error-text: var(--state-error-text);
   --color-state-error-ink: var(--state-error-ink);
   --color-success: #16a34a;
   --color-success-light: var(--success-light);

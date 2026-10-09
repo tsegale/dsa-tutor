@@ -58,7 +58,7 @@ const DEFAULT_STROKE = 'var(--rule-strong)'
 const DEFAULT_EDGE = 'var(--state-neutral)'
 const CURRENT_FILL = 'var(--state-compare)'
 const CURRENT_TEXT = 'var(--state-compare-ink)'
-const RB_RED_FILL = 'var(--state-error)'
+const RB_RED_FILL = 'var(--state-error-text)'
 const RB_BLACK_FILL = '#1f2937'
 const FOUND_FILL = 'var(--state-sorted)'
 const FOUND_TEXT = 'var(--state-sorted-ink)'
@@ -322,7 +322,7 @@ export default function TreeCanvas({
             // the active node stays identifiable against same-coloured
             // siblings.
             const fill = rbColor ? (rbColor === 'RED' ? RB_RED_FILL : RB_BLACK_FILL) : isFound ? FOUND_FILL : isCurrent ? CURRENT_FILL : onPath ? PATH_FILL : DEFAULT_FILL
-            const textFill = rbColor ? '#ffffff' : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
+            const textFill = rbColor === 'RED' ? 'var(--state-error-ink)' : rbColor ? '#ffffff' : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
             const isUnbalanced = 'unbalancedNodeId' in state && state.unbalancedNodeId === node.id
             const balanceFactor = showBalanceFactor && 'balanceFactor' in node ? (node as AVLNode).balanceFactor : undefined
             // The value just inserted enters from its parent - the last
@@ -367,7 +367,7 @@ export default function TreeCanvas({
                   <text
                     textAnchor="middle"
                     y={nodeRadius + 14}
-                    style={{ fill: isUnbalanced ? 'var(--state-error)' : 'var(--ink-2)', fontSize: Math.max(9, fontSize - 3), fontWeight: isUnbalanced ? 700 : 500 }}
+                    style={{ fill: isUnbalanced ? 'var(--state-error-text)' : 'var(--ink-2)', fontSize: Math.max(9, fontSize - 3), fontWeight: isUnbalanced ? 700 : 500 }}
                   >
                     {`bf=${balanceFactor}`}
                   </text>

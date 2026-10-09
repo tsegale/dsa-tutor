@@ -38,16 +38,20 @@ const EDGE_PATH = 'var(--state-sorted)'
 const EDGE_MST = 'var(--state-compare)'
 
 // Up to 8 distinct, colourblind-considerate colours for connected
-// components - reused (cycling) if a graph somehow has more than 8.
-const COMPONENT_COLOURS = [
-  'var(--state-current)',
-  'var(--state-sorted)',
-  'var(--state-error)',
-  '#0891b2',
-  'var(--state-compare)',
-  'var(--state-swap)',
-  'var(--state-neutral)',
-  '#65a30d',
+// components - reused (cycling) if a graph somehow has more than 8. Each
+// fill comes with the label colour that clears 4.5:1 on it; white failed on
+// most of them. The two fixed hexes are theme-invariant fills, so their
+// label is a fixed dark ink too.
+const CATEGORY_INK = '#12151c'
+const COMPONENT_COLOURS: { fill: string; text: string }[] = [
+  { fill: 'var(--state-current)', text: 'var(--state-current-ink)' },
+  { fill: 'var(--state-sorted)', text: 'var(--state-sorted-ink)' },
+  { fill: 'var(--state-error-text)', text: 'var(--state-error-ink)' },
+  { fill: '#0891b2', text: CATEGORY_INK },
+  { fill: 'var(--state-compare)', text: 'var(--state-compare-ink)' },
+  { fill: 'var(--state-swap)', text: 'var(--state-swap-ink)' },
+  { fill: 'var(--state-neutral)', text: 'var(--state-neutral-ink)' },
+  { fill: '#65a30d', text: CATEGORY_INK },
 ]
 
 const LEGEND: { label: string; colour: string }[] = [
@@ -382,7 +386,7 @@ function GraphNodeCircle({
       : null
 
   const fill = componentColour
-    ? componentColour
+    ? componentColour.fill
     : isCurrent
       ? CURRENT_FILL
       : isPath
@@ -393,7 +397,7 @@ function GraphNodeCircle({
             ? FRONTIER_FILL
             : DEFAULT_FILL
   const textFill = componentColour
-    ? '#ffffff'
+    ? componentColour.text
     : isCurrent
       ? CURRENT_TEXT
       : isPath

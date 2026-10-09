@@ -16,13 +16,14 @@ const CELL_SIZE = 20
 
 // A light board in both themes (see HEX_ALLOWLIST in themeTokens.test.ts),
 // so these are the light values of the canvas state tokens as literals:
-// start is --state-sorted, end --state-error, the current-cell stroke
-// --state-compare, and visited is --state-current at 30% on white.
+// start is --state-sorted, end --state-error-text (it carries a label),
+// the current-cell stroke --state-compare, and visited is --state-current
+// at 30% on white.
 const CELL_COLOURS: Record<GridCell['state'], { fill: string; text?: string }> = {
   empty: { fill: '#ffffff' },
   wall: { fill: '#2d3748' },
   start: { fill: '#0e9f6e', text: '#12151c' },
-  end: { fill: '#d64545', text: '#ffffff' },
+  end: { fill: '#c62828', text: '#ffffff' },
   visited: { fill: '#b6daf3' },
   frontier: { fill: '#fde68a' },
   path: { fill: '#facc15' },
@@ -184,7 +185,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
                   width={cellSize - 1}
                   height={cellSize - 1}
                   animate={{ fill: colours.fill }}
-                  stroke={isCurrent ? '#d98a00' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
+                  stroke={isCurrent ? '#cc8200' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
                   strokeWidth={isCurrent ? 2 : 0.5}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
                   style={{ cursor: isEditable ? 'pointer' : 'default' }}

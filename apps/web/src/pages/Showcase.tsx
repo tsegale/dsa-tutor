@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Pill } from '@/components/ui/Pill'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Modal } from '@/components/ui/Modal'
-import { Toaster } from '@/components/ui/sonner'
 import { Progress, ProgressRing } from '@/components/ui/progress'
 import { Skeleton, SkeletonCanvas, SkeletonCard, SkeletonText } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -57,13 +56,15 @@ const BASE_TOKENS: { token: string; className: string }[] = [
   { token: 'brand-hover', className: 'bg-brand-hover' },
   { token: 'brand-soft', className: 'bg-brand-soft' },
 ]
-const STATE_TOKENS: { state: string; className: string }[] = [
-  { state: 'neutral', className: 'bg-state-neutral text-state-neutral-ink' },
-  { state: 'compare', className: 'bg-state-compare text-state-compare-ink' },
-  { state: 'swap', className: 'bg-state-swap text-state-swap-ink' },
-  { state: 'sorted', className: 'bg-state-sorted text-state-sorted-ink' },
-  { state: 'current', className: 'bg-state-current text-state-current-ink' },
-  { state: 'error', className: 'bg-state-error text-state-error-ink' },
+// error is a fill only; error-text is the one that carries a label.
+const STATE_TOKENS: { state: string; className: string; label?: boolean }[] = [
+  { state: 'neutral', className: 'bg-state-neutral text-state-neutral-ink', label: true },
+  { state: 'compare', className: 'bg-state-compare text-state-compare-ink', label: true },
+  { state: 'swap', className: 'bg-state-swap text-state-swap-ink', label: true },
+  { state: 'sorted', className: 'bg-state-sorted text-state-sorted-ink', label: true },
+  { state: 'current', className: 'bg-state-current text-state-current-ink', label: true },
+  { state: 'error', className: 'bg-state-error' },
+  { state: 'error-text', className: 'bg-state-error-text text-state-error-ink', label: true },
 ]
 const ELEVATION = [
   { token: 'e1', className: 'shadow-e1', use: 'cards' },
@@ -151,8 +152,6 @@ export default function Showcase() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-8 sm:px-gutter">
-      <Toaster position="bottom-right" />
-
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-display text-ink">Design system</h1>
@@ -189,13 +188,13 @@ export default function Showcase() {
       <Section
         id="canvas-states"
         title="Canvas states"
-        description="Used only inside visualisations. Each fill carries its own text colour for contrast."
+        description="Used only inside visualisations. Every fill clears 3:1 against the surface. Fills that carry a value pair with their own text colour; error is a mark only, and error-text carries labels."
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {STATE_TOKENS.map(({ state, className }) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          {STATE_TOKENS.map(({ state, className, label }) => (
             <div key={state} className="flex flex-col gap-2">
               <div className={`flex h-14 items-center justify-center rounded-sm text-mono-lg ${className}`}>
-                42
+                {label ? '42' : null}
               </div>
               <div>
                 <p className="text-micro text-ink">{state}</p>
