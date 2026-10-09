@@ -24,7 +24,7 @@ export default function ConsentPage() {
   const queryClient = useQueryClient()
 
   // Shares the ['study', 'status'] cache with App.tsx's StudyGate and
-  // DashboardNav - reaching this page directly by URL (rather than via
+  // the AppShell account menu - reaching this page directly by URL (rather than via
   // StudyGate's redirect) is otherwise possible for any authenticated user,
   // so this page checks the same status itself before showing a consent
   // button that cannot work for them.

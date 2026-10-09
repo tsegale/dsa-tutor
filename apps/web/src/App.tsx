@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { getToken } from '@/api/auth'
@@ -18,6 +18,8 @@ import { useThemeStore } from '@/store/useThemeStore'
 const AuthPage = lazyWithReload(() => import('@/pages/AuthPage'))
 const Dashboard = lazyWithReload(() => import('@/pages/Dashboard'))
 const AlgorithmPage = lazyWithReload(() => import('@/pages/AlgorithmPage'))
+const TrackPage = lazyWithReload(() => import('@/pages/TrackPage'))
+const ProgressPage = lazyWithReload(() => import('@/pages/ProgressPage'))
 const EducatorDashboard = lazyWithReload(() => import('@/pages/EducatorDashboard'))
 const AssessmentPage = lazyWithReload(() => import('@/pages/AssessmentPage'))
 const ConsentPage = lazyWithReload(() => import('@/pages/ConsentPage'))
@@ -105,6 +107,14 @@ function useApplyTheme() {
   }, [theme])
 }
 
+// Keyed on the topic: the search palette can move from one topic straight
+// to another inside the workspace, and the same element would otherwise be
+// reused with the previous topic's session state.
+function AlgorithmRoute() {
+  const { algorithmName } = useParams<{ algorithmName: string }>()
+  return <AlgorithmPage key={algorithmName} />
+}
+
 export default function App() {
   useApplyTheme()
 
@@ -125,10 +135,26 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/track/:track"
+                  element={
+                    <ProtectedRoute>
+                      <TrackPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/progress"
+                  element={
+                    <ProtectedRoute>
+                      <ProgressPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/algorithm/:algorithmName"
                   element={
                     <ProtectedRoute>
-                      <AlgorithmPage />
+                      <AlgorithmRoute />
                     </ProtectedRoute>
                   }
                 />

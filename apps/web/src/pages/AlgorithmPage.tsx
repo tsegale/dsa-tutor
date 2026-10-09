@@ -12,7 +12,8 @@ import { useAuth } from '@/context/AuthContext'
 import { apiFetch } from '@/api/client'
 import { fetchStudyStatus } from '@/api/study'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
-import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT, REQUEST_SESSION_EXIT_EVENT } from '@/components/layout/TopBar'
+import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
+import { REQUEST_SESSION_EXIT_EVENT, type SessionExitDetail } from '@/components/layout/sessionExit'
 import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
@@ -764,13 +765,17 @@ export default function AlgorithmPage() {
 
   // Only a session actually being logged to the backend is worth asking
   // about - without one there is nothing for mentalEffort/confidence to
-  // attach to, so leaving goes straight back to the dashboard.
+  // attach to, so leaving goes straight to the destination. The top bar
+  // says where it is going (Home, a track page, another topic); the survey
+  // handlers below go there once it is answered or skipped.
+  const exitDestinationRef = useRef('/')
   useEffect(() => {
-    function handleRequestExit() {
+    function handleRequestExit(event: Event) {
+      exitDestinationRef.current = (event as CustomEvent<SessionExitDetail>).detail?.to ?? '/'
       if (useAlgorithmStore.getState().sessionId) {
         setShowSessionEndSurvey(true)
       } else {
-        navigate('/')
+        navigate(exitDestinationRef.current)
       }
     }
     window.addEventListener(REQUEST_SESSION_EXIT_EVENT, handleRequestExit)
@@ -786,7 +791,7 @@ export default function AlgorithmPage() {
   async function handleSessionEndSubmit(mentalEffort: number, confidence: number) {
     if (!sessionId) {
       setShowSessionEndSurvey(false)
-      navigate('/')
+      navigate(exitDestinationRef.current)
       return
     }
     setSessionEndSubmitting(true)
@@ -797,7 +802,7 @@ export default function AlgorithmPage() {
         body: JSON.stringify({ mentalEffort, confidence }),
       })
       setShowSessionEndSurvey(false)
-      navigate('/')
+      navigate(exitDestinationRef.current)
     } catch {
       setSessionEndSubmitting(false)
       setSessionEndError('Could not save your answers. Check your connection and try again.')
@@ -806,7 +811,7 @@ export default function AlgorithmPage() {
 
   function handleSessionEndSkip() {
     setShowSessionEndSurvey(false)
-    navigate('/')
+    navigate(exitDestinationRef.current)
   }
 
   useEffect(() => {

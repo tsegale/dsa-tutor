@@ -12,7 +12,7 @@ interface OnboardingStoreState {
 }
 
 // A Zustand store rather than local component state: the welcome modal
-// (Dashboard), the "Take the tour" trigger (DashboardNav), and the
+// (Dashboard), the "Take the tour" trigger (AppShell account menu), and the
 // walkthrough controller (mounted globally so it survives navigating
 // from the dashboard to the algorithm page mid-tour) all need to react
 // to the same onboarding state, not independent per-component copies.

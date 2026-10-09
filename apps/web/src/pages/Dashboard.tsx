@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
 import LargerScreenNotice from '@/components/layout/LargerScreenNotice'
-import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { apiFetch } from '../api/client'
-import type { TopicDto } from '@dsa-tutor/types'
 import { useAuth } from '../context/AuthContext'
 import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useOnboarding } from '../hooks/useOnboarding'
-import DashboardNav from '../components/layout/DashboardNav'
-import CurriculumSidebar from '../components/dashboard/CurriculumSidebar'
+import { AppTopBar } from '../components/layout/AppShell'
+import { useTopics } from '../hooks/useTopics'
 import TrackSection from '../components/dashboard/TrackSection'
 import StatsBanner from '../components/dashboard/StatsBanner'
 import BadgesSection from '../components/dashboard/BadgesSection'
@@ -21,10 +18,9 @@ import { EmptyStateIllustration } from '../components/brand'
 function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-surface-sunk">
-      <div className="h-16 w-full animate-pulse border-b border-border bg-card" />
+      <div className="h-14 w-full animate-pulse border-b border-border bg-card" />
       <div className="h-24 w-full animate-pulse border-b border-border bg-card" />
       <div className="flex">
-        <div className="h-[calc(100vh-160px)] w-[260px] shrink-0 animate-pulse border-r border-border bg-card" />
         <main className="flex-1 space-y-12 p-8">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-48 w-full animate-pulse rounded-md bg-card" />
@@ -62,14 +58,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { data: topics = [], isLoading } = useQuery({
-    queryKey: ['topics'],
-    queryFn: () => apiFetch<TopicDto[]>('/api/v1/topics'),
-    // Topics are seeded curriculum data, not per-user state - they only
-    // change on a deploy/reseed, so there is no reason to refetch on every
-    // mount or window focus.
-    staleTime: 10 * 60 * 1000,
-  })
+  const { data: topics = [], isLoading } = useTopics()
 
   function handleStart(topicName: string, mode: 'DEMO' | 'PRACTICE') {
     navigate(`/algorithm/${topicName}?mode=${mode}`)
@@ -91,7 +80,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-surface-sunk">
-      <DashboardNav />
+      <AppTopBar crumbs={[{ label: 'Home' }]} />
       {showBlockedNotice && (
         <div className="flex items-center justify-between border-b border-border bg-card px-6 py-2 text-sm text-text-primary">
           <span>That algorithm isn't part of your study topics, so it isn't available while you're enrolled.</span>
@@ -107,10 +96,6 @@ export default function Dashboard() {
       )}
       {user && <StatsBanner user={user} topics={topics} />}
       <div className="flex">
-        {/* PRACTICE, not DEMO - Practice is the default the study argues
-            for; Demo stays one click away on the algorithm page itself
-            (see remediation doc 9.8). */}
-        <CurriculumSidebar topics={topics} activeTopic={null} onTopicSelect={(name) => handleStart(name, 'PRACTICE')} />
         <main className="flex-1 overflow-y-auto px-8 pt-8 pb-10">
           <div className="space-y-12">
             {topics.length === 0 ? (
@@ -126,11 +111,13 @@ export default function Dashboard() {
                 <StudyProgressBanner topics={topics} />
                 <AILearningPathBanner topics={topics} onStart={handleStart} />
 
-                {trackOrder.map((track) => {
-                  const trackTopics = topics.filter((t) => t.track === track)
-                  if (trackTopics.length === 0) return null
-                  return <TrackSection key={track} track={track} topics={trackTopics} onStart={handleStart} />
-                })}
+                <div id="curriculum-tracks" className="space-y-12">
+                  {trackOrder.map((track) => {
+                    const trackTopics = topics.filter((t) => t.track === track)
+                    if (trackTopics.length === 0) return null
+                    return <TrackSection key={track} track={track} topics={trackTopics} onStart={handleStart} />
+                  })}
+                </div>
               </>
             )}
 
