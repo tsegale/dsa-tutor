@@ -23,7 +23,7 @@ function ErrorIcon() {
 function FieldError({ id, children }: { id: string; children?: React.ReactNode }) {
   if (!children) return null
   return (
-    <p id={id} className="mt-1.5 flex items-start gap-1.5 text-micro text-destructive">
+    <p id={id} className="mt-1.5 flex items-start gap-1.5 text-micro text-tone-red">
       <ErrorIcon />
       <span>{children}</span>
     </p>

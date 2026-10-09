@@ -32,7 +32,7 @@ function Progress({
     <ProgressPrimitive.Root
       data-slot="progress"
       value={value}
-      className={cn("relative h-1.5 w-full overflow-hidden rounded-full bg-surface-sunk", className)}
+      className={cn("relative h-1.5 w-full overflow-hidden rounded-full bg-rule", className)}
       {...props}
     >
       <ProgressPrimitive.Indicator
@@ -100,7 +100,7 @@ function ProgressRing({
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-          <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} fill="none" className="stroke-surface-sunk" />
+          <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} fill="none" className="stroke-rule" />
           <motion.circle
             cx={size / 2}
             cy={size / 2}

@@ -31,7 +31,7 @@ export default function ProgressBar({ percent, colorCoded = false, animate = tru
   const colorClass = getColorClass(value, colorCoded)
 
   return (
-    <div className="h-1 w-full overflow-hidden rounded-full bg-surface-sunk">
+    <div className="h-1 w-full overflow-hidden rounded-full bg-rule">
       {animate ? (
         <motion.div
           className={`h-full rounded-full ${colorClass}`}
