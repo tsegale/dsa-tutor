@@ -3,6 +3,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useRestoreFocus } from "@/hooks/useRestoreFocus"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -45,6 +46,8 @@ function SheetOverlay({
 function SheetContent({
   className,
   children,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   side = "right",
   showCloseButton = true,
   ...props
@@ -52,10 +55,23 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  // Every dialog opens from state, not a Trigger, so Radix has nothing to
+  // return focus to on close; this returns it to the opener (see the hook).
+  // A caller's own handler runs first and can opt out with preventDefault.
+  const restoreFocus = useRestoreFocus()
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
+        onOpenAutoFocus={(event) => {
+          restoreFocus.onOpenAutoFocus()
+          onOpenAutoFocus?.(event)
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (!event.defaultPrevented) restoreFocus.onCloseAutoFocus(event)
+        }}
         data-slot="sheet-content"
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
