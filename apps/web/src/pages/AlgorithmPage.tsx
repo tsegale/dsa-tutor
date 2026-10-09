@@ -5,6 +5,7 @@ import { Group, Panel, useDefaultLayout, usePanelRef, type LayoutStorage } from 
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, CriticalJunctionType, ScaffoldingLevel } from '@dsa-tutor/types'
+import { SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
@@ -315,8 +316,8 @@ function getTransitionMessage(from: ScaffoldingLevel, to: ScaffoldingLevel): str
 
   const raisingSupport = SCAFFOLDING_LEVEL_ORDER.indexOf(to) < SCAFFOLDING_LEVEL_ORDER.indexOf(from)
   return raisingSupport
-    ? `We are adding more support back, moving to ${to} scaffolding.`
-    : `Great work, moving to ${to} scaffolding as your understanding grows.`
+    ? `We are adding more support back, moving to ${SCAFFOLDING_LEVEL_NAME[to].toLowerCase()} scaffolding.`
+    : `Great work, moving to ${SCAFFOLDING_LEVEL_NAME[to].toLowerCase()} scaffolding as your understanding grows.`
 }
 
 const INITIAL_MASTERY_METRICS: MasteryMetrics = {

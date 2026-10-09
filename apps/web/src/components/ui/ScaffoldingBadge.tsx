@@ -1,6 +1,7 @@
 import { ScaffoldingLevel } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
 
 const STYLES: Record<ScaffoldingLevel, string> = {
   [ScaffoldingLevel.HIGH]: 'border border-primary bg-primary text-white',
@@ -22,11 +23,11 @@ export default function ScaffoldingBadge() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 2 4 5v6c0 5.25 3.5 9.74 8 11 4.5-1.26 8-5.75 8-11V5l-8-3z" />
           </svg>
-          {scaffoldingLevel}
+          {SCAFFOLDING_LEVEL_NAME[scaffoldingLevel]}
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        Support level: {scaffoldingLevel}. {scaffoldingReasoning}
+        Support level: {SCAFFOLDING_LEVEL_NAME[scaffoldingLevel]}. {scaffoldingReasoning}
       </TooltipContent>
     </Tooltip>
   )

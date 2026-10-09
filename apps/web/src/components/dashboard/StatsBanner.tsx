@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { TopicDto, UserProfile } from '@dsa-tutor/types'
 import { fetchMisconceptionSummary } from '@/api/misconceptionEvents'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
-import { SCAFFOLDING_LABEL } from '@/components/ui/ZPDScaffoldingPill'
+import { SCAFFOLDING_LABEL, SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
 
 interface StatsBannerProps {
   user: UserProfile
@@ -142,7 +142,7 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
         icon={<ChartLineIcon />}
         iconBg="var(--tone-amber-bg)"
         iconColor="var(--tone-amber-fg)"
-        value={scaffoldingLevel}
+        value={SCAFFOLDING_LEVEL_NAME[scaffoldingLevel]}
         valueColor="var(--tone-amber-fg)"
         label="Scaffolding level"
         sublabel={SCAFFOLDING_LABEL[scaffoldingLevel]}
