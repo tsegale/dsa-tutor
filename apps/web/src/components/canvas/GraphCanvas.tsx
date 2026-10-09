@@ -154,7 +154,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
 
       <div className="shrink-0 pt-8">
         <div className="flex items-center gap-2 px-3">
-          <span className="text-11 tracking-wider-caps text-text-muted dark:text-dark-text-secondary">Queue:</span>
+          <span className="text-micro text-text-muted dark:text-dark-text-secondary">Queue:</span>
           <div className="flex items-center gap-1.5">
             <AnimatePresence initial={false}>
               {state.queue.map((id, i) => (

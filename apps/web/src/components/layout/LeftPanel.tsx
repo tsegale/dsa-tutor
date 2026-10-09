@@ -201,7 +201,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             <AlgorithmControls slug={algorithmSlug} />
           ) : (
             <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+              <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
                 Custom array
               </h3>
               <input
@@ -231,8 +231,8 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
           {features.aiChallenge && (
           <section id="ai-tools-section" className="flex flex-col gap-2">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
-              AI Tools
+            <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
+              AI tools
             </h3>
             <ChallengeGenerator difficulty={difficulty} />
             {features.feynman && <FeynmanModeButton />}

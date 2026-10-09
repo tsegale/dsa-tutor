@@ -73,7 +73,7 @@ import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 
 const inputClass =
   'w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary'
-const labelClass = 'text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary'
+const labelClass = 'text-micro text-text-muted dark:text-dark-text-secondary'
 
 function parseArrayInput(input: string): number[] | null {
   const parts = input.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
@@ -508,7 +508,7 @@ function BSTControls({ slug }: { slug: string }) {
   if (slug === 'bst-search') {
     return (
       <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-        <h3 className={labelClass}>BST Search</h3>
+        <h3 className={labelClass}>BST search</h3>
         <NumberField label="Search for value" value={value} onChange={setValue} min={1} max={99} />
         <Button variant="outline" size="sm" onClick={() => apply(slug, bstSearchEngine(bstRootFor(BST_SEED), target))}>
           Search
@@ -520,7 +520,7 @@ function BSTControls({ slug }: { slug: string }) {
   if (slug === 'bst-delete') {
     return (
       <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-        <h3 className={labelClass}>BST Delete</h3>
+        <h3 className={labelClass}>BST delete</h3>
         <NumberField label="Delete value" value={value} onChange={setValue} min={1} max={99} />
         <Button variant="outline" size="sm" onClick={() => apply(slug, bstDeleteEngine(bstRootFor(BST_SEED), target))}>
           Delete
@@ -531,7 +531,7 @@ function BSTControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>BST Insert</h3>
+      <h3 className={labelClass}>BST insert</h3>
       <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
         Rebuilds the tree from scratch with this value inserted last - unrelated to the practice question above.
       </p>
@@ -554,7 +554,7 @@ function AVLControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>AVL Tree operations</h3>
+      <h3 className={labelClass}>AVL tree operations</h3>
       <NumberField label={isDelete ? 'Delete value' : 'Value'} value={value} onChange={setValue} min={1} max={99} />
       {isDelete ? (
         <Button variant="outline" size="sm" onClick={() => apply(slug, avlDeleteEngine(avlRootFor(AVL_SEED), target))}>
@@ -577,7 +577,7 @@ function RBControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Red-Black Tree operations</h3>
+      <h3 className={labelClass}>Red-black tree operations</h3>
       <NumberField label={isDelete ? 'Delete value' : 'Value'} value={value} onChange={setValue} min={1} max={99} />
       {isDelete ? (
         <Button variant="outline" size="sm" onClick={() => apply(slug, rbDeleteEngine(rbRootFor(RB_SEED), target))}>
@@ -611,7 +611,7 @@ function HeapControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>{isMax ? 'Max-Heap' : 'Min-Heap'} operations</h3>
+      <h3 className={labelClass}>{isMax ? 'Max-heap' : 'Min-heap'} operations</h3>
       {isDelete ? (
         <Button
           variant="outline"

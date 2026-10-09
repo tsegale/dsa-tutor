@@ -141,7 +141,7 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
       </div>
 
       <div className="shrink-0 border-b border-border px-3 pt-9 pb-2 dark:border-dark-border">
-        <p className="mb-1 text-[10px] font-semibold tracking-[0.06em] text-text-muted uppercase dark:text-dark-text-secondary">
+        <p className="text-micro mb-1 text-text-muted dark:text-dark-text-secondary">
           Current word
         </p>
         <div className="flex gap-1">

@@ -290,8 +290,41 @@
      The requested pixel values already exist collision-free via the
      default numeric scale: xs=p-1, sm=p-2, md=p-4, lg=p-6, xl=p-8,
      2xl=p-12, 3xl=p-16. */
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Fira Code', 'JetBrains Mono', monospace;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type scale (Design Phase 1A). Sans tokens are interface: labels,
+     buttons, headings, descriptions. The mono-* tokens are @utility rules
+     below because they also set the family: mono is data. */
+  --text-display: 40px;
+  --text-display--line-height: 44px;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
+  --text-h1: 30px;
+  --text-h1--line-height: 36px;
+  --text-h1--font-weight: 600;
+  --text-h1--letter-spacing: -0.015em;
+  --text-h2: 22px;
+  --text-h2--line-height: 28px;
+  --text-h2--font-weight: 600;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h3: 17px;
+  --text-h3--line-height: 24px;
+  --text-h3--font-weight: 600;
+  --text-h3--letter-spacing: 0;
+  --text-body: 15px;
+  --text-body--line-height: 24px;
+  --text-body--font-weight: 400;
+  --text-body--letter-spacing: 0;
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+  --text-small--font-weight: 400;
+  --text-small--letter-spacing: 0;
+  --text-micro: 12px;
+  --text-micro--line-height: 16px;
+  --text-micro--font-weight: 500;
+  --text-micro--letter-spacing: 0.01em;
+  --max-width-prose: 68ch;
 }
 
 @layer base {
@@ -299,13 +332,17 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-body tabular-nums;
   }
 }
 
 /* Canvas numbers (bar values, indices, distances, weights) keep a fixed
    digit width, so labels don't jitter as values change (4B.5). */
-svg text {
+svg text,
+.font-mono,
+code,
+pre,
+kbd {
   font-variant-numeric: tabular-nums;
 }
 
@@ -361,7 +398,35 @@ svg text {
 }
 
 @utility font-mono-code {
-  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mono type tokens: data (array values, indices, step counters, complexity
+   terms, pseudocode). Each carries the family and tabular figures so a
+   value never renders in sans or with proportional digits. */
+@utility text-mono-lg {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-mono-sm {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 @utility text-10 {
@@ -372,7 +437,3 @@ svg text {
   font-size: 11px;
 }
 
-@utility tracking-wider-caps {
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}

@@ -88,7 +88,7 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
       style={{ height: 'calc(100vh - 48px)' }}
     >
       <div className={cn('flex items-center px-4 pt-4', collapsed ? 'justify-center px-0' : 'justify-between')}>
-        {!collapsed && <span className="text-[13px] font-semibold tracking-wide text-text-muted uppercase">Curriculum</span>}
+        {!collapsed && <span className="text-micro text-text-muted">Curriculum</span>}
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
@@ -109,7 +109,7 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
               <div className={cn('flex items-center gap-1.5 px-2', collapsed && 'justify-center px-0')}>
                 <span className={cn('size-1.5 shrink-0 rounded-full', TRACK_DOT_CLASS[track])} />
                 {!collapsed && (
-                  <span className="text-[11px] font-semibold tracking-wide text-text-muted uppercase">
+                  <span className="text-micro text-text-muted">
                     {TRACK_LABELS[track]}
                   </span>
                 )}

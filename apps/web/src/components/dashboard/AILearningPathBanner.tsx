@@ -49,7 +49,7 @@ export default function AILearningPathBanner({ topics, onStart }: AILearningPath
         <SparklesIcon />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium tracking-wide text-[#4338ca] uppercase dark:text-tone-indigo">
+        <p className="text-micro text-[#4338ca] dark:text-tone-indigo">
           AI learning path recommendation
         </p>
         <p className="mt-0.5 text-xs leading-[1.6] text-tone-indigo">{bodyText}</p>

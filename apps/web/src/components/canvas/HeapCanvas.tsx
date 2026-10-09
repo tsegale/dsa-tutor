@@ -158,7 +158,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
             </svg>
 
             <div className="border-t border-border px-3 pt-3 dark:border-dark-border">
-              <p className="mb-1 text-[10px] font-semibold tracking-[0.06em] text-text-muted uppercase dark:text-dark-text-secondary">
+              <p className="text-micro mb-1 text-text-muted dark:text-dark-text-secondary">
                 Array view
               </p>
               <svg width={Math.max(width, arrayRowWidth)} height={BOX_SIZE + ARRAY_TOP_PADDING} role="img" aria-label="Heap array representation">

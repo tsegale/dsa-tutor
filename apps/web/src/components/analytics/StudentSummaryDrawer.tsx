@@ -131,7 +131,7 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
 
                   {summary.strengthAreas.length > 0 && (
                     <div>
-                      <h3 className="text-xs font-semibold tracking-wide text-success uppercase">Strengths</h3>
+                      <h3 className="text-micro text-success">Strengths</h3>
                       <ul className="mt-2 space-y-1.5">
                         {summary.strengthAreas.map((strength, i) => (
                           <li key={i} className="flex items-start gap-2 text-[13px] text-text-primary">
@@ -147,7 +147,7 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
 
                   {summary.concernAreas.length > 0 && (
                     <div>
-                      <h3 className="text-xs font-semibold tracking-wide text-secondary uppercase">Concerns</h3>
+                      <h3 className="text-micro text-secondary">Concerns</h3>
                       <ul className="mt-2 space-y-1.5">
                         {summary.concernAreas.map((concern, i) => (
                           <li key={i} className="flex items-start gap-2 text-[13px] text-text-primary">
@@ -162,7 +162,7 @@ export default function StudentSummaryDrawer({ student, open, onClose }: Student
                   )}
 
                   <div className="rounded-md border-l-4 border-primary bg-primary-light p-3">
-                    <p className="text-xs font-semibold text-primary uppercase">Recommended Action</p>
+                    <p className="text-micro text-primary">Recommended action</p>
                     <p className="mt-1 text-[14px] font-bold text-text-primary">{summary.recommendedAction}</p>
                   </div>
 

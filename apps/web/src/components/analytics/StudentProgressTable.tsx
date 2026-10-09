@@ -195,24 +195,24 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                     <button
                       type="button"
                       onClick={() => handleSort(col.key)}
-                      className="flex items-center gap-1 text-[12px] font-semibold tracking-wide text-text-muted uppercase hover:text-text-primary"
+                      className="text-micro flex items-center gap-1 text-text-muted hover:text-text-primary"
                     >
                       {col.label}
                       {sortColumn === col.key && <SortArrow direction={sortDirection} />}
                     </button>
                   </th>
                 ))}
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   AI Challenge Type
                 </th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   Hint dependency
                 </th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   Action needed
                 </th>
                 <th
-                  className="px-4 py-2.5 text-center text-[12px] font-semibold tracking-wide text-text-muted uppercase"
+                  className="text-micro px-4 py-2.5 text-center text-text-muted"
                   style={{ width: 60 }}
                 >
                   Progress

@@ -78,7 +78,7 @@ export default function SelfExplanationDialog({ prompt, algorithmName, level, se
     <Dialog open>
       <DialogContent showCloseButton={false} onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-md">
         <div className="border-l-4 border-secondary pl-3">
-          <p className="text-[10px] font-semibold tracking-wide text-secondary uppercase">Explain it in your own words</p>
+          <p className="text-micro text-secondary">Explain it in your own words</p>
           <DialogTitle className="mt-1 text-sm font-semibold text-text-primary">{prompt.question}</DialogTitle>
         </div>
 
