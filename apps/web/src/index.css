@@ -470,6 +470,40 @@ kbd {
   }
 }
 
+/* Skeleton shimmer: a highlight band sweeping across --surface-sunk. Off
+   under reduced motion, where the skeleton is a flat block. */
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@utility skeleton-shimmer {
+  background-color: var(--surface-sunk);
+  background-image: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--surface) 70%, transparent) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s var(--ease-standard) infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+  }
+}
+
+/* Error surfaces carry a stripe as well as colour and an X icon (CLAUDE.md
+   colour system), so an error never reads by hue alone. */
+@utility bg-error-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--destructive) 14%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+
 @utility duration-quick {
   transition-duration: var(--t-quick);
   transition-timing-function: var(--ease-standard);

@@ -19,10 +19,10 @@ interface ProgressBarProps {
 }
 
 function getColorClass(percent: number, colorCoded: boolean): string {
-  if (!colorCoded) return 'bg-primary'
+  if (!colorCoded) return 'bg-brand'
   if (percent >= 80) return 'bg-success'
   if (percent >= 50) return 'bg-secondary'
-  return 'bg-primary'
+  return 'bg-brand'
 }
 
 export default function ProgressBar({ percent, colorCoded = false, animate = true }: ProgressBarProps) {
@@ -31,7 +31,7 @@ export default function ProgressBar({ percent, colorCoded = false, animate = tru
   const colorClass = getColorClass(value, colorCoded)
 
   return (
-    <div className="h-1 w-full overflow-hidden rounded-full bg-border">
+    <div className="h-1 w-full overflow-hidden rounded-full bg-surface-sunk">
       {animate ? (
         <motion.div
           className={`h-full rounded-full ${colorClass}`}

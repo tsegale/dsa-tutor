@@ -1,13 +1,14 @@
 import { Difficulty } from '@dsa-tutor/types'
+import { Pill, type PillTone } from '@/components/ui/Pill'
 
 interface DifficultyTagProps {
   difficulty: Difficulty
 }
 
-const STYLES: Record<Difficulty, string> = {
-  [Difficulty.BEGINNER]: 'bg-success-light text-success',
-  [Difficulty.INTERMEDIATE]: 'bg-secondary-light text-secondary',
-  [Difficulty.ADVANCED]: 'bg-error-light text-error',
+const TONES: Record<Difficulty, PillTone> = {
+  [Difficulty.BEGINNER]: 'success',
+  [Difficulty.INTERMEDIATE]: 'warning',
+  [Difficulty.ADVANCED]: 'danger',
 }
 
 const LABELS: Record<Difficulty, string> = {
@@ -17,11 +18,5 @@ const LABELS: Record<Difficulty, string> = {
 }
 
 export default function DifficultyTag({ difficulty }: DifficultyTagProps) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STYLES[difficulty]}`}
-    >
-      {LABELS[difficulty]}
-    </span>
-  )
+  return <Pill tone={TONES[difficulty]}>{LABELS[difficulty]}</Pill>
 }
