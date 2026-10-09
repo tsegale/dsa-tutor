@@ -102,7 +102,7 @@ export default function DashboardNav() {
             <div className="flex items-center gap-2">
               <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: xpProgress.level.colour }} />
               <span className="text-sm font-semibold text-text-primary">{xpProgress.level.title}</span>
-              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-surface">
+              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-sunk">
                 <div
                   className="h-full rounded-full transition-[width] duration-300"
                   style={{ width: `${xpProgress.percent}%`, backgroundColor: xpProgress.level.colour }}

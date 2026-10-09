@@ -11,7 +11,7 @@ import ScaffoldingBadge from '@/components/ui/ScaffoldingBadge'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
+    <section className="space-y-4 rounded-lg border border-border bg-surface-sunk p-6">
       <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
       <div className="flex flex-wrap items-center gap-6">{children}</div>
     </section>

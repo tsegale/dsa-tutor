@@ -141,7 +141,7 @@ export default function TileGrid({ prompt, options, onSelect, selectedId, submis
                 {index < MAX_KEYED_TILES && (
                   <kbd
                     aria-hidden="true"
-                    className="flex size-5 shrink-0 items-center justify-center rounded border border-border bg-surface font-mono text-[10px] text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary"
+                    className="flex size-5 shrink-0 items-center justify-center rounded border border-border bg-surface-sunk font-mono text-[10px] text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary"
                   >
                     {index + 1}
                   </kbd>

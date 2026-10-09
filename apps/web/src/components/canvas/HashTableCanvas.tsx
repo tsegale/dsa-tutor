@@ -16,15 +16,15 @@ const CHAIN_NODE_WIDTH = 56
 const CHAIN_NODE_HEIGHT = 32
 const ROW_HEIGHT = 46
 
-const ACTIVE_FILL = '#f59e0b'
-const ACTIVE_TEXT = '#78350f'
-const OCCUPIED_FILL = '#3730a3'
-const OCCUPIED_TEXT = '#ffffff'
-const EMPTY_TARGET_FILL = '#16a34a'
-const EMPTY_TARGET_TEXT = '#ffffff'
-const DELETED_FILL = '#fecaca'
-const DELETED_TEXT = '#7f1d1d'
-const EMPTY_STROKE = '#cbd5e1'
+const ACTIVE_FILL = 'var(--state-compare)'
+const ACTIVE_TEXT = 'var(--state-compare-ink)'
+const OCCUPIED_FILL = 'var(--state-current)'
+const OCCUPIED_TEXT = 'var(--state-current-ink)'
+const EMPTY_TARGET_FILL = 'var(--state-sorted)'
+const EMPTY_TARGET_TEXT = 'var(--state-sorted-ink)'
+const DELETED_FILL = 'color-mix(in srgb, var(--state-error) 20%, var(--surface))'
+const DELETED_TEXT = 'var(--ink)'
+const EMPTY_STROKE = 'var(--rule-strong)'
 
 function ChainingCanvas({
   state,
@@ -51,10 +51,10 @@ function ChainingCanvas({
               width={BUCKET_WIDTH}
               height={BUCKET_HEIGHT}
               rx={4}
-              fill={isActive ? ACTIVE_FILL : '#f8fafc'}
-              stroke="#e2e8f0"
+              fill={isActive ? ACTIVE_FILL : 'var(--surface-sunk)'}
+              stroke="var(--rule)"
             />
-            <text x={20 + BUCKET_WIDTH / 2} y={y + BUCKET_HEIGHT / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: isActive ? ACTIVE_TEXT : '#0f172a', fontSize: 12, fontWeight: 600 }}>
+            <text x={20 + BUCKET_WIDTH / 2} y={y + BUCKET_HEIGHT / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: isActive ? ACTIVE_TEXT : 'var(--ink)', fontSize: 12, fontWeight: 600 }}>
               {i}
             </text>
 
@@ -77,7 +77,7 @@ function ChainingCanvas({
                         {entry.key}:{entry.value}
                       </text>
                       {ci > 0 && (
-                        <line x1={-20} y1={CHAIN_NODE_HEIGHT / 2} x2={0} y2={CHAIN_NODE_HEIGHT / 2} stroke="#94a3b8" strokeWidth={1.5} markerEnd="url(#hash-chain-arrow)" />
+                        <line x1={-20} y1={CHAIN_NODE_HEIGHT / 2} x2={0} y2={CHAIN_NODE_HEIGHT / 2} stroke="var(--state-neutral)" strokeWidth={1.5} markerEnd="url(#hash-chain-arrow)" />
                       )}
                     </motion.g>
                   )
@@ -90,14 +90,14 @@ function ChainingCanvas({
             </AnimatePresence>
 
             {bucket && bucket.chain.length > 1 && (
-              <line x1={20 + BUCKET_WIDTH} y1={y + BUCKET_HEIGHT / 2} x2={20 + BUCKET_WIDTH + 24} y2={y + BUCKET_HEIGHT / 2} stroke="#94a3b8" strokeWidth={1.5} markerEnd="url(#hash-chain-arrow)" />
+              <line x1={20 + BUCKET_WIDTH} y1={y + BUCKET_HEIGHT / 2} x2={20 + BUCKET_WIDTH + 24} y2={y + BUCKET_HEIGHT / 2} stroke="var(--state-neutral)" strokeWidth={1.5} markerEnd="url(#hash-chain-arrow)" />
             )}
           </g>
         )
       })}
       <defs>
         <marker id="hash-chain-arrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-          <path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8" />
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="var(--state-neutral)" />
         </marker>
       </defs>
     </svg>
@@ -140,7 +140,7 @@ function OpenAddressingCanvas({
               ? EMPTY_TARGET_TEXT
               : wasProbed
                 ? ACTIVE_TEXT
-                : '#94a3b8'
+                : 'var(--state-neutral)'
 
         return (
           <motion.g key={i} layout transition={canvasMove(prefersReducedMotion)}>
@@ -164,7 +164,7 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as HashTableState | undefined
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
@@ -189,7 +189,7 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
         <span
           className={cn(
             'rounded-md px-2 py-0.5 text-[10px] font-semibold',
-            loadFactor > 0.7 ? 'bg-error-light text-error' : 'bg-surface text-text-muted',
+            loadFactor > 0.7 ? 'bg-error-light text-error' : 'bg-surface-sunk text-text-muted',
           )}
         >
           load factor α = {loadFactor.toFixed(2)}
@@ -199,7 +199,7 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
 
       {state.activeKey !== null && (
         <div className="mt-9 px-3">
-          <div className="rounded-md border border-border bg-surface px-3 py-1.5 text-center font-mono text-[12px] text-text-primary dark:border-dark-border dark:bg-dark-border dark:text-dark-text-primary">
+          <div className="rounded-md border border-border bg-surface-sunk px-3 py-1.5 text-center font-mono text-[12px] text-text-primary dark:border-dark-border dark:bg-dark-border dark:text-dark-text-primary">
             hash({state.activeKey}) = {state.activeKey} % {state.capacity} ={' '}
             {isHashBucketPending ? '?' : (state.hashResult ?? '?')}
           </div>

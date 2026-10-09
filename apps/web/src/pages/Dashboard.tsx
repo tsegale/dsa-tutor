@@ -20,7 +20,7 @@ import { EmptyStateIllustration } from '../components/brand'
 
 function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface-sunk">
       <div className="h-16 w-full animate-pulse border-b border-border bg-card" />
       <div className="h-24 w-full animate-pulse border-b border-border bg-card" />
       <div className="flex">
@@ -90,7 +90,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface-sunk">
       <DashboardNav />
       {showBlockedNotice && (
         <div className="flex items-center justify-between border-b border-border bg-card px-6 py-2 text-sm text-text-primary">

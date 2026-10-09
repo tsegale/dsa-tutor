@@ -29,7 +29,7 @@ export default function MisconceptionResolutionTable() {
   return (
     <div className="overflow-x-auto rounded-md border border-border bg-card">
       <table className="w-full text-left text-sm">
-        <thead className="text-micro border-b border-border bg-surface text-text-muted">
+        <thead className="text-micro border-b border-border bg-surface-sunk text-text-muted">
           <tr>
             <th className="px-4 py-2">Category</th>
             <th className="px-4 py-2">Detected</th>

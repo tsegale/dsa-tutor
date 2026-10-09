@@ -15,14 +15,14 @@ const ROW_GAP = 12
 const LABEL_WIDTH = 64
 const BOX_HEIGHT = 40
 
-const NEUTRAL_FILL = '#c7c9e8'
-const NEUTRAL_TEXT = '#4a4d8a'
-const ACTIVE_FILL = '#f59e0b'
-const ACTIVE_TEXT = '#78350f'
-const DONE_FILL = '#16a34a'
-const DONE_TEXT = '#ffffff'
+const NEUTRAL_FILL = 'var(--state-neutral)'
+const NEUTRAL_TEXT = 'var(--state-neutral-ink)'
+const ACTIVE_FILL = 'var(--state-compare)'
+const ACTIVE_TEXT = 'var(--state-compare-ink)'
+const DONE_FILL = 'var(--state-sorted)'
+const DONE_TEXT = 'var(--state-sorted-ink)'
 const EMPTY_FILL = 'none'
-const EMPTY_STROKE = '#c7c9e8'
+const EMPTY_STROKE = 'var(--state-neutral)'
 
 function Row({
   label,

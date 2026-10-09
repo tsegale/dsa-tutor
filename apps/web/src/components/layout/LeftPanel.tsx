@@ -189,7 +189,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             type="button"
             onClick={onToggle}
             aria-label="Expand panel"
-            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
           >
             <ChevronIcon pointRight />
           </button>
@@ -251,7 +251,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                 'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors',
                 codeEditorMode
                   ? 'border-primary bg-primary-light text-primary'
-                  : 'border-border text-text-primary hover:bg-surface dark:text-dark-text-primary dark:hover:bg-dark-border',
+                  : 'border-border text-text-primary hover:bg-surface-sunk dark:text-dark-text-primary dark:hover:bg-dark-border',
               )}
             >
               <span className="flex items-center gap-1.5">

@@ -33,7 +33,7 @@ export default function KeyboardShortcutsModal({ open, onClose }: KeyboardShortc
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           {SHORTCUTS.map((shortcut) => (
             <div key={shortcut.action} className="flex items-center gap-3">
-              <kbd className="rounded border border-border bg-surface px-2 py-1 font-mono text-xs text-text-primary">
+              <kbd className="rounded border border-border bg-surface-sunk px-2 py-1 font-mono text-xs text-text-primary">
                 {shortcut.keys}
               </kbd>
               <span className="text-sm text-text-secondary">{shortcut.action}</span>

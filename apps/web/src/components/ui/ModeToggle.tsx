@@ -128,7 +128,7 @@ export default function ModeToggle() {
   const visibleOptions = OPTIONS.filter((option) => option.value !== AlgorithmMode.HANDS_ON || !handsOnHidden)
 
   return (
-    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface p-1 dark:bg-dark-border">
+    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface-sunk p-1 dark:bg-dark-border">
       {visibleOptions.map((option) => {
         const isActive = mode === option.value
         const isDisabled = option.value === AlgorithmMode.HANDS_ON && !handsOnAvailable

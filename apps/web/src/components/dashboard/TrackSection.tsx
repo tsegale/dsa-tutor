@@ -106,7 +106,7 @@ export default function TrackSection({ track, topics, onStart }: TrackSectionPro
                 remediation doc 9.1/9.4's "only show a badge where it
                 differs from the account default" principle). */}
             {allLocked && (
-              <span className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-text-muted">
+              <span className="flex items-center gap-1 rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-medium text-text-muted">
                 <LockIcon />
                 Locked
               </span>

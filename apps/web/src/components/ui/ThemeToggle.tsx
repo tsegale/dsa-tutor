@@ -37,7 +37,7 @@ export default function ThemeToggle({ className }: { className?: string }) {
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       aria-pressed={isDark}
       className={cn(
-        'flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface dark:hover:bg-dark-border',
+        'flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface-sunk dark:hover:bg-dark-border',
         className,
       )}
     >

@@ -62,7 +62,7 @@ export default function ResearchExports() {
               type="button"
               onClick={() => void handleDownload(kind, label)}
               disabled={pending !== null}
-              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40"
             >
               <DownloadIcon />
               {pending === kind ? 'Downloading...' : label}

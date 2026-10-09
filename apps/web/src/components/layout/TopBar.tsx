@@ -112,7 +112,7 @@ export default function TopBar() {
               type="button"
               onClick={toggleFocusMode}
               aria-label="Toggle focus mode"
-              className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface dark:hover:bg-dark-border"
+              className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface-sunk dark:hover:bg-dark-border"
             >
               <EyeIcon active={focusModeActive} />
             </button>
@@ -130,7 +130,7 @@ export default function TopBar() {
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SHORTCUTS_MODAL_EVENT))}
           aria-label="Keyboard shortcuts"
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
         >
           ?
         </button>
@@ -160,7 +160,7 @@ export default function TopBar() {
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent(REQUEST_SESSION_EXIT_EVENT))}
               aria-label="Back to dashboard"
-              className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+              className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
             >
               <BackToDashboardIcon />
             </button>

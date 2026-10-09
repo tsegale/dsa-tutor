@@ -21,14 +21,13 @@ const BASE_Y_OFFSET = 40
 // to stay clear of it while a prediction is pending.
 const PREDICTION_ZONE_OFFSET = 180
 
-const TOP_FILL = '#f59e0b'
-const TOP_TEXT = '#78350f'
-const INDIGO = '55, 48, 163'
-const PLACEHOLDER_STROKE = '#cbd5e1'
+const TOP_FILL = 'var(--state-compare)'
+const TOP_TEXT = 'var(--state-compare-ink)'
+const PLACEHOLDER_STROKE = 'var(--rule-strong)'
 
 function fillForDepth(depthFromTop: number): string {
   const opacity = depthFromTop === 0 ? 0.85 : depthFromTop === 1 ? 0.7 : depthFromTop === 2 ? 0.55 : 0.45
-  return `rgba(${INDIGO}, ${opacity})`
+  return `color-mix(in srgb, var(--state-current) ${opacity * 100}%, transparent)`
 }
 
 export default function StackCanvas({ width = 400, height = 400 }: StackCanvasProps) {
@@ -38,7 +37,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
   const state = snapshot?.dataStructureState as StackState | undefined
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   // the stack grows upward from a floor near the bottom of the svg, which
   // sits below the fold of this overflow-auto wrapper as soon as the svg
@@ -84,7 +83,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
 
       <div ref={scrollRef} className="flex-1 overflow-auto pt-10">
         <svg width={width} height={height} role="img" aria-label={`Stack, ${snapshot?.description ?? ''}`}>
-          <line x1={centerX - 90} y1={baseY} x2={centerX + 90} y2={baseY} stroke="#0f172a" strokeWidth={3} />
+          <line x1={centerX - 90} y1={baseY} x2={centerX + 90} y2={baseY} stroke="var(--ink)" strokeWidth={3} />
 
           {state.capacity !== null &&
             Array.from({ length: remainingCapacity }, (_, i) => {
@@ -110,7 +109,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
               const isTop = i === state.topIndex
               const y = baseY - (i + 1) * (ITEM_HEIGHT + ITEM_GAP)
               const fill = isTop ? TOP_FILL : fillForDepth(depthFromTop)
-              const textFill = isTop ? TOP_TEXT : '#ffffff'
+              const textFill = isTop ? TOP_TEXT : 'var(--state-current-ink)'
 
               return (
                 <motion.g
@@ -154,7 +153,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
                 y1={baseY - (state.topIndex + 1) * (ITEM_HEIGHT + ITEM_GAP) + ITEM_HEIGHT / 2}
                 x2={centerX - 90}
                 y2={baseY - (state.topIndex + 1) * (ITEM_HEIGHT + ITEM_GAP) + ITEM_HEIGHT / 2}
-                stroke="#f59e0b"
+                stroke="var(--state-compare)"
                 strokeWidth={2}
                 markerEnd="url(#stack-top-arrow)"
               />
@@ -170,7 +169,7 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
           )}
           <defs>
             <marker id="stack-top-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 Z" fill="#f59e0b" />
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--state-compare)" />
             </marker>
           </defs>
         </svg>

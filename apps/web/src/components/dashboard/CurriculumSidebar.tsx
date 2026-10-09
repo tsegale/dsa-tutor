@@ -93,7 +93,7 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? 'Expand curriculum sidebar' : 'Collapse curriculum sidebar'}
-          className="flex size-6 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+          className="flex size-6 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk"
         >
           <ChevronIcon collapsed={collapsed} />
         </button>
@@ -133,7 +133,7 @@ export default function CurriculumSidebar({ topics, activeTopic, onTopicSelect }
                         'flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
                         collapsed && 'justify-center px-0',
                         isActive && 'bg-primary-light',
-                        !topic.isLocked && !isActive && 'hover:bg-surface',
+                        !topic.isLocked && !isActive && 'hover:bg-surface-sunk',
                         topic.isLocked && 'cursor-not-allowed',
                       )}
                     >

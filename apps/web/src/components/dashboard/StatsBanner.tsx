@@ -127,7 +127,7 @@ export default function StatsBanner({ user, topics }: StatsBannerProps) {
   const mostEngagedTopic = [...unlockedTopics].filter((t) => t.masteryPercent > 0).sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
 
   return (
-    <div id="dashboard-stats-banner" className="flex gap-4 border-b border-border bg-surface px-6 py-4">
+    <div id="dashboard-stats-banner" className="flex gap-4 border-b border-border bg-surface-sunk px-6 py-4">
       <StatCard
         icon={<BrainIcon />}
         iconBg="var(--tone-indigo-bg)"

@@ -22,7 +22,7 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
   const state = snapshot?.dataStructureState as CallStackState | undefined
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   // the deepest (most recent, currently active) frame sits at the floor
   // near the bottom of the svg, which grows taller than this overflow-auto
@@ -68,15 +68,15 @@ export default function CallStackCanvas({ width = 500, height = 400 }: CallStack
 
       <div ref={scrollRef} className="flex-1 overflow-auto pt-10">
         <svg width={width} height={svgHeight} role="img" aria-label={`Call stack, ${snapshot?.description ?? ''}`}>
-          <line x1={centerX - FRAME_WIDTH / 2 - 10} y1={baseY} x2={centerX + FRAME_WIDTH / 2 + 10} y2={baseY} stroke="#0f172a" strokeWidth={3} />
+          <line x1={centerX - FRAME_WIDTH / 2 - 10} y1={baseY} x2={centerX + FRAME_WIDTH / 2 + 10} y2={baseY} stroke="var(--ink)" strokeWidth={3} />
 
           <AnimatePresence>
             {framesTopFirst.map((frame, i) => {
               const y = baseY - (i + 1) * (FRAME_HEIGHT + FRAME_GAP)
               const isBaseCase = frame.argument === state.baseCase
-              const fill = frame.status === 'returned' ? 'rgba(22, 163, 74, 0.2)' : frame.status === 'waiting' ? 'rgba(55, 48, 163, 0.3)' : '#ffffff'
-              const stroke = isBaseCase ? '#f59e0b' : frame.status === 'active' ? '#3730a3' : 'none'
-              const textFill = frame.status === 'waiting' ? '#64748b' : '#0f172a'
+              const fill = frame.status === 'returned' ? 'color-mix(in srgb, var(--state-sorted) 20%, transparent)' : frame.status === 'waiting' ? 'color-mix(in srgb, var(--state-current) 30%, transparent)' : 'var(--surface)'
+              const stroke = isBaseCase ? 'var(--state-compare)' : frame.status === 'active' ? 'var(--state-current)' : 'none'
+              const textFill = frame.status === 'waiting' ? 'var(--ink-2)' : 'var(--ink)'
 
               return (
                 <motion.g

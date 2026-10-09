@@ -179,7 +179,7 @@ export default function RightPanel({
                 type="button"
                 onClick={() => expandToTab(1)}
                 aria-label="AI Tutor"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <ExplanationIcon />
               </button>
@@ -193,7 +193,7 @@ export default function RightPanel({
                 type="button"
                 onClick={() => expandToTab(2)}
                 aria-label="Pseudocode"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <PseudocodeIcon />
               </button>
@@ -207,7 +207,7 @@ export default function RightPanel({
                 type="button"
                 onClick={() => expandToTab(3)}
                 aria-label="Complexity"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <ComplexityIcon />
               </button>
@@ -221,7 +221,7 @@ export default function RightPanel({
                 type="button"
                 onClick={() => expandToTab(4)}
                 aria-label="Step log"
-                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
               >
                 <StepLogIcon />
               </button>
@@ -233,7 +233,7 @@ export default function RightPanel({
             type="button"
             onClick={onToggle}
             aria-label="Expand panel"
-            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk"
           >
             <ChevronIcon pointRight={false} />
           </button>

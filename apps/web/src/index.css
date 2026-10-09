@@ -4,46 +4,83 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Design Phase 1B. Base palette: every other colour token below either
+     is one of these or points at one. Brand means "you can interact with
+     this" and never appears inside a canvas (guarded by themeTokens.test). */
+  --paper: #fbfbfd;
+  --surface: #ffffff;
+  --surface-sunk: #f3f5f9;
+  --ink: #12151c;
+  --ink-2: #5a6273;
+  /* 3.2:1 on --surface: placeholders and disabled text only, never a
+     readable label (WCAG AA needs 4.5:1). */
+  --ink-3: #8a91a1;
+  --rule: #e3e6ec;
+  --rule-strong: #cbd1db;
+  --brand: #4538d4;
+  --brand-hover: #3a2ebd;
+  --brand-soft: #eeebfb;
+
+  /* Canvas state palette: visualisations only. Colour inside a canvas
+     means algorithm state and nothing else. Swap is magenta, not violet,
+     so no state collides with the brand hue. Each *-ink is the text colour
+     that clears contrast on that fill (white or ink, whichever is higher). */
+  /* Spec value #94a1b8 is 2.6:1 on --surface; #8793a7 is the same hue at
+     3.1:1, keeping the 3:1 non-text minimum (remediation doc 9.9). */
+  --state-neutral: #8793a7;
+  --state-neutral-ink: #12151c;
+  --state-compare: #d98a00;
+  --state-compare-ink: #12151c;
+  --state-swap: #c2255c;
+  --state-swap-ink: #ffffff;
+  --state-sorted: #0e9f6e;
+  --state-sorted-ink: #12151c;
+  --state-current: #0b84d8;
+  --state-current-ink: #12151c;
+  --state-error: #d64545;
+  --state-error-ink: #ffffff;
+
   --radius: 0.625rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #4f46e5;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
   --primary-foreground: #ffffff;
   --secondary: #f59e0b;
   --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #94a3b8;
-  --accent: #eef2ff;
-  --accent-foreground: #4f46e5;
+  --muted: var(--surface-sunk);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--brand-soft);
+  --accent-foreground: var(--brand);
   --destructive: #dc2626;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #4f46e5;
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--brand);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #f8fafc;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #4f46e5;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eef2ff;
-  --sidebar-accent-foreground: #4f46e5;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #4f46e5;
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--brand);
   /* Project tokens below were literal hex in @theme, so they never
      flipped with .dark - text-text-primary stayed #0f172a on a dark card.
      Light values are unchanged. */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --surface: #f8fafc;
-  --primary-light: #eef2ff;
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-2);
+  /* Readable muted labels (the old axe AA fix) stay on --ink-2: --ink-3
+     is below 4.5:1 in both themes. */
+  --text-muted: var(--ink-2);
+  --primary-light: var(--brand-soft);
   --secondary-light: #fffbeb;
   /* AI surfaces only (Week 4, 4B.7): hints, AI feedback, AI Challenge.
      Amber stays for the canvas's "comparing" state and for prompts where
@@ -122,49 +159,46 @@
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
-  /* Fills (buttons, chips) with white text: #585ce8 gives 5.1:1. Indigo text
-     on dark surfaces uses --tone-indigo-fg instead (rule below). */
-  --primary: #585ce8;
-  --primary-foreground: #f8fafc;
+  --paper: #0c0f15;
+  --surface: #141821;
+  --surface-sunk: #10141c;
+  --ink: #e7ebf2;
+  --ink-2: #a2abbc;
+  --ink-3: #6e7788;
+  --rule: #232a36;
+  --rule-strong: #333c4c;
+  --brand: #7c6cf0;
+  --brand-hover: #9385f4;
+  --brand-soft: #1e1b3a;
+
+  --state-neutral: #5b6880;
+  --state-neutral-ink: #ffffff;
+  --state-compare: #f0a72e;
+  --state-compare-ink: #0c0f15;
+  --state-swap: #e8558a;
+  --state-swap-ink: #0c0f15;
+  --state-sorted: #2bc48a;
+  --state-sorted-ink: #0c0f15;
+  --state-current: #3ba7f0;
+  --state-current-ink: #0c0f15;
+  --state-error: #f06a6a;
+  --state-error-ink: #0c0f15;
+
+  /* White on the dark brand fill is 4.0:1; --paper on it is 4.8:1. */
+  --primary-foreground: var(--paper);
   --secondary: #fbbf24;
   --secondary-foreground: #0f172a;
-  --muted: #1e293b;
-  --muted-foreground: #cbd5e1;
-  --accent: #1e293b;
-  /* Text on the dark accent surface: #6366f1 measured 3.27:1, #a5b4fc 7.3:1. */
-  --accent-foreground: #a5b4fc;
+  /* Brand text on the dark accent and surfaces: --brand is 4.45:1 on
+     --surface, --brand-hover 5.8:1. */
+  --accent-foreground: var(--brand-hover);
   --destructive: #dc2626;
-  --border: #334155;
-  --input: #334155;
-  --ring: #6366f1;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #0f172a;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #a5b4fc;
-  --sidebar-border: #334155;
-  --sidebar-ring: #6366f1;
-  /* Same values as the dark-text-primary/secondary tokens the existing
-     dark: overrides use, so a pair and a bare token render identically.
-     #94a3b8 muted is ~5.7:1 on the #1e293b card. Tints become low-alpha
-     washes of their hue so text-text-primary stays legible on them. */
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --surface: #1e293b;
-  --primary-light: rgba(99, 102, 241, 0.18);
+  /* Tints become low-alpha washes of their hue so text-text-primary stays
+     legible on them. */
   --secondary-light: rgba(245, 158, 11, 0.15);
   --ai: #22d3ee;
   --ai-foreground: #67e8f9;
@@ -211,7 +245,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: #4338ca;
+  --color-primary-hover: var(--brand-hover);
   --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -229,7 +263,29 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-paper: var(--paper);
   --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-state-neutral: var(--state-neutral);
+  --color-state-neutral-ink: var(--state-neutral-ink);
+  --color-state-compare: var(--state-compare);
+  --color-state-compare-ink: var(--state-compare-ink);
+  --color-state-swap: var(--state-swap);
+  --color-state-swap-ink: var(--state-swap-ink);
+  --color-state-sorted: var(--state-sorted);
+  --color-state-sorted-ink: var(--state-sorted-ink);
+  --color-state-current: var(--state-current);
+  --color-state-current-ink: var(--state-current-ink);
+  --color-state-error: var(--state-error);
+  --color-state-error-ink: var(--state-error-ink);
   --color-success: #16a34a;
   --color-success-light: var(--success-light);
   --color-error: #dc2626;
@@ -256,13 +312,15 @@
   --color-brand-on-indigo: var(--brand-on-indigo);
   --color-brand-on-indigo-muted: var(--brand-on-indigo-muted);
   --color-text-accent: #378add;
-  --color-dark-background: #0f172a;
-  --color-dark-surface: #1e293b;
-  --color-dark-border: #334155;
-  --color-dark-primary: #585ce8;
+  /* Literal on purpose: these are only ever used behind dark:, so they
+     hold the dark values of the matching tokens. */
+  --color-dark-background: #0c0f15;
+  --color-dark-surface: #141821;
+  --color-dark-border: #232a36;
+  --color-dark-primary: #7c6cf0;
   --color-dark-secondary: #fbbf24;
-  --color-dark-text-primary: #f8fafc;
-  --color-dark-text-secondary: #cbd5e1;
+  --color-dark-text-primary: #e7ebf2;
+  --color-dark-text-secondary: #a2abbc;
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -350,11 +408,12 @@ kbd {
    for both jobs on a dark surface: white text on an indigo fill needs a dark
    indigo, indigo text on the dark card needs a light one (#6366f1 measured
    3.27:1 there). Fills keep --primary; text is redirected to
-   --tone-indigo-fg (7.3:1). Unlayered, so it outranks the utilities. */
+   --brand-hover (5.8:1 on --surface). Unlayered, so it outranks the
+   utilities. */
 .dark .text-primary,
 .dark .text-dark-primary,
 .dark .dark\:text-dark-primary {
-  color: var(--tone-indigo-fg);
+  color: var(--brand-hover);
 }
 
 /* One focus ring for every interactive element (Week 4, 4B.4). Unlayered

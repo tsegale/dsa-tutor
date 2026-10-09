@@ -45,7 +45,7 @@ export default function EducatorDashboard() {
 
   if (user && user.role !== 'EDUCATOR') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface px-6 text-center dark:bg-dark-background">
+      <div className="flex min-h-screen items-center justify-center bg-surface-sunk px-6 text-center dark:bg-dark-background">
         <div>
           <p className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
             This area is for educators
@@ -68,7 +68,7 @@ export default function EducatorDashboard() {
 
   if (isError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
+      <div className="flex min-h-screen items-center justify-center bg-surface-sunk">
         <div className="text-center">
           <p className="font-medium text-error">Failed to load analytics data.</p>
           <p className="mt-1 text-sm text-text-muted">Make sure you are logged in as an educator.</p>
@@ -81,7 +81,7 @@ export default function EducatorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface-sunk">
       <AnalyticsNav refetch={refetch} isFetching={isFetching} />
       <main className="mx-auto max-w-7xl px-8 py-8">
         {analytics && (
@@ -123,7 +123,7 @@ export default function EducatorDashboard() {
 
 function EducatorDashboardSkeleton() {
   return (
-    <div className="min-h-screen animate-pulse bg-surface">
+    <div className="min-h-screen animate-pulse bg-surface-sunk">
       <div className="h-16 border-b bg-card" />
       <div className="mx-auto max-w-7xl space-y-12 px-8 py-8">
         <div className="grid grid-cols-4 gap-4">

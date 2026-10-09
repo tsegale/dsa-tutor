@@ -16,14 +16,14 @@ const CELL_WIDTH = 70
 const CELL_HEIGHT = 44
 const CELL_GAP = 6
 
-const FRONT_FILL = '#16a34a'
-const FRONT_TEXT = '#ffffff'
-const REAR_FILL = '#f59e0b'
-const REAR_TEXT = '#78350f'
-const FILLED_FILL = '#3730a3'
-const FILLED_TEXT = '#ffffff'
-const GHOST_STROKE = '#cbd5e1'
-const EMPTY_STROKE = '#cbd5e1'
+const FRONT_FILL = 'var(--state-sorted)'
+const FRONT_TEXT = 'var(--state-sorted-ink)'
+const REAR_FILL = 'var(--state-compare)'
+const REAR_TEXT = 'var(--state-compare-ink)'
+const FILLED_FILL = 'var(--state-current)'
+const FILLED_TEXT = 'var(--state-current-ink)'
+const GHOST_STROKE = 'var(--rule-strong)'
+const EMPTY_STROKE = 'var(--rule-strong)'
 
 function LinearQueue({
   state,
@@ -128,7 +128,7 @@ function CircularQueue({
 
   return (
     <svg width={width} height={height} role="img" aria-label={`Circular queue, size ${state.size} of ${state.capacity}`}>
-      <circle cx={cx} cy={cy} r={radius} fill="none" stroke="#e2e8f0" strokeDasharray="2 4" />
+      <circle cx={cx} cy={cy} r={radius} fill="none" stroke="var(--rule)" strokeDasharray="2 4" />
 
       {Array.from({ length: state.capacity }, (_, slot) => {
         const { x, y } = cellPos(slot)
@@ -150,7 +150,7 @@ function CircularQueue({
               stroke={item ? 'none' : EMPTY_STROKE}
               strokeDasharray={item ? undefined : '3 3'}
             />
-            <text x={cellSize / 2} y={cellSize / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: item ? '#ffffff' : '#94a3b8', fontSize: 13, fontWeight: 600 }}>
+            <text x={cellSize / 2} y={cellSize / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: item ? 'var(--state-current-ink)' : 'var(--ink-3)', fontSize: 13, fontWeight: 600 }}>
               {item ? item.value : slot}
             </text>
           </motion.g>
@@ -196,7 +196,7 @@ export default function QueueCanvas({ width = 600, height = 320, variant }: Queu
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as QueueState | undefined
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (

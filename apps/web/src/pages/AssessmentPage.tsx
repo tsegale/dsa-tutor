@@ -76,7 +76,7 @@ export default function AssessmentPage() {
 
   if (attempt?.completedAt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface p-8 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface-sunk p-8 text-center">
         <p className="text-text-primary">This assessment has already been submitted. Thank you.</p>
       </div>
     )
@@ -84,7 +84,7 @@ export default function AssessmentPage() {
 
   if (startMutation.isError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface p-8 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-sunk p-8 text-center">
         <p className="text-text-primary">Could not start this assessment. Check your connection and try again.</p>
         <Button onClick={() => startMutation.mutate()}>Retry</Button>
       </div>
@@ -93,7 +93,7 @@ export default function AssessmentPage() {
 
   if (!attempt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
+      <div className="flex min-h-screen items-center justify-center bg-surface-sunk">
         <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
@@ -130,7 +130,7 @@ export default function AssessmentPage() {
   const canSubmit = answer.trim().length > 0
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface-sunk">
       <header className="flex h-16 items-center border-b border-border bg-card px-6">
         <DSATutorLogo variant="dark" showTagline={false} />
       </header>

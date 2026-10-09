@@ -46,7 +46,7 @@ export default function ConsentPage() {
 
   if (statusQuery.isError) {
     return (
-      <div className="min-h-screen bg-surface">
+      <div className="min-h-screen bg-surface-sunk">
         <ConsentPageHeader />
         <main className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-6 py-24 text-center">
           <p className="text-text-primary">Could not load your study status. Check your connection and try again.</p>
@@ -63,7 +63,7 @@ export default function ConsentPage() {
 
   if (status.withdrawn) {
     return (
-      <div className="min-h-screen bg-surface">
+      <div className="min-h-screen bg-surface-sunk">
         <ConsentPageHeader />
         <main className="mx-auto max-w-2xl px-6 py-24 text-center">
           <p className="text-text-primary">
@@ -75,7 +75,7 @@ export default function ConsentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface-sunk">
       <ConsentPageHeader />
 
       <main className="mx-auto max-w-2xl px-6 py-12">

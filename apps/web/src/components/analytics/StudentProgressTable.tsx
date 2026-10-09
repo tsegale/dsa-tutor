@@ -189,7 +189,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface">
+              <tr className="border-b border-border bg-surface-sunk">
                 {COLUMNS.map((col) => (
                   <th key={col.key} className="px-4 py-2.5 text-left">
                     <button
@@ -241,7 +241,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                   onClick={() => onSelectStudent?.(student)}
                   className={cn(
                     'border-b border-border last:border-0',
-                    onSelectStudent && 'cursor-pointer hover:bg-surface',
+                    onSelectStudent && 'cursor-pointer hover:bg-surface-sunk',
                   )}
                 >
                   <td className="px-4 py-3 text-text-primary">
@@ -330,7 +330,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
           type="button"
           onClick={handleExport}
           disabled={students.length === 0}
-          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40"
         >
           Export heatmap
         </button>

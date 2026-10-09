@@ -9,7 +9,7 @@ const SPEEDS = [0.5, 1, 1.5, 2, 3] as const
 
 function Kbd({ children }: { children: string }) {
   return (
-    <kbd className="rounded border border-border bg-surface px-1 font-mono text-[10px] leading-4 text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary">
+    <kbd className="rounded border border-border bg-surface-sunk px-1 font-mono text-[10px] leading-4 text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary">
       {children}
     </kbd>
   )
@@ -57,7 +57,7 @@ function ResetIcon() {
 }
 
 const iconButton =
-  'flex size-8 items-center justify-center rounded-full text-text-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40 dark:text-dark-text-primary dark:hover:bg-dark-border'
+  'flex size-8 items-center justify-center rounded-full text-text-primary hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40 dark:text-dark-text-primary dark:hover:bg-dark-border'
 
 export default function TransportBar() {
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
@@ -111,7 +111,7 @@ export default function TransportBar() {
 
         <span className="mx-2 h-5 w-px bg-border dark:bg-dark-border" aria-hidden="true" />
 
-        <div role="radiogroup" aria-label="Playback speed" className="flex items-center rounded-full bg-surface p-0.5 dark:bg-dark-border">
+        <div role="radiogroup" aria-label="Playback speed" className="flex items-center rounded-full bg-surface-sunk p-0.5 dark:bg-dark-border">
           {SPEEDS.map((speed) => (
             <button
               key={speed}
@@ -138,7 +138,7 @@ export default function TransportBar() {
           onClick={resetAlgorithm}
           aria-label="Reset run"
           aria-keyshortcuts="R"
-          className="flex items-center gap-1 rounded-full px-2 py-1 text-[12px] text-text-muted hover:bg-surface hover:text-text-primary dark:text-dark-text-secondary dark:hover:bg-dark-border dark:hover:text-dark-text-primary"
+          className="flex items-center gap-1 rounded-full px-2 py-1 text-[12px] text-text-muted hover:bg-surface-sunk hover:text-text-primary dark:text-dark-text-secondary dark:hover:bg-dark-border dark:hover:text-dark-text-primary"
         >
           <ResetIcon />
           Reset run
