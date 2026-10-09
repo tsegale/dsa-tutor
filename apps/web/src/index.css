@@ -40,6 +40,18 @@
   --state-error: #d64545;
   --state-error-ink: #ffffff;
 
+  /* Elevation (Design Phase 1C). */
+  --e1: 0 1px 2px rgb(18 21 28 / 0.06);
+  --e2: 0 6px 16px -4px rgb(18 21 28 / 0.1);
+  --e3: 0 24px 48px -12px rgb(18 21 28 / 0.18);
+
+  /* Motion: quick for state changes (hover, tabs), settle for things that
+     arrive (panels, toasts). Zeroed under prefers-reduced-motion below. The
+     canvas keeps its own Framer spring. */
+  --t-quick: 160ms;
+  --t-settle: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
   --radius: 0.625rem;
   --background: var(--paper);
   --foreground: var(--ink);
@@ -183,6 +195,10 @@
   --state-current-ink: #0c0f15;
   --state-error: #f06a6a;
   --state-error-ink: #0c0f15;
+
+  --e1: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --e2: 0 8px 24px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --e3: 0 24px 64px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.08);
 
   /* White on the dark brand fill is 4.0:1; --paper on it is 4.8:1. */
   --primary-foreground: var(--paper);
@@ -334,10 +350,23 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Radius hierarchy (Design Phase 1C): sm controls and inputs, md cards
+     and panels, lg modals; rounded-full stays the pill and avatar shape.
+     xl had one user and is pinned to lg rather than adding a fifth step. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 14px;
+  --shadow-e1: var(--e1);
+  --shadow-e2: var(--e2);
+  --shadow-e3: var(--e3);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Layout spacing on the default 4px scale: p-gutter (page), p-panel,
+     p-card, py-row. Plain names, not xs/sm/md, for the reason below. */
+  --spacing-gutter: 32px;
+  --spacing-panel: 20px;
+  --spacing-card: 16px;
+  --spacing-row: 12px;
   /* Named xs/sm/md/lg/xl/2xl/3xl spacing keys are deliberately not
      added here: Tailwind v4 shares one spacing scale across padding,
      margin, gap, width, height and inset utilities. Those names are
@@ -416,17 +445,39 @@ kbd {
   color: var(--brand-hover);
 }
 
-/* One focus ring for every interactive element (Week 4, 4B.4). Unlayered
-   on purpose: unlayered rules outrank Tailwind's layered utilities, so this
-   also restores a visible ring on the many controls that set outline-none.
-   :focus-visible keeps it to keyboard focus, never mouse clicks. Tab panels
-   and the workspace's resize handles are focusable too, so they get it. */
-:where(button, a, [role="button"], [role="tab"], [role="tabpanel"], [role="separator"], input, textarea, select):focus-visible {
-  outline: 2px solid var(--color-primary);
+/* The one focus ring (Week 4, 4B.4; Design Phase 1C). Components carry no
+   focus styling of their own. Unlayered on purpose: unlayered rules outrank
+   Tailwind's layered utilities, so this also restores a visible ring on
+   controls that set outline-none. :focus-visible keeps it to keyboard
+   focus. --brand flips with the theme, so there is no .dark copy.
+   - tabindex="-1" is excluded: those are containers focused from code
+     (dialogs, route headings), and a ring around the whole block is noise.
+   - Tab panels and the workspace resize handles are focusable, so they
+     stay listed by role.
+   - No border-radius here: inherit would copy the parent's radius onto the
+     element, and the outline already follows the element's own radius. */
+:where(button, a, [role="button"], [role="tab"], [role="tabpanel"], [role="separator"], input, textarea, select, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
-.dark :where(button, a, [role="button"], [role="tab"], [role="tabpanel"], [role="separator"], input, textarea, select):focus-visible {
-  outline-color: var(--color-dark-primary);
+
+/* Reduced motion: every token-driven transition goes instant. Framer
+   animations read the same preference through useReducedMotion. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-quick: 0ms;
+    --t-settle: 0ms;
+  }
+}
+
+@utility duration-quick {
+  transition-duration: var(--t-quick);
+  transition-timing-function: var(--ease-standard);
+}
+
+@utility duration-settle {
+  transition-duration: var(--t-settle);
+  transition-timing-function: var(--ease-standard);
 }
 
 /* tailwind-scrollbar-hide is a v3-style JS plugin and this project's
@@ -444,15 +495,15 @@ kbd {
 @keyframes canvas-pulse-border {
   0%,
   100% {
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.6);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 60%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 20%, transparent);
   }
 }
 
 @utility canvas-pulse-border {
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   animation: canvas-pulse-border 1.6s ease-in-out infinite;
 }
 
