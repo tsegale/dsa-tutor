@@ -48,11 +48,19 @@ describe('buildSyllabus', () => {
     expect(syllabus.every((m) => m.status.state !== 'locked')).toBe(true)
   })
 
-  it('marks topics in a locked module as locked but still openable, with the reason', () => {
-    // Module 1 mean is 50: below 60, so Searching, Sorting and Trees are locked.
-    const searching = buildSyllabus(FULL).find((m) => m.module.id === 'searching')!
+  it('opens a locked module only at its first topic, as a preview; the rest are locked but still openable', () => {
+    // Three Module 1 topics visible, one complete, three needed: Searching is locked.
+    const topics = [...FULL, topic('queue', AlgorithmTrack.FOUNDATIONS), topic('binary-search', AlgorithmTrack.SEARCHING)]
+    const searching = buildSyllabus(topics).find((m) => m.module.id === 'searching')!
     expect(searching.status.state).toBe('locked')
-    expect(searching.topics[0]).toMatchObject({ state: 'locked', openable: true, reason: 'Builds on Module 1: Linear structures. Reach 60% there to unlock.' })
+    expect(searching.topics[0]).toMatchObject({ number: '2.1', state: 'available', preview: true, openable: true, reason: null })
+    expect(searching.topics[1]).toMatchObject({
+      number: '2.2',
+      state: 'locked',
+      preview: false,
+      openable: true,
+      reason: 'Complete 3 topics in Module 1 to unlock (1 done).',
+    })
   })
 
   it('never opens a topic the API locked', () => {

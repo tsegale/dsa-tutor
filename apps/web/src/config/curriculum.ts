@@ -18,8 +18,12 @@ export interface Module {
   track: AlgorithmTrack
   /** Module ids that must be met before this one opens. */
   prerequisites: string[]
-  /** Mean mastery (%) across a prerequisite's topics needed to meet it. */
-  threshold: number
+  /**
+   * How many of this module's topics must be complete for it to count as met
+   * when another module lists it as a prerequisite. A count of specific
+   * work, as a real syllabus states it, not a mean over the whole module.
+   */
+  unlockCount: number
   /**
    * The module's topics (API topic names) in syllabus order. Numbering comes
    * from here (index 0 is N.1), so a study participant who sees one topic of
@@ -30,15 +34,12 @@ export interface Module {
 }
 
 /**
- * The one mastery line, used for three things that must agree:
- * - a prerequisite is met when its topics' mean mastery reaches it;
- * - a topic counts as complete (check marker, "N/M complete", Review) at it;
- * - a module is complete when every topic in it reaches it.
- * 60, not 80: requiring 80% across Module 1's 14 topics before any searching
- * topic opened would gate about eleven completions behind the second module,
- * too harsh for a 30-minute session.
+ * A topic is complete at this mastery (%). One line, so these always agree:
+ * the check marker, "N/M complete", Review, a green mastery ring, a module
+ * being complete (every topic), and a prerequisite being met (unlockCount of
+ * its topics complete).
  */
-export const CURRICULUM_THRESHOLD = 60
+export const TOPIC_COMPLETE = 60
 
 /**
  * Soft locks by default: a locked topic is shown as locked, with its
@@ -56,7 +57,7 @@ export const MODULES: readonly Module[] = [
     subtitle: 'Arrays, linked lists, stacks, queues, hash tables and recursion.',
     track: AlgorithmTrack.FOUNDATIONS,
     prerequisites: [],
-    threshold: CURRICULUM_THRESHOLD,
+    unlockCount: 3,
     topics: [
       'array-access',
       'array-insert',
@@ -81,7 +82,7 @@ export const MODULES: readonly Module[] = [
     subtitle: 'Finding a value faster by exploiting order: halving, jumping and estimating.',
     track: AlgorithmTrack.SEARCHING,
     prerequisites: ['linear-structures'],
-    threshold: CURRICULUM_THRESHOLD,
+    unlockCount: 2,
     topics: [
       'linear-search',
       'binary-search',
@@ -97,7 +98,7 @@ export const MODULES: readonly Module[] = [
     subtitle: 'From adjacent swaps to divide and conquer to sorting without comparisons.',
     track: AlgorithmTrack.SORTING,
     prerequisites: ['linear-structures'],
-    threshold: CURRICULUM_THRESHOLD,
+    unlockCount: 2,
     topics: [
       'bubble-sort',
       'selection-sort',
@@ -117,7 +118,7 @@ export const MODULES: readonly Module[] = [
     subtitle: 'Two pointers and sliding windows: patterns that turn nested loops into one pass.',
     track: AlgorithmTrack.TECHNIQUES,
     prerequisites: ['searching', 'sorting'],
-    threshold: CURRICULUM_THRESHOLD,
+    unlockCount: 2,
     topics: [
       'two-pointer',
       'sliding-window-fixed',
@@ -131,7 +132,7 @@ export const MODULES: readonly Module[] = [
     subtitle: 'Search trees, traversals, self-balancing trees, heaps and tries.',
     track: AlgorithmTrack.TREES,
     prerequisites: ['linear-structures'],
-    threshold: CURRICULUM_THRESHOLD,
+    unlockCount: 2,
     topics: [
       'bst',
       'bst-search',
@@ -160,7 +161,7 @@ export const MODULES: readonly Module[] = [
     subtitle: 'Traversal, shortest paths, spanning trees and path-finding on grids and mazes.',
     track: AlgorithmTrack.GRAPHS,
     prerequisites: ['hierarchical-structures'],
-    threshold: CURRICULUM_THRESHOLD,
+    unlockCount: 2,
     topics: [
       'bfs',
       'dfs',

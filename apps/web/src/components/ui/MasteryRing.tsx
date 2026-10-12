@@ -1,5 +1,5 @@
 import { ProgressRing } from '@/components/ui/progress'
-import { CURRICULUM_THRESHOLD } from '@/config/curriculum'
+import { TOPIC_COMPLETE } from '@/config/curriculum'
 
 interface MasteryRingProps {
   progress: number
@@ -23,7 +23,7 @@ export default function MasteryRing({ progress, size = 48, strokeWidth = 4, show
       size={size}
       strokeWidth={strokeWidth}
       showPercentSign={showPercent}
-      tone={percent >= CURRICULUM_THRESHOLD ? 'success' : 'brand'}
+      tone={percent >= TOPIC_COMPLETE ? 'success' : 'brand'}
       ariaLabel="Mastery"
     />
   )

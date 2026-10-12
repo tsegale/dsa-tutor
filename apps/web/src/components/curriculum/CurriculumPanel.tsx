@@ -290,7 +290,7 @@ function ModuleSection({
 
       {open && (
         <ol id={bodyId} aria-label={`${moduleLabel(module)} topics`} className="pb-2">
-          {topics.map(({ topic, number, state, openable, reason }) => {
+          {topics.map(({ topic, number, state, openable, preview, reason }) => {
             const isCurrent = topic.name === currentTopicName
             const content = (
               <>
@@ -299,9 +299,13 @@ function ModuleSection({
                 <span title={topic.displayName} className={cn('min-w-0 flex-1 truncate text-small', state === 'locked' ? 'text-ink-2' : 'text-ink', isCurrent && 'font-semibold')}>
                   {topic.displayName}
                 </span>
-                <span className="shrink-0 text-mono-sm text-ink-2">{topic.masteryPercent}%</span>
+                {preview ? (
+                  <span className="shrink-0 rounded-full bg-surface-sunk px-1.5 text-micro text-ink-2">Preview</span>
+                ) : (
+                  <span className="shrink-0 text-mono-sm text-ink-2">{topic.masteryPercent}%</span>
+                )}
                 <span className="sr-only">
-                  , {TOPIC_STATE_LABEL[state]}
+                  , {preview ? 'preview, open before the module unlocks' : TOPIC_STATE_LABEL[state]}
                   {reason ? `. ${reason}` : ''}
                 </span>
               </>

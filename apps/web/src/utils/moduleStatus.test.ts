@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack } from '@dsa-tutor/types'
-import { CURRICULUM_THRESHOLD, MODULES, getModule } from '@/config/curriculum'
-import { canOpen, lockReason, moduleStatus, topicNumber, topicState, unmetLabel, type TopicMastery } from './moduleStatus'
+import { MODULES, TOPIC_COMPLETE, getModule } from '@/config/curriculum'
+import { canOpen, isPreview, lockReason, moduleStatus, topicNumber, topicState, unmetLabel, type TopicMastery } from './moduleStatus'
 
 const t = (name: string, track: AlgorithmTrack, masteryPercent = 0, isLocked = false): TopicMastery => ({ name, track, masteryPercent, isLocked })
 const linear = getModule('linear-structures')
 const searching = getModule('searching')
 const techniques = getModule('algorithmic-techniques')
+
+/** Every topic of the curriculum, all at the given mastery unless overridden. */
+const curriculum = (mastery: Record<string, number> = {}) =>
+  MODULES.flatMap((module) => module.topics.map((name) => t(name, module.track, mastery[name] ?? 0)))
 
 describe('curriculum config', () => {
   it('numbers the six modules 1-6 in order, one per track', () => {
@@ -19,35 +23,28 @@ describe('curriculum config', () => {
       for (const id of module.prerequisites) expect(getModule(id).number).toBeLessThan(module.number)
     }
   })
+
+  it('asks 3 complete topics of Module 1 and 2 of every other module', () => {
+    expect(MODULES.map((m) => m.unlockCount)).toEqual([3, 2, 2, 2, 2, 2])
+  })
 })
 
-describe('moduleStatus', () => {
-  it('opens a module with no prerequisites, available until anything is started', () => {
-    const status = moduleStatus(linear, [t('array-access', AlgorithmTrack.FOUNDATIONS), t('stack', AlgorithmTrack.FOUNDATIONS)])
-    expect(status).toEqual({ state: 'available', mean: 0, complete: 0, total: 2, unmet: null })
+describe('rule 1: a prerequisite is a count of complete topics', () => {
+  it('locks Module 2 until 3 Module 1 topics are complete, and reports progress', () => {
+    const two = curriculum({ 'array-access': 100, 'array-insert': TOPIC_COMPLETE })
+    expect(moduleStatus(searching, two)).toMatchObject({ state: 'locked', unmet: { module: linear, required: 3, done: 2 } })
+    const three = curriculum({ 'array-access': 100, 'array-insert': 60, stack: 90 })
+    expect(moduleStatus(searching, three)).toMatchObject({ state: 'available', unmet: null })
   })
 
-  it('is in progress once a topic has mastery, and complete when every topic reaches the threshold', () => {
-    expect(moduleStatus(linear, [t('array-access', AlgorithmTrack.FOUNDATIONS, 30), t('stack', AlgorithmTrack.FOUNDATIONS)]).state).toBe('in-progress')
-    expect(moduleStatus(linear, [t('array-access', AlgorithmTrack.FOUNDATIONS, 60), t('stack', AlgorithmTrack.FOUNDATIONS, 100)]).state).toBe('complete')
-    expect(moduleStatus(linear, [t('array-access', AlgorithmTrack.FOUNDATIONS, 59), t('stack', AlgorithmTrack.FOUNDATIONS, 100)]).state).toBe('in-progress')
-  })
-
-  it('locks while a prerequisite mean is below the threshold, and names it with its mean', () => {
-    const topics = [t('array-access', AlgorithmTrack.FOUNDATIONS, 100), t('stack', AlgorithmTrack.FOUNDATIONS, 0), t('linear-search', AlgorithmTrack.SEARCHING)]
-    const status = moduleStatus(searching, topics)
-    expect(status.state).toBe('locked')
-    expect(status.unmet).toEqual({ module: linear, mean: 50, threshold: CURRICULUM_THRESHOLD })
-  })
-
-  it('unlocks once the prerequisite mean reaches the threshold', () => {
-    const topics = [t('array-access', AlgorithmTrack.FOUNDATIONS, 100), t('stack', AlgorithmTrack.FOUNDATIONS, 20), t('linear-search', AlgorithmTrack.SEARCHING)]
-    expect(moduleStatus(searching, topics)).toMatchObject({ state: 'available', unmet: null })
+  it('does not count a topic below TOPIC_COMPLETE, however many are started', () => {
+    const almost = curriculum({ 'array-access': 59, 'array-insert': 59, 'array-delete': 59, stack: 59 })
+    expect(moduleStatus(searching, almost).unmet).toMatchObject({ done: 0 })
   })
 
   it('reports the first unmet prerequisite of several, in declared order', () => {
-    const topics = [t('linear-search', AlgorithmTrack.SEARCHING, 10), t('bubble-sort', AlgorithmTrack.SORTING, 90), t('two-pointer', AlgorithmTrack.TECHNIQUES)]
-    expect(moduleStatus(techniques, topics).unmet?.module.id).toBe('searching')
+    const sortingDone = curriculum({ 'bubble-sort': 100, 'selection-sort': 100 })
+    expect(moduleStatus(techniques, sortingDone).unmet?.module.id).toBe('searching')
   })
 
   it('treats a prerequisite with no visible topics as met (a study participant)', () => {
@@ -56,8 +53,21 @@ describe('moduleStatus', () => {
       expect(moduleStatus(getModule(id), studyTopics).state).toBe('available')
     }
   })
+})
 
-  it('ignores a topic on the module track that the module does not list (a stale row)', () => {
+describe('rule 2: a module with a started topic is never locked', () => {
+  it('shows in progress, not locked, even with its prerequisite unmet', () => {
+    const status = moduleStatus(searching, curriculum({ 'linear-search': 30 }))
+    expect(status.state).toBe('in-progress')
+    expect(status.unmet).not.toBeNull()
+  })
+
+  it('is complete when every topic reaches TOPIC_COMPLETE', () => {
+    const all = Object.fromEntries(searching.topics.map((name) => [name, 100]))
+    expect(moduleStatus(searching, curriculum(all)).state).toBe('complete')
+  })
+
+  it('ignores a stale row on the module track that the module does not list', () => {
     const status = moduleStatus(linear, [t('array-access', AlgorithmTrack.FOUNDATIONS, 100), t('linked-list', AlgorithmTrack.FOUNDATIONS, 0)])
     expect(status).toMatchObject({ total: 1, complete: 1, state: 'complete' })
   })
@@ -67,42 +77,55 @@ describe('moduleStatus', () => {
   })
 })
 
-describe('topicState', () => {
-  const open = moduleStatus(linear, [])
-  const locked = { ...open, state: 'locked' as const }
+describe('rule 3: the first topic of every module is open', () => {
+  const fresh = curriculum()
 
-  it('follows mastery in an open module', () => {
-    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 0), open, 60)).toBe('available')
-    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 40), open, 60)).toBe('in-progress')
-    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 60), open, 60)).toBe('complete')
+  it('on a fresh account, opens all of Module 1 and the first topic of every other module', () => {
+    const open = MODULES.flatMap((module) => {
+      const status = moduleStatus(module, fresh)
+      return fresh.filter((topic) => module.topics.includes(topic.name) && topicState(topic, status, module) !== 'locked')
+    })
+    expect(open).toHaveLength(14 + 5)
+    expect(open.filter((topic) => topic.track !== AlgorithmTrack.FOUNDATIONS).map((topic) => topic.name)).toEqual([
+      'linear-search',
+      'bubble-sort',
+      'two-pointer',
+      'bst',
+      'bfs',
+    ])
   })
 
-  it('shows locked in a locked module, unless the topic already reached the threshold', () => {
-    expect(topicState(t('linear-search', AlgorithmTrack.SEARCHING, 40), locked, 60)).toBe('locked')
-    expect(topicState(t('linear-search', AlgorithmTrack.SEARCHING, 70), locked, 60)).toBe('complete')
-  })
-
-  it('always shows an API-locked topic as locked', () => {
-    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 0, true), open, 60)).toBe('locked')
+  it('labels the first topic of a locked module as a preview, and only that one', () => {
+    const status = moduleStatus(searching, fresh)
+    expect(isPreview(t('linear-search', AlgorithmTrack.SEARCHING), status, searching)).toBe(true)
+    expect(isPreview(t('binary-search', AlgorithmTrack.SEARCHING), status, searching)).toBe(false)
+    expect(isPreview(t('array-access', AlgorithmTrack.FOUNDATIONS), moduleStatus(linear, fresh), linear)).toBe(false)
   })
 })
 
-describe('canOpen and lockReason', () => {
-  const locked = { state: 'locked' as const, unmet: { module: linear, mean: 20, threshold: 60 } }
+describe('topicState, canOpen and copy', () => {
+  const lockedStatus = moduleStatus(searching, curriculum())
 
-  it('opens a soft-locked topic, and refuses it under hard locks', () => {
-    expect(canOpen({ isLocked: false }, locked, false)).toBe(true)
-    expect(canOpen({ isLocked: false }, locked, true)).toBe(false)
+  it('marks complete at TOPIC_COMPLETE, and an API-locked topic always locked', () => {
+    const open = moduleStatus(linear, curriculum())
+    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 60), open, linear)).toBe('complete')
+    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 40), open, linear)).toBe('in-progress')
+    expect(topicState(t('array-access', AlgorithmTrack.FOUNDATIONS, 100, true), open, linear)).toBe('locked')
   })
 
-  it('never opens a topic the API locked', () => {
-    expect(canOpen({ isLocked: true }, { state: 'available' }, false)).toBe(false)
+  it('opens soft-locked topics; under hard locks only the preview opens; never an API lock', () => {
+    expect(canOpen(t('binary-search', AlgorithmTrack.SEARCHING), lockedStatus, searching, false)).toBe(true)
+    expect(canOpen(t('binary-search', AlgorithmTrack.SEARCHING), lockedStatus, searching, true)).toBe(false)
+    expect(canOpen(t('linear-search', AlgorithmTrack.SEARCHING), lockedStatus, searching, true)).toBe(true)
+    expect(canOpen(t('linear-search', AlgorithmTrack.SEARCHING, 0, true), lockedStatus, searching, false)).toBe(false)
   })
 
-  it('names the prerequisite in plain language', () => {
-    expect(lockReason({ isLocked: false }, locked)).toBe('Builds on Module 1: Linear structures. Reach 60% there to unlock.')
-    expect(unmetLabel(locked.unmet)).toBe('Requires Module 1 at 60% (now 20%)')
-    expect(lockReason({ isLocked: false }, { unmet: null })).toBeNull()
+  it('states the requirement in one line, with progress', () => {
+    const unmet = { module: linear, required: 3, done: 1 }
+    expect(unmetLabel(unmet)).toBe('Complete 3 topics in Module 1 to unlock (1 done)')
+    expect(unmetLabel({ ...unmet, required: 1 })).toBe('Complete 1 topic in Module 1 to unlock (1 done)')
+    expect(lockReason({ isLocked: false }, { state: 'locked', unmet })).toBe('Complete 3 topics in Module 1 to unlock (1 done).')
+    expect(lockReason({ isLocked: false }, { state: 'in-progress', unmet })).toBeNull()
   })
 })
 

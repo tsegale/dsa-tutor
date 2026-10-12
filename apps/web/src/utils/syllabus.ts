@@ -1,6 +1,6 @@
 import type { TopicDto } from '@dsa-tutor/types'
 import { MODULES, type Module } from '@/config/curriculum'
-import { canOpen, lockReason, moduleStatus, topicNumber, topicState, type ModuleStatus, type TopicState } from './moduleStatus'
+import { canOpen, isPreview, lockReason, moduleStatus, topicNumber, topicState, type ModuleStatus, type TopicState } from './moduleStatus'
 
 // The curriculum as the rail and the module pages show it: modules in
 // order, each with its numbered topics and their states. Pure, so the panel
@@ -13,6 +13,8 @@ export interface SyllabusTopic {
   state: TopicState
   /** False only under a hard lock (the API's, or hardLocks). */
   openable: boolean
+  /** A locked module's first topic: open, and labelled as a preview. */
+  preview: boolean
   /** Plain-language reason when locked, else null. */
   reason: string | null
 }
@@ -40,13 +42,17 @@ export function buildSyllabus(topics: readonly TopicDto[]): SyllabusModule[] {
     return {
       module,
       status,
-      topics: own.map(({ topic, index }) => ({
-        topic,
-        number: topicNumber(module, index),
-        state: topicState(topic, status, module.threshold),
-        openable: canOpen(topic, status),
-        reason: topicState(topic, status, module.threshold) === 'locked' ? lockReason(topic, status) : null,
-      })),
+      topics: own.map(({ topic, index }) => {
+        const state = topicState(topic, status, module)
+        return {
+          topic,
+          number: topicNumber(module, index),
+          state,
+          openable: canOpen(topic, status, module),
+          preview: isPreview(topic, status, module),
+          reason: state === 'locked' ? lockReason(topic, status) : null,
+        }
+      }),
     }
   }).filter((entry) => entry.topics.length > 0)
 }

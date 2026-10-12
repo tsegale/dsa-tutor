@@ -1,6 +1,6 @@
 import type { AlgorithmTrack, TopicDto } from '@dsa-tutor/types'
 import { TRACKS, getTrack } from '@/data/tracks'
-import { CURRICULUM_THRESHOLD, placeOfTopic } from '@/config/curriculum'
+import { TOPIC_COMPLETE, placeOfTopic } from '@/config/curriculum'
 
 // Curriculum order: tracks in module order (TRACKS), and within a track the order
 // the API returns (topic.service.ts sorts by the seeded `order` column).
@@ -68,7 +68,7 @@ export function searchTopics<T extends Searchable>(topics: readonly T[], query: 
  * A topic counts as complete at the curriculum threshold (config/curriculum.ts),
  * the same line that completes a module and turns a mastery ring green.
  */
-export const MASTERED_AT = CURRICULUM_THRESHOLD
+export const MASTERED_AT = TOPIC_COMPLETE
 
 export const isTopicComplete = (topic: Pick<TopicDto, 'masteryPercent'>) => topic.masteryPercent >= MASTERED_AT
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTopics } from '@/hooks/useTopics'
-import { moduleLabel } from '@/config/curriculum'
+import { buildsOnLabel } from '@/utils/moduleStatus'
 import { buildSyllabus } from '@/utils/syllabus'
 
 // Locks are soft: a topic in a locked module still opens, and the workspace
@@ -14,11 +14,12 @@ export function SoftLockNotice({ topicName }: { topicName: string | undefined })
   const entry = buildSyllabus(topics).find((module) => module.topics.some((t) => t.topic.name === topicName))
   const topic = entry?.topics.find((t) => t.topic.name === topicName)
   const unmet = entry?.status.unmet
-  if (!entry || !topic || topic.state !== 'locked' || !topic.openable || !unmet) return null
+  // A soft-locked topic, or a locked module's preview topic.
+  if (!entry || !topic || entry.status.state !== 'locked' || !topic.openable || !unmet) return null
 
   return (
     <div role="status" className="flex shrink-0 items-center justify-between gap-4 border-b border-rule bg-surface-sunk px-4 py-2 text-small text-ink">
-      <p>This builds on {moduleLabel(unmet.module)}.</p>
+      <p>{buildsOnLabel(unmet)}</p>
       <button
         type="button"
         onClick={() => setDismissed(true)}
