@@ -2,6 +2,8 @@
 
 The build used for data collection, recorded when it was frozen so the method chapter's reproducibility section can cite it exactly. From the freeze on: no prompt changes, no scoring changes, no assessment item changes and no junction changes. Bug fixes only, each re-run against the Week 5 pilot checks and added to the log at the end of this file.
 
+> **Freeze lifted on 2026-10-13, before any study participant.** No participant used `study-freeze-v1`, so it is not the data-collection build and must not be cited as one. The interface redesign (Design Phases 1 to 3) lands on master after this date. Before the first participant the build is re-tagged and re-frozen, and this record is updated to the new tag. Prompts, scoring, assessment items and junctions were not changed by the redesign.
+
 ## Release
 
 | | |
