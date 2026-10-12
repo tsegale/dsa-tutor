@@ -102,5 +102,13 @@ export function unmetLabel(unmet: UnmetPrerequisite): string {
   return `Requires Module ${unmet.module.number} at ${unmet.threshold}% (now ${unmet.mean}%)`
 }
 
+/** How a topic's status reads aloud (the markers themselves are decorative). */
+export const TOPIC_STATE_LABEL: Record<TopicState, string> = {
+  complete: 'complete',
+  'in-progress': 'in progress',
+  available: 'not started',
+  locked: 'locked',
+}
+
 /** Syllabus numbering: module.topic, e.g. "5.18". */
 export const topicNumber = (module: Pick<Module, 'number'>, indexInModule: number) => `${module.number}.${indexInModule + 1}`

@@ -17,6 +17,7 @@ import { Kbd } from '@/components/ui/Kbd'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import AccountIdentity from './AccountIdentity'
 import { CommandPalette } from './CommandPalette'
+import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
 
 // The app's one header, shared by Home, the track pages, Progress and the
@@ -276,7 +277,7 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
           Skip to main content
         </a>
       )}
-      <header className="relative z-30 flex h-14 w-full shrink-0 items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
+      <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <a
             href="/"
@@ -353,14 +354,20 @@ export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: Reac
   return (
     <div className="flex min-h-screen flex-col bg-paper">
       <AppTopBar crumbs={crumbs} />
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 outline-none md:px-gutter [&_h1]:outline-none">
-        {crumbs.length > 1 && (
-          <div className="mb-6">
-            <BreadcrumbForPage crumbs={crumbs} />
-          </div>
-        )}
-        {children}
-      </main>
+      <div className="flex min-h-0 flex-1">
+        {/* The curriculum rail: pinned under the top bar, scrolling on its own. */}
+        <div className="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 lg:flex">
+          <CurriculumPanel />
+        </div>
+        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-6 pb-16 outline-none md:px-gutter [&_h1]:outline-none">
+          {crumbs.length > 1 && (
+            <div className="mb-6">
+              <BreadcrumbForPage crumbs={crumbs} />
+            </div>
+          )}
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

@@ -513,6 +513,29 @@ kbd {
   }
 }
 
+/* The curriculum rail's current-topic marker: a slow ring easing out from
+   the dot. Off under reduced motion, where the dot alone marks it. */
+@keyframes marker-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@utility marker-pulse {
+  animation: marker-pulse 2.4s var(--ease-standard) infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* Error surfaces carry a stripe as well as colour and an X icon (CLAUDE.md
    colour system), so an error never reads by hue alone. */
 @utility bg-error-stripes {
