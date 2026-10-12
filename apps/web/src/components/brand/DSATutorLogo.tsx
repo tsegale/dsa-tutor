@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { cn } from '@/lib/utils'
 
 interface DSATutorLogoProps {
   variant?: 'dark' | 'white'
@@ -6,52 +7,38 @@ interface DSATutorLogoProps {
   showTagline?: boolean
 }
 
+// The wordmark, on design tokens. 'dark' sits on the app's own headers and
+// follows the theme: a brand tile whose graph is drawn in the brand's text
+// colour (--primary-foreground, white on the light brand, near-black on the
+// lighter dark-mode brand). 'white' sits on the sign-in page's fixed indigo
+// panel, which does not change with the theme.
 export default function DSATutorLogo({ variant = 'dark', className = '', showTagline = true }: DSATutorLogoProps) {
   const titleId = useId()
-  // The 'dark' variant sits on the app's own headers, which turn dark with
-  // the theme - its wordmark flips too, or it vanishes into the header.
-  const textClass = variant === 'white' ? 'text-white' : 'text-[#1e293b] dark:text-dark-text-primary'
-  const accentClass = variant === 'white' ? 'text-[#a5b4fc]' : 'text-[#3730a3] dark:text-[#a5b4fc]'
-  const taglineColor = variant === 'white' ? 'rgba(255,255,255,0.5)' : '#94a3b8'
-  const iconBg = variant === 'white' ? 'rgba(255,255,255,0.2)' : '#3730a3'
-  const iconStroke = variant === 'white' ? 'rgba(255,255,255,0.3)' : 'transparent'
-  const nodeMain = variant === 'white' ? 'rgba(255,255,255,0.9)' : '#818cf8'
-  const nodeSub = variant === 'white' ? 'rgba(255,255,255,0.7)' : '#a5b4fc'
-  const edgeColor = variant === 'white' ? 'rgba(255,255,255,0.5)' : '#c7d2fe'
+  const onPanel = variant === 'white'
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" role="img" aria-labelledby={titleId}>
+    <div className={cn('flex items-center gap-3', className)}>
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" role="img" aria-labelledby={titleId} className={onPanel ? 'text-white' : 'text-primary-foreground'}>
         <title id={titleId}>DSA Tutor - AI Scaffolding Engine</title>
-        <rect width="40" height="40" rx="10" fill={iconBg} stroke={iconStroke} strokeWidth="1" />
-        <circle cx="8" cy="20" r="3.5" fill={nodeMain} />
-        <circle cx="20" cy="10" r="3.5" fill={nodeSub} />
-        <circle cx="20" cy="30" r="3.5" fill={nodeSub} />
-        <circle cx="32" cy="20" r="3.5" fill={nodeMain} />
-        <line x1="11" y1="18" x2="17" y2="13" stroke={edgeColor} strokeWidth="1.5" />
-        <line x1="11" y1="22" x2="17" y2="27" stroke={edgeColor} strokeWidth="1.5" />
-        <line x1="23" y1="11" x2="29" y2="18" stroke={edgeColor} strokeWidth="1.5" />
-        <line x1="23" y1="29" x2="29" y2="22" stroke={edgeColor} strokeWidth="1.5" />
-        <circle cx="35" cy="6" r="3" fill="#7c3aed" />
-        <circle cx="35" cy="6" r="5" fill="none" stroke="#7c3aed" strokeWidth="1" opacity={0.4} />
+        <rect width="40" height="40" rx="10" className={onPanel ? 'fill-white/20 stroke-white/30' : 'fill-brand'} strokeWidth="1" />
+        <g stroke="currentColor" strokeWidth="1.5" opacity="0.55">
+          <line x1="11" y1="18" x2="17" y2="13" />
+          <line x1="11" y1="22" x2="17" y2="27" />
+          <line x1="23" y1="11" x2="29" y2="18" />
+          <line x1="23" y1="29" x2="29" y2="22" />
+        </g>
+        <circle cx="8" cy="20" r="3.5" fill="currentColor" />
+        <circle cx="32" cy="20" r="3.5" fill="currentColor" />
+        <circle cx="20" cy="10" r="3.5" fill="currentColor" opacity="0.75" />
+        <circle cx="20" cy="30" r="3.5" fill="currentColor" opacity="0.75" />
+        <circle cx="35" cy="6" r="3" fill="currentColor" />
+        <circle cx="35" cy="6" r="5" stroke="currentColor" strokeWidth="1" opacity="0.4" />
       </svg>
       <div className="flex flex-col">
-        <span className={textClass} style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em' }}>
-          DSA<span className={accentClass}>Tutor</span>
+        <span className={cn('text-h3 leading-none font-bold tracking-tight', onPanel ? 'text-white' : 'text-ink')}>
+          DSA<span className={onPanel ? 'text-brand-on-indigo-muted' : 'text-brand'}>Tutor</span>
         </span>
-        {showTagline && (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 500,
-              color: taglineColor,
-              letterSpacing: '0.01em',
-              marginTop: 2,
-            }}
-          >
-            AI scaffolding engine
-          </span>
-        )}
+        {showTagline && <span className={cn('mt-0.5 text-micro', onPanel ? 'text-brand-on-indigo-muted' : 'text-ink-2')}>AI scaffolding engine</span>}
       </div>
     </div>
   )
