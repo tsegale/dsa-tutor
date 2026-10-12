@@ -35,7 +35,9 @@ export interface ModuleStatus {
 
 const mean = (values: number[]) => (values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0)
 
-const topicsOf = <T extends TopicMastery>(topics: readonly T[], module: Module) => topics.filter((topic) => topic.track === module.track)
+// Membership is the module's own topic list (config/curriculum.ts), not the
+// track: a stale row on the module's track is not part of the module.
+const topicsOf = <T extends TopicMastery>(topics: readonly T[], module: Module) => topics.filter((topic) => module.topics.includes(topic.name))
 
 /**
  * A module is locked while any prerequisite's mean mastery is below the

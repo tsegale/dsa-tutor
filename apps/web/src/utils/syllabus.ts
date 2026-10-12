@@ -31,11 +31,16 @@ export interface SyllabusModule {
 export function buildSyllabus(topics: readonly TopicDto[]): SyllabusModule[] {
   return MODULES.map((module) => {
     const status = moduleStatus(module, topics)
-    const own = topics.filter((topic) => topic.track === module.track)
+    // In syllabus order, numbered by syllabus position: a participant who
+    // sees one topic of a module still sees its real number (2.2, not 2.1).
+    const own = module.topics.flatMap((name, index) => {
+      const topic = topics.find((candidate) => candidate.name === name)
+      return topic ? [{ topic, index }] : []
+    })
     return {
       module,
       status,
-      topics: own.map((topic, index) => ({
+      topics: own.map(({ topic, index }) => ({
         topic,
         number: topicNumber(module, index),
         state: topicState(topic, status, module.threshold),

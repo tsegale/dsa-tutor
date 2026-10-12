@@ -20,6 +20,13 @@ export interface Module {
   prerequisites: string[]
   /** Mean mastery (%) across a prerequisite's topics needed to meet it. */
   threshold: number
+  /**
+   * The module's topics (API topic names) in syllabus order. Numbering comes
+   * from here (index 0 is N.1), so a study participant who sees one topic of
+   * a module still sees its real number. A topic the API returns that no
+   * module lists (a stale database row) is not part of the curriculum.
+   */
+  topics: readonly string[]
 }
 
 /**
@@ -50,6 +57,22 @@ export const MODULES: readonly Module[] = [
     track: AlgorithmTrack.FOUNDATIONS,
     prerequisites: [],
     threshold: CURRICULUM_THRESHOLD,
+    topics: [
+      'array-access',
+      'array-insert',
+      'array-delete',
+      'singly-linked-list',
+      'doubly-linked-list',
+      'circular-linked-list',
+      'stack',
+      'queue',
+      'circular-queue',
+      'deque',
+      'hash-table-chaining',
+      'hash-table-probing',
+      'recursion-factorial',
+      'recursion-fibonacci',
+    ],
   },
   {
     number: 2,
@@ -59,6 +82,13 @@ export const MODULES: readonly Module[] = [
     track: AlgorithmTrack.SEARCHING,
     prerequisites: ['linear-structures'],
     threshold: CURRICULUM_THRESHOLD,
+    topics: [
+      'linear-search',
+      'binary-search',
+      'jump-search',
+      'interpolation-search',
+      'exponential-search',
+    ],
   },
   {
     number: 3,
@@ -68,6 +98,17 @@ export const MODULES: readonly Module[] = [
     track: AlgorithmTrack.SORTING,
     prerequisites: ['linear-structures'],
     threshold: CURRICULUM_THRESHOLD,
+    topics: [
+      'bubble-sort',
+      'selection-sort',
+      'insertion-sort',
+      'shell-sort',
+      'merge-sort',
+      'quick-sort',
+      'heap-sort',
+      'counting-sort',
+      'radix-sort',
+    ],
   },
   {
     number: 4,
@@ -77,6 +118,11 @@ export const MODULES: readonly Module[] = [
     track: AlgorithmTrack.TECHNIQUES,
     prerequisites: ['searching', 'sorting'],
     threshold: CURRICULUM_THRESHOLD,
+    topics: [
+      'two-pointer',
+      'sliding-window-fixed',
+      'sliding-window-variable',
+    ],
   },
   {
     number: 5,
@@ -86,6 +132,26 @@ export const MODULES: readonly Module[] = [
     track: AlgorithmTrack.TREES,
     prerequisites: ['linear-structures'],
     threshold: CURRICULUM_THRESHOLD,
+    topics: [
+      'bst',
+      'bst-search',
+      'bst-delete',
+      'tree-inorder',
+      'tree-preorder',
+      'tree-postorder',
+      'tree-level-order',
+      'avl-insert',
+      'avl-delete',
+      'rb-insert',
+      'rb-delete',
+      'max-heap-insert',
+      'max-heap-delete',
+      'min-heap-insert',
+      'min-heap-delete',
+      'trie-insert',
+      'trie-search',
+      'trie-delete',
+    ],
   },
   {
     number: 6,
@@ -95,12 +161,32 @@ export const MODULES: readonly Module[] = [
     track: AlgorithmTrack.GRAPHS,
     prerequisites: ['hierarchical-structures'],
     threshold: CURRICULUM_THRESHOLD,
+    topics: [
+      'bfs',
+      'dfs',
+      'dijkstra',
+      'bellman-ford',
+      'floyd-warshall',
+      'kruskal',
+      'prim',
+      'cycle-detection',
+      'connected-components',
+      'topological-sort',
+      'grid-bfs',
+      'grid-dfs',
+      'grid-dijkstra',
+      'grid-astar',
+      'maze-generation',
+      'maze-prim',
+      'maze-kruskal',
+    ],
   },
 ]
 
 const BY_ID = new Map(MODULES.map((module) => [module.id, module]))
 const BY_TRACK = new Map(MODULES.map((module) => [module.track, module]))
 const BY_NUMBER = new Map(MODULES.map((module) => [module.number, module]))
+const BY_TOPIC = new Map(MODULES.flatMap((module) => module.topics.map((name, index) => [name, { module, index }] as const)))
 
 export function getModule(id: string): Module {
   const module = BY_ID.get(id)
@@ -118,6 +204,14 @@ export function moduleByNumber(value: string | number | undefined): Module | nul
   const number = typeof value === 'string' ? Number(value) : value
   return number !== undefined && Number.isInteger(number) ? (BY_NUMBER.get(number) ?? null) : null
 }
+
+/** The module a topic belongs to and its 0-based position there, or null. */
+export function placeOfTopic(name: string): { module: Module; index: number } | null {
+  return BY_TOPIC.get(name) ?? null
+}
+
+/** Whether the syllabus lists this topic (a stale API row is not listed). */
+export const isCurriculumTopic = (name: string) => BY_TOPIC.has(name)
 
 /** "Module 3: Sorting" */
 export const moduleLabel = (module: Module) => `Module ${module.number}: ${module.title}`

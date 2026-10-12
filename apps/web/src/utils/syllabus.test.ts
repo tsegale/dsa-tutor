@@ -23,11 +23,22 @@ const FULL = [
 ]
 
 describe('buildSyllabus', () => {
-  it('lists modules in order with module.topic numbering', () => {
+  it('lists modules in order, numbering topics by their syllabus position', () => {
     const syllabus = buildSyllabus(FULL)
     expect(syllabus.map((m) => m.module.number)).toEqual([1, 2, 3, 5])
-    expect(syllabus[0].topics.map((t) => t.number)).toEqual(['1.1', '1.2'])
+    // Stack is the seventh topic of Module 1, whatever else is visible.
+    expect(syllabus[0].topics.map((t) => t.number)).toEqual(['1.1', '1.7'])
     expect(syllabus[2].topics[0].number).toBe('3.1')
+  })
+
+  it('keeps the real numbers for a participant who sees one topic per module', () => {
+    const study = [topic('bubble-sort', AlgorithmTrack.SORTING), topic('binary-search', AlgorithmTrack.SEARCHING), topic('bst', AlgorithmTrack.TREES)]
+    expect(buildSyllabus(study).flatMap((m) => m.topics.map((t) => `${t.number} ${t.topic.name}`))).toEqual(['2.2 binary-search', '3.1 bubble-sort', '5.1 bst'])
+  })
+
+  it('leaves out a topic no module lists, such as a stale linked-list row', () => {
+    const syllabus = buildSyllabus([...FULL, topic('linked-list', AlgorithmTrack.FOUNDATIONS)])
+    expect(syllabus[0].topics.map((t) => t.topic.name)).toEqual(['array-access', 'stack'])
   })
 
   it('omits modules with no visible topics and keeps the real numbers for a participant', () => {

@@ -1,6 +1,6 @@
 import type { AlgorithmTrack, TopicDto } from '@dsa-tutor/types'
 import { TRACKS, getTrack } from '@/data/tracks'
-import { CURRICULUM_THRESHOLD } from '@/config/curriculum'
+import { CURRICULUM_THRESHOLD, placeOfTopic } from '@/config/curriculum'
 
 // Curriculum order: tracks in module order (TRACKS), and within a track the order
 // the API returns (topic.service.ts sorts by the seeded `order` column).
@@ -8,8 +8,15 @@ import { CURRICULUM_THRESHOLD } from '@/config/curriculum'
 
 const TRACK_INDEX = new Map(TRACKS.map((track, index) => [track.id, index]))
 
-export function orderTopics<T extends Pick<TopicDto, 'track'>>(topics: readonly T[]): T[] {
-  return [...topics].sort((a, b) => (TRACK_INDEX.get(a.track) ?? 99) - (TRACK_INDEX.get(b.track) ?? 99))
+// Syllabus position (module number, then place in the module's topic list)
+// when the topic is in the syllabus; otherwise its track's module order.
+const rank = (topic: Pick<TopicDto, 'track'> & { name?: string }) => {
+  const place = topic.name ? placeOfTopic(topic.name) : null
+  return place ? place.module.number * 1000 + place.index : (TRACK_INDEX.get(topic.track) ?? 99) * 1000 + 999
+}
+
+export function orderTopics<T extends Pick<TopicDto, 'track'> & { name?: string }>(topics: readonly T[]): T[] {
+  return [...topics].sort((a, b) => rank(a) - rank(b))
 }
 
 export function topicsInTrack<T extends Pick<TopicDto, 'track'>>(topics: readonly T[], track: AlgorithmTrack): T[] {
