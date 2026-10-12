@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
-import type { TopicDto } from '@dsa-tutor/types'
 import { topicPath } from '@/data/tracks'
-import { orderTopics } from '@/utils/curriculum'
+import { aiRecommendation, type LearningPlan } from '@/utils/syllabus'
 import { Button } from '@/components/ui/button'
 
 function SparklesIcon() {
@@ -13,18 +12,23 @@ function SparklesIcon() {
 }
 
 /**
- * The recommendation shown under Home's Continue card. Rendered only when
- * there is a real one: some progress to build on and an unstarted topic to
- * go to. With no progress the Continue card already says where to start, so
- * a "Welcome, start with X" banner would only repeat it. Recommendations
- * follow curriculum order and never hardcode a topic (remediation doc 9.1).
+ * The recommendation under Home's Continue card, read from the one learning
+ * plan (utils/syllabus planNext) so it cannot disagree with anything else:
+ * - it needs progress to speak of, and a recommendation;
+ * - when a Continue card is resuming a session, it renders only if it names
+ *   the same topic, otherwise it would contradict the card;
+ * - the recommendation itself never points before the furthest topic reached.
  * Cyan: the AI accent, on AI surfaces only.
  */
-export default function AILearningPathBanner({ topics }: { topics: TopicDto[] }) {
-  const ordered = orderTopics(topics)
-  const strongest = [...ordered].filter((t) => t.masteryPercent > 0).sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
-  const next = ordered.find((t) => !t.isLocked && t.masteryPercent === 0)
-  if (!strongest || !next) return null
+export default function AILearningPathBanner({ plan }: { plan: LearningPlan }) {
+  const recommended = aiRecommendation(plan)
+  const furthest = plan.furthest
+  if (!recommended || !furthest) return null
+
+  const progressLine =
+    furthest.topic.name === recommended.topic.name
+      ? `You have started ${recommended.number} ${recommended.topic.displayName}. Recommended next: finish it.`
+      : `You have reached ${furthest.number} ${furthest.topic.displayName}. Recommended next: ${recommended.number} ${recommended.topic.displayName}.`
 
   return (
     <section aria-label="AI learning path recommendation" className="flex flex-col gap-3 rounded-md border border-ai/30 bg-ai-light p-card sm:flex-row sm:items-center">
@@ -33,12 +37,10 @@ export default function AILearningPathBanner({ topics }: { topics: TopicDto[] })
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-micro text-ai-foreground">AI learning path recommendation</p>
-        <p className="mt-0.5 text-small text-ink">
-          You have made progress on {strongest.displayName}. Recommended next: {next.displayName}.
-        </p>
+        <p className="mt-0.5 text-small text-ink">{progressLine}</p>
       </div>
       <Button asChild size="sm" className="shrink-0 bg-ai text-ai-contrast hover:bg-ai/90">
-        <Link to={topicPath(next.name)}>Start {next.displayName}</Link>
+        <Link to={topicPath(recommended.topic.name)}>Open {recommended.topic.displayName}</Link>
       </Button>
     </section>
   )

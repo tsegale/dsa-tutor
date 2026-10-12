@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack, Difficulty, type TopicDto } from '@dsa-tutor/types'
-import { buildSyllabus, defaultExpandedModule, expandedStorageKey, moduleOfTopic, readExpanded, writeExpanded } from './syllabus'
+import { aiRecommendation, buildSyllabus, defaultExpandedModule, expandedStorageKey, moduleOfTopic, planNext, readExpanded, writeExpanded } from './syllabus'
 
 const topic = (name: string, track: AlgorithmTrack, masteryPercent = 0, isLocked = false): TopicDto => ({
   id: name,
@@ -115,5 +115,87 @@ describe('expansion storage', () => {
     expect(readExpanded(blocked, 'k')).toBeNull()
     expect(() => writeExpanded(blocked, 'k', ['a'])).not.toThrow()
     expect(readExpanded(undefined, 'k')).toBeNull()
+  })
+})
+
+describe('planNext', () => {
+  // Every topic of Modules 1-3, with the given mastery.
+  const curriculum = (mastery: Record<string, number>) =>
+    buildSyllabus(
+      [
+        ...['array-access', 'array-insert', 'array-delete', 'singly-linked-list', 'doubly-linked-list', 'circular-linked-list', 'stack', 'queue'].map((n) =>
+          topic(n, AlgorithmTrack.FOUNDATIONS, mastery[n] ?? 0)
+        ),
+        ...['linear-search', 'binary-search'].map((n) => topic(n, AlgorithmTrack.SEARCHING, mastery[n] ?? 0)),
+        ...['bubble-sort', 'selection-sort'].map((n) => topic(n, AlgorithmTrack.SORTING, mastery[n] ?? 0)),
+      ]
+    )
+  const session = (name: string) => ({ startTime: '2026-10-13T10:00:00Z', topic: { name } })
+
+  it('starts at 1.1 with no progress', () => {
+    const plan = planNext(curriculum({}), null)
+    expect(plan.recommended?.number).toBe('1.1')
+    expect(plan.continue).toBeNull()
+    expect(plan.furthest).toBeNull()
+  })
+
+  it('never points back before the furthest topic reached', () => {
+    // Work on 1.7 Stack only: the answer is Stack itself (in progress), not 1.1.
+    expect(planNext(curriculum({ stack: 40 }), null).recommended?.topic.name).toBe('stack')
+    // Stack complete: the next one on, 1.8 Queue.
+    expect(planNext(curriculum({ stack: 100 }), null).recommended?.topic.name).toBe('queue')
+  })
+
+  it('resumes the latest unfinished session when there is one', () => {
+    const plan = planNext(curriculum({ stack: 40 }), session('stack'))
+    expect(plan.continue?.entry.topic.name).toBe('stack')
+    expect(plan.recommended?.topic.name).toBe('stack')
+  })
+
+  it('steps into a locked module only through its open preview', () => {
+    // 1.8 Queue complete; Module 2 is locked (1 of 3), so 2.1 is its preview.
+    expect(planNext(curriculum({ queue: 100 }), null).recommended).toMatchObject({ number: '2.1', preview: true })
+  })
+
+  it('skips a topic the API hard-locked', () => {
+    const syllabus = buildSyllabus([topic('array-access', AlgorithmTrack.FOUNDATIONS, 0, true), topic('array-insert', AlgorithmTrack.FOUNDATIONS)])
+    expect(planNext(syllabus, null).recommended?.topic.name).toBe('array-insert')
+  })
+
+  it('gives each module its own next topic by the same rule', () => {
+    const plan = planNext(curriculum({ stack: 100 }), null)
+    expect(plan.nextByModule.get('linear-structures')?.topic.name).toBe('queue')
+    expect(plan.nextByModule.get('searching')?.topic.name).toBe('linear-search')
+  })
+
+  it('returns null rather than pointing backwards when nothing incomplete lies ahead', () => {
+    const plan = planNext(curriculum({ 'selection-sort': 100 }), null)
+    expect(plan.recommended).toBeNull()
+  })
+})
+
+describe('aiRecommendation', () => {
+  const syllabus = buildSyllabus(['array-access', 'array-insert', 'array-delete', 'singly-linked-list', 'doubly-linked-list', 'circular-linked-list', 'stack', 'queue'].map((n) =>
+    topic(n, AlgorithmTrack.FOUNDATIONS, n === 'stack' ? 100 : n === 'array-insert' ? 30 : 0)
+  ))
+  const session = (name: string) => ({ startTime: '2026-10-13T10:00:00Z', topic: { name } })
+
+  it('shows nothing without progress', () => {
+    expect(aiRecommendation(planNext(buildSyllabus([topic('array-access', AlgorithmTrack.FOUNDATIONS)]), null))).toBeNull()
+  })
+
+  it('recommends the topic after the furthest reached, never an earlier one', () => {
+    // 1.2 is started but behind 1.7 Stack (complete): the answer is 1.8 Queue.
+    expect(aiRecommendation(planNext(syllabus, null))?.topic.name).toBe('queue')
+  })
+
+  it('stays silent rather than contradict a Continue card resuming something else', () => {
+    const plan = planNext(syllabus, session('array-insert'))
+    expect(plan.continue?.entry.topic.name).toBe('array-insert')
+    expect(aiRecommendation(plan)).toBeNull()
+  })
+
+  it('may agree with the Continue card', () => {
+    expect(aiRecommendation(planNext(syllabus, session('queue')))?.topic.name).toBe('queue')
   })
 })

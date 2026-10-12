@@ -2,17 +2,23 @@ import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { moduleLabel } from '@/config/curriculum'
 import { unmetLabel } from '@/utils/moduleStatus'
-import type { SyllabusModule } from '@/utils/syllabus'
+import type { SyllabusModule, SyllabusTopic } from '@/utils/syllabus'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 
 // One of Home's module cards: the way into the curriculum from Home. The
 // whole card is the link (a single tab stop), so it lifts on hover. A locked
 // module names what it builds on in place of the next topic.
-export function ModuleCard({ entry }: { entry: SyllabusModule }) {
-  const { module, status, topics } = entry
+export function ModuleCard({
+  entry,
+  next,
+}: {
+  entry: SyllabusModule
+  /** This module's next topic, from the shared learning plan (planNext). */
+  next: SyllabusTopic | null
+}) {
+  const { module, status } = entry
   const locked = status.state === 'locked'
-  const next = topics.find((t) => t.openable && t.state !== 'complete' && t.topic.masteryPercent === 0) ?? topics.find((t) => t.openable && t.state !== 'complete')
   const percent = status.total ? (status.complete / status.total) * 100 : 0
   const footer = locked && status.unmet ? unmetLabel(status.unmet) : next ? `Next: ${next.number} ${next.topic.displayName}` : 'All topics complete'
 

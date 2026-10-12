@@ -2,10 +2,9 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { topicPath } from '@/data/tracks'
 import { moduleLabel } from '@/config/curriculum'
-import { buildSyllabus } from '@/utils/syllabus'
-import { useTopics } from '@/hooks/useTopics'
+import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { orderTopics, pickContinue } from '@/utils/curriculum'
+import { orderTopics } from '@/utils/curriculum'
 import { getProgressToNextLevel } from '@/utils/xpLevels'
 import { AppShell } from '@/components/layout/AppShell'
 import { Progress } from '@/components/ui/progress'
@@ -30,7 +29,8 @@ function ChartIcon() {
 export default function ProgressPage() {
   const { user } = useAuth()
   const { restricted } = useStudyScope()
-  const { data: topics, isLoading, isFetching, refetch } = useTopics()
+  const { topicsQuery, syllabus, plan } = useLearningPlan()
+  const { data: topics, isLoading, isFetching, refetch } = topicsQuery
   const crumbs = [{ label: 'Home', to: '/' }, { label: 'Progress' }]
 
   if (isLoading) {
@@ -67,7 +67,7 @@ export default function ProgressPage() {
   const hasHistory = xpTotal > 0 || topics.some((topic) => topic.masteryPercent > 0)
 
   if (!hasHistory) {
-    const first = pickContinue(topics, null)
+    const first = plan?.recommended ?? null
     return (
       <AppShell crumbs={crumbs}>
         <h1 className="mb-6 text-h1 text-ink">Progress</h1>
@@ -76,11 +76,11 @@ export default function ProgressPage() {
           title="Your progress starts with your first topic."
           description="Mastery, level and badges appear here as you answer predictions."
           action={
-            first.kind === 'done' ? undefined : (
+            first ? (
               <Button asChild size="sm">
                 <Link to={topicPath(first.topic.name)}>Start {first.topic.displayName}</Link>
               </Button>
-            )
+            ) : undefined
           }
         />
       </AppShell>
@@ -96,7 +96,7 @@ export default function ProgressPage() {
         value: topic.masteryPercent,
         label: `${topic.masteryPercent}% mastery`,
       }))
-    : buildSyllabus(topics).map(({ module, status }) => ({
+    : syllabus.map(({ module, status }) => ({
         key: module.id,
         name: moduleLabel(module),
         to: `/module/${module.number}`,

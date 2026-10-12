@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import type { TopicDto } from '@dsa-tutor/types'
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/hooks/useOnboarding'
-import { useTopics } from '@/hooks/useTopics'
+import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { fetchLatestIncompleteSession } from '@/api/sessions'
 import { MODULES } from '@/config/curriculum'
-import { pickContinue } from '@/utils/curriculum'
-import { buildSyllabus } from '@/utils/syllabus'
+import type { ContinueTarget } from '@/utils/curriculum'
+import type { LearningPlan, SyllabusModule } from '@/utils/syllabus'
 import { AppShell } from '@/components/layout/AppShell'
 import { ContinueCard } from '@/components/home/ContinueCard'
 import { ModuleCard } from '@/components/home/ModuleCard'
@@ -66,14 +64,9 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const topicsQuery = useTopics()
-  const sessionQuery = useQuery({
-    queryKey: ['sessions', 'latest-incomplete'],
-    queryFn: fetchLatestIncompleteSession,
-    staleTime: 30 * 1000,
-    retry: 1,
-  })
-
+  // One plan for "what next": the Continue card, the AI recommendation and
+  // the module cards all read it, so they cannot name different topics.
+  const { topicsQuery, sessionQuery, syllabus, plan } = useLearningPlan()
   const topics = topicsQuery.data
   const latestSession = sessionQuery.data ?? null
 
@@ -118,11 +111,11 @@ export default function Home() {
           </h1>
 
           <StudyProgressBanner topics={topics} />
-          <ContinueCard target={pickContinue(topics, latestSession)} sessionUnavailable={sessionQuery.isError} />
-          <AILearningPathBanner topics={topics} />
+          {plan && <ContinueCard target={continueTarget(plan)} sessionUnavailable={sessionQuery.isError} />}
+          {plan && <AILearningPathBanner plan={plan} />}
           {user && <ProgressStrip user={user} topics={topics} />}
 
-          {restricted ? <StudyTopics topics={topics} /> : <Modules topics={topics} />}
+          {plan && (restricted ? <StudyTopics syllabus={syllabus} plan={plan} /> : <Modules syllabus={syllabus} plan={plan} />)}
         </div>
       )}
 
@@ -140,9 +133,15 @@ export default function Home() {
   )
 }
 
-function Modules({ topics }: { topics: TopicDto[] }) {
+/** The Continue card's subject: resume if there is a session, else the recommendation. */
+function continueTarget(plan: LearningPlan): ContinueTarget<TopicDto> {
+  if (plan.continue) return { kind: 'continue', topic: plan.continue.entry.topic, startTime: plan.continue.startTime }
+  if (plan.recommended) return { kind: 'start', topic: plan.recommended.topic }
+  return { kind: 'done' }
+}
+
+function Modules({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: LearningPlan }) {
   // A module with nothing visible to this user is left out, never an empty card.
-  const syllabus = buildSyllabus(topics)
   return (
     <section aria-labelledby="modules-heading" className="mt-4 flex flex-col gap-4">
       <h2 id="modules-heading" className="text-h2 text-ink">
@@ -151,7 +150,7 @@ function Modules({ topics }: { topics: TopicDto[] }) {
       <ul id="curriculum-tracks" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {syllabus.map((entry) => (
           <li key={entry.module.id}>
-            <ModuleCard entry={entry} />
+            <ModuleCard entry={entry} next={plan.nextByModule.get(entry.module.id) ?? null} />
           </li>
         ))}
       </ul>
@@ -164,9 +163,9 @@ function Modules({ topics }: { topics: TopicDto[] }) {
  * module. Three one-topic module cards would look broken, so they are listed
  * directly, as the rows a module page uses, keeping their real numbers.
  */
-function StudyTopics({ topics }: { topics: TopicDto[] }) {
-  const rows = buildSyllabus(topics).flatMap((entry) => entry.topics)
-  const next = rows.find((row) => row.openable && row.state !== 'complete')
+function StudyTopics({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: LearningPlan }) {
+  const rows = syllabus.flatMap((entry) => entry.topics)
+  const next = plan.continue?.entry ?? plan.recommended
   return (
     <section aria-labelledby="study-topics-heading" className="mt-4 flex flex-col gap-4">
       <div>

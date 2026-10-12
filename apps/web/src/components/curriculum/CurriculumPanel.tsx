@@ -1,15 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
-import { useTopics } from '@/hooks/useTopics'
-import { fetchLatestIncompleteSession } from '@/api/sessions'
+import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { topicPath } from '@/data/tracks'
 import { moduleLabel } from '@/config/curriculum'
-import { pickContinue } from '@/utils/curriculum'
 import { TOPIC_STATE_LABEL, unmetLabel } from '@/utils/moduleStatus'
-import { buildSyllabus, defaultExpandedModule, expandedStorageKey, readExpanded, writeExpanded, type SyllabusModule } from '@/utils/syllabus'
+import { defaultExpandedModule, expandedStorageKey, readExpanded, writeExpanded, type SyllabusModule } from '@/utils/syllabus'
 import { useShellNavigate } from '@/components/layout/shellNavigation'
 import { Progress, ProgressRing } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -85,24 +82,13 @@ export interface CurriculumPanelProps {
 export function CurriculumPanel({ currentTopicName = null, variant = 'rail', className }: CurriculumPanelProps) {
   const { user } = useAuth()
   const go = useShellNavigate()
-  const { data: topics, isLoading, isFetching, refetch } = useTopics()
-  const { data: latestSession } = useQuery({
-    queryKey: ['sessions', 'latest-incomplete'],
-    queryFn: fetchLatestIncompleteSession,
-    staleTime: 30 * 1000,
-    retry: 1,
-  })
+  const { topicsQuery, syllabus, plan } = useLearningPlan()
+  const { data: topics, isLoading, isFetching, refetch } = topicsQuery
 
-  const syllabus = useMemo(() => (topics ? buildSyllabus(topics) : []), [topics])
-
-  // The topic the rail points at: the one open in the workspace, else
-  // Home's Continue target (the latest unfinished session, or the next topic).
-  const focusTopicName = useMemo(() => {
-    if (currentTopicName) return currentTopicName
-    if (!topics) return null
-    const target = pickContinue(topics, latestSession)
-    return target.kind === 'done' ? null : target.topic.name
-  }, [currentTopicName, topics, latestSession])
+  // The topic the rail points at: the one open in the workspace, else the
+  // shared plan's answer (resume the latest session, or the recommendation),
+  // the same topic Home's Continue card names.
+  const focusTopicName = currentTopicName ?? plan?.continue?.entry.topic.name ?? plan?.recommended?.topic.name ?? null
 
   const key = expandedStorageKey(user?.id)
   const [stored, setStored] = useState<string[] | null>(() => readExpanded(storage(), key))

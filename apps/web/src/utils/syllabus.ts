@@ -100,3 +100,61 @@ export function writeExpanded(storage: Pick<Storage, 'setItem'> | undefined, key
     // remembered. Nothing to recover.
   }
 }
+
+// One answer to "what next" (Phase 3.1B). Home's Continue card, the AI
+// recommendation, the module cards' "Next" and the rail's focus all read
+// this, so they cannot disagree.
+
+export interface LearningPlan {
+  /** The latest unfinished session, when its topic is visible and opens: resume. */
+  continue: { entry: SyllabusTopic; startTime: string } | null
+  /** The first incomplete topic at or after the furthest topic reached. */
+  recommended: SyllabusTopic | null
+  /** The furthest topic reached (any mastery), or null with no progress. */
+  furthest: SyllabusTopic | null
+  /** The same rule within each module, for module cards and module pages. */
+  nextByModule: Map<string, SyllabusTopic | null>
+}
+
+/**
+ * The first incomplete topic at or after the furthest one reached, never
+ * earlier: recommending 1.1 after work on 1.7 would point backwards. Topics
+ * whose module is still locked are passed over while an open one exists
+ * further on; with no progress at all the search starts from the beginning.
+ * Returns null when nothing incomplete lies at or after that point.
+ */
+export function nextInSequence(sequence: readonly SyllabusTopic[]): SyllabusTopic | null {
+  let furthest = -1
+  sequence.forEach((entry, index) => {
+    if (entry.topic.masteryPercent > 0) furthest = index
+  })
+  const ahead = sequence.slice(Math.max(furthest, 0))
+  const incomplete = ahead.filter((entry) => entry.state !== 'complete' && entry.openable)
+  return incomplete.find((entry) => entry.state !== 'locked') ?? incomplete[0] ?? null
+}
+
+export function planNext(
+  syllabus: readonly SyllabusModule[],
+  latest: { startTime: string; topic: { name: string } } | null | undefined,
+): LearningPlan {
+  const sequence = syllabus.flatMap((module) => module.topics)
+  const resumable = latest ? sequence.find((entry) => entry.topic.name === latest.topic.name && entry.openable) : undefined
+  const furthest = [...sequence].reverse().find((entry) => entry.topic.masteryPercent > 0) ?? null
+  return {
+    continue: resumable && latest ? { entry: resumable, startTime: latest.startTime } : null,
+    recommended: nextInSequence(sequence),
+    furthest,
+    nextByModule: new Map(syllabus.map((module) => [module.module.id, nextInSequence(module.topics)])),
+  }
+}
+
+/**
+ * The topic the AI recommendation banner may name, or null for no banner. It
+ * needs progress to speak of; and while a Continue card is resuming a
+ * session it may only agree with it, never name a different topic.
+ */
+export function aiRecommendation(plan: LearningPlan): SyllabusTopic | null {
+  if (!plan.recommended || !plan.furthest) return null
+  if (plan.continue && plan.continue.entry.topic.name !== plan.recommended.topic.name) return null
+  return plan.recommended
+}

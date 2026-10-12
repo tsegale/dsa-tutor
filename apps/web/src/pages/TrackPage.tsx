@@ -1,9 +1,8 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { getTrackBySlug } from '@/data/tracks'
 import { moduleByNumber, moduleForTrack, moduleLabel, type Module } from '@/config/curriculum'
-import { useTopics } from '@/hooks/useTopics'
+import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { buildSyllabus } from '@/utils/syllabus'
 import { unmetLabel } from '@/utils/moduleStatus'
 import { AppShell } from '@/components/layout/AppShell'
 import { TopicRow } from '@/components/track/TopicRow'
@@ -55,7 +54,8 @@ function useModuleFromRoute(): Module | null {
 export default function TrackPage() {
   const module = useModuleFromRoute()
   const { restricted } = useStudyScope()
-  const { data: topics, isLoading, isFetching, refetch } = useTopics()
+  const { topicsQuery, syllabus, plan } = useLearningPlan()
+  const { data: topics, isLoading, isFetching, refetch } = topicsQuery
 
   // A study participant has no module pages: their three topics are on Home.
   if (restricted) return <Navigate to="/" replace />
@@ -100,9 +100,10 @@ export default function TrackPage() {
     )
   }
 
-  const entry = buildSyllabus(topics).find((candidate) => candidate.module.id === module.id)
+  const entry = syllabus.find((candidate) => candidate.module.id === module.id)
   const totalMinutes = entry ? entry.topics.reduce((sum, t) => sum + t.topic.estimatedMinutes, 0) : 0
-  const next = entry?.topics.find((t) => t.openable && t.state !== 'complete' && t.topic.masteryPercent === 0) ?? entry?.topics.find((t) => t.openable && t.state !== 'complete')
+  // The shared plan's next topic for this module, as its Home card names it.
+  const next = plan?.nextByModule.get(module.id) ?? null
 
   return (
     <AppShell crumbs={crumbs}>

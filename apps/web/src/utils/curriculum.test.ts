@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack } from '@dsa-tutor/types'
-import { MASTERED_AT, nextTopicIn, orderTopics, pickContinue, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
+import { MASTERED_AT, orderTopics, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
 
 const topic = (displayName: string, track: AlgorithmTrack, description = '') => ({ displayName, track, description })
 
@@ -76,45 +76,6 @@ describe('trackProgress', () => {
   })
 })
 
-const pick = (name: string, track: AlgorithmTrack, masteryPercent = 0, isLocked = false) => ({ name, track, masteryPercent, isLocked })
-
-describe('nextTopicIn', () => {
-  it('prefers the first unstarted open topic', () => {
-    const list = [pick('a', AlgorithmTrack.SORTING, 90), pick('b', AlgorithmTrack.SORTING, 40), pick('c', AlgorithmTrack.SORTING, 0)]
-    expect(nextTopicIn(list)?.name).toBe('c')
-  })
-
-  it('falls back to the first started but incomplete topic', () => {
-    const list = [pick('a', AlgorithmTrack.SORTING, 90), pick('b', AlgorithmTrack.SORTING, 40)]
-    expect(nextTopicIn(list)?.name).toBe('b')
-  })
-
-  it('skips locked topics and returns null for a finished track', () => {
-    expect(nextTopicIn([pick('a', AlgorithmTrack.SORTING, 0, true)])).toBeNull()
-    expect(nextTopicIn([pick('a', AlgorithmTrack.SORTING, 100)])).toBeNull()
-  })
-})
-
-describe('pickContinue', () => {
-  const topics = [pick('bubble-sort', AlgorithmTrack.SORTING, 30), pick('array-access', AlgorithmTrack.FOUNDATIONS, 0)]
-  const session = (name: string) => ({ startTime: '2026-10-08T10:00:00Z', topic: { name } })
-
-  it('continues the latest unfinished session', () => {
-    expect(pickContinue(topics, session('bubble-sort'))).toEqual({ kind: 'continue', topic: topics[0], startTime: '2026-10-08T10:00:00Z' })
-  })
-
-  it('starts the first open topic in curriculum order when there is no history', () => {
-    expect(pickContinue(topics, null)).toEqual({ kind: 'start', topic: topics[1] })
-  })
-
-  it('ignores a session for a topic this user can no longer see', () => {
-    expect(pickContinue(topics, session('dijkstra'))).toEqual({ kind: 'start', topic: topics[1] })
-  })
-
-  it('reports done when every open topic is complete', () => {
-    expect(pickContinue([pick('a', AlgorithmTrack.SORTING, 100)], null)).toEqual({ kind: 'done' })
-  })
-})
 
 describe('relativeDay', () => {
   const now = new Date(2026, 9, 9, 15, 0)
