@@ -1,4 +1,5 @@
 import { ProgressRing } from '@/components/ui/progress'
+import { CURRICULUM_THRESHOLD } from '@/config/curriculum'
 
 interface MasteryRingProps {
   progress: number
@@ -10,8 +11,8 @@ interface MasteryRingProps {
   showPercent?: boolean
 }
 
-// The dashboard's mastery ring, now the shared ProgressRing. Two bands
-// instead of three: brand while learning, success once mastered (80%+).
+// The mastery ring, on the shared ProgressRing. Two bands: brand while
+// learning, success once the topic reaches the curriculum threshold.
 // The old middle band was violet, the canvas "active" colour, and gold
 // added a third accent with no meaning of its own.
 export default function MasteryRing({ progress, size = 48, strokeWidth = 4, showPercent = true }: MasteryRingProps) {
@@ -22,7 +23,7 @@ export default function MasteryRing({ progress, size = 48, strokeWidth = 4, show
       size={size}
       strokeWidth={strokeWidth}
       showPercentSign={showPercent}
-      tone={percent >= 80 ? 'success' : 'brand'}
+      tone={percent >= CURRICULUM_THRESHOLD ? 'success' : 'brand'}
       ariaLabel="Mastery"
     />
   )

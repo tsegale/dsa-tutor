@@ -1,7 +1,9 @@
 import { AlgorithmTrack } from '@dsa-tutor/types'
+import { moduleForTrack } from '@/config/curriculum'
 
-// The six curriculum tracks, in the order a learner meets them. Every place
-// that names, orders or links a track reads it from here.
+// The six tracks the curriculum modules draw on (config/curriculum.ts).
+// Slugs, names and descriptions live here; order comes from module numbers,
+// so tracks always list in syllabus order.
 export interface TrackMeta {
   id: AlgorithmTrack
   /** URL segment: /track/:slug */
@@ -11,7 +13,7 @@ export interface TrackMeta {
   description: string
 }
 
-export const TRACKS: readonly TrackMeta[] = [
+const TRACK_LIST: TrackMeta[] = [
   {
     id: AlgorithmTrack.FOUNDATIONS,
     slug: 'foundations',
@@ -49,6 +51,8 @@ export const TRACKS: readonly TrackMeta[] = [
     description: 'Traversal, shortest paths, spanning trees and path-finding on grids and mazes.',
   },
 ]
+
+export const TRACKS: readonly TrackMeta[] = TRACK_LIST.sort((a, b) => moduleForTrack(a.id).number - moduleForTrack(b.id).number)
 
 const BY_ID = new Map(TRACKS.map((track) => [track.id, track]))
 const BY_SLUG = new Map(TRACKS.map((track) => [track.slug, track]))

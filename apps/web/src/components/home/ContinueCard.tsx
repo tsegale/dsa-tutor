@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { TopicDto } from '@dsa-tutor/types'
 import { getTrack, topicPath } from '@/data/tracks'
-import { relativeDay, type ContinueTarget } from '@/utils/curriculum'
+import { isTopicComplete, relativeDay, type ContinueTarget } from '@/utils/curriculum'
 import { Button } from '@/components/ui/button'
 import { ProgressRing } from '@/components/ui/progress'
 
@@ -57,7 +57,7 @@ export function ContinueCard({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-5">
-        <ProgressRing value={topic.masteryPercent} size={64} strokeWidth={5} ariaLabel={`${topic.displayName} mastery`} tone={topic.masteryPercent >= 80 ? 'success' : 'brand'} />
+        <ProgressRing value={topic.masteryPercent} size={64} strokeWidth={5} ariaLabel={`${topic.displayName} mastery`} tone={isTopicComplete(topic) ? 'success' : 'brand'} />
         <Button asChild>
           <Link to={topicPath(topic.name)}>{isContinue ? 'Continue' : 'Start'}</Link>
         </Button>

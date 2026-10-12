@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack } from '@dsa-tutor/types'
-import { nextTopicIn, orderTopics, pickContinue, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
+import { MASTERED_AT, nextTopicIn, orderTopics, pickContinue, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
 
 const topic = (displayName: string, track: AlgorithmTrack, description = '') => ({ displayName, track, description })
 
@@ -18,12 +18,13 @@ const TOPICS = [
 const names = (list: { topic: { displayName: string } }[]) => list.map((m) => m.topic.displayName)
 
 describe('orderTopics', () => {
-  it('puts tracks in curriculum order and keeps the API order inside a track', () => {
+  it('puts tracks in module order and keeps the API order inside a track', () => {
+    // Module 2 is Searching and Module 3 Sorting (config/curriculum.ts).
     expect(orderTopics(TOPICS).map((t) => t.displayName)).toEqual([
       'Array Access',
       'Queue',
-      'Bubble Sort',
       'Binary Search',
+      'Bubble Sort',
       'Binary Search Tree',
       'Breadth-First Search',
       'Grid A*',
@@ -67,7 +68,7 @@ describe('trackProgress', () => {
   const t = (masteryPercent: number) => ({ masteryPercent })
 
   it('counts topics at or above the mastery line as complete', () => {
-    expect(trackProgress([t(80), t(79), t(100), t(0)])).toEqual({ total: 4, complete: 2, percent: 50 })
+    expect(trackProgress([t(MASTERED_AT), t(MASTERED_AT - 1), t(100), t(0)])).toEqual({ total: 4, complete: 2, percent: 50 })
   })
 
   it('reports an empty track as 0 of 0 rather than dividing by zero', () => {
@@ -129,7 +130,7 @@ describe('topicAction', () => {
   it('starts, continues, then reviews as mastery grows', () => {
     expect(topicAction({ masteryPercent: 0 })).toBe('Start')
     expect(topicAction({ masteryPercent: 1 })).toBe('Continue')
-    expect(topicAction({ masteryPercent: 79 })).toBe('Continue')
-    expect(topicAction({ masteryPercent: 80 })).toBe('Review')
+    expect(topicAction({ masteryPercent: MASTERED_AT - 1 })).toBe('Continue')
+    expect(topicAction({ masteryPercent: MASTERED_AT })).toBe('Review')
   })
 })
