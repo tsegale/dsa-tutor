@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { conditionFeatures } from '@/utils/studyCondition'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
-import { getTrack, trackPath } from '@/data/tracks'
+import { moduleForTrack, moduleLabel } from '@/config/curriculum'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import ModeToggle from '@/components/ui/ModeToggle'
@@ -57,7 +57,7 @@ export default function TopBar() {
   const crumbs = registryEntry && !restricted
     ? [
         { label: 'Home', to: '/' },
-        { label: getTrack(registryEntry.track).name, to: trackPath(registryEntry.track) },
+        { label: moduleLabel(moduleForTrack(registryEntry.track)), to: `/module/${moduleForTrack(registryEntry.track).number}` },
         { label: algorithmDisplayName },
       ]
     : [{ label: 'Home', to: '/' }, { label: algorithmDisplayName }]
@@ -66,6 +66,7 @@ export default function TopBar() {
     <AppTopBar
       crumbs={crumbs}
       onNavigate={requestSessionExit}
+      currentTopicName={algorithmSlug ?? null}
       afterCrumbs={features.scaffoldingPill ? <ZPDScaffoldingPill /> : undefined}
       center={features.modeToggle ? <ModeToggle /> : undefined}
       progressPercent={progressPercent}

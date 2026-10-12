@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { TRACKS, topicPath } from '@/data/tracks'
+import { topicPath } from '@/data/tracks'
+import { moduleLabel } from '@/config/curriculum'
+import { buildSyllabus } from '@/utils/syllabus'
 import { useTopics } from '@/hooks/useTopics'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { orderTopics, pickContinue, topicsInTrack, trackProgress } from '@/utils/curriculum'
+import { orderTopics, pickContinue } from '@/utils/curriculum'
 import { getProgressToNextLevel } from '@/utils/xpLevels'
 import { AppShell } from '@/components/layout/AppShell'
 import { Progress } from '@/components/ui/progress'
@@ -14,7 +16,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
 import BadgesSection from '@/components/dashboard/BadgesSection'
 
 // Progress over the curriculum: level and XP (moved here from the old
-// dashboard header), completion per track (or per study topic for a study
+// dashboard header), completion per module (or per study topic for a study
 // participant), and badges.
 
 function ChartIcon() {
@@ -94,15 +96,13 @@ export default function ProgressPage() {
         value: topic.masteryPercent,
         label: `${topic.masteryPercent}% mastery`,
       }))
-    : TRACKS.map((track) => ({ track, progress: trackProgress(topicsInTrack(topics, track.id)) }))
-        .filter(({ progress }) => progress.total > 0)
-        .map(({ track, progress }) => ({
-          key: track.slug,
-          name: track.name,
-          to: `/track/${track.slug}`,
-          value: progress.percent,
-          label: `${progress.complete} of ${progress.total} complete`,
-        }))
+    : buildSyllabus(topics).map(({ module, status }) => ({
+        key: module.id,
+        name: moduleLabel(module),
+        to: `/module/${module.number}`,
+        value: status.total ? Math.round((status.complete / status.total) * 100) : 0,
+        label: `${status.complete} of ${status.total} complete · ${status.mean}% mean mastery`,
+      }))
 
   return (
     <AppShell crumbs={crumbs}>
@@ -121,7 +121,7 @@ export default function ProgressPage() {
 
       <section aria-labelledby="breakdown-heading" className="mb-8">
         <h2 id="breakdown-heading" className="mb-3 text-h2 text-ink">
-          {restricted ? 'Study topics' : 'Tracks'}
+          {restricted ? 'Study topics' : 'Modules'}
         </h2>
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {rows.map((row) => (

@@ -8,7 +8,9 @@ import { useOnboarding } from '@/hooks/useOnboarding'
 import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { fetchStudyStatus, withdrawFromStudy } from '@/api/study'
-import { TRACKS, topicPath } from '@/data/tracks'
+import { topicPath } from '@/data/tracks'
+import { MODULES, moduleLabel } from '@/config/curriculum'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -116,7 +118,7 @@ function NavLink({ to, active, children }: { to: string; active: boolean; childr
   )
 }
 
-function TracksMenu({ active }: { active: boolean }) {
+function ModulesMenu({ active }: { active: boolean }) {
   const go = useShellNavigate()
   return (
     <DropdownMenu>
@@ -129,14 +131,15 @@ function TracksMenu({ active }: { active: boolean }) {
             active ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-brand' : 'text-ink-2 hover:text-ink'
           )}
         >
-          Tracks
+          Modules
           <ChevronDownIcon />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-48">
-        {TRACKS.map((track) => (
-          <DropdownMenuItem key={track.slug} onSelect={() => go(`/track/${track.slug}`)}>
-            {track.name}
+      <DropdownMenuContent align="start" className="min-w-64">
+        {MODULES.map((module) => (
+          <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
+            <span className="w-16 shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
+            {module.title}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -184,9 +187,9 @@ function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
             <>
               <DropdownMenuItem onSelect={() => go('/')}>Home</DropdownMenuItem>
               {!restricted &&
-                TRACKS.map((track) => (
-                  <DropdownMenuItem key={track.slug} onSelect={() => go(`/track/${track.slug}`)}>
-                    {track.name}
+                MODULES.map((module) => (
+                  <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
+                    {moduleLabel(module)}
                   </DropdownMenuItem>
                 ))}
               <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
@@ -244,12 +247,17 @@ export interface AppTopBarProps {
   progressPercent?: number
   /** Replaces direct navigation; see the note at the top of this file. */
   onNavigate?: (to: string) => void
+  /** The topic open in the workspace, highlighted in the curriculum drawer. */
+  currentTopicName?: string | null
 }
 
-export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercent, onNavigate }: AppTopBarProps) {
+export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercent, onNavigate, currentTopicName = null }: AppTopBarProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  // Below 1024px the curriculum rail is a drawer rather than a squeezed column.
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  useEffect(() => setDrawerOpen(false), [pathname])
   const { restricted } = useStudyScope()
   const inWorkspace = Boolean(onNavigate)
   const go = useCallback((to: string) => (onNavigate ? onNavigate(to) : navigate(to)), [navigate, onNavigate])
@@ -279,6 +287,18 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
       )}
       <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open curriculum"
+            aria-haspopup="dialog"
+            aria-expanded={drawerOpen}
+            className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink lg:hidden"
+          >
+            <svg viewBox="0 0 16 16" className="size-4" aria-hidden="true">
+              <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
           <a
             href="/"
             aria-label="DSA Tutor home"
@@ -297,7 +317,7 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
               </NavLink>
               {/* A study participant's three topics sit in three tracks; one-topic
                   track pages would look broken, so Home lists them instead. */}
-              {!restricted && <TracksMenu active={pathname.startsWith('/track/')} />}
+              {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}
               <NavLink to="/progress" active={pathname === '/progress'}>
                 Progress
               </NavLink>
@@ -342,6 +362,13 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
       </header>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onSelect={(topic) => go(topicPath(topic.name))} />
+
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent side="left" className="w-80 max-w-[85vw] gap-0 p-0 lg:hidden" aria-describedby={undefined}>
+          <SheetTitle className="sr-only">Curriculum</SheetTitle>
+          <CurriculumPanel variant="drawer" currentTopicName={currentTopicName} className="h-full" />
+        </SheetContent>
+      </Sheet>
     </ShellNavigation.Provider>
   )
 }

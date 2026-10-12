@@ -1,95 +1,91 @@
 import { Link } from 'react-router-dom'
-import type { TopicDto } from '@dsa-tutor/types'
 import { cn } from '@/lib/utils'
 import { topicPath } from '@/data/tracks'
 import { isTopicComplete, topicAction } from '@/utils/curriculum'
+import { TOPIC_STATE_LABEL } from '@/utils/moduleStatus'
+import type { SyllabusTopic } from '@/utils/syllabus'
 import { buttonVariants } from '@/components/ui/button'
 import { ProgressRing } from '@/components/ui/progress'
 import DifficultyTag from '@/components/ui/DifficultyTag'
+import { StatusMarker } from '@/components/curriculum/StatusMarker'
 
-// One numbered row of a track page. The action link (Start, Continue or
-// Review) is the row's only interactive element; its hit area is stretched
-// over the whole row, so the row is the click target while the keyboard
-// meets one tab stop per topic and nothing is nested inside a link.
-
-function LockIcon() {
-  return (
-    <svg className="size-4 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  )
-}
+// One numbered row of a module page, numbered and marked exactly as the
+// curriculum rail shows it (3.1, 3.2 ...). The action link (Start, Continue
+// or Review) is the row's only interactive element; its hit area is
+// stretched over the whole row, so the row is the click target while the
+// keyboard meets one tab stop per topic and nothing is nested in a link.
+// A soft-locked topic keeps its action and says what it builds on; only a
+// hard lock (the API's, or hardLocks) replaces the action.
+//
+// Columns: marker, number, name, then (from md) difficulty, minutes,
+// mastery, action. On a phone the details wrap under the name.
 
 export function TopicRow({
-  topic,
-  index,
-  trackName,
+  entry,
   isNext,
 }: {
-  topic: TopicDto
-  index: number
-  trackName: string
-  /** The track's next topic (as Home's card names it): the one primary action. */
+  entry: SyllabusTopic
+  /** The module's next topic: the list's one primary action. */
   isNext: boolean
 }) {
+  const { topic, number, state, openable, reason } = entry
   const action = topicAction(topic)
-  const number = String(index + 1).padStart(2, '0')
+  const muted = state === 'locked'
 
   return (
     <li
       className={cn(
-        'relative grid grid-cols-[2.25rem_1fr_auto] items-center gap-x-3 gap-y-2 px-card py-row md:grid-cols-[2.25rem_1fr_auto_4.5rem_2.75rem_6.5rem]',
-        topic.isLocked ? 'bg-surface-sunk' : 'transition-colors duration-quick hover:bg-surface-sunk'
+        'relative grid grid-cols-[1rem_2.75rem_1fr_auto] items-center gap-x-3 gap-y-2 px-card py-row md:grid-cols-[1rem_2.75rem_1fr_auto_4.5rem_2.75rem_6.5rem]',
+        muted ? 'bg-surface-sunk' : 'transition-colors duration-quick hover:bg-surface-sunk'
       )}
     >
-      <span className="text-mono-sm text-ink-2" aria-hidden="true">
+      <StatusMarker state={state} pulse={isNext && !muted} />
+      <span className={cn('text-mono-sm', muted ? 'text-ink-3' : 'text-ink-2')} aria-hidden="true">
         {number}
       </span>
 
-      <div className={cn('min-w-0', topic.isLocked && 'opacity-60')}>
-        <h3 className="truncate text-small font-medium text-ink">{topic.displayName}</h3>
-        <p className="truncate text-micro font-normal text-ink-2">
-          {topic.isLocked ? `Locked: complete the earlier ${trackName} topics to open this one` : topic.description}
-        </p>
+      <div className="min-w-0">
+        <h3 className={cn('truncate text-small font-medium', muted ? 'text-ink-2' : 'text-ink')}>
+          <span className="sr-only">{number} </span>
+          {topic.displayName}
+          <span className="sr-only">, {TOPIC_STATE_LABEL[state]}</span>
+        </h3>
+        {/* A soft lock is explained once, in the module's note above the list;
+            only a hard lock (which cannot be opened) states its reason here. */}
+        <p className="truncate text-micro font-normal text-ink-2">{!openable && reason ? reason : topic.description}</p>
       </div>
 
-      {/* Difficulty, time and mastery: their own columns from md, a wrapped
-          line under the name on a phone. Lock dimming sits on each item
-          because opacity has no effect on a display:contents box. */}
-      <div className="col-span-2 col-start-2 row-start-2 flex flex-wrap items-center gap-3 md:contents">
-        <span className={cn('md:col-start-3 md:row-start-1', topic.isLocked && 'opacity-60')}>
+      {/* Lock dimming sits on each item: opacity has no effect on a
+          display:contents box. */}
+      <div className="col-span-2 col-start-3 row-start-2 flex flex-wrap items-center gap-3 md:contents">
+        <span className={cn('md:col-start-4 md:row-start-1', muted && 'opacity-70')}>
           <DifficultyTag difficulty={topic.difficulty} />
         </span>
-        <span className={cn('text-mono-sm text-ink-2 md:col-start-4 md:row-start-1 md:text-right', topic.isLocked && 'opacity-60')}>
+        <span className={cn('text-mono-sm text-ink-2 md:col-start-5 md:row-start-1 md:text-right', muted && 'opacity-70')}>
           {topic.estimatedMinutes} min
         </span>
-        <span className={cn('md:col-start-5 md:row-start-1', topic.isLocked && 'opacity-60')}>
+        <span className={cn('md:col-start-6 md:row-start-1', muted && 'opacity-70')}>
           <ProgressRing value={topic.masteryPercent} size={32} strokeWidth={3} showPercentSign={false} tone={isTopicComplete(topic) ? 'success' : 'brand'} ariaLabel={`${topic.displayName} mastery`} />
         </span>
       </div>
 
-      <div className="col-start-3 row-start-1 justify-self-end md:col-start-6">
-        {topic.isLocked ? (
-          <span className="inline-flex items-center gap-1.5 text-micro text-ink-2">
-            <LockIcon />
-            Locked
-          </span>
-        ) : (
+      <div className="col-start-4 row-start-1 justify-self-end md:col-start-7">
+        {openable ? (
           <Link
             to={topicPath(topic.name)}
-            aria-label={`${action} ${topic.displayName}`}
+            aria-label={`${action} ${number} ${topic.displayName}`}
             className={cn(
-              // One primary button per list, on the next topic; eighteen brand
-              // buttons would make the list a wall again.
+              // One primary button per list, on the next topic.
               buttonVariants({ variant: isNext ? 'primary' : 'secondary', size: 'sm' }),
               // The stretched hit area: the whole row opens the topic. static
-              // (over the button's relative) so ::after spans the row, not the button.
+              // (over the button's relative) so ::after spans the row.
               'static md:w-24 after:absolute after:inset-0 after:content-[""] hover:translate-y-0'
             )}
           >
             {action}
           </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-micro text-ink-2">Locked</span>
         )}
       </div>
     </li>

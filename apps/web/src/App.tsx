@@ -144,6 +144,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/module/:number"
+                  element={
+                    <ProtectedRoute>
+                      <TrackPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/progress"
                   element={
                     <ProtectedRoute>

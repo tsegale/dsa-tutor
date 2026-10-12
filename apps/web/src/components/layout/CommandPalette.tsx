@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import { useTopics } from '@/hooks/useTopics'
 import { useRestoreFocus } from '@/hooks/useRestoreFocus'
 import { searchTopics } from '@/utils/curriculum'
+import { buildSyllabus, type SyllabusTopic } from '@/utils/syllabus'
+import type { Module } from '@/config/curriculum'
 import { Kbd } from '@/components/ui/Kbd'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/button'
@@ -50,7 +52,19 @@ export function CommandPalette({
   const listRef = useRef<HTMLUListElement>(null)
 
   const results = useMemo(() => searchTopics(topics, query), [topics, query])
-  const selectable = useMemo(() => results.map((r, i) => (r.topic.isLocked ? -1 : i)).filter((i) => i >= 0), [results])
+  // Each result's syllabus entry: its number, module and lock state.
+  const syllabusByName = useMemo(() => {
+    const map = new Map<string, { entry: SyllabusTopic; module: Module }>()
+    for (const { module, topics: rows } of buildSyllabus(topics)) for (const entry of rows) map.set(entry.topic.name, { entry, module })
+    return map
+  }, [topics])
+  // Soft-locked topics open (with a notice in the workspace); only a hard
+  // lock makes a result unselectable.
+  const isOpenable = (name: string) => syllabusByName.get(name)?.entry.openable ?? true
+  const selectable = useMemo(
+    () => results.map((r, i) => (syllabusByName.get(r.topic.name)?.entry.openable ?? true ? i : -1)).filter((i) => i >= 0),
+    [results, syllabusByName]
+  )
 
   // A new query starts from the best match.
   useEffect(() => {
@@ -75,7 +89,7 @@ export function CommandPalette({
 
   function choose(index: number) {
     const match = results[index]
-    if (!match || match.topic.isLocked) return
+    if (!match || !isOpenable(match.topic.name)) return
     onOpenChange(false)
     onSelect(match.topic)
   }
@@ -153,8 +167,11 @@ export function CommandPalette({
               <p className="p-3 text-small text-ink-2">No topic matches "{query.trim()}". Try a track name such as "trees".</p>
             ) : (
               <ul ref={listRef} id={listId} role="listbox" aria-label="Topics" className="flex flex-col">
-                {results.map(({ topic, trackName }, index) => {
+                {results.map(({ topic }, index) => {
                   const isActive = index === active
+                  const info = syllabusByName.get(topic.name)
+                  const locked = info?.entry.state === 'locked'
+                  const openable = info?.entry.openable ?? true
                   return (
                     <li
                       key={topic.id ?? topic.name}
@@ -162,23 +179,25 @@ export function CommandPalette({
                       data-index={index}
                       role="option"
                       aria-selected={isActive}
-                      aria-disabled={topic.isLocked || undefined}
-                      onMouseMove={() => !topic.isLocked && setActive(index)}
+                      aria-disabled={!openable || undefined}
+                      onMouseMove={() => openable && setActive(index)}
                       onClick={() => choose(index)}
                       className={cn(
                         'flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2',
                         isActive && 'bg-brand-soft',
-                        topic.isLocked && 'cursor-not-allowed opacity-60'
+                        !openable && 'cursor-not-allowed opacity-60'
                       )}
                     >
+                      <span className="w-9 shrink-0 text-mono-sm text-ink-2">{info?.entry.number}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-small font-medium text-ink">{topic.displayName}</p>
-                        <p className="truncate text-micro text-ink-2">
-                          {topic.isLocked ? `Locked: complete the earlier ${trackName} topics first` : topic.description}
+                        <p className="truncate text-small font-medium text-ink">
+                          {topic.displayName}
+                          {locked && <span className="sr-only">, locked</span>}
                         </p>
+                        <p className="truncate text-micro text-ink-2">{locked && info?.entry.reason ? info.entry.reason : topic.description}</p>
                       </div>
-                      {topic.isLocked && <LockIcon />}
-                      <span className="shrink-0 text-micro text-ink-2">{trackName}</span>
+                      {locked && <LockIcon />}
+                      <span className="shrink-0 text-micro text-ink-2">{info ? `Module ${info.module.number}` : ''}</span>
                     </li>
                   )
                 })}

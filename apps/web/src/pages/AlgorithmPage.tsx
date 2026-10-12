@@ -13,7 +13,10 @@ import { apiFetch } from '@/api/client'
 import { fetchStudyStatus } from '@/api/study'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
 import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
-import { REQUEST_SESSION_EXIT_EVENT, type SessionExitDetail } from '@/components/layout/sessionExit'
+import { REQUEST_SESSION_EXIT_EVENT, requestSessionExit, type SessionExitDetail } from '@/components/layout/sessionExit'
+import { ShellNavigation } from '@/components/layout/shellNavigation'
+import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
+import { SoftLockNotice } from '@/components/curriculum/SoftLockNotice'
 import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
@@ -1199,6 +1202,7 @@ export default function AlgorithmPage() {
     return (
       <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
         <TopBar />
+        <SoftLockNotice topicName={algorithmNameParam} />
         <div className="relative flex-1 overflow-hidden">
           {compactTab === 'canvas' && (
             <div className="relative h-full w-full overflow-hidden" data-canvas-area>
@@ -1273,7 +1277,16 @@ export default function AlgorithmPage() {
       <div className="h-14 shrink-0">
         <TopBar />
       </div>
+      <SoftLockNotice topicName={algorithmNameParam} />
 
+      <div className="flex min-h-0 flex-1">
+      {/* The curriculum rail sits outside the resizable group, so it never
+          competes with the canvas and tool rail for the group's widths. Its
+          links leave through the session-exit request like every other way
+          out of the workspace (survey first). */}
+      <ShellNavigation.Provider value={requestSessionExit}>
+        <CurriculumPanel currentTopicName={algorithmNameParam ?? null} />
+      </ShellNavigation.Provider>
       {/* Resizable workspace (4A.1): the same three panels, now in a
           persisted, draggable group. Sizes are percentages of the width
           except the 48px collapsed rails. */}
@@ -1281,7 +1294,7 @@ export default function AlgorithmPage() {
         id="dsa-workspace"
         defaultLayout={workspaceLayout.defaultLayout}
         onLayoutChanged={workspaceLayout.onLayoutChanged}
-        className="min-h-0 flex-1"
+        className="min-h-0 min-w-0 flex-1"
       >
         <Panel
           id="left"
@@ -1352,6 +1365,7 @@ export default function AlgorithmPage() {
           </motion.div>
         </Panel>
       </Group>
+      </div>
 
       {overlaysAndModals}
     </div>

@@ -7,11 +7,12 @@ import { useOnboarding } from '@/hooks/useOnboarding'
 import { useTopics } from '@/hooks/useTopics'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { fetchLatestIncompleteSession } from '@/api/sessions'
-import { TRACKS, getTrack } from '@/data/tracks'
-import { nextTopicIn, orderTopics, pickContinue, topicsInTrack } from '@/utils/curriculum'
+import { MODULES } from '@/config/curriculum'
+import { pickContinue } from '@/utils/curriculum'
+import { buildSyllabus } from '@/utils/syllabus'
 import { AppShell } from '@/components/layout/AppShell'
 import { ContinueCard } from '@/components/home/ContinueCard'
-import { TrackCard } from '@/components/home/TrackCard'
+import { ModuleCard } from '@/components/home/ModuleCard'
 import { ProgressStrip } from '@/components/home/ProgressStrip'
 import { TopicRow } from '@/components/track/TopicRow'
 import AILearningPathBanner from '@/components/dashboard/AILearningPathBanner'
@@ -21,8 +22,8 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
 
 // Home answers one question: what do I do now. One Continue card, then the
-// six tracks as the only way into the curriculum. No carousels, at most
-// eight cards. The curriculum itself lives on the track pages.
+// six modules (the curriculum rail is the other way in). No carousels, at
+// most eight cards. Each module's topics live on its module page.
 
 function HomeSkeleton() {
   return (
@@ -32,8 +33,8 @@ function HomeSkeleton() {
       <Skeleton className="h-16 w-full rounded-md" />
       <Skeleton className="mt-4 h-7 w-24" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {TRACKS.map((track) => (
-          <SkeletonCard key={track.slug} />
+        {MODULES.map((module) => (
+          <SkeletonCard key={module.id} />
         ))}
       </div>
     </div>
@@ -121,7 +122,7 @@ export default function Home() {
           <AILearningPathBanner topics={topics} />
           {user && <ProgressStrip user={user} topics={topics} />}
 
-          {restricted ? <StudyTopics topics={topics} /> : <Tracks topics={topics} />}
+          {restricted ? <StudyTopics topics={topics} /> : <Modules topics={topics} />}
         </div>
       )}
 
@@ -139,18 +140,18 @@ export default function Home() {
   )
 }
 
-function Tracks({ topics }: { topics: TopicDto[] }) {
-  // A track with nothing visible to this user is hidden, never an empty card.
-  const tracks = TRACKS.map((track) => ({ track, topics: topicsInTrack(topics, track.id) })).filter(({ topics }) => topics.length > 0)
+function Modules({ topics }: { topics: TopicDto[] }) {
+  // A module with nothing visible to this user is left out, never an empty card.
+  const syllabus = buildSyllabus(topics)
   return (
-    <section aria-labelledby="tracks-heading" className="mt-4 flex flex-col gap-4">
-      <h2 id="tracks-heading" className="text-h2 text-ink">
-        Tracks
+    <section aria-labelledby="modules-heading" className="mt-4 flex flex-col gap-4">
+      <h2 id="modules-heading" className="text-h2 text-ink">
+        Modules
       </h2>
       <ul id="curriculum-tracks" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {tracks.map(({ track, topics: trackTopics }) => (
-          <li key={track.slug}>
-            <TrackCard track={track} topics={trackTopics} />
+        {syllabus.map((entry) => (
+          <li key={entry.module.id}>
+            <ModuleCard entry={entry} />
           </li>
         ))}
       </ul>
@@ -160,12 +161,12 @@ function Tracks({ topics }: { topics: TopicDto[] }) {
 
 /**
  * An active study participant sees exactly their study topics, one per
- * track. Three one-topic track cards would look broken, so they are listed
- * directly, as the same rows a track page uses.
+ * module. Three one-topic module cards would look broken, so they are listed
+ * directly, as the rows a module page uses, keeping their real numbers.
  */
 function StudyTopics({ topics }: { topics: TopicDto[] }) {
-  const ordered = orderTopics(topics)
-  const next = nextTopicIn(ordered)
+  const rows = buildSyllabus(topics).flatMap((entry) => entry.topics)
+  const next = rows.find((row) => row.openable && row.state !== 'complete')
   return (
     <section aria-labelledby="study-topics-heading" className="mt-4 flex flex-col gap-4">
       <div>
@@ -175,8 +176,8 @@ function StudyTopics({ topics }: { topics: TopicDto[] }) {
         <p className="mt-1 text-small text-ink-2">These are the topics in your study. Each one opens the same way as in the full curriculum.</p>
       </div>
       <ol id="curriculum-tracks" className="divide-y divide-rule overflow-hidden rounded-md border border-rule bg-surface">
-        {ordered.map((topic, index) => (
-          <TopicRow key={topic.id} topic={topic} index={index} trackName={getTrack(topic.track).name} isNext={topic.id === next?.id} />
+        {rows.map((row) => (
+          <TopicRow key={row.topic.id} entry={row} isNext={row.topic.id === next?.topic.id} />
         ))}
       </ol>
     </section>
