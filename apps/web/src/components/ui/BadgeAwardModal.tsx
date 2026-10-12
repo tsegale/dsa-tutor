@@ -94,7 +94,7 @@ export default function BadgeAwardModal({ badgeId, onClose }: BadgeAwardModalPro
             <Confetti active={badge !== null && !prefersReducedMotion} />
 
             <div className="relative flex flex-col items-center gap-4 py-4 text-center">
-              <span className="text-[11px] font-semibold tracking-wide text-secondary uppercase">
+              <span className="text-micro text-secondary">
                 Badge earned
               </span>
 

@@ -23,21 +23,21 @@ const NODES_PER_ROW = 8
 const LEFT_PADDING = 60
 const TOP_PADDING = 70
 
-// Same fixed-hex-palette rationale as the other canvases: Framer's
-// `animate={{ fill }}` needs literal colour values to interpolate
-// toward, not a Tailwind class name.
-const DEFAULT_FILL = '#ffffff'
-const DEFAULT_STROKE = '#e2e8f0'
-const DEFAULT_TEXT = '#0f172a'
-const CURRENT_FILL = '#f59e0b'
-const CURRENT_TEXT = '#78350f'
-const FOUND_FILL = '#16a34a'
-const FOUND_TEXT = '#ffffff'
-const DELETE_FILL = '#dc2626'
-const DELETE_TEXT = '#ffffff'
-const POINTER_BG = '#f8fafc'
-const ARROW_ACTIVE = '#3730a3'
-const ARROW_INACTIVE = '#94a3b8'
+// Canvas state tokens from index.css. Framer's `animate={{ fill }}` needs
+// a literal colour to interpolate toward, so animated fills go through
+// useResolveColour, which also re-resolves them when the theme flips.
+const DEFAULT_FILL = 'var(--surface)'
+const DEFAULT_STROKE = 'var(--rule)'
+const DEFAULT_TEXT = 'var(--ink)'
+const CURRENT_FILL = 'var(--state-compare)'
+const CURRENT_TEXT = 'var(--state-compare-ink)'
+const FOUND_FILL = 'var(--state-sorted)'
+const FOUND_TEXT = 'var(--state-sorted-ink)'
+const DELETE_FILL = 'var(--state-error-text)'
+const DELETE_TEXT = 'var(--state-error-ink)'
+const POINTER_BG = 'var(--surface-sunk)'
+const ARROW_ACTIVE = 'var(--state-current)'
+const ARROW_INACTIVE = 'var(--state-neutral)'
 
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Current', colour: CURRENT_FILL },
@@ -102,7 +102,7 @@ export default function LinkedListCanvas({
   const svgHeight = Math.max(height, TOP_PADDING + rowCount * ROW_HEIGHT + 40)
   const svgWidth = Math.max(width, LEFT_PADDING + NODES_PER_ROW * (NODE_WIDTH + ARROW_GAP))
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state || state.nodes.length === 0) {
     return (
@@ -265,7 +265,7 @@ export default function LinkedListCanvas({
                   }
                 >
                   {isHead && (
-                    <text x={0} y={-24} textAnchor="middle" className="fill-primary text-[10px] font-semibold">
+                    <text x={0} y={-24} textAnchor="middle" className="fill-state-current text-[10px] font-semibold">
                       &#9660; head
                     </text>
                   )}

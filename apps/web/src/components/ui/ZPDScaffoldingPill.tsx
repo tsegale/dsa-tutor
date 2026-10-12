@@ -21,6 +21,15 @@ export const SCAFFOLDING_LABEL: Record<ScaffoldingLevel, string> = {
   [ScaffoldingLevel.NONE]: 'Independent mode',
 }
 
+// The level's own name, in sentence case: the enum values are uppercase
+// identifiers and must never reach the screen as-is.
+export const SCAFFOLDING_LEVEL_NAME: Record<ScaffoldingLevel, string> = {
+  [ScaffoldingLevel.HIGH]: 'High',
+  [ScaffoldingLevel.MEDIUM]: 'Medium',
+  [ScaffoldingLevel.LOW]: 'Low',
+  [ScaffoldingLevel.NONE]: 'None',
+}
+
 export default function ZPDScaffoldingPill() {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const scaffoldingReasoning = useAlgorithmStore((state) => state.scaffoldingReasoning)
@@ -34,7 +43,7 @@ export default function ZPDScaffoldingPill() {
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        Support level: {scaffoldingLevel}. {scaffoldingReasoning}
+        Support level: {SCAFFOLDING_LEVEL_NAME[scaffoldingLevel]}. {scaffoldingReasoning}
       </TooltipContent>
     </Tooltip>
   )

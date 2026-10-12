@@ -189,7 +189,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             type="button"
             onClick={onToggle}
             aria-label="Expand panel"
-            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
+            className="mt-auto flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
           >
             <ChevronIcon pointRight />
           </button>
@@ -201,7 +201,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             <AlgorithmControls slug={algorithmSlug} />
           ) : (
             <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
+              <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
                 Custom array
               </h3>
               <input
@@ -231,8 +231,8 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
           {features.aiChallenge && (
           <section id="ai-tools-section" className="flex flex-col gap-2">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted dark:text-dark-text-secondary">
-              AI Tools
+            <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
+              AI tools
             </h3>
             <ChallengeGenerator difficulty={difficulty} />
             {features.feynman && <FeynmanModeButton />}
@@ -251,7 +251,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                 'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors',
                 codeEditorMode
                   ? 'border-primary bg-primary-light text-primary'
-                  : 'border-border text-text-primary hover:bg-surface dark:text-dark-text-primary dark:hover:bg-dark-border',
+                  : 'border-border text-text-primary hover:bg-surface-sunk dark:text-dark-text-primary dark:hover:bg-dark-border',
               )}
             >
               <span className="flex items-center gap-1.5">

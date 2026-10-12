@@ -17,7 +17,7 @@ export default function SoundToggle() {
       <TooltipTrigger asChild>
         <button
           onClick={toggle}
-          className="rounded-md p-2 transition-colors hover:bg-surface dark:hover:bg-dark-border"
+          className="rounded-md p-2 transition-colors hover:bg-surface-sunk dark:hover:bg-dark-border"
           aria-label={enabled ? 'Mute sounds' : 'Enable sounds'}
         >
           {enabled ? (

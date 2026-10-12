@@ -7,6 +7,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
 import FitToViewButton from './FitToViewButton'
+import { useResolveColour } from './useResolveColour'
 
 interface NodeGraphCanvasProps {
   width?: number
@@ -17,28 +18,41 @@ const NODE_RADIUS = 32
 const VIEWBOX_WIDTH = 700
 const VIEWBOX_HEIGHT = 480
 
-const DEFAULT_FILL = '#f1f5f9'
-const DEFAULT_STROKE = '#94a3b8'
-const DEFAULT_TEXT = '#334155'
-const FRONTIER_FILL = '#fef3c7'
-const FRONTIER_STROKE = '#f59e0b'
-const FRONTIER_TEXT = '#78350f'
-const CURRENT_FILL = '#f59e0b'
-const CURRENT_TEXT = '#ffffff'
-const VISITED_FILL = '#4338ca'
-const VISITED_TEXT = '#ffffff'
-const PATH_FILL = '#16a34a'
-const PATH_TEXT = '#ffffff'
-const START_LABEL = '#16a34a'
-const TARGET_LABEL = '#7c3aed'
-const EDGE_DEFAULT = '#cbd5e1'
-const EDGE_CURRENT = '#f59e0b'
-const EDGE_PATH = '#16a34a'
-const EDGE_MST = '#d97706'
+const DEFAULT_FILL = 'var(--surface-sunk)'
+const DEFAULT_STROKE = 'var(--state-neutral)'
+const DEFAULT_TEXT = 'var(--ink-2)'
+const FRONTIER_FILL = 'color-mix(in srgb, var(--state-compare) 20%, var(--surface))'
+const FRONTIER_STROKE = 'var(--state-compare)'
+const FRONTIER_TEXT = 'var(--state-compare-ink)'
+const CURRENT_FILL = 'var(--state-compare)'
+const CURRENT_TEXT = 'var(--state-compare-ink)'
+const VISITED_FILL = 'var(--state-current)'
+const VISITED_TEXT = 'var(--state-current-ink)'
+const PATH_FILL = 'var(--state-sorted)'
+const PATH_TEXT = 'var(--state-sorted-ink)'
+const START_LABEL = 'var(--state-sorted)'
+const TARGET_LABEL = 'var(--state-swap)'
+const EDGE_DEFAULT = 'var(--rule-strong)'
+const EDGE_CURRENT = 'var(--state-compare)'
+const EDGE_PATH = 'var(--state-sorted)'
+const EDGE_MST = 'var(--state-compare)'
 
 // Up to 8 distinct, colourblind-considerate colours for connected
-// components - reused (cycling) if a graph somehow has more than 8.
-const COMPONENT_COLOURS = ['#4338ca', '#16a34a', '#dc2626', '#0891b2', '#d97706', '#7c3aed', '#db2777', '#65a30d']
+// components - reused (cycling) if a graph somehow has more than 8. Each
+// fill comes with the label colour that clears 4.5:1 on it; white failed on
+// most of them. The two fixed hexes are theme-invariant fills, so their
+// label is a fixed dark ink too.
+const CATEGORY_INK = '#12151c'
+const COMPONENT_COLOURS: { fill: string; text: string }[] = [
+  { fill: 'var(--state-current)', text: 'var(--state-current-ink)' },
+  { fill: 'var(--state-sorted)', text: 'var(--state-sorted-ink)' },
+  { fill: 'var(--state-error-text)', text: 'var(--state-error-ink)' },
+  { fill: '#0891b2', text: CATEGORY_INK },
+  { fill: 'var(--state-compare)', text: 'var(--state-compare-ink)' },
+  { fill: 'var(--state-swap)', text: 'var(--state-swap-ink)' },
+  { fill: 'var(--state-neutral)', text: 'var(--state-neutral-ink)' },
+  { fill: '#65a30d', text: CATEGORY_INK },
+]
 
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Current', colour: CURRENT_FILL },
@@ -102,7 +116,7 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
 
   const isInteractive = mode !== AlgorithmMode.PRACTICE && stepIndex === 0
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   const positions = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>()
@@ -287,7 +301,7 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
                     y2={state.directed ? y2 : edge.y2}
                     // Active highlight, not the green of the final path:
                     // a relaxation is an update, not the answer.
-                    stroke="var(--color-active)"
+                    stroke="var(--state-swap)"
                     strokeWidth={3}
                     strokeDasharray={len}
                     initial={prefersReducedMotion ? false : { strokeDashoffset: len }}
@@ -360,6 +374,7 @@ function GraphNodeCircle({
   prefersReducedMotion: boolean
   onPointerDown: () => void
 }) {
+  const resolveColour = useResolveColour()
   const isCurrent = state.currentNode === node.id
   const isPath = !isCurrent && state.pathNodes.includes(node.id)
   const isVisited = !isCurrent && !isPath && state.visited.includes(node.id)
@@ -371,7 +386,7 @@ function GraphNodeCircle({
       : null
 
   const fill = componentColour
-    ? componentColour
+    ? componentColour.fill
     : isCurrent
       ? CURRENT_FILL
       : isPath
@@ -382,7 +397,7 @@ function GraphNodeCircle({
             ? FRONTIER_FILL
             : DEFAULT_FILL
   const textFill = componentColour
-    ? '#ffffff'
+    ? componentColour.text
     : isCurrent
       ? CURRENT_TEXT
       : isPath
@@ -413,7 +428,7 @@ function GraphNodeCircle({
         r={NODE_RADIUS}
         stroke={stroke}
         strokeWidth={isFrontier ? 2.5 : isPath ? 3 : 1.5}
-        animate={{ fill }}
+        animate={{ fill: resolveColour(fill) }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }}
       />
       <text textAnchor="middle" dominantBaseline="central" style={{ fill: textFill, fontSize: 14, fontWeight: 600 }}>
@@ -426,8 +441,8 @@ function GraphNodeCircle({
       )}
       {topoIndex !== undefined && topoIndex >= 0 && (
         <g>
-          <circle cx={NODE_RADIUS - 4} cy={-NODE_RADIUS + 4} r={9} fill="#1f2937" />
-          <text x={NODE_RADIUS - 4} y={-NODE_RADIUS + 4} textAnchor="middle" dominantBaseline="central" style={{ fill: '#ffffff', fontSize: 9, fontWeight: 700 }}>
+          <circle cx={NODE_RADIUS - 4} cy={-NODE_RADIUS + 4} r={9} fill="var(--ink)" />
+          <text x={NODE_RADIUS - 4} y={-NODE_RADIUS + 4} textAnchor="middle" dominantBaseline="central" style={{ fill: 'var(--paper)', fontSize: 9, fontWeight: 700 }}>
             {topoIndex + 1}
           </text>
         </g>

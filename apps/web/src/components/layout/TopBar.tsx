@@ -1,45 +1,25 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { conditionFeatures } from '@/utils/studyCondition'
-import { AlgorithmTrack } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
-import { useAuth } from '@/context/AuthContext'
+import { getTrack, trackPath } from '@/data/tracks'
+import { useStudyScope } from '@/hooks/useStudyScope'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { StudentAvatar } from '@/components/brand'
-import AccountIdentity from './AccountIdentity'
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
 import SoundToggle from '@/components/ui/SoundToggle'
-import ThemeToggle from '@/components/ui/ThemeToggle'
 import ZPDScaffoldingPill from '@/components/ui/ZPDScaffoldingPill'
+import { AppTopBar } from './AppShell'
+import { requestSessionExit } from './sessionExit'
 
 export const OPEN_SHORTCUTS_MODAL_EVENT = 'dsa-tutor:open-shortcuts-modal'
-// AlgorithmPage owns whether leaving now should show the session-end
-// survey first (it knows the active DB session id); this button only
-// signals the intent to leave, it never navigates directly.
-export const REQUEST_SESSION_EXIT_EVENT = 'dsa-tutor:request-session-exit'
 
-const TRACK_DISPLAY_NAMES: Record<AlgorithmTrack, string> = {
-  [AlgorithmTrack.FOUNDATIONS]: 'Foundations',
-  [AlgorithmTrack.SORTING]: 'Sorting',
-  [AlgorithmTrack.TREES]: 'Trees',
-  [AlgorithmTrack.GRAPHS]: 'Graphs',
-  [AlgorithmTrack.SEARCHING]: 'Searching',
-  [AlgorithmTrack.TECHNIQUES]: 'Techniques',
-}
+const ICON_BUTTON =
+  'flex size-8 shrink-0 items-center justify-center rounded-sm text-ink-2 transition-colors duration-quick hover:bg-surface-sunk hover:text-ink'
 
 function EyeIcon({ active }: { active: boolean }) {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      className={active ? 'text-primary' : 'text-text-muted dark:text-dark-text-secondary'}
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={active ? 'text-brand' : undefined}>
       <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -56,8 +36,6 @@ function BackToDashboardIcon() {
 }
 
 export default function TopBar() {
-  const navigate = useNavigate()
-  const { user, logout } = useAuth()
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
@@ -70,109 +48,70 @@ export default function TopBar() {
 
   // Looked up from the URL slug, not the store's algorithmName: an
   // AlgorithmPage effect overwrites algorithmName with the topic's
-  // display name (e.g. "Binary Search Tree") once the topics API call
-  // resolves, so a registry lookup keyed on that field would fail here
-  // and leave the track blank.
+  // display name once the topics API call resolves, so a registry lookup
+  // keyed on that field would fail here and leave the track blank.
   const registryEntry = getAlgorithmRegistryEntry(algorithmSlug ?? '')
+  // A study participant has no track pages (see useStudyScope).
+  const { restricted } = useStudyScope()
   const algorithmDisplayName = registryEntry?.displayName ?? algorithmName
-  const trackDisplayName = registryEntry ? TRACK_DISPLAY_NAMES[registryEntry.track] : ''
+  const crumbs = registryEntry && !restricted
+    ? [
+        { label: 'Home', to: '/' },
+        { label: getTrack(registryEntry.track).name, to: trackPath(registryEntry.track) },
+        { label: algorithmDisplayName },
+      ]
+    : [{ label: 'Home', to: '/' }, { label: algorithmDisplayName }]
 
   return (
-    <header className="relative flex h-14 w-full items-center justify-between border-b border-border bg-card px-4">
-      <div className="flex items-center gap-3">
-        <nav className="flex items-center gap-1 text-[13px]">
-          <span className="text-text-muted dark:text-dark-text-secondary">Dashboard</span>
-          <span className="text-text-muted dark:text-dark-text-secondary">/</span>
-          <span className="text-text-muted dark:text-dark-text-secondary">{trackDisplayName}</span>
-          <span className="text-text-muted dark:text-dark-text-secondary">/</span>
-          <span className="font-bold text-primary">{algorithmDisplayName}</span>
-        </nav>
-        {features.scaffoldingPill && <ZPDScaffoldingPill />}
-      </div>
-
-      {features.modeToggle && (
-        <div className="absolute left-1/2 -translate-x-1/2">
-          <ModeToggle />
-        </div>
-      )}
-
-      <div className="flex items-center gap-3">
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="w-32">
-            <ProgressBar />
+    <AppTopBar
+      crumbs={crumbs}
+      onNavigate={requestSessionExit}
+      afterCrumbs={features.scaffoldingPill ? <ZPDScaffoldingPill /> : undefined}
+      center={features.modeToggle ? <ModeToggle /> : undefined}
+      progressPercent={progressPercent}
+      actions={
+        <>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="w-28">
+              <ProgressBar />
+            </div>
+            <span className="text-mono-sm whitespace-nowrap text-ink-2">
+              Step {Math.min(stepIndex + 1, snapshotArray.length)} of {snapshotArray.length}
+            </span>
           </div>
-          <span className="text-[11px] whitespace-nowrap tabular-nums text-text-muted dark:text-dark-text-secondary">
-            Step {Math.min(stepIndex + 1, snapshotArray.length)} of {snapshotArray.length}
-          </span>
-        </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={toggleFocusMode}
-              aria-label="Toggle focus mode"
-              className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-surface dark:hover:bg-dark-border"
-            >
-              <EyeIcon active={focusModeActive} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Focus Mode (F)</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={toggleFocusMode} aria-label="Toggle focus mode" aria-pressed={focusModeActive} className={ICON_BUTTON}>
+                <EyeIcon active={focusModeActive} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Focus mode (F)</TooltipContent>
+          </Tooltip>
 
-        <div className="shrink-0">
-          <SoundToggle />
-        </div>
+          <div className="shrink-0">
+            <SoundToggle />
+          </div>
 
-        <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SHORTCUTS_MODAL_EVENT))}
+            aria-label="Keyboard shortcuts"
+            className={ICON_BUTTON}
+          >
+            ?
+          </button>
 
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SHORTCUTS_MODAL_EVENT))}
-          aria-label="Keyboard shortcuts"
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
-        >
-          ?
-        </button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" aria-label="Account menu" className="flex shrink-0 items-center justify-center rounded-full">
-              <StudentAvatar initials={user?.name?.[0]?.toUpperCase() ?? '?'} size={28} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <AccountIdentity />
-            <DropdownMenuItem
-              onSelect={() => {
-                logout()
-                navigate('/auth')
-              }}
-            >
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent(REQUEST_SESSION_EXIT_EVENT))}
-              aria-label="Back to dashboard"
-              className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border"
-            >
-              <BackToDashboardIcon />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Back to dashboard</TooltipContent>
-        </Tooltip>
-      </div>
-      <div
-        className="absolute inset-x-0 bottom-0 h-[2px] bg-primary"
-        style={{ width: `${progressPercent}%` }}
-        aria-hidden="true"
-      />
-    </header>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={() => requestSessionExit('/')} aria-label="Back to dashboard" className={ICON_BUTTON}>
+                <BackToDashboardIcon />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Back to dashboard</TooltipContent>
+          </Tooltip>
+        </>
+      }
+    />
   )
 }

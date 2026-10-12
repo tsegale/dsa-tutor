@@ -10,6 +10,7 @@ import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
+import { useResolveColour } from './useResolveColour'
 
 interface ArrayCanvasProps {
   width?: number
@@ -75,15 +76,15 @@ type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted' | 'eliminated'
 // white canvas can reach WCAG's 3:1 non-text contrast minimum once the
 // base colour is light to begin with (even solid black at 40% opacity
 // only reaches ~1.6:1). Neutral bars are now fully opaque with a darker
-// tone instead, staying visually de-emphasised next to the saturated
+// tone instead (--state-neutral, 3.1:1 on white), staying visually de-emphasised next to the saturated
 // comparing/swapping/sorted colours through hue and saturation rather
 // than transparency (see remediation doc 9.9).
-const NEUTRAL_FILL = '#8b90c9'
+const NEUTRAL_FILL = 'var(--state-neutral)'
 const BAR_COLOURS: Record<BarState, { fill: string; opacity: number; glow?: string }> = {
   neutral: { fill: NEUTRAL_FILL, opacity: 1.0 },
-  comparing: { fill: '#f59e0b', opacity: 1.0, glow: 'rgba(245,158,11,0.3)' },
-  swapping: { fill: '#7c3aed', opacity: 1.0, glow: 'rgba(124,58,237,0.3)' },
-  sorted: { fill: '#16a34a', opacity: 1.0 },
+  comparing: { fill: 'var(--state-compare)', opacity: 1.0, glow: 'color-mix(in srgb, var(--state-compare) 30%, transparent)' },
+  swapping: { fill: 'var(--state-swap)', opacity: 1.0, glow: 'color-mix(in srgb, var(--state-swap) 30%, transparent)' },
+  sorted: { fill: 'var(--state-sorted)', opacity: 1.0 },
   // Search only: out of the remaining range. The inactive 40% rule.
   eliminated: { fill: NEUTRAL_FILL, opacity: 0.4 },
 }
@@ -135,7 +136,7 @@ function legendForContext(canvasType: CanvasType, algorithmSlug: string | undefi
   return DEFAULT_LEGEND
 }
 
-const MISTAKE_WASH_COLOR = 'rgba(220, 38, 38, 0.12)'
+const MISTAKE_WASH_COLOR = 'color-mix(in srgb, var(--state-error) 12%, transparent)'
 // 0.5x speed of the nominal 800ms step interval used elsewhere.
 const MISTAKE_STEP_INTERVAL_MS = 1600
 const MISTAKE_PAUSE_MS = 1000
@@ -266,6 +267,7 @@ export default function ArrayCanvas({
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
+  const resolveColour = useResolveColour()
   // Bars spring when a value changes, not when the canvas itself resizes
   // (the prediction panel opening, a panel drag): there the whole layout
   // shifts at once, and springing only the bars left them visibly out of
@@ -523,7 +525,7 @@ export default function ArrayCanvas({
   const canvasLabel = `${algorithmName}, step ${snapshot.stepIndex + 1} of ${totalSteps}: ${canvasNarration}`
 
   const progressColorClass =
-    progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+    progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   return (
     <>
@@ -588,7 +590,7 @@ export default function ArrayCanvas({
           height={height - PADDING * 2}
           rx={6}
           fill="none"
-          stroke="#F59E0B"
+          stroke="var(--state-compare)"
           strokeWidth={2}
           strokeDasharray="6 4"
         />
@@ -695,7 +697,7 @@ export default function ArrayCanvas({
               // fill is animated with the geometry: on a motion.rect a
               // changing style fill is not re-applied, which left every bar
               // stuck on its first colour.
-              animate={{ attrY: bar.y, height: bar.height, fill: colours.fill }}
+              animate={{ attrY: bar.y, height: bar.height, fill: resolveColour(colours.fill) }}
               transition={{ attrY: barMove, height: barMove, fill: { duration: prefersReducedMotion ? 0 : 0.2 } }}
               width={bar.width}
               rx={4}
@@ -710,7 +712,7 @@ export default function ArrayCanvas({
                 height={bar.height}
                 rx={4}
                 fill="none"
-                stroke="#DC2626"
+                stroke="var(--state-error)"
                 strokeWidth={2}
                 strokeDasharray="6 4"
               />
@@ -766,7 +768,7 @@ export default function ArrayCanvas({
           <>
             {twoPointer.left === twoPointer.right ? (
               <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 6})`}>
-                <polygon points="0,-8 -7,4 7,4" fill="#7c3aed" />
+                <polygon points="0,-8 -7,4 7,4" fill="var(--state-swap)" />
                 <text y={16} textAnchor="middle" className="fill-active text-[11px] font-bold">
                   L=R
                 </text>
@@ -774,13 +776,13 @@ export default function ArrayCanvas({
             ) : (
               <>
                 <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 6})`}>
-                  <polygon points="0,-8 -7,4 7,4" fill="#16a34a" />
+                  <polygon points="0,-8 -7,4 7,4" fill="var(--state-sorted)" />
                   <text y={16} textAnchor="middle" className="fill-success text-[11px] font-bold">
                     L
                   </text>
                 </g>
                 <g transform={`translate(${bars[twoPointer.right].x + bars[twoPointer.right].width / 2}, ${height - 6})`}>
-                  <polygon points="0,-8 -7,4 7,4" fill="#dc2626" />
+                  <polygon points="0,-8 -7,4 7,4" fill="var(--state-error)" />
                   <text y={16} textAnchor="middle" className="fill-error text-[11px] font-bold">
                     R
                   </text>
@@ -803,8 +805,8 @@ export default function ArrayCanvas({
               width={bars[windowOverlay.end].x + bars[windowOverlay.end].width - bars[windowOverlay.start].x}
               height={height - PADDING * 2}
               rx={8}
-              fill="rgba(55, 48, 163, 0.15)"
-              stroke="#3730a3"
+              fill="color-mix(in srgb, var(--state-current) 15%, transparent)"
+              stroke="var(--state-current)"
               strokeWidth={2}
               transition={barMove}
             />

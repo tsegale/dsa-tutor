@@ -54,7 +54,7 @@ export default function BadgesSection() {
               <div
                 className="flex size-11 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isAwarded ? `color-mix(in srgb, ${TIER_BORDER[badge.tier]} 13%, transparent)` : 'var(--surface)',
+                  backgroundColor: isAwarded ? `color-mix(in srgb, ${TIER_BORDER[badge.tier]} 13%, transparent)` : 'var(--surface-sunk)',
                   color: isAwarded ? TIER_BORDER[badge.tier] : 'var(--tier-locked)',
                 }}
               >

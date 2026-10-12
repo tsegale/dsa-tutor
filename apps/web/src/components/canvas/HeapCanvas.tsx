@@ -5,6 +5,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { HeapState } from '@/engine/heap'
+import { useResolveColour } from './useResolveColour'
 
 interface HeapCanvasProps {
   width?: number
@@ -25,12 +26,12 @@ const BOX_GAP = 6
 const ARRAY_TOP_PADDING = 28
 const DEFAULT_WIDTH = 600
 
-const DEFAULT_FILL = '#c7c9e8'
-const DEFAULT_TEXT = '#4a4d8a'
-const CURRENT_FILL = '#f59e0b'
-const CURRENT_TEXT = '#78350f'
-const RELATIVE_FILL = 'rgba(55, 48, 163, 0.6)'
-const RELATIVE_TEXT = '#ffffff'
+const DEFAULT_FILL = 'var(--state-neutral)'
+const DEFAULT_TEXT = 'var(--state-neutral-ink)'
+const CURRENT_FILL = 'var(--state-compare)'
+const CURRENT_TEXT = 'var(--state-compare-ink)'
+const RELATIVE_FILL = 'color-mix(in srgb, var(--state-current) 60%, transparent)'
+const RELATIVE_TEXT = 'var(--state-current-ink)'
 
 /** Complete-binary-tree layout purely from array indices - a heap has no
  * explicit node/pointer structure, so position is derived arithmetically
@@ -56,6 +57,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
+  const resolveColour = useResolveColour()
   const state = snapshot?.dataStructureState as HeapState | undefined
 
   const treeSlots = useMemo(() => layoutHeapTree(state?.array.length ?? 0, width), [state, width])
@@ -71,7 +73,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
     return result
   }, [treeSlots])
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
@@ -118,7 +120,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
             <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">Current</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="size-2 rounded-sm" style={{ backgroundColor: '#3730a3' }} aria-hidden="true" />
+            <span className="size-2 rounded-sm" style={{ backgroundColor: 'var(--state-current)' }} aria-hidden="true" />
             <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">Parent / child</span>
           </div>
         </div>
@@ -148,7 +150,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
                         : { x: CANVAS_SPRING, y: CANVAS_SPRING, default: { duration: 0.25, ease: 'backOut' } }
                     }
                   >
-                    <motion.circle r={NODE_RADIUS} animate={{ fill }} transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }} />
+                    <motion.circle r={NODE_RADIUS} animate={{ fill: resolveColour(fill) }} transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }} />
                     <text textAnchor="middle" dominantBaseline="central" style={{ fill: text, fontSize: 12, fontWeight: 500 }}>
                       {state.array[slot.index]}
                     </text>
@@ -158,7 +160,7 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
             </svg>
 
             <div className="border-t border-border px-3 pt-3 dark:border-dark-border">
-              <p className="mb-1 text-[10px] font-semibold tracking-[0.06em] text-text-muted uppercase dark:text-dark-text-secondary">
+              <p className="text-micro mb-1 text-text-muted dark:text-dark-text-secondary">
                 Array view
               </p>
               <svg width={Math.max(width, arrayRowWidth)} height={BOX_SIZE + ARRAY_TOP_PADDING} role="img" aria-label="Heap array representation">
@@ -176,8 +178,8 @@ export default function HeapCanvas({ width = DEFAULT_WIDTH, height = 400 }: Heap
                         width={BOX_SIZE}
                         height={BOX_SIZE}
                         rx={6}
-                        animate={{ fill }}
-                        stroke={index === state.currentIdx ? '#78350f' : 'none'}
+                        animate={{ fill: resolveColour(fill) }}
+                        stroke={index === state.currentIdx ? 'var(--state-compare-ink)' : 'none'}
                         strokeWidth={index === state.currentIdx ? 2 : 0}
                         transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }}
                       />

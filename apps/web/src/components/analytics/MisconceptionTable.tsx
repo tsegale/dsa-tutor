@@ -68,13 +68,13 @@ export default function MisconceptionTable({ breakdown }: MisconceptionTableProp
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-text-primary text-white">
-              <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide uppercase">Rank</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide uppercase">
-                Misconception Category
+              <th className="text-micro px-4 py-2.5 text-left">Rank</th>
+              <th className="text-micro px-4 py-2.5 text-left">
+                Misconception category
               </th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide uppercase">Count</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide uppercase">Frequency</th>
-              <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide uppercase">Severity</th>
+              <th className="text-micro px-4 py-2.5 text-left">Count</th>
+              <th className="text-micro px-4 py-2.5 text-left">Frequency</th>
+              <th className="text-micro px-4 py-2.5 text-left">Severity</th>
             </tr>
           </thead>
           <tbody>

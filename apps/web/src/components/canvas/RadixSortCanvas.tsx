@@ -16,11 +16,11 @@ const CHIP_HEIGHT = 22
 const CHIP_GAP = 4
 const BOX_HEIGHT = 40
 
-const NEUTRAL_FILL = '#c7c9e8'
-const NEUTRAL_TEXT = '#4a4d8a'
-const ACTIVE_FILL = '#f59e0b'
-const ACTIVE_TEXT = '#78350f'
-const BUCKET_FILL = '#7c3aed'
+const NEUTRAL_FILL = 'var(--state-neutral)'
+const NEUTRAL_TEXT = 'var(--state-neutral-ink)'
+const ACTIVE_FILL = 'var(--state-compare)'
+const ACTIVE_TEXT = 'var(--state-compare-ink)'
+const BUCKET_FILL = 'var(--state-swap)'
 
 function digitLabel(digitPosition: number): string {
   if (digitPosition === 1) return 'ones digit'
@@ -189,7 +189,7 @@ export default function RadixSortCanvas({ width = 600, height = 300 }: RadixSort
                     x={x + bucketWidth / 2}
                     y={chipY + CHIP_HEIGHT / 2 + 4}
                     textAnchor="middle"
-                    className="fill-white text-[10px] font-medium"
+                    className="fill-state-swap-ink text-[10px] font-medium"
                   >
                     {value}
                   </text>

@@ -45,7 +45,7 @@ export default function AnalyticsNav({ refetch, isFetching }: AnalyticsNavProps)
           type="button"
           onClick={() => navigate('/')}
           aria-label="Back to dashboard"
-          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk"
         >
           <BackArrowIcon />
         </button>
@@ -64,7 +64,7 @@ export default function AnalyticsNav({ refetch, isFetching }: AnalyticsNavProps)
           type="button"
           onClick={() => refetch()}
           aria-label="Refresh analytics"
-          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface"
+          className="flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk"
         >
           <RefreshIcon spinning={isFetching} />
         </button>

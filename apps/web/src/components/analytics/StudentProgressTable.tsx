@@ -189,30 +189,30 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface">
+              <tr className="border-b border-border bg-surface-sunk">
                 {COLUMNS.map((col) => (
                   <th key={col.key} className="px-4 py-2.5 text-left">
                     <button
                       type="button"
                       onClick={() => handleSort(col.key)}
-                      className="flex items-center gap-1 text-[12px] font-semibold tracking-wide text-text-muted uppercase hover:text-text-primary"
+                      className="text-micro flex items-center gap-1 text-text-muted hover:text-text-primary"
                     >
                       {col.label}
                       {sortColumn === col.key && <SortArrow direction={sortDirection} />}
                     </button>
                   </th>
                 ))}
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   AI Challenge Type
                 </th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   Hint dependency
                 </th>
-                <th className="px-4 py-2.5 text-left text-[12px] font-semibold tracking-wide text-text-muted uppercase">
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   Action needed
                 </th>
                 <th
-                  className="px-4 py-2.5 text-center text-[12px] font-semibold tracking-wide text-text-muted uppercase"
+                  className="text-micro px-4 py-2.5 text-center text-text-muted"
                   style={{ width: 60 }}
                 >
                   Progress
@@ -241,7 +241,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                   onClick={() => onSelectStudent?.(student)}
                   className={cn(
                     'border-b border-border last:border-0',
-                    onSelectStudent && 'cursor-pointer hover:bg-surface',
+                    onSelectStudent && 'cursor-pointer hover:bg-surface-sunk',
                   )}
                 >
                   <td className="px-4 py-3 text-text-primary">
@@ -330,7 +330,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
           type="button"
           onClick={handleExport}
           disabled={students.length === 0}
-          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40"
         >
           Export heatmap
         </button>

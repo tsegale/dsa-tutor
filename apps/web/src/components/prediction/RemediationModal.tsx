@@ -87,7 +87,7 @@ export default function RemediationModal({ payload, onShown, onComplete }: Remed
     <Dialog open onOpenChange={() => {}}>
       <DialogContent showCloseButton={false} onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-lg">
         <div className="flex flex-col gap-4 py-2">
-          <p className="text-xs font-semibold tracking-wide text-secondary uppercase">Quick check</p>
+          <p className="text-micro text-secondary">Quick check</p>
 
           {payload.scaffold && (
             <p className="rounded-md bg-primary-light p-3 text-sm text-text-primary">{payload.scaffold}</p>

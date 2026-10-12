@@ -20,7 +20,7 @@ export default function BottomOutModal({ category, algorithmTopicSlug, onAcknowl
       <DialogContent showCloseButton={false} onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-lg">
         <div className="flex flex-col gap-4 py-2">
           <div>
-            <p className="text-xs font-semibold tracking-wide text-secondary uppercase">Here's how it works</p>
+            <p className="text-micro text-secondary">Here's how it works</p>
             <h2 className="mt-1 text-base font-semibold text-text-primary">
               Let's settle {getStudentLanguageLabel(category, algorithmTopicSlug)} before moving on.
             </h2>

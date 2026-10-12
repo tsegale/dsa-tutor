@@ -277,7 +277,7 @@ export default function FeynmanModal({
                 <span className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary">
                   Explanation score: {result.score}/100
                 </span>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-surface dark:bg-dark-border">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-surface-sunk dark:bg-dark-border">
                   <div
                     className={cn('h-full rounded-full transition-all duration-500', scoreColorClass(result.score))}
                     style={{ width: `${result.score}%` }}

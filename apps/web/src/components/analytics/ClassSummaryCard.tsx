@@ -75,7 +75,7 @@ export default function ClassSummaryCard({ analytics }: ClassSummaryCardProps) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-medium tracking-wide text-tone-indigo-label uppercase">AI classroom insight</p>
+          <p className="text-micro text-tone-indigo-label">AI classroom insight</p>
           <Tooltip>
             <TooltipTrigger asChild>
               <button

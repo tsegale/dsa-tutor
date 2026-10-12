@@ -17,7 +17,7 @@ export default function FitToViewButton({ zoomed, onFit, className }: { zoomed: 
       onClick={onFit}
       aria-label="Fit to view"
       className={cn(
-        'absolute right-3 bottom-3 z-10 flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-text-secondary shadow-sm hover:bg-surface dark:text-dark-text-secondary dark:hover:bg-dark-border',
+        'absolute right-3 bottom-3 z-10 flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-text-secondary shadow-sm hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border',
         className,
       )}
     >

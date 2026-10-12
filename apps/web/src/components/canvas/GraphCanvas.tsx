@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
 import FitToViewButton from './FitToViewButton'
 import type { BFSState } from '@/engine/bfs'
+import { useResolveColour } from './useResolveColour'
 
 interface GraphCanvasProps {
   width?: number
@@ -36,25 +37,25 @@ const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
   G: { x: 390, y: 410 },
 }
 
-// Same fixed-hex-palette rationale as TreeCanvas: these are animated
-// via Framer's `animate={{ fill }}`, which needs literal colour
-// values, and this palette was already verified legible in dark mode.
-const DEFAULT_FILL = '#ffffff'
-const DEFAULT_STROKE = '#cbd5e1'
-const DEFAULT_TEXT = '#0f172a'
-const CURRENT_FILL = '#f59e0b'
-const CURRENT_TEXT = '#78350f'
-const VISITED_FILL = '#16a34a'
-const VISITED_TEXT = '#ffffff'
-const QUEUED_FILL = 'rgba(55, 48, 163, 0.7)'
-const QUEUED_TEXT = '#ffffff'
-const TARGET_RING = '#7c3aed'
-const FOUND_PATH_EDGE = '#16a34a'
-const TRAVERSED_EDGE = '#3730a3'
+// Canvas state tokens from index.css. Framer's `animate={{ fill }}` needs
+// a literal colour to interpolate toward, so animated fills go through
+// useResolveColour, which also re-resolves them when the theme flips.
+const DEFAULT_FILL = 'var(--surface)'
+const DEFAULT_STROKE = 'var(--rule-strong)'
+const DEFAULT_TEXT = 'var(--ink)'
+const CURRENT_FILL = 'var(--state-compare)'
+const CURRENT_TEXT = 'var(--state-compare-ink)'
+const VISITED_FILL = 'var(--state-sorted)'
+const VISITED_TEXT = 'var(--state-sorted-ink)'
+const QUEUED_FILL = 'color-mix(in srgb, var(--state-current) 70%, transparent)'
+const QUEUED_TEXT = 'var(--state-current-ink)'
+const TARGET_RING = 'var(--state-swap)'
+const FOUND_PATH_EDGE = 'var(--state-sorted)'
+const TRAVERSED_EDGE = 'var(--state-current)'
 
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Currently processing', colour: CURRENT_FILL },
-  { label: 'In queue', colour: '#3730a3' },
+  { label: 'In queue', colour: 'var(--state-current)' },
   { label: 'Visited', colour: VISITED_FILL },
   { label: 'Unvisited', colour: DEFAULT_STROKE },
 ]
@@ -66,6 +67,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
   const stepIndex = useAlgorithmStore((s) => s.stepIndex)
   const snapshotArray = useAlgorithmStore((s) => s.snapshotArray)
   const prefersReducedMotion = useReducedMotion()
+  const resolveColour = useResolveColour()
   const state = snapshot?.dataStructureState as BFSState | undefined
   const prevState =
     stepIndex > 0 ? (snapshotArray[stepIndex - 1]?.dataStructureState as BFSState | undefined) : undefined
@@ -84,7 +86,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
 
   const zoom = useViewBoxZoom(BASE_VIEW)
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   // Guards against the transient render right after navigating to this
   // page, before setAlgorithm() has replaced the store's default
@@ -154,7 +156,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
 
       <div className="shrink-0 pt-8">
         <div className="flex items-center gap-2 px-3">
-          <span className="text-11 tracking-wider-caps text-text-muted dark:text-dark-text-secondary">Queue:</span>
+          <span className="text-micro text-text-muted dark:text-dark-text-secondary">Queue:</span>
           <div className="flex items-center gap-1.5">
             <AnimatePresence initial={false}>
               {state.queue.map((id, i) => (
@@ -166,7 +168,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
                   transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}
                   className={cn(
                     'flex size-7 items-center justify-center rounded-md border text-[12px] font-medium',
-                    i === 0 ? 'border-primary bg-primary text-white' : 'border-primary text-primary',
+                    i === 0 ? 'border-state-current bg-state-current text-state-current-ink' : 'border-state-current text-text-primary dark:text-dark-text-primary',
                   )}
                 >
                   {id}
@@ -258,7 +260,7 @@ export default function GraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HE
                   r={NODE_RADIUS}
                   stroke={DEFAULT_STROKE}
                   strokeWidth={fill === DEFAULT_FILL ? 1.5 : 0}
-                  animate={{ fill }}
+                  animate={{ fill: resolveColour(fill) }}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }}
                 />
                 <text

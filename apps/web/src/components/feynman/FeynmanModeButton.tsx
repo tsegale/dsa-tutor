@@ -31,7 +31,7 @@ export default function FeynmanModeButton() {
       className={cn(
         'flex w-full items-center justify-center gap-1.5 rounded-md border py-2 text-sm font-medium',
         disabled
-          ? 'cursor-default border-border bg-surface text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary'
+          ? 'cursor-default border-border bg-surface-sunk text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary'
           : 'border-active bg-active/10 text-active hover:bg-active/15',
       )}
     >

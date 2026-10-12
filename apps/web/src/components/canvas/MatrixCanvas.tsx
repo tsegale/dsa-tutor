@@ -3,6 +3,7 @@ import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from 
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import type { MatrixState } from '@/engine/floydWarshall'
+import { useResolveColour } from './useResolveColour'
 
 interface MatrixCanvasProps {
   width?: number
@@ -16,9 +17,10 @@ export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvas
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
+  const resolveColour = useResolveColour()
   const state = snapshot?.dataStructureState as MatrixState | undefined
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
@@ -85,8 +87,8 @@ export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvas
                 const isActive = state.i === i && state.j === j
                 const isUpdated = updatedSet.has(`${i},${j}`)
                 const value = state.dist[i][j]
-                const fill = isActive ? '#f59e0b' : isUpdated ? '#16a34a' : i === j ? '#f1f5f9' : '#ffffff'
-                const textFill = isActive || isUpdated ? '#ffffff' : '#334155'
+                const fill = isActive ? 'var(--state-compare)' : isUpdated ? 'var(--state-sorted)' : i === j ? 'var(--surface-sunk)' : 'var(--surface)'
+                const textFill = isActive ? 'var(--state-compare-ink)' : isUpdated ? 'var(--state-sorted-ink)' : 'var(--ink-2)'
                 return (
                   <g key={`cell-${i}-${j}`}>
                     <motion.rect
@@ -95,8 +97,8 @@ export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvas
                       width={CELL_SIZE - 2}
                       height={CELL_SIZE - 2}
                       rx={4}
-                      animate={{ fill }}
-                      stroke="#cbd5e1"
+                      animate={{ fill: resolveColour(fill) }}
+                      stroke="var(--rule-strong)"
                       strokeWidth={1}
                       transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }}
                     />

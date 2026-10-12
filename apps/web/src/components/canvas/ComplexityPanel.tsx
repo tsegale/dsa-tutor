@@ -26,8 +26,8 @@ function RunMeasurement({ topicSlug }: { topicSlug: string | undefined }) {
         : null
 
   return (
-    <div className="rounded-md border border-border bg-surface p-3" aria-live="polite">
-      <p className="text-xs font-bold text-primary">This run</p>
+    <div className="rounded-md border border-border bg-surface-sunk p-3" aria-live="polite">
+      <p className="text-xs font-bold text-text-primary">This run</p>
       {countHidden ? (
         <p className="mt-1 text-sm text-text-muted">The measured count appears once you have estimated it at the end of the run.</p>
       ) : (
@@ -571,7 +571,7 @@ export default function ComplexityPanel() {
   }
 
   const rows = [
-    { label: 'Best case', note: data.bestNote, value: data.best, colorClass: 'text-primary bg-primary-light' },
+    { label: 'Best case', note: data.bestNote, value: data.best, colorClass: 'text-text-primary bg-card' },
     { label: 'Average case', note: data.averageNote, value: data.average, colorClass: 'text-secondary bg-secondary-light' },
     { label: 'Worst case', note: data.worstNote, value: data.worst, colorClass: 'text-error bg-error-light' },
     { label: 'Space', note: data.spaceNote, value: data.space, colorClass: 'text-success bg-success-light' },

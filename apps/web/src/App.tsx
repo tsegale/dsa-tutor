@@ -1,12 +1,14 @@
 import { Suspense, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { getToken } from '@/api/auth'
 import { fetchStudyStatus } from '@/api/study'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
+import { RouteFocus } from '@/components/layout/RouteFocus'
 import { lazyWithReload } from '@/utils/chunkReload'
 import { useThemeStore } from '@/store/useThemeStore'
 
@@ -15,8 +17,10 @@ import { useThemeStore } from '@/store/useThemeStore'
 // instead of all being bundled into the one script every visitor
 // downloads before first paint.
 const AuthPage = lazyWithReload(() => import('@/pages/AuthPage'))
-const Dashboard = lazyWithReload(() => import('@/pages/Dashboard'))
+const Home = lazyWithReload(() => import('@/pages/Home'))
 const AlgorithmPage = lazyWithReload(() => import('@/pages/AlgorithmPage'))
+const TrackPage = lazyWithReload(() => import('@/pages/TrackPage'))
+const ProgressPage = lazyWithReload(() => import('@/pages/ProgressPage'))
 const EducatorDashboard = lazyWithReload(() => import('@/pages/EducatorDashboard'))
 const AssessmentPage = lazyWithReload(() => import('@/pages/AssessmentPage'))
 const ConsentPage = lazyWithReload(() => import('@/pages/ConsentPage'))
@@ -34,7 +38,7 @@ const queryClient = new QueryClient()
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface">
+    <div className="flex min-h-screen items-center justify-center bg-surface-sunk">
       <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
     </div>
   )
@@ -104,6 +108,14 @@ function useApplyTheme() {
   }, [theme])
 }
 
+// Keyed on the topic: the search palette can move from one topic straight
+// to another inside the workspace, and the same element would otherwise be
+// reused with the previous topic's session state.
+function AlgorithmRoute() {
+  const { algorithmName } = useParams<{ algorithmName: string }>()
+  return <AlgorithmPage key={algorithmName} />
+}
+
 export default function App() {
   useApplyTheme()
 
@@ -119,7 +131,23 @@ export default function App() {
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/track/:track"
+                  element={
+                    <ProtectedRoute>
+                      <TrackPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/progress"
+                  element={
+                    <ProtectedRoute>
+                      <ProgressPage />
                     </ProtectedRoute>
                   }
                 />
@@ -127,7 +155,7 @@ export default function App() {
                   path="/algorithm/:algorithmName"
                   element={
                     <ProtectedRoute>
-                      <AlgorithmPage />
+                      <AlgorithmRoute />
                     </ProtectedRoute>
                   }
                 />
@@ -176,7 +204,10 @@ export default function App() {
               </Routes>
             </Suspense>
             <GlobalOnboarding />
+            <RouteFocus />
           </BrowserRouter>
+          {/* One toast region for the whole app, styled to the tokens. */}
+          <Toaster position="bottom-right" />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

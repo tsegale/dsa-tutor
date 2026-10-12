@@ -39,7 +39,7 @@ function DropdownMenuItem({
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
       className={cn(
-        'flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm text-text-primary outline-none select-none hover:bg-surface focus:bg-surface dark:hover:bg-dark-border dark:focus:bg-dark-border',
+        'flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm text-text-primary outline-none select-none hover:bg-surface-sunk focus:bg-surface-sunk dark:hover:bg-dark-border dark:focus:bg-dark-border',
         'data-[disabled]:cursor-not-allowed data-[disabled]:text-text-muted data-[disabled]:hover:bg-transparent data-[disabled]:focus:bg-transparent',
         className,
       )}

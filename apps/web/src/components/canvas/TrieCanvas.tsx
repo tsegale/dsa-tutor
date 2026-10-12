@@ -5,6 +5,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import type { TrieNode, TrieState } from '@/engine/trie'
+import { useResolveColour } from './useResolveColour'
 
 interface TrieCanvasProps {
   width?: number
@@ -33,15 +34,15 @@ const MIN_GAP = 16
 const TOP_PADDING = 40
 const DEFAULT_WIDTH = 700
 
-const DEFAULT_FILL = '#c7c9e8'
-const DEFAULT_TEXT = '#4a4d8a'
-const CURRENT_FILL = '#f59e0b'
-const CURRENT_TEXT = '#78350f'
-const MATCHED_FILL = '#16a34a'
-const MATCHED_TEXT = '#ffffff'
-const NEW_FILL = '#2563eb'
-const NEW_TEXT = '#ffffff'
-const EDGE_COLOR = '#c7c9e8'
+const DEFAULT_FILL = 'var(--state-neutral)'
+const DEFAULT_TEXT = 'var(--state-neutral-ink)'
+const CURRENT_FILL = 'var(--state-compare)'
+const CURRENT_TEXT = 'var(--state-compare-ink)'
+const MATCHED_FILL = 'var(--state-sorted)'
+const MATCHED_TEXT = 'var(--state-sorted-ink)'
+const NEW_FILL = 'var(--state-current)'
+const NEW_TEXT = 'var(--state-current-ink)'
+const EDGE_COLOR = 'var(--state-neutral)'
 
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Current', colour: CURRENT_FILL },
@@ -98,11 +99,12 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
+  const resolveColour = useResolveColour()
   const state = snapshot?.dataStructureState as TrieState | undefined
 
   const { nodes, edges } = useMemo(() => layoutTrie(state?.root ?? null, width), [state, width])
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
@@ -141,7 +143,7 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
       </div>
 
       <div className="shrink-0 border-b border-border px-3 pt-9 pb-2 dark:border-dark-border">
-        <p className="mb-1 text-[10px] font-semibold tracking-[0.06em] text-text-muted uppercase dark:text-dark-text-secondary">
+        <p className="text-micro mb-1 text-text-muted dark:text-dark-text-secondary">
           Current word
         </p>
         <div className="flex gap-1">
@@ -154,7 +156,7 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
                   ? 'bg-secondary text-white'
                   : i < state.currentCharIdx
                     ? 'bg-success text-white'
-                    : 'bg-surface text-text-muted dark:bg-dark-border dark:text-dark-text-secondary',
+                    : 'bg-surface-sunk text-text-muted dark:bg-dark-border dark:text-dark-text-secondary',
               )}
             >
               {char}
@@ -198,8 +200,8 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
                   width={NODE_WIDTH}
                   height={NODE_HEIGHT}
                   rx={8}
-                  animate={{ fill }}
-                  stroke={node.isTerminal ? '#1f2937' : 'none'}
+                  animate={{ fill: resolveColour(fill) }}
+                  stroke={node.isTerminal ? 'var(--ink)' : 'none'}
                   strokeWidth={node.isTerminal ? 2 : 0}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }}
                 />
@@ -211,7 +213,7 @@ export default function TrieCanvas({ width = DEFAULT_WIDTH, height = 400 }: Trie
                     height={NODE_HEIGHT + 6}
                     rx={10}
                     fill="none"
-                    stroke="#1f2937"
+                    stroke="var(--ink)"
                     strokeWidth={1}
                   />
                 )}

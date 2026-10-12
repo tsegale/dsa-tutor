@@ -288,8 +288,8 @@ export default function AuthPage() {
 
           {activeTab === 'login' && (
             <div className="mb-6">
-              <p className="mb-2 text-[11px] font-medium tracking-wide text-text-muted uppercase">I am a</p>
-              <div className="flex gap-0.5 rounded-lg border-[0.5px] border-border bg-surface p-[3px]">
+              <p className="text-micro mb-2 text-text-muted">I am a</p>
+              <div className="flex gap-0.5 rounded-lg border-[0.5px] border-border bg-surface-sunk p-[3px]">
                 {(['student', 'instructor'] as const).map((option) => (
                   <button
                     key={option}

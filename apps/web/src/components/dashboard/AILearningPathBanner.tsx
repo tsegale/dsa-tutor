@@ -1,9 +1,8 @@
+import { Link } from 'react-router-dom'
 import type { TopicDto } from '@dsa-tutor/types'
-
-interface AILearningPathBannerProps {
-  topics: TopicDto[]
-  onStart: (topicName: string, mode: 'DEMO' | 'PRACTICE') => void
-}
+import { topicPath } from '@/data/tracks'
+import { orderTopics } from '@/utils/curriculum'
+import { Button } from '@/components/ui/button'
 
 function SparklesIcon() {
   return (
@@ -13,54 +12,34 @@ function SparklesIcon() {
   )
 }
 
-export default function AILearningPathBanner({ topics, onStart }: AILearningPathBannerProps) {
-  const masteredTopic = [...topics]
-    .filter((t) => t.masteryPercent > 0)
-    .sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
-  const nextTopic = topics.find((t) => !t.isLocked && t.masteryPercent === 0 && t.name !== masteredTopic?.name)
-  // Topics arrive ordered by track then curriculum order (see
-  // topic.service.ts), so the first unlocked one is always the same card
-  // the dashboard itself shows first - this must never hardcode a
-  // specific topic, or it silently drifts out of sync the moment the
-  // curriculum's starting point changes (see remediation doc 9.1).
-  const firstTopic = topics.find((t) => !t.isLocked)
-
-  const bodyText = masteredTopic
-    ? `Based on your last session, you've made progress on ${masteredTopic.displayName}. ${
-        nextTopic
-          ? `Recommended next step: ${nextTopic.displayName}, begin the AI diagnostic to establish your baseline.`
-          : ''
-      }`
-    : `Welcome. Start with ${firstTopic?.displayName ?? 'the first topic'} to begin your adaptive learning path.`
-
-  const ctaLabel = masteredTopic ? `Continue ${masteredTopic.displayName}` : `Begin ${firstTopic?.displayName ?? 'learning'}`
-
-  function handleClick() {
-    const topicName = masteredTopic?.name ?? firstTopic?.name
-    if (topicName) onStart(topicName, 'PRACTICE')
-  }
+/**
+ * The recommendation shown under Home's Continue card. Rendered only when
+ * there is a real one: some progress to build on and an unstarted topic to
+ * go to. With no progress the Continue card already says where to start, so
+ * a "Welcome, start with X" banner would only repeat it. Recommendations
+ * follow curriculum order and never hardcode a topic (remediation doc 9.1).
+ * Cyan: the AI accent, on AI surfaces only.
+ */
+export default function AILearningPathBanner({ topics }: { topics: TopicDto[] }) {
+  const ordered = orderTopics(topics)
+  const strongest = [...ordered].filter((t) => t.masteryPercent > 0).sort((a, b) => b.masteryPercent - a.masteryPercent)[0]
+  const next = ordered.find((t) => !t.isLocked && t.masteryPercent === 0)
+  if (!strongest || !next) return null
 
   return (
-    <section
-      className="flex items-center gap-3 rounded-[10px] p-3.5"
-      style={{ backgroundColor: 'var(--tone-indigo-bg)', border: '0.5px solid var(--tone-indigo-border)' }}
-    >
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#3730a3] text-white">
+    <section aria-label="AI learning path recommendation" className="flex flex-col gap-3 rounded-md border border-ai/30 bg-ai-light p-card sm:flex-row sm:items-center">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-ai text-ai-contrast">
         <SparklesIcon />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium tracking-wide text-[#4338ca] uppercase dark:text-tone-indigo">
-          AI learning path recommendation
+        <p className="text-micro text-ai-foreground">AI learning path recommendation</p>
+        <p className="mt-0.5 text-small text-ink">
+          You have made progress on {strongest.displayName}. Recommended next: {next.displayName}.
         </p>
-        <p className="mt-0.5 text-xs leading-[1.6] text-tone-indigo">{bodyText}</p>
       </div>
-      <button
-        type="button"
-        onClick={handleClick}
-        className="shrink-0 rounded-md bg-[#3730a3] px-4 py-2 text-xs font-medium text-white hover:opacity-90"
-      >
-        {ctaLabel}
-      </button>
+      <Button asChild size="sm" className="shrink-0 bg-ai text-ai-contrast hover:bg-ai/90">
+        <Link to={topicPath(next.name)}>Start {next.displayName}</Link>
+      </Button>
     </section>
   )
 }

@@ -45,12 +45,11 @@ export default function DSATutorLogo({ variant = 'dark', className = '', showTag
               fontSize: 10,
               fontWeight: 500,
               color: taglineColor,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
+              letterSpacing: '0.01em',
               marginTop: 2,
             }}
           >
-            AI Scaffolding Engine
+            AI scaffolding engine
           </span>
         )}
       </div>

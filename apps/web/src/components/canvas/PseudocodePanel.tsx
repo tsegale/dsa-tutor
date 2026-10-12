@@ -52,7 +52,7 @@ export default function PseudocodePanel() {
         className="flex items-center gap-3 px-4 py-1.5 text-[11px]"
         style={{ borderBottom: '0.5px solid var(--border)' }}
       >
-        <span className="font-medium text-primary">Pseudocode</span>
+        <span className="font-medium text-text-primary dark:text-dark-text-primary">Pseudocode</span>
         <span className="text-text-muted dark:text-dark-text-secondary">|</span>
         <ComingSoonLabel label="Python" />
         <span className="text-text-muted dark:text-dark-text-secondary">|</span>
@@ -70,7 +70,7 @@ export default function PseudocodePanel() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute inset-0 border-l-[3px] border-[#378add] bg-[rgba(55,138,221,0.1)]"
+                    className="absolute inset-0 border-l-[3px] border-state-current bg-[color-mix(in_srgb,var(--state-current)_10%,transparent)]"
                   />
                 )}
               </AnimatePresence>
@@ -80,7 +80,7 @@ export default function PseudocodePanel() {
               <span
                 className={cn(
                   'relative min-w-0 flex-1 pl-2 text-[11px]',
-                  isActive ? 'font-medium text-text-accent' : 'font-normal text-text-primary dark:text-dark-text-primary',
+                  isActive ? 'font-medium text-text-primary dark:text-dark-text-primary' : 'font-normal text-text-primary dark:text-dark-text-primary',
                 )}
                 style={{ whiteSpace: 'nowrap', overflow: 'visible' }}
               >

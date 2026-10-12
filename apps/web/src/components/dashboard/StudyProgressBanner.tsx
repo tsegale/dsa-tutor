@@ -57,7 +57,7 @@ export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) 
                 className={
                   done.has(slug)
                     ? 'flex items-center gap-1 rounded-full bg-success-light px-2.5 py-0.5 text-xs text-success'
-                    : 'rounded-full bg-surface px-2.5 py-0.5 text-xs text-text-muted'
+                    : 'rounded-full bg-surface-sunk px-2.5 py-0.5 text-xs text-text-muted'
                 }
               >
                 {done.has(slug) && <CheckIcon />}

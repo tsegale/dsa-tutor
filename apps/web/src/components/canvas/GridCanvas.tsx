@@ -14,12 +14,17 @@ interface GridCanvasProps {
 
 const CELL_SIZE = 20
 
+// A light board in both themes (see HEX_ALLOWLIST in themeTokens.test.ts),
+// so these are the light values of the canvas state tokens as literals:
+// start is --state-sorted, end --state-error-text (it carries a label),
+// the current-cell stroke --state-compare, and visited is --state-current
+// at 30% on white.
 const CELL_COLOURS: Record<GridCell['state'], { fill: string; text?: string }> = {
   empty: { fill: '#ffffff' },
   wall: { fill: '#2d3748' },
-  start: { fill: '#16a34a', text: '#ffffff' },
-  end: { fill: '#dc2626', text: '#ffffff' },
-  visited: { fill: '#c7d2fe' },
+  start: { fill: '#0e9f6e', text: '#12151c' },
+  end: { fill: '#c62828', text: '#ffffff' },
+  visited: { fill: '#b6daf3' },
   frontier: { fill: '#fde68a' },
   path: { fill: '#facc15' },
 }
@@ -27,7 +32,7 @@ const CELL_COLOURS: Record<GridCell['state'], { fill: string; text?: string }> =
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Wall', colour: '#2d3748' },
   { label: 'Frontier', colour: '#fde68a' },
-  { label: 'Visited', colour: '#c7d2fe' },
+  { label: 'Visited', colour: '#b6daf3' },
   { label: 'Path', colour: '#facc15' },
 ]
 
@@ -106,7 +111,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
     regenerate(grid)
   }
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
@@ -149,7 +154,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
             <button
               type="button"
               onClick={handleClearWalls}
-              className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-text-secondary hover:bg-surface dark:border-dark-border dark:text-dark-text-secondary"
+              className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-text-secondary hover:bg-surface-sunk dark:border-dark-border dark:text-dark-text-secondary"
             >
               Clear walls
             </button>
@@ -180,7 +185,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
                   width={cellSize - 1}
                   height={cellSize - 1}
                   animate={{ fill: colours.fill }}
-                  stroke={isCurrent ? '#f59e0b' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
+                  stroke={isCurrent ? '#cc8200' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
                   strokeWidth={isCurrent ? 2 : 0.5}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
                   style={{ cursor: isEditable ? 'pointer' : 'default' }}

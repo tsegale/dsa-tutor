@@ -10,6 +10,7 @@ import type { BSTNode, BSTState } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
 import type { AVLNode, AVLState } from '@/engine/avlTree'
 import type { RBNode, RBState } from '@/engine/redBlackTree'
+import { useResolveColour } from './useResolveColour'
 
 /** BSTState (insert/search/delete), TraversalState (inorder/preorder/
  * postorder/level-order), AVLState (insert/delete), and RBState (insert/
@@ -45,29 +46,29 @@ const NODE_GAP = 16
 const VIEWBOX_PADDING = 28
 const DEFAULT_WIDTH = 600
 
-// Fixed hex palette (not Tailwind dark: classes) for the same reason
-// ArrayCanvas's bar states are fixed hex: these values are animated via
-// Framer's `animate={{ fill }}`, which needs a literal colour to
-// interpolate toward, not a class name. Default node contrast matches
+// Canvas state tokens from index.css. Framer's `animate={{ fill }}` needs
+// a literal colour to interpolate toward, so animated fills go through
+// useResolveColour, which also re-resolves them when the theme flips.
+// Default node contrast matches
 // GraphCanvas's unvisited-node treatment (white fill, near-black text,
 // light stroke) rather than the low-contrast lavender this used before.
-const DEFAULT_FILL = '#ffffff'
-const DEFAULT_TEXT = '#0f172a'
-const DEFAULT_STROKE = '#cbd5e1'
-const DEFAULT_EDGE = '#94a3b8'
-const CURRENT_FILL = '#f59e0b'
-const CURRENT_TEXT = '#78350f'
-const RB_RED_FILL = '#dc2626'
+const DEFAULT_FILL = 'var(--surface)'
+const DEFAULT_TEXT = 'var(--ink)'
+const DEFAULT_STROKE = 'var(--rule-strong)'
+const DEFAULT_EDGE = 'var(--state-neutral)'
+const CURRENT_FILL = 'var(--state-compare)'
+const CURRENT_TEXT = 'var(--state-compare-ink)'
+const RB_RED_FILL = 'var(--state-error-text)'
 const RB_BLACK_FILL = '#1f2937'
-const FOUND_FILL = '#16a34a'
-const FOUND_TEXT = '#ffffff'
-const PATH_FILL = 'rgba(55, 48, 163, 0.6)'
-const PATH_TEXT = '#ffffff'
-const PATH_EDGE = '#3730a3'
+const FOUND_FILL = 'var(--state-sorted)'
+const FOUND_TEXT = 'var(--state-sorted-ink)'
+const PATH_FILL = 'color-mix(in srgb, var(--state-current) 60%, transparent)'
+const PATH_TEXT = 'var(--state-current-ink)'
+const PATH_EDGE = 'var(--state-current)'
 
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Current node', colour: CURRENT_FILL },
-  { label: 'Path taken', colour: '#3730a3' },
+  { label: 'Path taken', colour: 'var(--state-current)' },
   { label: 'Found node', colour: FOUND_FILL },
   { label: 'Unvisited', colour: DEFAULT_FILL },
 ]
@@ -143,6 +144,7 @@ export default function TreeCanvas({
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
+  const resolveColour = useResolveColour()
   const state = snapshot?.dataStructureState as TreeCanvasState | undefined
 
   const { nodes: layout, nodeRadius, fontSize, minX, maxX, maxDepth } = useMemo(
@@ -192,7 +194,7 @@ export default function TreeCanvas({
   )
   const zoom = useViewBoxZoom(baseView)
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-success' : progressPercent >= 50 ? 'bg-secondary' : 'bg-primary'
+  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
@@ -220,7 +222,7 @@ export default function TreeCanvas({
           cy={cy}
           r={BASE_NODE_RADIUS}
           fill="none"
-          stroke="#c7c9e8"
+          stroke="var(--state-neutral)"
           strokeWidth={2}
           strokeDasharray="4 3"
         />
@@ -320,7 +322,7 @@ export default function TreeCanvas({
             // the active node stays identifiable against same-coloured
             // siblings.
             const fill = rbColor ? (rbColor === 'RED' ? RB_RED_FILL : RB_BLACK_FILL) : isFound ? FOUND_FILL : isCurrent ? CURRENT_FILL : onPath ? PATH_FILL : DEFAULT_FILL
-            const textFill = rbColor ? '#ffffff' : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
+            const textFill = rbColor === 'RED' ? 'var(--state-error-ink)' : rbColor ? '#ffffff' : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : onPath ? PATH_TEXT : DEFAULT_TEXT
             const isUnbalanced = 'unbalancedNodeId' in state && state.unbalancedNodeId === node.id
             const balanceFactor = showBalanceFactor && 'balanceFactor' in node ? (node as AVLNode).balanceFactor : undefined
             // The value just inserted enters from its parent - the last
@@ -347,9 +349,9 @@ export default function TreeCanvas({
               >
                 <motion.circle
                   r={nodeRadius}
-                  animate={{ fill }}
+                  animate={{ fill: resolveColour(fill) }}
                   stroke={
-                    isUnbalanced ? '#dc2626' : rbColor && isCurrent ? '#f59e0b' : fill === DEFAULT_FILL ? DEFAULT_STROKE : 'none'
+                    isUnbalanced ? 'var(--state-error)' : rbColor && isCurrent ? 'var(--state-compare)' : fill === DEFAULT_FILL ? DEFAULT_STROKE : 'none'
                   }
                   strokeWidth={isUnbalanced || (rbColor && isCurrent) ? 3 : fill === DEFAULT_FILL ? 1.5 : 0}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
@@ -365,7 +367,7 @@ export default function TreeCanvas({
                   <text
                     textAnchor="middle"
                     y={nodeRadius + 14}
-                    style={{ fill: isUnbalanced ? '#dc2626' : '#6b7280', fontSize: Math.max(9, fontSize - 3), fontWeight: isUnbalanced ? 700 : 500 }}
+                    style={{ fill: isUnbalanced ? 'var(--state-error-text)' : 'var(--ink-2)', fontSize: Math.max(9, fontSize - 3), fontWeight: isUnbalanced ? 700 : 500 }}
                   >
                     {`bf=${balanceFactor}`}
                   </text>
@@ -387,7 +389,7 @@ export default function TreeCanvas({
                 ? `Traversal: ${state.traversalType}`
                 : `Searching for: ${state.targetValue}`}
         </p>
-        <p className="text-[12px] text-primary dark:text-dark-primary">
+        <p className="text-[12px] text-text-secondary dark:text-dark-text-secondary">
           {state.operation === 'traverse' ? 'Visited so far' : 'Path taken'}:{' '}
           {pathValues.length > 0 ? pathValues.join(' → ') : '—'}
         </p>
