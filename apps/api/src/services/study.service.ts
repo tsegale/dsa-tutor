@@ -80,7 +80,7 @@ export async function completedStudyTopics(userId: string, consentAt: Date): Pro
 export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { participantCode: true, consentAt: true, withdrawnAt: true, posttestOverrideAt: true, classicTopicSlug: true },
+    select: { participantCode: true, consentAt: true, withdrawnAt: true, posttestOverrideAt: true, classicTopicSlug: true, isDemo: true },
   })
   if (!user?.participantCode) {
     return {
@@ -93,6 +93,7 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
       topicsCompleted: [],
       posttestOverride: false,
       classicTopicSlug: null,
+      isDemo: user?.isDemo ?? false,
     }
   }
 
@@ -110,6 +111,7 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
       topicsCompleted: [],
       posttestOverride: false,
       classicTopicSlug: null,
+      isDemo: false,
     }
   }
 
@@ -141,6 +143,8 @@ export async function getStudyStatus(userId: string): Promise<StudyStatusDto> {
     topicsCompleted,
     posttestOverride: user.posttestOverrideAt !== null,
     classicTopicSlug: user.classicTopicSlug,
+    // Enrolment refuses demo accounts, so a participant never is one.
+    isDemo: false,
   }
 }
 

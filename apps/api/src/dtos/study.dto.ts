@@ -12,4 +12,7 @@ export interface StudyStatusDto {
   /** The one study topic this participant uses in Classic (the plain
    * visualiser), fixed at enrolment. Null for non-participants. */
   classicTopicSlug: string | null
+  /** A throwaway demo account: never a participant, and enrolment refuses
+   * it, so the app does not offer it the study. */
+  isDemo: boolean
 }

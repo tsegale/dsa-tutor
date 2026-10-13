@@ -14,6 +14,7 @@ const participant: StudyStatusDto = {
   topicsCompleted: [],
   posttestOverride: false,
   classicTopicSlug: 'binary-search',
+  isDemo: false,
 }
 
 afterEach(() => useAlgorithmStore.getState().setClassicMode(false))

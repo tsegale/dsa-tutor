@@ -62,8 +62,9 @@ export default function ProfilePage() {
           </dl>
         </Section>
 
-        {/* Educators are never study participants, so they get no join offer. */}
-        {studyStatus && user?.role !== 'EDUCATOR' && (phase || studyStatus.withdrawn || !studyStatus.isParticipant) && (
+        {/* Educators and demo accounts are never study participants (enrolment
+            refuses a demo account), so neither gets a join offer. */}
+        {studyStatus && user?.role !== 'EDUCATOR' && (phase || studyStatus.withdrawn || (!studyStatus.isParticipant && !studyStatus.isDemo)) && (
           <Section title="Research study">
             {phase ? (
               <div className="flex flex-col items-start gap-3">

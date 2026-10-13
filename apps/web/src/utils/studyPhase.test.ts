@@ -12,6 +12,7 @@ const participant: StudyStatusDto = {
   topicsCompleted: [],
   posttestOverride: false,
   classicTopicSlug: 'binary-search',
+  isDemo: false,
 }
 
 describe('studyPhase', () => {
