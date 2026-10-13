@@ -4,7 +4,13 @@ import type { AVLState } from '@/engine/avlTree'
 import type { RBState } from '@/engine/redBlackTree'
 import type { BellmanFordState } from '@/engine/bellmanFord'
 
-export const SEARCH_ALGORITHM_NAMES = new Set(['Linear Search', 'Binary Search'])
+export const SEARCH_ALGORITHM_NAMES = new Set([
+  'Linear Search',
+  'Binary Search',
+  'Jump Search',
+  'Interpolation Search',
+  'Exponential Search',
+])
 
 /** Shape shared by LinearSearchState and BinarySearchState - the only
  * fields the ALGORITHM_COMPLETE tiles/prompt need for either. */

@@ -290,7 +290,11 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
           snapshot.metrics?.visits ??
           (algorithmName === 'Linear Search' && state.foundIndex !== null ? state.foundIndex + 1 : undefined)
         const length = state.array?.length ?? 0
-        const everyIndexProbed = probes !== undefined ? probes >= length : length <= 2
+        // With no probe count (the jump, interpolation and exponential
+        // engines keep none), assume the worst: "every element was visited"
+        // could be true, so it is never offered as wrong.
+        const countable = algorithmName === 'Linear Search' || algorithmName === 'Binary Search'
+        const everyIndexProbed = probes !== undefined ? probes >= length : !countable || length <= 2
         return state.found
           ? shuffleArray([
               {
