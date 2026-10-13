@@ -12,7 +12,8 @@
     "clean": "rm -rf dist node_modules",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "create-educator": "tsx scripts/create-educator.ts"
+    "create-educator": "tsx scripts/create-educator.ts",
+    "seed-demo-account": "tsx scripts/seed-demo-account.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

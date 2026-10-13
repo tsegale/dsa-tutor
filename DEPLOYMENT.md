@@ -31,6 +31,20 @@ and `.env.example` in sync.
 | STUDY_ENROLMENT_CODES | Researcher-issued participant codes, comma-separated | e.g. P01,...,P12,PILOT-1,PILOT-2 |
 | STUDY_RESEARCHER_PIN | Researcher-only PIN that lets a participant take the post-test without meeting the topic-completion rule (recorded) | Choose one; never give it to participants |
 
+### Showcase demo account
+
+A signed-in learner with realistic progress (Module 1 largely complete, Modules
+2 and 3 part done, Module 4 complete, Module 5 available, Module 6 locked), for
+walkthroughs and screenshots. Run against the target database, after the seed:
+
+    DEMO_SEED_EMAIL=... DEMO_SEED_PASSWORD=... pnpm --filter api seed-demo-account
+
+The variables are read by the script only, not by the running api, so they are
+not in the table above. The account is `isDemo` with no participant code, so it
+is excluded from research exports, educator analytics and study enrolment, and
+its AI calls are capped like any demo account. Re-running the script resets its
+progress; it refuses an email that belongs to a real account.
+
 ## apps/ai (Railway)
 
 | Variable | Purpose | Where to get it |
