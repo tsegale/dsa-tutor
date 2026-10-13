@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { topicPath } from '@/data/tracks'
-import { MODULES, moduleLabel } from '@/config/curriculum'
+import { MODULES } from '@/config/curriculum'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -14,6 +14,7 @@ import { Kbd } from '@/components/ui/Kbd'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import AccountIdentity from './AccountIdentity'
 import { AccountStats } from './AccountStats'
+import { AccountStatusRows } from './AccountStatusRows'
 import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
@@ -183,16 +184,58 @@ function ModulesMenu({ active }: { active: boolean }) {
 }
 
 /**
+ * Below 1024px the main nav collapses into one menu button (Phase 4G), so the
+ * bar stays within seven elements. An educator keeps the role switcher in the
+ * bar (it must stay one click away), so their menu holds Modules and Progress
+ * only: "Student view" is already the way Home. Below 768px, where even the
+ * switcher does not fit beside the wordmark, its two views join the menu.
+ */
+function NavMenu({ includeHome, includeModules, roleViews }: { includeHome: boolean; includeModules: boolean; roleViews: boolean }) {
+  const go = useShellNavigate()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-sm px-2 text-small font-medium text-ink-2 transition-colors duration-quick hover:bg-surface-sunk hover:text-ink lg:hidden"
+        >
+          Menu
+          <ChevronDownIcon />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-64">
+        {roleViews && (
+          <>
+            <DropdownMenuItem onSelect={() => go('/')}>Student view</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => go('/educator')}>Educator view</DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {includeHome && <DropdownMenuItem onSelect={() => go('/')}>Home</DropdownMenuItem>}
+        {includeModules &&
+          MODULES.map((module) => (
+            <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
+              <span className="w-16 shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
+              {module.title}
+            </DropdownMenuItem>
+          ))}
+        <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/**
  * The avatar's menu (Phase 4F): who is signed in and as what, three learner
  * stats, then Profile and Log out. Study enrolment, withdrawal and the tour
  * live on the profile page.
  */
-function AccountMenu() {
+function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
   const go = useShellNavigate()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { isTooSmall } = useLayoutBreakpoint()
-  const { restricted } = useStudyScope()
+  // Below 1024px the status chips live here instead of in the bar.
+  const { isCompact } = useLayoutBreakpoint()
 
   return (
     <DropdownMenu>
@@ -203,6 +246,7 @@ function AccountMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-64">
         <AccountIdentity />
+        {isCompact && <AccountStatusRows inWorkspace={inWorkspace} />}
         {/* An educator is not a learner here: no learner stats. */}
         {user?.role !== 'EDUCATOR' && (
           <>
@@ -211,22 +255,6 @@ function AccountMenu() {
           </>
         )}
         <DropdownMenuSeparator />
-        {/* Below md the Home / Modules / Progress links are hidden from the
-            bar, so the menu carries them. Rendered conditionally, not hidden
-            with CSS: a hidden item would stay in the menu's arrow-key order. */}
-        {isTooSmall && (
-          <>
-            <DropdownMenuItem onSelect={() => go('/')}>Home</DropdownMenuItem>
-            {!restricted &&
-              MODULES.map((module) => (
-                <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
-                  {moduleLabel(module)}
-                </DropdownMenuItem>
-              ))}
-            <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
         <DropdownMenuItem onSelect={() => go('/profile')}>Profile</DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => {
@@ -259,6 +287,8 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
   useEffect(() => setDrawerOpen(false), [pathname])
   const { restricted } = useStudyScope()
   const { user } = useAuth()
+  const isEducator = user?.role === 'EDUCATOR'
+  const { isTooSmall } = useLayoutBreakpoint()
   const inWorkspace = Boolean(onNavigate)
   const go = useCallback((to: string) => (onNavigate ? onNavigate(to) : navigate(to)), [navigate, onNavigate])
 
@@ -304,20 +334,26 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
                 would spend one of the bar's seven interactive elements. The
                 descriptor hides below 1024px; the wordmark stays. */}
             <DSATutorLogo variant="dark" taglineClassName="hidden lg:block" className="shrink-0" />
-            <nav aria-label="Main" className="hidden items-center gap-5 md:flex">
-              {user?.role === 'EDUCATOR' ? (
-                <RoleSwitcher educatorView={pathname.startsWith('/educator')} />
-              ) : (
-                <NavLink to="/" active={pathname === '/'}>
-                  Home
-                </NavLink>
+            <nav aria-label="Main" className="flex items-center gap-5">
+              {/* Rendered conditionally, not hidden with CSS, so the menu's
+                  arrow-key order never holds an item that is not there. */}
+              {isEducator && !isTooSmall && <RoleSwitcher educatorView={pathname.startsWith('/educator')} />}
+              <NavMenu includeHome={!isEducator} includeModules={!restricted} roleViews={isEducator && isTooSmall} />
+              {!isEducator && (
+                <span className="hidden lg:contents">
+                  <NavLink to="/" active={pathname === '/'}>
+                    Home
+                  </NavLink>
+                </span>
               )}
               {/* A study participant's three topics sit in three modules; a
                   one-topic module page would look broken, so Home lists them. */}
-              {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}
-              <NavLink to="/progress" active={pathname === '/progress'}>
-                Progress
-              </NavLink>
+              <span className="hidden lg:contents">
+                {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}
+                <NavLink to="/progress" active={pathname === '/progress'}>
+                  Progress
+                </NavLink>
+              </span>
             </nav>
           </div>
 
@@ -348,7 +384,7 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
             </button>
             <ThemeToggle />
             <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
-            <AccountMenu />
+            <AccountMenu inWorkspace={inWorkspace} />
           </div>
         </header>
         {context}

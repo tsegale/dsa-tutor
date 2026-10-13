@@ -5,6 +5,7 @@ import { useTopics } from '@/hooks/useTopics'
 import { SUPPORT_LEVEL, nextLevelDownLine } from '@/config/supportLevels'
 import { overallSupport, type SupportAssessment } from '@/utils/supportBand'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // The scaffolding state, made visible in the global bar (Phase 4C). The chip
 // names the level and opens a popover in which the mechanism explains
@@ -42,17 +43,23 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
   const { label, segments } = SUPPORT_LEVEL[level]
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Support level: ${label}. Show why`}
-          className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule px-2.5 text-small whitespace-nowrap transition-colors duration-quick hover:border-rule-strong hover:bg-surface-sunk"
-        >
-          <span className="text-micro text-ink-2">Support</span>
-          <Meter filled={segments} />
-          <span className="font-medium text-ink">{label}</span>
-        </button>
-      </PopoverTrigger>
+      {/* Below 1280px only the meter shows; the tooltip carries the words. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Support level: ${label}. Show why`}
+              className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule px-2.5 text-small whitespace-nowrap transition-colors duration-quick hover:border-rule-strong hover:bg-surface-sunk"
+            >
+              <span className="hidden text-micro text-ink-2 xl:inline">Support</span>
+              <Meter filled={segments} />
+              <span className="hidden font-medium text-ink xl:inline">{label}</span>
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent className="xl:hidden">Support level: {label}</TooltipContent>
+      </Tooltip>
       <PopoverContent aria-label="Why this level of support">
         <p className="text-micro text-ink-2">{basis}</p>
         <div className="mt-2 flex items-center gap-2.5">
@@ -71,25 +78,27 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
   )
 }
 
-function SessionChip() {
-  return <ChipView assessment={useSessionSupport()} basis="This session, from your answers so far" />
-}
-
-function OverallChip() {
-  const assessment = useOverallSupport()
-  if (!assessment) return null
-  return <ChipView assessment={assessment} basis="Your overall band, from mastery across your topics" />
-}
+const SESSION_BASIS = 'This session, from your answers so far'
+const OVERALL_BASIS = 'Your overall band, from mastery across your topics'
 
 /**
- * In the workspace: the live session level, updating as support fades.
- * Elsewhere: the learner's overall band. Never in Classic, the study's
- * control condition, whose participants must not see a scaffolding indicator.
+ * The support state the header shows, or null where it must not show: in
+ * Classic, the study's control condition, whose participants must not see a
+ * scaffolding indicator, and while the overall band's topics load. In the
+ * workspace it is the live session level; elsewhere the overall band.
  */
-export function ScaffoldingChip({ inWorkspace }: { inWorkspace: boolean }) {
+export function useHeaderSupport(inWorkspace: boolean): { assessment: SupportAssessment; basis: string } | null {
   // The study condition's feature list decides, as it does for every other
   // tutor surface: Classic has no scaffolding indicator.
   const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
-  if (inWorkspace) return features.scaffoldingPill ? <SessionChip /> : null
-  return <OverallChip />
+  const session = useSessionSupport()
+  const overall = useOverallSupport()
+  if (inWorkspace) return features.scaffoldingPill ? { assessment: session, basis: SESSION_BASIS } : null
+  return overall ? { assessment: overall, basis: OVERALL_BASIS } : null
+}
+
+/** The global bar's chip; see useHeaderSupport for when it is absent. */
+export function ScaffoldingChip({ inWorkspace }: { inWorkspace: boolean }) {
+  const support = useHeaderSupport(inWorkspace)
+  return support ? <ChipView assessment={support.assessment} basis={support.basis} /> : null
 }
