@@ -299,8 +299,9 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
               </svg>
             </button>
             {/* Not a link: Home is the first nav item, and a second way home
-                would spend one of the bar's seven interactive elements. */}
-            <DSATutorLogo variant="dark" showTagline={false} className="shrink-0" />
+                would spend one of the bar's seven interactive elements. The
+                descriptor hides below 1024px; the wordmark stays. */}
+            <DSATutorLogo variant="dark" taglineClassName="hidden lg:block" className="shrink-0" />
             <nav aria-label="Main" className="hidden items-center gap-5 md:flex">
               <NavLink to="/" active={pathname === '/'}>
                 Home

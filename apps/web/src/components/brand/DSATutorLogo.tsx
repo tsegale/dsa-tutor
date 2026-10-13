@@ -1,10 +1,11 @@
-import { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 interface DSATutorLogoProps {
   variant?: 'dark' | 'white'
   className?: string
   showTagline?: boolean
+  /** Extra classes for the descriptor, e.g. hiding it below a breakpoint. */
+  taglineClassName?: string
 }
 
 // The wordmark, on design tokens. 'dark' sits on the app's own headers and
@@ -12,14 +13,16 @@ interface DSATutorLogoProps {
 // colour (--primary-foreground, white on the light brand, near-black on the
 // lighter dark-mode brand). 'white' sits on the sign-in page's fixed indigo
 // panel, which does not change with the theme.
-export default function DSATutorLogo({ variant = 'dark', className = '', showTagline = true }: DSATutorLogoProps) {
-  const titleId = useId()
+//
+// The descriptor says what the system is (Phase 4B). It is --ink-2, not
+// --ink-3: --ink-3 is 3.2:1 on the surface, which fails WCAG AA for text.
+export default function DSATutorLogo({ variant = 'dark', className = '', showTagline = true, taglineClassName }: DSATutorLogoProps) {
   const onPanel = variant === 'white'
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" role="img" aria-labelledby={titleId} className={onPanel ? 'text-white' : 'text-primary-foreground'}>
-        <title id={titleId}>DSA Tutor - AI Scaffolding Engine</title>
+      {/* Decorative: the wordmark beside it is the accessible name. */}
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true" className={onPanel ? 'text-white' : 'text-primary-foreground'}>
         <rect width="40" height="40" rx="10" className={onPanel ? 'fill-white/20 stroke-white/30' : 'fill-brand'} strokeWidth="1" />
         <g stroke="currentColor" strokeWidth="1.5" opacity="0.55">
           <line x1="11" y1="18" x2="17" y2="13" />
@@ -36,9 +39,11 @@ export default function DSATutorLogo({ variant = 'dark', className = '', showTag
       </svg>
       <div className="flex flex-col">
         <span className={cn('text-h3 leading-none font-bold tracking-tight', onPanel ? 'text-white' : 'text-ink')}>
-          DSA<span className={onPanel ? 'text-brand-on-indigo-muted' : 'text-brand'}>Tutor</span>
+          DSA <span className={onPanel ? 'text-brand-on-indigo-muted' : 'text-brand'}>Tutor</span>
         </span>
-        {showTagline && <span className={cn('mt-0.5 text-micro', onPanel ? 'text-brand-on-indigo-muted' : 'text-ink-2')}>AI scaffolding engine</span>}
+        {showTagline && (
+          <span className={cn('mt-1 text-micro', onPanel ? 'text-brand-on-indigo-muted' : 'text-ink-2', taglineClassName)}>Adaptive tutoring system</span>
+        )}
       </div>
     </div>
   )
