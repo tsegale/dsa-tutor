@@ -1,27 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { TopicDto } from '@dsa-tutor/types'
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { useLearningPlan } from '@/hooks/useLearningPlan'
+import { nextStep } from '@/utils/nextStep'
+import { browserStorage, readLastPosition } from '@/utils/lastPosition'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { MODULES } from '@/config/curriculum'
-import type { ContinueTarget } from '@/utils/curriculum'
 import type { LearningPlan, SyllabusModule } from '@/utils/syllabus'
 import { AppShell } from '@/components/layout/AppShell'
-import { ContinueCard } from '@/components/home/ContinueCard'
+import { NextStepBanner } from '@/components/home/NextStepBanner'
 import { ModuleCard } from '@/components/home/ModuleCard'
 import { ProgressStrip } from '@/components/home/ProgressStrip'
 import { TopicRow } from '@/components/track/TopicRow'
-import AILearningPathBanner from '@/components/dashboard/AILearningPathBanner'
 import StudyProgressBanner from '@/components/dashboard/StudyProgressBanner'
 import WelcomeModal from '@/components/onboarding/WelcomeModal'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
 
-// Home answers one question: what do I do now. One Continue card, then the
-// six modules (the curriculum rail is the other way in). No carousels, at
-// most eight cards. Each module's topics live on its module page.
+// Home answers one question first: what do I do now. One next-step banner
+// (Phase 5A), then the stats strip at quiet weight, then the modules.
 
 function HomeSkeleton() {
   return (
@@ -64,11 +62,13 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // One plan for "what next": the Continue card, the AI recommendation and
-  // the module cards all read it, so they cannot name different topics.
+  // One plan for "what next": the banner, the module summaries and the rail
+  // all read it, so they cannot name different topics.
   const { topicsQuery, sessionQuery, syllabus, plan } = useLearningPlan()
   const topics = topicsQuery.data
   const latestSession = sessionQuery.data ?? null
+  // The banner words the plan's answer, with where this device last stopped.
+  const step = useMemo(() => (plan ? nextStep(plan, readLastPosition(browserStorage(), user?.id)) : null), [plan, user?.id])
 
   return (
     <AppShell>
@@ -111,8 +111,7 @@ export default function Home() {
           </h1>
 
           <StudyProgressBanner topics={topics} />
-          {plan && <ContinueCard target={continueTarget(plan)} sessionUnavailable={sessionQuery.isError} />}
-          {plan && <AILearningPathBanner plan={plan} />}
+          {step && <NextStepBanner step={step} sessionUnavailable={sessionQuery.isError} />}
           {user && <ProgressStrip user={user} topics={topics} />}
 
           {plan && (restricted ? <StudyTopics syllabus={syllabus} plan={plan} /> : <Modules syllabus={syllabus} plan={plan} />)}
@@ -131,13 +130,6 @@ export default function Home() {
       )}
     </AppShell>
   )
-}
-
-/** The Continue card's subject: resume if there is a session, else the recommendation. */
-function continueTarget(plan: LearningPlan): ContinueTarget<TopicDto> {
-  if (plan.continue) return { kind: 'continue', topic: plan.continue.entry.topic, startTime: plan.continue.startTime }
-  if (plan.recommended) return { kind: 'start', topic: plan.recommended.topic }
-  return { kind: 'done' }
 }
 
 function Modules({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: LearningPlan }) {

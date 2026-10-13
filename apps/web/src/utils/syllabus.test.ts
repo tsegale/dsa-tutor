@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack, Difficulty, type TopicDto } from '@dsa-tutor/types'
-import { aiRecommendation, buildSyllabus, defaultExpandedModule, expandedStorageKey, moduleOfTopic, planNext, readExpanded, writeExpanded } from './syllabus'
+import { buildSyllabus, defaultExpandedModule, expandedStorageKey, moduleOfTopic, planNext, readExpanded, writeExpanded } from './syllabus'
 
 const topic = (name: string, track: AlgorithmTrack, masteryPercent = 0, isLocked = false): TopicDto => ({
   id: name,
@@ -174,28 +174,3 @@ describe('planNext', () => {
   })
 })
 
-describe('aiRecommendation', () => {
-  const syllabus = buildSyllabus(['array-access', 'array-insert', 'array-delete', 'singly-linked-list', 'doubly-linked-list', 'circular-linked-list', 'stack', 'queue'].map((n) =>
-    topic(n, AlgorithmTrack.FOUNDATIONS, n === 'stack' ? 100 : n === 'array-insert' ? 30 : 0)
-  ))
-  const session = (name: string) => ({ startTime: '2026-10-13T10:00:00Z', topic: { name } })
-
-  it('shows nothing without progress', () => {
-    expect(aiRecommendation(planNext(buildSyllabus([topic('array-access', AlgorithmTrack.FOUNDATIONS)]), null))).toBeNull()
-  })
-
-  it('recommends the topic after the furthest reached, never an earlier one', () => {
-    // 1.2 is started but behind 1.7 Stack (complete): the answer is 1.8 Queue.
-    expect(aiRecommendation(planNext(syllabus, null))?.topic.name).toBe('queue')
-  })
-
-  it('stays silent rather than contradict a Continue card resuming something else', () => {
-    const plan = planNext(syllabus, session('array-insert'))
-    expect(plan.continue?.entry.topic.name).toBe('array-insert')
-    expect(aiRecommendation(plan)).toBeNull()
-  })
-
-  it('may agree with the Continue card', () => {
-    expect(aiRecommendation(planNext(syllabus, session('queue')))?.topic.name).toBe('queue')
-  })
-})

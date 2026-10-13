@@ -147,14 +147,3 @@ export function planNext(
     nextByModule: new Map(syllabus.map((module) => [module.module.id, nextInSequence(module.topics)])),
   }
 }
-
-/**
- * The topic the AI recommendation banner may name, or null for no banner. It
- * needs progress to speak of; and while a Continue card is resuming a
- * session it may only agree with it, never name a different topic.
- */
-export function aiRecommendation(plan: LearningPlan): SyllabusTopic | null {
-  if (!plan.recommended || !plan.furthest) return null
-  if (plan.continue && plan.continue.entry.topic.name !== plan.recommended.topic.name) return null
-  return plan.recommended
-}

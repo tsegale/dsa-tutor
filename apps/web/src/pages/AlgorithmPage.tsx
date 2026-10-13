@@ -9,6 +9,7 @@ import { SCAFFOLDING_LEVEL_NAME } from '@/config/supportLevels'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
+import { browserStorage, writeLastPosition } from '@/utils/lastPosition'
 import { apiFetch } from '@/api/client'
 import { fetchStudyStatus } from '@/api/study'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
@@ -412,6 +413,19 @@ export default function AlgorithmPage() {
   // visualiser, never labelled as such. The status is already cached by
   // StudyGate, so this is known before the first paint.
   const isClassic = isClassicTopic(studyStatus, algorithmNameParam)
+
+  // Where the learner stopped, for Home's "Resume ... step 24 of 52" (Phase
+  // 5A). The server keeps no step position; this device remembers it.
+  useEffect(() => {
+    if (!algorithmNameParam || snapshotArray.length === 0) return
+    writeLastPosition(browserStorage(), user?.id, {
+      topic: algorithmNameParam,
+      step: Math.min(stepIndex + 1, snapshotArray.length),
+      total: snapshotArray.length,
+      at: new Date().toISOString(),
+    })
+  }, [algorithmNameParam, stepIndex, snapshotArray.length, user?.id])
+
   useEffect(() => {
     // Only once the topic list has loaded: while it is loading, topics is
     // [] and currentTopic null for every page, so a direct load or refresh

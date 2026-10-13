@@ -84,12 +84,6 @@ export function trackProgress(topics: readonly Pick<TopicDto, 'masteryPercent'>[
   return { total: topics.length, complete, percent: topics.length ? Math.round((complete / topics.length) * 100) : 0 }
 }
 
-/** What Home's Continue card shows; built from the learning plan (utils/syllabus planNext). */
-export type ContinueTarget<T> =
-  | { kind: 'continue'; topic: T; startTime: string }
-  | { kind: 'start'; topic: T }
-  | { kind: 'done' }
-
 /** "today", "yesterday", "3 days ago", or a date beyond a fortnight. */
 export function relativeDay(iso: string, now: Date = new Date()): string {
   const then = new Date(iso)
