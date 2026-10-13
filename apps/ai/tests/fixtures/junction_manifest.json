@@ -1,0 +1,228 @@
+{
+  "bubble-sort": [
+    "ALGORITHM_COMPLETE",
+    "COMPLEXITY_PREDICTION",
+    "EARLY_TERMINATION",
+    "PASS_COMPLETE",
+    "SWAP_DECISION"
+  ],
+  "selection-sort": [
+    "ALGORITHM_COMPLETE",
+    "NEW_MINIMUM",
+    "PASS_COMPLETE"
+  ],
+  "insertion-sort": [
+    "ALGORITHM_COMPLETE",
+    "PASS_COMPLETE",
+    "SWAP_DECISION"
+  ],
+  "merge-sort": [
+    "ALGORITHM_COMPLETE",
+    "MERGE_DECISION",
+    "PASS_COMPLETE"
+  ],
+  "quick-sort": [
+    "ALGORITHM_COMPLETE",
+    "PARTITION_DECISION",
+    "PIVOT_SELECTION"
+  ],
+  "shell-sort": [
+    "ALGORITHM_COMPLETE",
+    "GAP_COMPARISON"
+  ],
+  "heap-sort": [
+    "ALGORITHM_COMPLETE",
+    "HEAP_COMPARE",
+    "HEAP_EXTRACT"
+  ],
+  "counting-sort": [
+    "ALGORITHM_COMPLETE",
+    "COUNT_INCREMENT",
+    "PLACE_ELEMENT",
+    "PREFIX_ACCUMULATE"
+  ],
+  "radix-sort": [
+    "ALGORITHM_COMPLETE",
+    "DIGIT_BUCKET"
+  ],
+  "bst": [
+    "ALGORITHM_COMPLETE",
+    "BST_DIRECTION",
+    "COMPLEXITY_PREDICTION"
+  ],
+  "bst-search": [
+    "BST_DIRECTION"
+  ],
+  "bst-delete": [
+    "BST_DIRECTION"
+  ],
+  "tree-inorder": [
+    "VISIT_NODE"
+  ],
+  "tree-preorder": [
+    "VISIT_NODE"
+  ],
+  "tree-postorder": [
+    "VISIT_NODE"
+  ],
+  "tree-level-order": [
+    "VISIT_NODE"
+  ],
+  "avl-insert": [
+    "AVL_BALANCE_CHECK",
+    "AVL_ROTATION_TYPE",
+    "BST_DIRECTION"
+  ],
+  "avl-delete": [
+    "AVL_BALANCE_CHECK",
+    "BST_DIRECTION"
+  ],
+  "rb-insert": [
+    "BST_DIRECTION",
+    "RB_COLOR_DECISION",
+    "RB_ROTATION_RECOLOR"
+  ],
+  "rb-delete": [
+    "BST_DIRECTION",
+    "RB_COLOR_DECISION"
+  ],
+  "max-heap-insert": [
+    "HEAP_SIFT_UP"
+  ],
+  "max-heap-delete": [
+    "HEAP_SIFT_DOWN"
+  ],
+  "min-heap-insert": [
+    "HEAP_SIFT_UP"
+  ],
+  "min-heap-delete": [
+    "HEAP_SIFT_DOWN"
+  ],
+  "trie-insert": [
+    "TRIE_INSERT_NEW"
+  ],
+  "trie-search": [
+    "TRIE_CHARACTER_MATCH"
+  ],
+  "trie-delete": [
+    "TRIE_CHARACTER_MATCH"
+  ],
+  "bfs": [
+    "NEXT_NODE_SELECTION"
+  ],
+  "dfs": [
+    "NEXT_NODE_SELECTION"
+  ],
+  "dijkstra": [
+    "EDGE_RELAX"
+  ],
+  "bellman-ford": [
+    "BELLMAN_PASS_COMPLETE"
+  ],
+  "floyd-warshall": [
+    "MATRIX_UPDATE"
+  ],
+  "kruskal": [
+    "UNION_FIND_CHECK"
+  ],
+  "prim": [
+    "MST_EDGE_SELECT"
+  ],
+  "cycle-detection": [
+    "CYCLE_FOUND"
+  ],
+  "connected-components": [
+    "NEW_COMPONENT"
+  ],
+  "topological-sort": [
+    "TOPOLOGICAL_ORDER"
+  ],
+  "grid-dijkstra": [
+    "GRID_NEXT_CELL"
+  ],
+  "grid-astar": [
+    "GRID_NEXT_CELL"
+  ],
+  "array-access": [
+    "INDEX_ACCESS"
+  ],
+  "array-insert": [
+    "INSERT_POSITION"
+  ],
+  "array-delete": [
+    "DELETE_SHIFT"
+  ],
+  "singly-linked-list": [
+    "INSERT_BETWEEN",
+    "NULL_CHECK"
+  ],
+  "doubly-linked-list": [
+    "INSERT_BETWEEN"
+  ],
+  "circular-linked-list": [
+    "WRAP_CHECK"
+  ],
+  "stack": [
+    "STACK_PUSH_RESULT"
+  ],
+  "queue": [
+    "QUEUE_REAR"
+  ],
+  "circular-queue": [
+    "QUEUE_FRONT"
+  ],
+  "deque": [
+    "DEQUE_END"
+  ],
+  "hash-table-chaining": [
+    "COLLISION_RESOLVE",
+    "HASH_BUCKET"
+  ],
+  "hash-table-probing": [
+    "HASH_BUCKET",
+    "LOAD_FACTOR",
+    "PROBE_NEXT"
+  ],
+  "recursion-factorial": [
+    "BASE_CASE",
+    "RECURSIVE_CALL",
+    "RETURN_VALUE"
+  ],
+  "recursion-fibonacci": [
+    "BASE_CASE",
+    "RECURSIVE_CALL"
+  ],
+  "linear-search": [
+    "ALGORITHM_COMPLETE",
+    "TARGET_CHECK"
+  ],
+  "binary-search": [
+    "ALGORITHM_COMPLETE",
+    "COMPLEXITY_PREDICTION",
+    "MIDPOINT_DECISION"
+  ],
+  "jump-search": [
+    "ALGORITHM_COMPLETE",
+    "JUMP_SIZE",
+    "MIDPOINT_DECISION"
+  ],
+  "interpolation-search": [
+    "ALGORITHM_COMPLETE",
+    "PROBE_POSITION"
+  ],
+  "exponential-search": [
+    "ALGORITHM_COMPLETE",
+    "MIDPOINT_DECISION",
+    "RANGE_DOUBLE"
+  ],
+  "two-pointer": [
+    "POINTER_MOVE"
+  ],
+  "sliding-window-fixed": [
+    "WINDOW_EXPAND",
+    "WINDOW_SUM"
+  ],
+  "sliding-window-variable": [
+    "WINDOW_EXPAND"
+  ]
+}

@@ -62,6 +62,16 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
         "current bound versus the target - doubling continues exactly "
         "as long as that value is still less than the target."
     ),
+    "ALGORITHM_COMPLETE": (
+        "The student was asked what proves the search is finished. If the "
+        "target was found, the proof is that the element at the index found "
+        "was confirmed equal to the target. If it was not found, the proof "
+        "is that every place the target could still be was eliminated: for "
+        "Jump Search the one block that could hold it was scanned, for "
+        "Interpolation Search the range emptied or the target fell outside "
+        "its remaining values, for Exponential Search the binary search "
+        "over the bounded range emptied it. Each relies on the array being sorted."
+    ),
     "MIDPOINT_DECISION": (
         "In Jump Search this asks whether the current block boundary's "
         "value is at least the target (ending the jump phase and "

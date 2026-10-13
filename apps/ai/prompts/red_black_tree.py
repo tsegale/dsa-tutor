@@ -51,6 +51,15 @@ Common misconceptions:
 """
 
 CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
+    "BST_DIRECTION": (
+        "The student was asked which way the value goes at this node while "
+        "descending a Red-Black tree, which follows the plain binary search "
+        "tree rule (smaller goes left, equal or greater goes right). Ground "
+        "the feedback in the exact value and the node's value. At low "
+        "support, name the invariant: colours and rotations fix balance "
+        "only, so the ordering property must already hold where the value "
+        "lands."
+    ),
     "RB_COLOR_DECISION": (
         "The student was asked whether the relevant uncle/sibling node "
         "is RED or BLACK, and what that implies (recolour-only vs. a "

@@ -46,6 +46,15 @@ Common misconceptions:
 """
 
 CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
+    "BST_DIRECTION": (
+        "The student was asked which way the value goes at this node while "
+        "descending an AVL tree, which follows the plain binary search tree "
+        "rule (smaller goes left, equal or greater goes right). Ground the "
+        "feedback in the exact value and the node's value. At low support, "
+        "name the invariant: the ordering property has to hold before any "
+        "rotation, because rotations preserve in-order sequence and never "
+        "repair a misplaced value."
+    ),
     "AVL_BALANCE_CHECK": (
         "The student was asked whether a specific node is balanced, "
         "given its balance factor. Ground the feedback in that exact "
