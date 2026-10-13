@@ -114,13 +114,16 @@ export function quickSortEngine(input: number[]): AlgorithmSnapshot[] {
     }
 
     const pivotValue = working[high]
+    const range = Array.from({ length: high - low + 1 }, (_, k) => low + k)
 
+    // Graded: which element of the range becomes the pivot, and why. The
+    // range is marked, the pivot is not - marking it would give the answer.
     push({
-      description: `Choosing the last element of range [${low}, ${high}] (value ${pivotValue}) as the pivot.`,
+      description: `This implementation always takes the last element of the range as the pivot: index ${high} (value ${pivotValue}).`,
       pseudocodeLine: PSEUDOCODE_LINE.CHOOSE_PIVOT,
-      isPredictionRequired: false,
+      isPredictionRequired: true,
       state: { array: working, pivotIndex: high, pivotValue, leftPointer: low, rightPointer: high, partitionRange: [low, high], sortedIndices },
-      swappedIndices: [high],
+      activeIndices: range,
       highlightIndices: [...sortedIndices],
       criticalJunctionType: CriticalJunctionType.PIVOT_SELECTION,
       junctionDifficulty: JunctionDifficulty.PROCEDURAL,

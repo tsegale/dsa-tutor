@@ -44,6 +44,7 @@ export function correctTileIdFor(snapshot: AlgorithmSnapshot): string | null {
       }
       return s.targetValue < s.currentNode.value ? 'go-left' : 'go-right'
     }
+    case CriticalJunctionType.PIVOT_SELECTION:
     case CriticalJunctionType.PASS_COMPLETE:
     case CriticalJunctionType.EARLY_TERMINATION:
     case CriticalJunctionType.ALGORITHM_COMPLETE:

@@ -14,6 +14,11 @@ Key properties:
 - In-place: no auxiliary array is needed, only pointer bookkeeping
 
 Common misconceptions:
+- PIVOT_SELECTION: Student names the first element, the median of three or
+  a random element. Those are real strategies, but not this
+  implementation's: Lomuto as written here always takes the last element of
+  the current range. Address by asking: which element does this code read
+  as the pivot, and what does that choice cost on sorted input?
 - PARTITION_DECISION: Student swaps an element that should stay right of
   the pivot, or leaves one that should move left. Address by asking:
   Is this element smaller than the pivot? Where does it belong relative to
@@ -28,9 +33,16 @@ Common misconceptions:
 
 CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     "PIVOT_SELECTION": (
-        "The student is being shown why this element was chosen as the "
-        "pivot (always the last element of the current range) - this is "
-        "an explanation step, not a graded prediction."
+        "The student was asked which element of the current range becomes "
+        "the pivot and why. The correct answer is the last element of the "
+        "range: this Lomuto implementation always reads array[high]. If the "
+        "student chose the first element, the median of three or a random "
+        "element, say that it is a real strategy but not the one this code "
+        "uses, and point to the pseudocode line that reads the pivot; do not "
+        "name the correct element, its index or its value. At low or no "
+        "support, name the invariant the choice governs: after partitioning "
+        "the pivot sits at its final sorted index, and how evenly it splits "
+        "the range is decided entirely by the pivot strategy."
     ),
     "PARTITION_DECISION": (
         "The student was asked whether the element at the left pointer "

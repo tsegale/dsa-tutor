@@ -33,6 +33,38 @@ function shuffleArray<T>(arr: T[]): T[] {
  * tile id only - shuffling changes display order, never which id is
  * correct, and the backend checks id, not position.
  */
+/**
+ * Quick Sort's pivot choice: the right tile is this implementation's rule
+ * (Lomuto, last element); the distractors are the other common strategies.
+ * Median-of-three is left out whenever it lands on the first or last
+ * element, or on the pivot's value, so no two tiles name the same element.
+ */
+export function pivotSelectionTiles(array: number[], [low, high]: [number, number]): TileOption[] {
+  const mid = Math.floor((low + high) / 2)
+  const median = [low, mid, high].sort((a, b) => array[a] - array[b] || a - b)[1]
+  const tiles: TileOption[] = [
+    { id: 'correct', label: `${array[high]} at index ${high}: the last element of the range`, misconception: null },
+    {
+      id: 'first-element',
+      label: `${array[low]} at index ${low}: the first element of the range`,
+      misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+    },
+    {
+      id: 'random',
+      label: 'Any element of the range, picked at random',
+      misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+    },
+  ]
+  if (median !== low && median !== high && array[median] !== array[high]) {
+    tiles.push({
+      id: 'median-of-three',
+      label: `${array[median]} at index ${median}: the median of the first, middle and last elements`,
+      misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+    })
+  }
+  return tiles
+}
+
 function collectTreeValues(node: BSTNode | null): number[] {
   if (!node) return []
   return [...collectTreeValues(node.left), node.value, ...collectTreeValues(node.right)]
@@ -403,6 +435,11 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
           misconception: MisconceptionCategory.COMPARISON_DIRECTION,
         },
       ])
+    }
+
+    case CriticalJunctionType.PIVOT_SELECTION: {
+      const s = snapshot.dataStructureState as { array: number[]; partitionRange: [number, number] }
+      return shuffleArray(pivotSelectionTiles(s.array, s.partitionRange))
     }
 
     case CriticalJunctionType.PARTITION_DECISION: {

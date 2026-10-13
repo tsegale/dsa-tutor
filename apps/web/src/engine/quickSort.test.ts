@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { CriticalJunctionType, JunctionDifficulty } from '@dsa-tutor/types'
 import { quickSortEngine, type QuickSortState } from './quickSort'
+import { getTilesForSnapshot, pivotSelectionTiles } from '@/utils/tileBuilder'
+import { getPromptForSnapshot } from '@/utils/junctionPrompt'
+import { correctTileIdFor } from '@/utils/correctTile'
 
 function lastState(snapshots: ReturnType<typeof quickSortEngine>): QuickSortState {
   return snapshots[snapshots.length - 1].dataStructureState as QuickSortState
@@ -111,5 +115,67 @@ describe('quickSortEngine', () => {
     const mutable = (snapshots[0].dataStructureState as QuickSortState).array
     mutable.push(999)
     expect((snapshots[1].dataStructureState as QuickSortState).array).not.toContain(999)
+  })
+})
+
+describe('pivot selection junction', () => {
+  const inputs = [
+    [7, 2, 9, 1, 5, 8, 3],
+    [1, 2, 3, 4, 5, 6, 7],
+    [7, 6, 5, 4, 3, 2, 1],
+    [3, 3, 3, 3],
+    [5, 1, 5, 2, 5],
+    [2, 1],
+    [4, 8, 6],
+  ]
+  const pivotSteps = (input: number[]) =>
+    quickSortEngine(input).filter((s) => s.criticalJunctionType === CriticalJunctionType.PIVOT_SELECTION)
+
+  it('is a graded procedural junction at every partition of two or more elements', () => {
+    for (const input of inputs) {
+      const steps = pivotSteps(input)
+      expect(steps.length).toBeGreaterThan(0)
+      for (const step of steps) {
+        expect(step.isPredictionRequired).toBe(true)
+        expect(step.junctionDifficulty).toBe(JunctionDifficulty.PROCEDURAL)
+      }
+    }
+  })
+
+  it('marks the range but never the pivot while the question is open', () => {
+    for (const input of inputs) {
+      for (const step of pivotSteps(input)) {
+        const [low, high] = (step.dataStructureState as QuickSortState).partitionRange
+        expect(step.swappedIndices).toEqual([])
+        expect(step.activeIndices).toEqual(Array.from({ length: high - low + 1 }, (_, k) => low + k))
+        expect(getPromptForSnapshot(step, 'Quick Sort')).toBe(
+          `Indices ${low} to ${high} are about to be partitioned. Which element becomes the pivot, and why?`,
+        )
+      }
+    }
+  })
+
+  it('offers exactly one tile naming the last element, the graded answer, and no two tiles naming one element', () => {
+    for (const input of inputs) {
+      for (const step of pivotSteps(input)) {
+        const { array, partitionRange } = step.dataStructureState as QuickSortState
+        const [, high] = partitionRange
+        const tiles = getTilesForSnapshot(step, 'Quick Sort')
+        const correct = tiles.find((t) => t.id === correctTileIdFor(step))
+        expect(correct?.label).toBe(`${array[high]} at index ${high}: the last element of the range`)
+        const named = tiles.map((t) => t.label.match(/at index (\d+)/)?.[1]).filter(Boolean)
+        expect(new Set(named).size).toBe(named.length)
+        expect(new Set(tiles.map((t) => t.label)).size).toBe(tiles.length)
+      }
+    }
+  })
+
+  it('covers first-element, median-of-three and random strategies, dropping median-of-three when it is the pivot', () => {
+    const ids = (array: number[], range: [number, number]) => pivotSelectionTiles(array, range).map((t) => t.id).sort()
+    expect(ids([9, 4, 5, 7, 2], [0, 4])).toEqual(['correct', 'first-element', 'median-of-three', 'random'])
+    // Median of 1, 9 and 5 is the last element: the tile would name the pivot.
+    expect(ids([1, 3, 9, 4, 5], [0, 4])).toEqual(['correct', 'first-element', 'random'])
+    // Two elements: the middle is the first, so median-of-three adds nothing.
+    expect(ids([2, 1], [0, 1])).toEqual(['correct', 'first-element', 'random'])
   })
 })

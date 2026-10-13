@@ -96,6 +96,11 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
       return `Comparing ${leftVal} (left run) with ${rightVal} (right run). Which goes into the merged result first?`
     }
 
+    case CriticalJunctionType.PIVOT_SELECTION: {
+      const [low, high] = (snapshot.dataStructureState as { partitionRange: [number, number] }).partitionRange
+      return `Indices ${low} to ${high} are about to be partitioned. Which element becomes the pivot, and why?`
+    }
+
     case CriticalJunctionType.PARTITION_DECISION: {
       const s = snapshot.dataStructureState as { array: number[]; leftPointer: number; pivotValue: number }
       return `Comparing index ${s.leftPointer} (value ${s.array[s.leftPointer]}) with the pivot ${s.pivotValue}. What happens next?`

@@ -704,7 +704,15 @@ def evaluate_answer(request: PredictionRequest) -> bool:
     # which algorithm produced the junction. COMPLEXITY_PREDICTION's tiles are
     # built from the run's own comparison counter, so its grading is
     # deterministic with no model involvement.
-    if junction_type in ("PASS_COMPLETE", "EARLY_TERMINATION", "ALGORITHM_COMPLETE", "COMPLEXITY_PREDICTION"):
+    # PIVOT_SELECTION is tile-based the same way: its distractors are other
+    # pivot strategies, and the implementation's own rule is 'correct'.
+    if junction_type in (
+        "PASS_COMPLETE",
+        "EARLY_TERMINATION",
+        "ALGORITHM_COMPLETE",
+        "COMPLEXITY_PREDICTION",
+        "PIVOT_SELECTION",
+    ):
         return request.student_answer == "correct"
 
     if junction_type == "SWAP_DECISION":
@@ -962,6 +970,16 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
         return (
             f"The left run's front value was {left_val} and the right run's front "
             f"value was {right_val}. The student chose: {student_answer}."
+        )
+
+    if junction_type == "PIVOT_SELECTION" and isinstance(ds, dict):
+        arr = ds.get("array") or []
+        low, high = (ds.get("partitionRange") or [0, 0])[:2]
+        pivot_val = arr[high] if 0 <= high < len(arr) else None
+        return (
+            f"Indices {low} to {high} were about to be partitioned. This implementation "
+            f"(Lomuto) always takes the last element of the range, index {high} "
+            f"(value {pivot_val}). The student chose: {student_answer}."
         )
 
     if junction_type == "PARTITION_DECISION" and isinstance(ds, dict):

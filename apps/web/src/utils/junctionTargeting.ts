@@ -23,6 +23,7 @@ export const MISCONCEPTION_TARGET_JUNCTIONS: Partial<Record<MisconceptionCategor
     CriticalJunctionType.MERGE_DECISION,
   ],
   [MisconceptionCategory.INVARIANT_MISAPPLICATION]: [
+    CriticalJunctionType.PIVOT_SELECTION,
     CriticalJunctionType.HEAP_COMPARE,
     CriticalJunctionType.HEAP_SIFT_UP,
     CriticalJunctionType.HEAP_SIFT_DOWN,

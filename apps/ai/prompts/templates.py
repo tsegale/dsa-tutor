@@ -42,7 +42,11 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #   2026-09-30.1    Feedback JSON no longer asks for xp_awarded: XP is
 #                   derived by the api from the logged interaction (Week 4
 #                   4D.5), so the model has one less field to get wrong.
-PROMPT_VERSION = "2026-09-30.1"
+#   2026-10-14.1    Quick Sort PIVOT_SELECTION is a graded junction (Phase
+#                   7A): guidance and comparison context for the pivot
+#                   question, with first-element, median-of-three and random
+#                   distractors.
+PROMPT_VERSION = "2026-10-14.1"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one
