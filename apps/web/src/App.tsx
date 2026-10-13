@@ -21,6 +21,7 @@ const Home = lazyWithReload(() => import('@/pages/Home'))
 const AlgorithmPage = lazyWithReload(() => import('@/pages/AlgorithmPage'))
 const TrackPage = lazyWithReload(() => import('@/pages/TrackPage'))
 const ProgressPage = lazyWithReload(() => import('@/pages/ProgressPage'))
+const ProfilePage = lazyWithReload(() => import('@/pages/ProfilePage'))
 const EducatorDashboard = lazyWithReload(() => import('@/pages/EducatorDashboard'))
 const AssessmentPage = lazyWithReload(() => import('@/pages/AssessmentPage'))
 const ConsentPage = lazyWithReload(() => import('@/pages/ConsentPage'))
@@ -156,6 +157,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <ProgressPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
                 />

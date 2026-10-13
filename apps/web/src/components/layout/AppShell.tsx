@@ -1,23 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
-import { useOnboarding } from '@/hooks/useOnboarding'
 import { useLayoutBreakpoint } from '@/hooks/useLayoutBreakpoint'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { fetchStudyStatus, withdrawFromStudy } from '@/api/study'
 import { topicPath } from '@/data/tracks'
 import { MODULES, moduleLabel } from '@/config/curriculum'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { DSATutorLogo, StudentAvatar } from '@/components/brand'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Kbd } from '@/components/ui/Kbd'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import AccountIdentity from './AccountIdentity'
+import { AccountStats } from './AccountStats'
 import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
@@ -186,91 +182,62 @@ function ModulesMenu({ active }: { active: boolean }) {
   )
 }
 
-function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
+/**
+ * The avatar's menu (Phase 4F): who is signed in and as what, three learner
+ * stats, then Profile and Log out. Study enrolment, withdrawal and the tour
+ * live on the profile page.
+ */
+function AccountMenu() {
   const go = useShellNavigate()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { user, logout } = useAuth()
   const { isTooSmall } = useLayoutBreakpoint()
   const { restricted } = useStudyScope()
-  // Launches the walkthrough directly rather than resetting onboarding,
-  // which would reopen the welcome modal first (remediation doc 9.7).
-  const { startTour } = useOnboarding()
-  // Shares the ['study', 'status'] cache with App.tsx's StudyGate.
-  const { data: studyStatus } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus })
-  const [confirmingWithdraw, setConfirmingWithdraw] = useState(false)
-
-  const withdrawMutation = useMutation({
-    mutationFn: withdrawFromStudy,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['study', 'status'] })
-      setConfirmingWithdraw(false)
-    },
-  })
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button type="button" aria-label="Account menu" className="flex shrink-0 items-center justify-center rounded-full">
-            <StudentAvatar initials={user?.name?.[0]?.toUpperCase() ?? '?'} size={30} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-56">
-          <AccountIdentity />
-          {/* Below md the Home / Tracks / Progress links are hidden from the
-              bar, so the menu carries them. Rendered conditionally, not
-              hidden with CSS: a hidden item would stay in the menu's
-              arrow-key order. */}
-          {isTooSmall && (
-            <>
-              <DropdownMenuItem onSelect={() => go('/')}>Home</DropdownMenuItem>
-              {!restricted &&
-                MODULES.map((module) => (
-                  <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
-                    {moduleLabel(module)}
-                  </DropdownMenuItem>
-                ))}
-              <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
-            </>
-          )}
-          {user?.role === 'EDUCATOR' && <DropdownMenuItem onSelect={() => go('/educator')}>Educator dashboard</DropdownMenuItem>}
-          {!inWorkspace && <DropdownMenuItem onSelect={startTour}>Take the tour</DropdownMenuItem>}
-          {studyStatus && !studyStatus.isParticipant && (
-            <DropdownMenuItem onSelect={() => go('/study/join')}>Join the study</DropdownMenuItem>
-          )}
-          {studyStatus?.isParticipant && !studyStatus.withdrawn && (
-            <DropdownMenuItem onSelect={() => setConfirmingWithdraw(true)}>Withdraw from study</DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            onSelect={() => {
-              logout()
-              navigate('/auth')
-            }}
-          >
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={confirmingWithdraw} onOpenChange={setConfirmingWithdraw}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogTitle>Withdraw from the study?</DialogTitle>
-          <DialogDescription>
-            Your data will be removed from every research export going forward. Your account and progress stay exactly as
-            they are: this only stops you being studied, not your access.
-          </DialogDescription>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setConfirmingWithdraw(false)} className="flex-1">
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={() => withdrawMutation.mutate()} loading={withdrawMutation.isPending} className="flex-1">
-              Withdraw
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" aria-label="Account menu" className="flex shrink-0 items-center justify-center rounded-full">
+          <StudentAvatar initials={user?.name?.[0]?.toUpperCase() ?? '?'} size={30} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-64">
+        <AccountIdentity />
+        {/* An educator is not a learner here: no learner stats. */}
+        {user?.role !== 'EDUCATOR' && (
+          <>
+            <DropdownMenuSeparator />
+            <AccountStats />
+          </>
+        )}
+        <DropdownMenuSeparator />
+        {/* Below md the Home / Modules / Progress links are hidden from the
+            bar, so the menu carries them. Rendered conditionally, not hidden
+            with CSS: a hidden item would stay in the menu's arrow-key order. */}
+        {isTooSmall && (
+          <>
+            <DropdownMenuItem onSelect={() => go('/')}>Home</DropdownMenuItem>
+            {!restricted &&
+              MODULES.map((module) => (
+                <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
+                  {moduleLabel(module)}
+                </DropdownMenuItem>
+              ))}
+            <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem onSelect={() => go('/profile')}>Profile</DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            logout()
+            navigate('/auth')
+          }}
+        >
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -371,14 +338,17 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
               onClick={() => setPaletteOpen(true)}
               aria-label="Search topics"
               aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
-              className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule-control bg-surface px-2.5 text-small whitespace-nowrap text-ink-2 transition-colors duration-quick hover:border-ink-2 hover:text-ink"
+              // Secondary weight: it opens the command palette, it is not a
+              // live input, and it should not be the heaviest thing in the bar.
+              className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule-strong bg-surface-sunk px-2.5 text-small whitespace-nowrap text-ink-2 transition-colors duration-quick hover:border-ink-2 hover:text-ink"
             >
               <SearchIcon />
               <span className="hidden lg:inline">Search topics</span>
               <Kbd className="hidden sm:inline-flex">{shortcut}</Kbd>
             </button>
             <ThemeToggle />
-            <AccountMenu inWorkspace={inWorkspace} />
+            <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
+            <AccountMenu />
           </div>
         </header>
         {context}
