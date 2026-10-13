@@ -173,8 +173,12 @@ describe("user A cannot touch user B's resources", () => {
     expect(studyService.submitSus).toHaveBeenCalledWith('A', responses)
   })
 
-  it('delete: no route can delete any resource', () => {
-    expect(registeredRoutes(app).filter((route) => route.method.includes('DELETE'))).toEqual([])
+  it('delete: the only delete route is deleting your own account, by token, never by id', () => {
+    // Phase 6E: DELETE /profile/account acts on req.userId alone. It takes no
+    // path parameter, so it cannot be pointed at another user's account.
+    const deletes = registeredRoutes(app).filter((route) => route.method.includes('DELETE'))
+    expect(deletes.map((route) => route.path)).toEqual(['/api/v1/profile/account'])
+    expect(deletes.every((route) => !route.path.includes(':'))).toBe(true)
   })
 })
 

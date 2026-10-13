@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import { getAnalytics } from '../api/analytics'
 import { useAuth } from '../context/AuthContext'
@@ -37,6 +37,14 @@ export default function EducatorDashboard() {
     refetchInterval: 30000,
     enabled: !user || user.role === 'EDUCATOR',
   })
+
+  // A link such as the profile's /educator#research-exports lands on that
+  // section once the analytics have rendered it.
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (!hash || !analytics) return
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [hash, analytics])
 
   function handleSelectStudent(student: EducatorAnalyticsDto['studentProgress'][0]) {
     setSelectedStudent(student)

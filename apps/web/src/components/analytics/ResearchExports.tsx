@@ -36,7 +36,8 @@ export default function ResearchExports() {
   }
 
   return (
-    <div className="rounded-md border border-border bg-card">
+    // The profile's data section links here (/educator#research-exports).
+    <div id="research-exports" className="scroll-mt-28 rounded-md border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
         <span className="text-sm font-semibold text-text-primary">Research data</span>
         <p className="mt-1 text-xs text-text-muted">

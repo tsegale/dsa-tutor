@@ -47,6 +47,7 @@ export const profile = {
       theme: z.enum(['LIGHT', 'DARK', 'SYSTEM']),
     }),
   },
+  deleteAccount: { body: z.strictObject({ password: nonEmpty(200) }) },
 } satisfies Record<string, RequestSchema>
 
 // ------------------------------------------------------------ sessions

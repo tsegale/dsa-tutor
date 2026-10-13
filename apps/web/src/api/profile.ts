@@ -10,3 +10,8 @@ export function fetchLearnerAnalytics() {
 export function savePreferences(preferences: LearningPreferences) {
   return apiFetch<LearningPreferences>('/api/v1/profile/preferences', { method: 'PUT', body: JSON.stringify(preferences) })
 }
+
+/** Delete the account and everything recorded for it; the password confirms it (Phase 6E). */
+export function deleteAccount(password: string) {
+  return apiFetch<{ deleted: true }>('/api/v1/profile/account', { method: 'DELETE', body: JSON.stringify({ password }) })
+}

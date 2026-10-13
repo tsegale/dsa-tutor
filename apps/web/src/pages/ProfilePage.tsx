@@ -9,6 +9,7 @@ import { IdentityHeader } from '@/components/profile/IdentityHeader'
 import { StudySection } from '@/components/profile/StudySection'
 import { AnalyticsSection } from '@/components/profile/AnalyticsSection'
 import { PreferencesSection } from '@/components/profile/PreferencesSection'
+import { DataPrivacySection } from '@/components/profile/DataPrivacySection'
 
 // The learner and participant hub (Phase 6): identity, study participation
 // (participants only), and the guided tour. It must read as complete for a
@@ -47,6 +48,14 @@ export default function ProfilePage() {
         <AnalyticsSection />
 
         <PreferencesSection />
+
+        {user && (
+          <DataPrivacySection
+            user={user}
+            isParticipant={Boolean(studyStatus?.participantCode)}
+            activeParticipant={Boolean(studyStatus?.participantCode && studyStatus.consentAt && !studyStatus.withdrawn)}
+          />
+        )}
 
         <Section title="Guided tour">
           <div className="flex flex-col items-start gap-3">
