@@ -5,7 +5,7 @@ import { Group, Panel, useDefaultLayout, usePanelRef, type LayoutStorage } from 
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, CriticalJunctionType, ScaffoldingLevel } from '@dsa-tutor/types'
-import { SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
+import { SCAFFOLDING_LEVEL_NAME } from '@/config/supportLevels'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
@@ -380,6 +380,7 @@ export default function AlgorithmPage() {
   const sessionTotalPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
   const setScaffoldingLevel = useAlgorithmStore((state) => state.setScaffoldingLevel)
   const setScaffoldingReasoning = useAlgorithmStore((state) => state.setScaffoldingReasoning)
+  const setScaffoldingScore = useAlgorithmStore((state) => state.setScaffoldingScore)
   const pendingRemediation = useMisconceptionStore((state) => state.pendingRemediation)
   const lastBottomedOutCategory = useMisconceptionStore((state) => state.lastBottomedOutCategory)
   const completePendingRemediation = useMisconceptionStore((state) => state.completePendingRemediation)
@@ -669,6 +670,7 @@ export default function AlgorithmPage() {
     const currentLevel = useAlgorithmStore.getState().scaffoldingLevel
     const gatedLevel = gateScaffoldingReduction(currentLevel, assessment.recommendedLevel, nextMetrics.consecutiveCorrect)
     setScaffoldingReasoning(assessment.reasoning)
+    setScaffoldingScore(assessment.overallScore)
 
     if (sessionId) {
       // Tracked so PredictionZone holds the run on this junction until any

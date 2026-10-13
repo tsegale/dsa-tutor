@@ -33,6 +33,18 @@ export interface MasteryAssessment {
   reasoning: string
 }
 
+/** What each level of support gives the learner, as the reasoning states it.
+ * Shared with the header's scaffolding chip so the two never drift. */
+export const SUPPORT_DESCRIPTION: Record<MasteryAssessment['recommendedLevel'], string> = {
+  HIGH: 'Maximum support with proactive hints and detailed feedback.',
+  MEDIUM: 'Hints on request, targeted feedback on errors.',
+  LOW: 'Hints available on request only, no proactive support.',
+  NONE: 'Scaffolding fully removed.',
+}
+
+/** The minimum overall score for each level below HIGH. */
+export const LEVEL_THRESHOLDS = { NONE: 80, LOW: 65, MEDIUM: 45 } as const
+
 export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
   if (metrics.totalPredictions === 0) {
     return {
@@ -75,18 +87,18 @@ export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
   let recommendedLevel: MasteryAssessment['recommendedLevel']
   let reasoning: string
 
-  if (overallScore >= 80 && metrics.consecutiveCorrect >= 5 && recentHintsRequested === 0) {
+  if (overallScore >= LEVEL_THRESHOLDS.NONE && metrics.consecutiveCorrect >= 5 && recentHintsRequested === 0) {
     recommendedLevel = 'NONE'
-    reasoning = `Score ${overallScore}/100 with ${metrics.consecutiveCorrect} consecutive correct and no hints in the last ${RECENT_HINT_WINDOW} predictions. Scaffolding fully removed.`
-  } else if (overallScore >= 65 && recentHintsRequested <= 1) {
+    reasoning = `Score ${overallScore}/100 with ${metrics.consecutiveCorrect} consecutive correct and no hints in the last ${RECENT_HINT_WINDOW} predictions. ${SUPPORT_DESCRIPTION.NONE}`
+  } else if (overallScore >= LEVEL_THRESHOLDS.LOW && recentHintsRequested <= 1) {
     recommendedLevel = 'LOW'
-    reasoning = `Score ${overallScore}/100. Hints available on request only, no proactive support.`
-  } else if (overallScore >= 45) {
+    reasoning = `Score ${overallScore}/100. ${SUPPORT_DESCRIPTION.LOW}`
+  } else if (overallScore >= LEVEL_THRESHOLDS.MEDIUM) {
     recommendedLevel = 'MEDIUM'
-    reasoning = `Score ${overallScore}/100. Hints on request, targeted feedback on errors.`
+    reasoning = `Score ${overallScore}/100. ${SUPPORT_DESCRIPTION.MEDIUM}`
   } else {
     recommendedLevel = 'HIGH'
-    reasoning = `Score ${overallScore}/100. Maximum support with proactive hints and detailed feedback.`
+    reasoning = `Score ${overallScore}/100. ${SUPPORT_DESCRIPTION.HIGH}`
   }
 
   return { overallScore, conceptualScore, proceduralScore, recommendedLevel, reasoning }
@@ -96,7 +108,7 @@ const LEVEL_ORDER: MasteryAssessment['recommendedLevel'][] = ['HIGH', 'MEDIUM', 
 
 // Consecutive correct predictions required before stepping support down one
 // level, keyed by the level being stepped down FROM.
-const CONSECUTIVE_REQUIRED_TO_REDUCE: Record<'HIGH' | 'MEDIUM' | 'LOW', number> = {
+export const CONSECUTIVE_REQUIRED_TO_REDUCE: Record<'HIGH' | 'MEDIUM' | 'LOW', number> = {
   HIGH: 3,
   MEDIUM: 4,
   LOW: 5,

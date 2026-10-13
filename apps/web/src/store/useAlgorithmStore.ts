@@ -12,6 +12,8 @@ export interface AlgorithmStoreState {
   mode: AlgorithmMode
   scaffoldingLevel: ScaffoldingLevel
   scaffoldingReasoning: string
+  /** The session's latest overall mastery score (0-100), stated with the reasoning. */
+  scaffoldingScore: number
   sessionXP: number
   focusModeActive: boolean
   isPlaying: boolean
@@ -72,6 +74,7 @@ export interface AlgorithmStoreState {
   setPlaybackSpeed: (speed: number) => void
   setScaffoldingLevel: (level: ScaffoldingLevel) => void
   setScaffoldingReasoning: (reasoning: string) => void
+  setScaffoldingScore: (score: number) => void
   setSessionId: (id: string) => void
   setUserId: (id: string) => void
   startPlayback: () => void
@@ -172,6 +175,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   mode: AlgorithmMode.DEMO,
   scaffoldingLevel: ScaffoldingLevel.HIGH,
   scaffoldingReasoning: 'No interaction data yet. Starting with maximum support.',
+  scaffoldingScore: 0,
   sessionXP: 0,
   focusModeActive: false,
   isPlaying: false,
@@ -281,6 +285,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     })),
 
   setScaffoldingReasoning: (reasoning) => set({ scaffoldingReasoning: reasoning }),
+
+  setScaffoldingScore: (score) => set({ scaffoldingScore: score }),
 
   setSessionId: (id) => set({ sessionId: id, selfExplanationsOffered: 0, challengesStarted: 0 }),
 

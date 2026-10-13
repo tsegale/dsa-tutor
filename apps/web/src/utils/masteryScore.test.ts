@@ -201,3 +201,27 @@ describe('gateScaffoldingReduction', () => {
     expect(gateScaffoldingReduction('MEDIUM', 'MEDIUM', 0)).toBe('MEDIUM')
   })
 })
+
+describe('calculateMastery reasoning wording', () => {
+  // Pinned word for word: the header's scaffolding popover quotes it, and the
+  // descriptions now come from SUPPORT_DESCRIPTION.
+  const base = { conceptualCorrect: 0, conceptualTotal: 0, proceduralCorrect: 0, proceduralTotal: 0, hintsRequested: 0, recentHintCounts: [] }
+
+  it('words each level exactly as before', () => {
+    expect(calculateMastery({ ...base, totalPredictions: 10, correctPredictions: 3, consecutiveCorrect: 0 }).reasoning).toBe(
+      'Score 30/100. Maximum support with proactive hints and detailed feedback.',
+    )
+    expect(calculateMastery({ ...base, totalPredictions: 10, correctPredictions: 5, consecutiveCorrect: 0 }).reasoning).toBe(
+      'Score 50/100. Hints on request, targeted feedback on errors.',
+    )
+    expect(calculateMastery({ ...base, totalPredictions: 10, correctPredictions: 7, consecutiveCorrect: 0, recentHintCounts: [1, 1] }).reasoning).toBe(
+      'Score 70/100. Hints on request, targeted feedback on errors.',
+    )
+    expect(calculateMastery({ ...base, totalPredictions: 10, correctPredictions: 7, consecutiveCorrect: 0 }).reasoning).toBe(
+      'Score 70/100. Hints available on request only, no proactive support.',
+    )
+    expect(calculateMastery({ ...base, totalPredictions: 10, correctPredictions: 8, consecutiveCorrect: 5 }).reasoning).toBe(
+      'Score 90/100 with 5 consecutive correct and no hints in the last 10 predictions. Scaffolding fully removed.',
+    )
+  })
+})

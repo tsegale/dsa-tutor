@@ -21,6 +21,7 @@ import AccountIdentity from './AccountIdentity'
 import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
+import { ScaffoldingChip } from './ScaffoldingChip'
 
 // The app's header, in two tiers (Phase 4A):
 // - The global bar (56px) is the same element list on every page that has it:
@@ -257,6 +258,7 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
   const [drawerOpen, setDrawerOpen] = useState(false)
   useEffect(() => setDrawerOpen(false), [pathname])
   const { restricted } = useStudyScope()
+  const { user } = useAuth()
   const inWorkspace = Boolean(onNavigate)
   const go = useCallback((to: string) => (onNavigate ? onNavigate(to) : navigate(to)), [navigate, onNavigate])
 
@@ -316,6 +318,9 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
           </div>
 
           <div className="flex shrink-0 items-center justify-end gap-2">
+            {/* Status chips, then a hairline, then search, theme and account.
+                An educator is not a learner being scaffolded: no chip. */}
+            {user?.role !== 'EDUCATOR' && <ScaffoldingChip inWorkspace={inWorkspace} />}
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}

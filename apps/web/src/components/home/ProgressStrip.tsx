@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import type { TopicDto, UserProfile } from '@dsa-tutor/types'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { fetchMisconceptionSummary } from '@/api/misconceptionEvents'
-import { SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
+import { SUPPORT_LEVEL } from '@/config/supportLevels'
+import { masteryIndex, overallSupport } from '@/utils/supportBand'
 
 // The four stats the old dashboard showed as large coloured tiles, folded
 // into one quiet row: context for the Continue card, never the headline.
@@ -10,18 +10,18 @@ import { SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
 // unlocked topics, and "resolved" counts misconception events the
 // deterministic resolve rule closed, not merely wrong answers.
 export function ProgressStrip({ user, topics }: { user: UserProfile; topics: TopicDto[] }) {
-  const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const { data: misconceptionSummary } = useQuery({
     queryKey: ['misconception-events', 'summary'],
     queryFn: fetchMisconceptionSummary,
   })
 
-  const unlocked = topics.filter((topic) => !topic.isLocked)
-  const mastery = unlocked.length ? Math.round(unlocked.reduce((sum, topic) => sum + topic.masteryPercent, 0) / unlocked.length) : 0
+  const mastery = masteryIndex(topics)
+  // The same overall band the header's scaffolding chip shows.
+  const support = overallSupport(topics)
 
   const stats: { label: string; value: string; mono: boolean }[] = [
     { label: 'Mastery index', value: `${mastery}%`, mono: true },
-    { label: 'Support level', value: SCAFFOLDING_LEVEL_NAME[scaffoldingLevel], mono: false },
+    { label: 'Support level', value: SUPPORT_LEVEL[support.level].label, mono: false },
     { label: 'Misconceptions resolved', value: String(misconceptionSummary?.resolved ?? 0), mono: true },
     { label: 'Day streak', value: String(user.streakCount), mono: true },
   ]

@@ -1,7 +1,7 @@
 import { ScaffoldingLevel } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { SCAFFOLDING_LEVEL_NAME } from '@/components/ui/ZPDScaffoldingPill'
+import { SCAFFOLDING_LEVEL_NAME } from '@/config/supportLevels'
 
 const STYLES: Record<ScaffoldingLevel, string> = {
   [ScaffoldingLevel.HIGH]: 'border border-primary bg-primary text-white',

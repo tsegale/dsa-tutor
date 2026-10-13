@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import ModeToggle from '@/components/ui/ModeToggle'
 import ProgressBar from '@/components/ui/ProgressBar'
 import SoundToggle from '@/components/ui/SoundToggle'
-import ZPDScaffoldingPill from '@/components/ui/ZPDScaffoldingPill'
 import { AppTopBar, Breadcrumb } from './AppShell'
 import { ContextBar } from './ContextBar'
 import { requestSessionExit } from './sessionExit'
@@ -66,10 +65,7 @@ export default function TopBar() {
           label="Session"
           progressPercent={progressPercent}
           start={
-            <>
-              <Breadcrumb crumbs={crumbs} />
-              {features.scaffoldingPill && <ZPDScaffoldingPill />}
-            </>
+<Breadcrumb crumbs={crumbs} />
           }
           center={features.modeToggle ? <ModeToggle /> : undefined}
           end={
