@@ -50,12 +50,38 @@ export const DEMO_PLAN: ReadonlyArray<readonly [string, number]> = [
 /** Answered predictions per seeded session: percents are multiples of 5. */
 export const PREDICTIONS_PER_TOPIC = 20
 
+export type DemoLevel = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+
 export interface DemoInteraction {
   stepIndex: number
   predictionCorrect: boolean
   timeSpentSeconds: number
   masteryScoreAtTime: number
+  /** The support level in force when this answer was given. */
+  scaffoldingLevelAtTime: DemoLevel
   createdAt: Date
+}
+
+// How support fades in the seeded runs, so the profile's trajectory chart
+// shows the mechanism. Mirrors apps/web/src/utils/masteryScore.ts: the
+// recommended level from the running score and streak, then the gate that
+// steps support down one level at a time after a run of correct answers and
+// restores it at once. Seeded answers use no hints.
+const LEVELS: DemoLevel[] = ['HIGH', 'MEDIUM', 'LOW', 'NONE']
+const STREAK_TO_STEP_DOWN: Record<'HIGH' | 'MEDIUM' | 'LOW', number> = { HIGH: 3, MEDIUM: 4, LOW: 5 }
+
+function recommendedLevel(score: number, streak: number): DemoLevel {
+  if (score >= 80 && streak >= 5) return 'NONE'
+  if (score >= 65) return 'LOW'
+  if (score >= 45) return 'MEDIUM'
+  return 'HIGH'
+}
+
+export function nextLevel(current: DemoLevel, score: number, streak: number): DemoLevel {
+  const target = recommendedLevel(score, streak)
+  const at = LEVELS.indexOf(current)
+  if (LEVELS.indexOf(target) <= at) return target
+  return current !== 'NONE' && streak >= STREAK_TO_STEP_DOWN[current] ? LEVELS[at + 1] : current
 }
 
 export interface DemoSession {
@@ -65,6 +91,8 @@ export interface DemoSession {
   completed: boolean
   reachedFinalStep: boolean
   activeSeconds: number
+  /** The level the session ended at. */
+  finalLevel: DemoLevel
   interactions: DemoInteraction[]
 }
 
@@ -99,6 +127,9 @@ export function buildDemoProgress(now: Date): DemoSession[] {
     let elapsed = 0
     let correctSoFar = 0
     const interactions: DemoInteraction[] = []
+    // Every session starts at full support and fades as answers improve.
+    let level: DemoLevel = 'HIGH'
+    let streak = 0
     for (let i = 0; i < PREDICTIONS_PER_TOPIC; i++) {
       // A right answer grows likelier through the run, and the totals are
       // forced at the end so the topic lands exactly on its planned percent.
@@ -109,13 +140,17 @@ export function buildDemoProgress(now: Date): DemoSession[] {
       if (predictionCorrect) correctSoFar++
       const timeSpentSeconds = 8 + Math.floor(random() * 30)
       elapsed += timeSpentSeconds + 6
+      const masteryScoreAtTime = Math.round((correctSoFar / (i + 1)) * 100)
       interactions.push({
         stepIndex: 2 + i * 3,
         predictionCorrect,
         timeSpentSeconds,
-        masteryScoreAtTime: Math.round((correctSoFar / (i + 1)) * 100),
+        masteryScoreAtTime,
+        scaffoldingLevelAtTime: level,
         createdAt: new Date(startTime.getTime() + elapsed * 1000),
       })
+      streak = predictionCorrect ? streak + 1 : 0
+      level = nextLevel(level, masteryScoreAtTime, streak)
     }
 
     return {
@@ -124,6 +159,7 @@ export function buildDemoProgress(now: Date): DemoSession[] {
       endTime: isLatest ? null : new Date(startTime.getTime() + (elapsed + 60) * 1000),
       completed: !isLatest,
       reachedFinalStep: percent >= 60,
+      finalLevel: level,
       activeSeconds: elapsed,
       interactions,
     }

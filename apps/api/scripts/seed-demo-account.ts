@@ -72,7 +72,7 @@ async function main() {
           userId: user.id,
           algorithmTopicId: topicId.get(session.topic)!,
           mode: 'PRACTICE',
-          scaffoldingLevel: 'MEDIUM',
+          scaffoldingLevel: session.finalLevel,
           startTime: session.startTime,
           endTime: session.endTime,
           completed: session.completed,
@@ -83,7 +83,6 @@ async function main() {
             create: session.interactions.map((interaction) => ({
               ...interaction,
               interactionType: 'PREDICTION',
-              scaffoldingLevelAtTime: 'MEDIUM',
             })),
           },
         },

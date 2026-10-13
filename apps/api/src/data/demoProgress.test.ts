@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { DEMO_PLAN, PREDICTIONS_PER_TOPIC, buildDemoProgress } from './demoProgress'
+import { DEMO_PLAN, PREDICTIONS_PER_TOPIC, buildDemoProgress, nextLevel } from './demoProgress'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
 const sessions = buildDemoProgress(NOW)
@@ -46,5 +46,31 @@ describe('buildDemoProgress', () => {
   it('names only topics the seed creates', () => {
     const seed = readFileSync(join(__dirname, '../../prisma/seed.ts'), 'utf8')
     for (const [topic] of DEMO_PLAN) expect(seed).toContain(`name: '${topic}'`)
+  })
+})
+
+describe('seeded support fading', () => {
+  const order = ['HIGH', 'MEDIUM', 'LOW', 'NONE']
+
+  it('starts every session at full support and only steps down one level at a time', () => {
+    for (const session of sessions) {
+      expect(session.interactions[0].scaffoldingLevelAtTime).toBe('HIGH')
+      session.interactions.forEach((interaction, index) => {
+        if (index === 0) return
+        const before = order.indexOf(session.interactions[index - 1].scaffoldingLevelAtTime)
+        expect(order.indexOf(interaction.scaffoldingLevelAtTime) - before).toBeLessThanOrEqual(1)
+      })
+    }
+  })
+
+  it('fades a strong topic below full support, so the chart shows the mechanism', () => {
+    const strong = sessions.find((s) => s.topic === 'array-access')!
+    expect(order.indexOf(strong.finalLevel)).toBeGreaterThanOrEqual(order.indexOf('LOW'))
+  })
+
+  it('steps down only after the streak the gate requires, and restores support at once', () => {
+    expect(nextLevel('HIGH', 90, 2)).toBe('HIGH')
+    expect(nextLevel('HIGH', 90, 3)).toBe('MEDIUM')
+    expect(nextLevel('LOW', 30, 0)).toBe('HIGH')
   })
 })
