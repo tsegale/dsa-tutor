@@ -72,7 +72,7 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', cla
   // The topic the rail points at: the one open in the workspace, else the
   // shared plan's answer (resume the latest session, or the recommendation),
   // the same topic Home's Continue card names.
-  const focusTopicName = currentTopicName ?? plan?.continue?.entry.topic.name ?? plan?.recommended?.topic.name ?? null
+  const focusTopicName = currentTopicName ?? plan?.focus?.topic.name ?? null
 
   const key = expandedStorageKey(user?.id)
   const [stored, setStored] = useState<string[] | null>(() => readExpanded(storage(), key))

@@ -139,7 +139,7 @@ export default function Home() {
  * with nothing visible to this user is left out, never an empty section.
  */
 function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan: LearningPlan; userId: string | undefined }) {
-  const focus = plan.continue?.entry.topic.name ?? plan.recommended?.topic.name ?? null
+  const focus = plan.focus?.topic.name ?? null
   const { expanded, toggle } = useExpandedModules(`dsa-tutor-home-expanded:${userId ?? 'anonymous'}`, defaultExpandedModule(syllabus, focus))
   return (
     <section aria-labelledby="modules-heading" className="mt-4 flex flex-col gap-4">
@@ -173,7 +173,7 @@ function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan:
  */
 function StudyTopics({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: LearningPlan }) {
   const rows = syllabus.flatMap((entry) => entry.topics)
-  const next = plan.continue?.entry ?? plan.recommended
+  const next = plan.focus
   return (
     <section aria-labelledby="study-topics-heading" className="mt-4 flex flex-col gap-4">
       <div>

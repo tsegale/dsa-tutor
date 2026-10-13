@@ -112,7 +112,13 @@ export interface LearningPlan {
   recommended: SyllabusTopic | null
   /** The furthest topic reached (any mastery), or null with no progress. */
   furthest: SyllabusTopic | null
-  /** The same rule within each module, for module cards and module pages. */
+  /** The one topic the app points at: the open session, else the recommendation. */
+  focus: SyllabusTopic | null
+  /**
+   * Each module's next topic, for module sections and pages. The module that
+   * holds the focus topic names the focus topic, so Home's banner and its own
+   * module never name different topics; other modules use nextInSequence.
+   */
   nextByModule: Map<string, SyllabusTopic | null>
 }
 
@@ -140,10 +146,19 @@ export function planNext(
   const sequence = syllabus.flatMap((module) => module.topics)
   const resumable = latest ? sequence.find((entry) => entry.topic.name === latest.topic.name && entry.openable) : undefined
   const furthest = [...sequence].reverse().find((entry) => entry.topic.masteryPercent > 0) ?? null
+  const recommended = nextInSequence(sequence)
+  const resume = resumable && latest ? { entry: resumable, startTime: latest.startTime } : null
+  const focus = resume?.entry ?? recommended
   return {
-    continue: resumable && latest ? { entry: resumable, startTime: latest.startTime } : null,
-    recommended: nextInSequence(sequence),
+    continue: resume,
+    recommended,
     furthest,
-    nextByModule: new Map(syllabus.map((module) => [module.module.id, nextInSequence(module.topics)])),
+    focus,
+    nextByModule: new Map(
+      syllabus.map((module) => [
+        module.module.id,
+        focus && module.topics.includes(focus) ? focus : nextInSequence(module.topics),
+      ])
+    ),
   }
 }

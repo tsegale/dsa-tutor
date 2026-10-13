@@ -168,6 +168,15 @@ describe('planNext', () => {
     expect(plan.nextByModule.get('searching')?.topic.name).toBe('linear-search')
   })
 
+  it('makes the module holding the open session name that session, so it never contradicts the banner', () => {
+    // Resuming 1.1 while 1.8 Queue is the sequence's next: Module 1 names 1.1.
+    const plan = planNext(curriculum({ stack: 100, 'array-access': 30 }), { startTime: '2026-10-13T09:00:00Z', topic: { name: 'array-access' } })
+    expect(plan.focus?.topic.name).toBe('array-access')
+    expect(plan.nextByModule.get('linear-structures')?.topic.name).toBe('array-access')
+    // Other modules keep their own next topic.
+    expect(plan.nextByModule.get('searching')?.topic.name).toBe('linear-search')
+  })
+
   it('returns null rather than pointing backwards when nothing incomplete lies ahead', () => {
     const plan = planNext(curriculum({ 'selection-sort': 100 }), null)
     expect(plan.recommended).toBeNull()
