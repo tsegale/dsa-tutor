@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { CodeEvalResponse } from '@dsa-tutor/types'
 import { evaluateCode } from '@/api/codeEval'
 import { preloadPyodide, pyodideStatus, runSwapDecisionPython } from '@/utils/pyodideRunner'
-import CodeMirrorEditor from './CodeMirrorEditor'
+
+// CodeMirror is most of the workspace's weight and only Code Mode uses it,
+// so it loads when this input first renders, not with every topic.
+const CodeMirrorEditor = lazy(() => import('./CodeMirrorEditor'))
 
 interface CodeEditorInputProps {
   prompt: string
@@ -90,7 +93,9 @@ export default function CodeEditorInput({
 
       {/* Five lines at the editor's 1.7 line height, plus padding. */}
       <div className="flex min-h-[9.5em] flex-1">
-        <CodeMirrorEditor value={code} onChange={setCode} invalid={syntaxError !== null} ariaLabel="Python code for this step" />
+        <Suspense fallback={<div aria-busy="true" aria-label="Loading the code editor" className="flex-1 rounded-sm border border-rule bg-surface-sunk" />}>
+          <CodeMirrorEditor value={code} onChange={setCode} invalid={syntaxError !== null} ariaLabel="Python code for this step" />
+        </Suspense>
       </div>
 
       {syntaxError && <p className="shrink-0 text-[12px] text-error">{syntaxError}</p>}
