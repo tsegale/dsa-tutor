@@ -7,8 +7,11 @@ import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 
 // One of Home's module cards: the way into the curriculum from Home. The
-// whole card is the link (a single tab stop), so it lifts on hover. A locked
-// module names what it builds on in place of the next topic.
+// whole card is the link (a single tab stop), so it lifts on hover.
+// A locked module's requirement is stated once per screen: from 1024px the
+// curriculum rail beside the cards already states it, so the card shows the
+// module's open preview topic instead; below that (the rail is a closed
+// drawer) the card states the requirement itself.
 export function ModuleCard({
   entry,
   next,
@@ -37,7 +40,16 @@ export function ModuleCard({
           </span>
         </div>
         <p className="mt-auto truncate border-t border-rule pt-3 text-small text-ink-2">
-          {next && !locked ? (
+          {locked && status.unmet ? (
+            <>
+              <span className="lg:hidden">{unmetLabel(status.unmet)}</span>
+              {next && (
+                <span className="hidden lg:inline">
+                  Preview: <span className="text-mono-sm">{next.number}</span> <span className="font-medium text-ink">{next.topic.displayName}</span>
+                </span>
+              )}
+            </>
+          ) : next ? (
             <>
               Next: <span className="text-mono-sm">{next.number}</span> <span className="font-medium text-ink">{next.topic.displayName}</span>
             </>

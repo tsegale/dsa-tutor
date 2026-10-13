@@ -34,6 +34,8 @@ export function ContinueCard({
 
   const { topic } = target
   const isContinue = target.kind === 'continue'
+  // A recommended topic that already has progress is continued, not started.
+  const started = topic.masteryPercent > 0
   const trackName = getTrack(topic.track).name
 
   return (
@@ -43,7 +45,7 @@ export function ContinueCard({
       className="flex flex-col gap-5 rounded-md border border-rule bg-surface p-panel shadow-e1 sm:flex-row sm:items-center"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-micro text-ink-2">{isContinue ? 'Continue where you left off' : 'Start here'}</p>
+        <p className="text-micro text-ink-2">{isContinue ? 'Continue where you left off' : started ? 'Next up' : 'Start here'}</p>
         <h2 id="continue-heading" className="mt-1 text-h2 text-ink">
           {topic.displayName}
         </h2>
@@ -59,7 +61,7 @@ export function ContinueCard({
       <div className="flex shrink-0 items-center gap-5">
         <ProgressRing value={topic.masteryPercent} size={64} strokeWidth={5} ariaLabel={`${topic.displayName} mastery`} tone={isTopicComplete(topic) ? 'success' : 'brand'} />
         <Button asChild>
-          <Link to={topicPath(topic.name)}>{isContinue ? 'Continue' : 'Start'}</Link>
+          <Link to={topicPath(topic.name)}>{isContinue || started ? 'Continue' : 'Start'}</Link>
         </Button>
       </div>
     </section>

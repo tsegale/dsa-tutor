@@ -254,7 +254,9 @@ function ModuleSection({
               <span className={cn('min-w-0 text-small font-semibold', locked ? 'text-ink-2' : 'text-ink')}>{module.title}</span>
               {locked && <LockIcon />}
             </span>
-            {locked && status.unmet ? (
+            {/* The requirement shows once per module: on the header while the
+                module is collapsed, above its topic list once it is open. */}
+            {locked && status.unmet && !open ? (
               <span className="text-micro text-ink-2">{unmetLabel(status.unmet)}</span>
             ) : (
               <span className="flex items-center gap-2">
@@ -274,6 +276,7 @@ function ModuleSection({
         </button>
       </h3>
 
+      {open && locked && status.unmet && <p className="mx-4 mb-2 text-micro text-ink-2">{unmetLabel(status.unmet)}</p>}
       {open && (
         <ol id={bodyId} aria-label={`${moduleLabel(module)} topics`} className="pb-2">
           {topics.map(({ topic, number, state, openable, preview, reason }) => {
