@@ -85,6 +85,15 @@ server`. Use Supabase's Dashboard > Connect > Session Pooler string instead
 username format). The Session Pooler supports `prisma migrate deploy`, unlike
 the Transaction Pooler.
 
+**Every public table needs row level security on.** Supabase serves the public
+schema through its Data API to anyone holding the anon key. Migration
+`20261013090000_enable_row_level_security` turns RLS on, with no policies, for
+every table that existed then; the app is unaffected because Prisma connects as
+the table owner. A table added later needs `ALTER TABLE public."Name" ENABLE ROW
+LEVEL SECURITY;` in its migration (the Security Advisor flags it otherwise).
+Migrations are applied by hand (`prisma migrate deploy` with DATABASE_URL set to
+the Session Pooler); the container does not run them.
+
 **Railway's Config-as-code (`railway.json`) is deprecated for new services.**
 Since 2026-08-28, a service that has never used Config-as-code cannot opt in,
 so a committed `railway.json` (like the ones in `apps/api/` and `apps/ai/`) is
