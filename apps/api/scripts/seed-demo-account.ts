@@ -66,8 +66,12 @@ async function main() {
     await tx.userBadge.deleteMany({ where: { userId: user.id } })
     await tx.topicMastery.deleteMany({ where: { userId: user.id } })
 
+    // Two queries per session (the session, then its answers in one insert):
+    // run from far away, a nested create's one-query-per-row outlasts the
+    // transaction timeout.
     for (const session of sessions) {
-      await tx.session.create({
+      const created = await tx.session.create({
+        select: { id: true },
         data: {
           userId: user.id,
           algorithmTopicId: topicId.get(session.topic)!,
@@ -79,13 +83,14 @@ async function main() {
           reachedFinalStep: session.reachedFinalStep,
           wallClockSeconds: session.activeSeconds,
           activeSeconds: session.activeSeconds,
-          interactions: {
-            create: session.interactions.map((interaction) => ({
-              ...interaction,
-              interactionType: 'PREDICTION',
-            })),
-          },
         },
+      })
+      await tx.interaction.createMany({
+        data: session.interactions.map((interaction) => ({
+          ...interaction,
+          sessionId: created.id,
+          interactionType: 'PREDICTION',
+        })),
       })
     }
 
@@ -93,7 +98,7 @@ async function main() {
       where: { id: user.id },
       data: { xpTotal: correct * 10, streakCount: 4, lastActiveDate: now },
     })
-  }, { timeout: 60_000 })
+  }, { maxWait: 20_000, timeout: 180_000 })
 
   console.log(`Demo account seeded: ${email} (${sessions.length} topics started, ${correct} correct predictions)`)
 }
