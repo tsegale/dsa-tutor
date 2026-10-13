@@ -13,6 +13,9 @@ const participant: StudyStatusDto = {
   posttestOverride: false,
   classicTopicSlug: 'binary-search',
   isDemo: false,
+  participantCode: 'P01',
+  consentAt: '2026-10-01T09:00:00.000Z',
+  susSubmitted: false,
 }
 
 describe('studyPhase', () => {
@@ -29,7 +32,8 @@ describe('studyPhase', () => {
     expect(studyPhase({ ...participant, topicsCompleted: ['bubble-sort'] })?.label).toBe('topic 2 of 3')
     expect(studyPhase({ ...participant, topicsCompleted: ['bubble-sort', 'binary-search'] })?.label).toBe('topic 3 of 3')
     expect(studyPhase({ ...participant, topicsCompleted: ['bubble-sort', 'binary-search', 'bst'], posttestAvailable: true })?.label).toBe('post-test due')
-    expect(studyPhase({ ...participant, posttestAvailable: true, posttestCompleted: true })?.label).toBe('complete')
+    expect(studyPhase({ ...participant, posttestAvailable: true, posttestCompleted: true })?.label).toBe('questionnaire due')
+    expect(studyPhase({ ...participant, posttestAvailable: true, posttestCompleted: true, susSubmitted: true })?.label).toBe('complete')
   })
 
   it('treats a researcher-opened post-test as post-test due', () => {

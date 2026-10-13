@@ -1,7 +1,7 @@
 import type { StudyStatusDto } from '@dsa-tutor/types'
 import { STUDY_TOPIC_SLUGS } from './misconceptionProbes'
 
-export type StudyPhaseKey = 'consent' | 'pretest' | 'topics' | 'posttest' | 'complete'
+export type StudyPhaseKey = 'consent' | 'pretest' | 'topics' | 'posttest' | 'questionnaire' | 'complete'
 
 export interface StudyPhase {
   key: StudyPhaseKey
@@ -18,7 +18,8 @@ export function studyPhase(status: StudyStatusDto | null | undefined): StudyPhas
   if (!status?.isParticipant || status.withdrawn) return null
   if (status.consentRequired) return { key: 'consent', label: 'consent due' }
   if (status.pretestRequired) return { key: 'pretest', label: 'pre-test due' }
-  if (status.posttestCompleted) return { key: 'complete', label: 'complete' }
+  // The usability questionnaire (SUS) comes last, after the post-test.
+  if (status.posttestCompleted) return status.susSubmitted ? { key: 'complete', label: 'complete' } : { key: 'questionnaire', label: 'questionnaire due' }
   if (status.posttestAvailable) return { key: 'posttest', label: 'post-test due' }
   const total = STUDY_TOPIC_SLUGS.length
   const current = Math.min(status.topicsCompleted.length + 1, total)

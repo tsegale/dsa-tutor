@@ -27,3 +27,18 @@ describe('study status isDemo', () => {
     expect(await getStudyStatus('participant')).toMatchObject({ isParticipant: true, isDemo: false })
   })
 })
+
+describe('study status participant fields (Phase 6B)', () => {
+  it('gives a participant their code, consent date and questionnaire state, never the score', async () => {
+    const consentAt = new Date('2026-10-01T09:00:00Z')
+    findUnique.mockResolvedValueOnce({ participantCode: 'P04', consentAt, withdrawnAt: null, posttestOverrideAt: null, classicTopicSlug: 'bst', isDemo: false, susSubmittedAt: new Date(), susScore: 85 })
+    const status = await getStudyStatus('p4')
+    expect(status).toMatchObject({ participantCode: 'P04', consentAt: consentAt.toISOString(), susSubmitted: true })
+    expect(JSON.stringify(status)).not.toMatch(/susScore|85/)
+  })
+
+  it('gives a non-participant nulls', async () => {
+    findUnique.mockResolvedValueOnce({ participantCode: null, consentAt: null, withdrawnAt: null, posttestOverrideAt: null, classicTopicSlug: null, isDemo: false, susSubmittedAt: null })
+    expect(await getStudyStatus('s')).toMatchObject({ participantCode: null, consentAt: null, susSubmitted: false })
+  })
+})

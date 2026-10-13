@@ -15,6 +15,9 @@ const participant: StudyStatusDto = {
   posttestOverride: false,
   classicTopicSlug: 'binary-search',
   isDemo: false,
+  participantCode: 'P01',
+  consentAt: '2026-10-01T09:00:00.000Z',
+  susSubmitted: false,
 }
 
 afterEach(() => useAlgorithmStore.getState().setClassicMode(false))

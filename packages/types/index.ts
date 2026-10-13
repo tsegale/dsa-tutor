@@ -740,6 +740,12 @@ export interface StudyStatusDto {
   /** A throwaway demo account: never a participant, and enrolment refuses
    * it, so the app does not offer it the study. */
   isDemo: boolean
+  /** The identifier used in every research export; null for non-participants. */
+  participantCode: string | null
+  /** When the participant consented (ISO), or null. */
+  consentAt: string | null
+  /** Whether the end-of-study usability questionnaire (SUS) is in. The score is never sent. */
+  susSubmitted: boolean
 }
 
 /** An item as delivered to the student - never carries the correct answer. */
