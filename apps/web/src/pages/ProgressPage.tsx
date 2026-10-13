@@ -31,11 +31,10 @@ export default function ProgressPage() {
   const { restricted } = useStudyScope()
   const { topicsQuery, syllabus, plan } = useLearningPlan()
   const { data: topics, isLoading, isFetching, refetch } = topicsQuery
-  const crumbs = [{ label: 'Home', to: '/' }, { label: 'Progress' }]
 
   if (isLoading) {
     return (
-      <AppShell crumbs={crumbs}>
+      <AppShell>
         <div aria-busy="true" aria-label="Loading your progress" className="flex flex-col gap-6">
           <Skeleton className="h-9 w-40" />
           <Skeleton className="h-36 w-full rounded-md" />
@@ -51,7 +50,7 @@ export default function ProgressPage() {
 
   if (!topics) {
     return (
-      <AppShell crumbs={crumbs}>
+      <AppShell>
         <h1 className="mb-6 text-h1 text-ink">Progress</h1>
         <ErrorState
           title="Your progress did not load."
@@ -69,7 +68,7 @@ export default function ProgressPage() {
   if (!hasHistory) {
     const first = plan?.recommended ?? null
     return (
-      <AppShell crumbs={crumbs}>
+      <AppShell>
         <h1 className="mb-6 text-h1 text-ink">Progress</h1>
         <EmptyState
           icon={<ChartIcon />}
@@ -105,7 +104,7 @@ export default function ProgressPage() {
       }))
 
   return (
-    <AppShell crumbs={crumbs}>
+    <AppShell>
       <h1 className="mb-6 text-h1 text-ink">Progress</h1>
 
       <section aria-labelledby="level-heading" className="mb-8 rounded-md border border-rule bg-surface p-card shadow-e1">

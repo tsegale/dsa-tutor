@@ -1274,7 +1274,7 @@ export default function AlgorithmPage() {
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden">
-      <div className="h-14 shrink-0">
+      <div className="shrink-0">
         <TopBar />
       </div>
       <SoftLockNotice topicName={algorithmNameParam} />

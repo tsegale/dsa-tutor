@@ -3,12 +3,13 @@ import { getTrackBySlug } from '@/data/tracks'
 import { moduleByNumber, moduleForTrack, moduleLabel, type Module } from '@/config/curriculum'
 import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { unmetLabel } from '@/utils/moduleStatus'
+import { unmetLabel, type ModuleStatus } from '@/utils/moduleStatus'
 import { AppShell } from '@/components/layout/AppShell'
+import { ContextBar } from '@/components/layout/ContextBar'
 import { TopicRow } from '@/components/track/TopicRow'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { ProgressRing } from '@/components/ui/progress'
+import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/button'
 
@@ -44,6 +45,36 @@ function ModuleSkeleton() {
   )
 }
 
+/** The module page's context bar: module number, title and progress. */
+function ModuleContext({ module, status }: { module: Module; status?: ModuleStatus }) {
+  return (
+    <ContextBar
+      label="Module"
+      start={
+        <p className="flex min-w-0 items-baseline gap-2">
+          <span className="shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
+          <span className="truncate text-small font-medium text-ink">{module.title}</span>
+        </p>
+      }
+      end={
+        status && (
+          <div className="flex shrink-0 items-center gap-3">
+            <Progress
+              value={status.total ? (status.complete / status.total) * 100 : 0}
+              tone={status.state === 'complete' ? 'success' : 'brand'}
+              className="h-1 w-24"
+              aria-label={`${moduleLabel(module)} completion`}
+            />
+            <span className="text-mono-sm whitespace-nowrap text-ink-2">
+              {status.complete} of {status.total} complete
+            </span>
+          </div>
+        )
+      }
+    />
+  )
+}
+
 function useModuleFromRoute(): Module | null {
   const { track: slug, number } = useParams<{ track?: string; number?: string }>()
   if (number !== undefined) return moduleByNumber(number)
@@ -62,7 +93,7 @@ export default function TrackPage() {
 
   if (!module) {
     return (
-      <AppShell crumbs={[{ label: 'Home', to: '/' }, { label: 'Not found' }]}>
+      <AppShell>
         <h1 className="sr-only">Module not found</h1>
         <EmptyState
           title="There is no module at this address."
@@ -76,11 +107,9 @@ export default function TrackPage() {
     )
   }
 
-  const crumbs = [{ label: 'Home', to: '/' }, { label: moduleLabel(module) }]
-
   if (isLoading) {
     return (
-      <AppShell crumbs={crumbs}>
+      <AppShell context={<ModuleContext module={module} />}>
         <ModuleSkeleton />
       </AppShell>
     )
@@ -88,7 +117,7 @@ export default function TrackPage() {
 
   if (!topics) {
     return (
-      <AppShell crumbs={crumbs}>
+      <AppShell context={<ModuleContext module={module} />}>
         <h1 className="mb-6 text-h1 text-ink">{moduleLabel(module)}</h1>
         <ErrorState
           title={`The ${module.title} topics did not load.`}
@@ -106,27 +135,18 @@ export default function TrackPage() {
   const next = plan?.nextByModule.get(module.id) ?? null
 
   return (
-    <AppShell crumbs={crumbs}>
-      <header className="mb-6 flex items-start justify-between gap-6">
+    <AppShell context={<ModuleContext module={module} status={entry?.status} />}>
+      {/* Module number and completion are in the context bar above. */}
+      <header className="mb-6">
         <div className="min-w-0">
-          <p className="text-mono-sm text-ink-2">Module {module.number}</p>
-          <h1 className="mt-1 text-h1 text-ink">{module.title}</h1>
+          <h1 className="text-h1 text-ink">{module.title}</h1>
           <p className="mt-2 max-w-prose text-body text-ink-2">{module.subtitle}</p>
           {entry && (
             <p className="mt-3 text-mono-sm text-ink-2">
-              {entry.status.complete} of {entry.status.total} complete · {entry.status.mean}% mean mastery · about {totalMinutes} min
+              {entry.status.mean}% mean mastery · about {totalMinutes} min
             </p>
           )}
         </div>
-        {entry && (
-          <ProgressRing
-            value={entry.status.total ? (entry.status.complete / entry.status.total) * 100 : 0}
-            size={72}
-            strokeWidth={6}
-            tone={entry.status.state === 'complete' ? 'success' : 'brand'}
-            ariaLabel={`${moduleLabel(module)} completion`}
-          />
-        )}
       </header>
 
       {entry?.status.state === 'locked' && entry.status.unmet && (

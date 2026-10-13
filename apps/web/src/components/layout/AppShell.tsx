@@ -22,9 +22,14 @@ import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
 
-// The app's one header, shared by Home, the track pages, Progress and the
-// algorithm workspace: wordmark, breadcrumb, Home / Tracks / Progress,
-// topic search (Ctrl/Cmd+K) and the theme and account controls.
+// The app's header, in two tiers (Phase 4A):
+// - The global bar (56px) is the same element list on every page that has it:
+//   Home, module pages, Progress and the algorithm workspace. Wordmark, main
+//   nav, topic search (Ctrl/Cmd+K), theme and account. Nothing page-specific
+//   goes in it, and it carries at most 7 interactive elements at any width.
+// - The context bar (40px) sits under it only where a page has context: the
+//   workspace's breadcrumb, mode tabs, step counter and session controls, or
+//   a module page's number, title and progress.
 //
 // Every navigation the shell starts goes through `go`. Pages navigate
 // directly; the workspace overrides it so leaving a session (breadcrumb,
@@ -56,7 +61,7 @@ function SearchIcon() {
   )
 }
 
-function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
+export function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
   const go = useShellNavigate()
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
@@ -236,22 +241,15 @@ function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
 }
 
 export interface AppTopBarProps {
-  crumbs: Crumb[]
-  /** Workspace only: controls after the breadcrumb (the support pill). */
-  afterCrumbs?: ReactNode
-  /** Workspace only: centred control (the mode toggle). */
-  center?: ReactNode
-  /** Workspace only: controls before search, theme and account. */
-  actions?: ReactNode
-  /** Workspace only: a thin step-progress line along the bottom edge. */
-  progressPercent?: number
+  /** The context bar's content; omitted on pages without context. */
+  context?: ReactNode
   /** Replaces direct navigation; see the note at the top of this file. */
   onNavigate?: (to: string) => void
   /** The topic open in the workspace, highlighted in the curriculum drawer. */
   currentTopicName?: string | null
 }
 
-export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercent, onNavigate, currentTopicName = null }: AppTopBarProps) {
+export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppTopBarProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -285,81 +283,55 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
           Skip to main content
         </a>
       )}
-      <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open curriculum"
-            aria-haspopup="dialog"
-            aria-expanded={drawerOpen}
-            className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink lg:hidden"
-          >
-            <svg viewBox="0 0 16 16" className="size-4" aria-hidden="true">
-              <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
-          <a
-            href="/"
-            aria-label="DSA Tutor home"
-            onClick={(event) => {
-              event.preventDefault()
-              go('/')
-            }}
-            className="shrink-0 rounded-sm"
-          >
-            <DSATutorLogo variant="dark" showTagline={false} />
-          </a>
-          {!inWorkspace && (
+      <div className="sticky top-0 z-30 w-full shrink-0">
+        <header className="flex h-14 w-full items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-6">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open curriculum"
+              aria-haspopup="dialog"
+              aria-expanded={drawerOpen}
+              className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink lg:hidden"
+            >
+              <svg viewBox="0 0 16 16" className="size-4" aria-hidden="true">
+                <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+            {/* Not a link: Home is the first nav item, and a second way home
+                would spend one of the bar's seven interactive elements. */}
+            <DSATutorLogo variant="dark" showTagline={false} className="shrink-0" />
             <nav aria-label="Main" className="hidden items-center gap-5 md:flex">
               <NavLink to="/" active={pathname === '/'}>
                 Home
               </NavLink>
-              {/* A study participant's three topics sit in three tracks; one-topic
-                  track pages would look broken, so Home lists them instead. */}
+              {/* A study participant's three topics sit in three modules; a
+                  one-topic module page would look broken, so Home lists them. */}
               {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}
               <NavLink to="/progress" active={pathname === '/progress'}>
                 Progress
               </NavLink>
             </nav>
-          )}
-          {inWorkspace && (
-            <>
-              <span aria-hidden="true" className="h-5 w-px shrink-0 bg-rule" />
-              <Breadcrumb crumbs={crumbs} />
-              {afterCrumbs}
-            </>
-          )}
-        </div>
+          </div>
 
-        {center && <div className="shrink-0">{center}</div>}
-
-        <div className="flex flex-1 items-center justify-end gap-2">
-          {actions}
-          <button
-            type="button"
-            onClick={() => setPaletteOpen(true)}
-            aria-label="Search topics"
-            aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
-            className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule-control bg-surface px-2.5 text-small whitespace-nowrap text-ink-2 transition-colors duration-quick hover:border-ink-2 hover:text-ink"
-          >
-            <SearchIcon />
-            {/* The workspace bar is full; there the icon and shortcut say enough. */}
-            {!inWorkspace && <span className="hidden lg:inline">Search topics</span>}
-            <Kbd className="hidden sm:inline-flex">{shortcut}</Kbd>
-          </button>
-          <ThemeToggle />
-          <AccountMenu inWorkspace={inWorkspace} />
-        </div>
-
-        {progressPercent !== undefined && (
-          <div
-            className="absolute bottom-0 left-0 h-0.5 bg-brand transition-[width] duration-settle"
-            style={{ width: `${progressPercent}%` }}
-            aria-hidden="true"
-          />
-        )}
-      </header>
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Search topics"
+              aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
+              className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule-control bg-surface px-2.5 text-small whitespace-nowrap text-ink-2 transition-colors duration-quick hover:border-ink-2 hover:text-ink"
+            >
+              <SearchIcon />
+              <span className="hidden lg:inline">Search topics</span>
+              <Kbd className="hidden sm:inline-flex">{shortcut}</Kbd>
+            </button>
+            <ThemeToggle />
+            <AccountMenu inWorkspace={inWorkspace} />
+          </div>
+        </header>
+        {context}
+      </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onSelect={(topic) => go(topicPath(topic.name))} />
 
@@ -374,36 +346,22 @@ export function AppTopBar({ crumbs, afterCrumbs, center, actions, progressPercen
 }
 
 /**
- * Page frame for Home, the track pages and Progress: the top bar, then the
- * breadcrumb (when the page is below Home) and the page content.
+ * Page frame for Home, the module pages and Progress: the header tiers, the
+ * curriculum rail and the page content. Only a module page passes `context`.
  */
-export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: ReactNode }) {
+export function AppShell({ context, children }: { context?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-paper">
-      <AppTopBar crumbs={crumbs} />
+      <AppTopBar context={context} />
       <div className="flex min-h-0 flex-1">
-        {/* The curriculum rail: pinned under the top bar, scrolling on its own. */}
-        <div className="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 lg:flex">
+        {/* The curriculum rail: pinned under the header tiers, scrolling on its own. */}
+        <div className={cn('sticky hidden shrink-0 lg:flex', context ? 'top-24 h-[calc(100vh-6rem)]' : 'top-14 h-[calc(100vh-3.5rem)]')}>
           <CurriculumPanel />
         </div>
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-6 pb-16 outline-none md:px-gutter [&_h1]:outline-none">
-          {crumbs.length > 1 && (
-            <div className="mb-6">
-              <BreadcrumbForPage crumbs={crumbs} />
-            </div>
-          )}
           {children}
         </main>
       </div>
     </div>
-  )
-}
-
-function BreadcrumbForPage({ crumbs }: { crumbs: Crumb[] }) {
-  const navigate = useNavigate()
-  return (
-    <ShellNavigation.Provider value={navigate}>
-      <Breadcrumb crumbs={crumbs} />
-    </ShellNavigation.Provider>
   )
 }

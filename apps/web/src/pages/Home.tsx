@@ -71,7 +71,7 @@ export default function Home() {
   const latestSession = sessionQuery.data ?? null
 
   return (
-    <AppShell crumbs={[{ label: 'Home' }]}>
+    <AppShell>
       {topicsQuery.isLoading || sessionQuery.isLoading ? (
         <HomeSkeleton />
       ) : !topics ? (

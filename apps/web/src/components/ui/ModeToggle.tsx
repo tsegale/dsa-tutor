@@ -128,7 +128,7 @@ export default function ModeToggle() {
   const visibleOptions = OPTIONS.filter((option) => option.value !== AlgorithmMode.HANDS_ON || !handsOnHidden)
 
   return (
-    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface-sunk p-1 dark:bg-dark-border">
+    <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface-sunk p-0.5 dark:bg-dark-border">
       {visibleOptions.map((option) => {
         const isActive = mode === option.value
         const isDisabled = option.value === AlgorithmMode.HANDS_ON && !handsOnAvailable
@@ -140,7 +140,7 @@ export default function ModeToggle() {
             disabled={isDisabled}
             aria-pressed={isActive}
             onClick={() => !isDisabled && setMode(option.value)}
-            className={`relative z-10 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`relative z-10 rounded-md px-3 py-1 text-sm font-medium transition-colors ${
               isDisabled
                 ? 'cursor-default text-text-muted opacity-50 dark:text-dark-text-secondary'
                 : isActive
