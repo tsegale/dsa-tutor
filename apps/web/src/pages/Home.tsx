@@ -7,16 +7,17 @@ import { nextStep } from '@/utils/nextStep'
 import { browserStorage, readLastPosition } from '@/utils/lastPosition'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { MODULES } from '@/config/curriculum'
-import type { LearningPlan, SyllabusModule } from '@/utils/syllabus'
+import { defaultExpandedModule, type LearningPlan, type SyllabusModule } from '@/utils/syllabus'
 import { AppShell } from '@/components/layout/AppShell'
 import { NextStepBanner } from '@/components/home/NextStepBanner'
-import { ModuleCard } from '@/components/home/ModuleCard'
+import { ModuleSection } from '@/components/home/ModuleSection'
+import { useExpandedModules } from '@/hooks/useExpandedModules'
 import { ProgressStrip } from '@/components/home/ProgressStrip'
 import { TopicRow } from '@/components/track/TopicRow'
 import StudyProgressBanner from '@/components/dashboard/StudyProgressBanner'
 import WelcomeModal from '@/components/onboarding/WelcomeModal'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 // Home answers one question first: what do I do now. One next-step banner
 // (Phase 5A), then the stats strip at quiet weight, then the modules.
@@ -27,10 +28,9 @@ function HomeSkeleton() {
       <Skeleton className="h-9 w-64" />
       <Skeleton className="h-40 w-full rounded-md" />
       <Skeleton className="h-16 w-full rounded-md" />
-      <Skeleton className="mt-4 h-7 w-24" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-4">
         {MODULES.map((module) => (
-          <SkeletonCard key={module.id} />
+          <Skeleton key={module.id} className="h-20 w-full rounded-md" />
         ))}
       </div>
     </div>
@@ -114,7 +114,7 @@ export default function Home() {
           {step && <NextStepBanner step={step} sessionUnavailable={sessionQuery.isError} />}
           {user && <ProgressStrip user={user} topics={topics} />}
 
-          {plan && (restricted ? <StudyTopics syllabus={syllabus} plan={plan} /> : <Modules syllabus={syllabus} plan={plan} />)}
+          {plan && (restricted ? <StudyTopics syllabus={syllabus} plan={plan} /> : <Modules syllabus={syllabus} plan={plan} userId={user?.id} />)}
         </div>
       )}
 
@@ -132,20 +132,40 @@ export default function Home() {
   )
 }
 
-function Modules({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: LearningPlan }) {
-  // A module with nothing visible to this user is left out, never an empty card.
+/**
+ * The syllabus, stacked in curriculum order (Phase 5B). The module holding
+ * the next step opens on first load, chosen by the same rule as the rail;
+ * after that, whatever the learner opened is remembered per user. A module
+ * with nothing visible to this user is left out, never an empty section.
+ */
+function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan: LearningPlan; userId: string | undefined }) {
+  const focus = plan.continue?.entry.topic.name ?? plan.recommended?.topic.name ?? null
+  const { expanded, toggle } = useExpandedModules(`dsa-tutor-home-expanded:${userId ?? 'anonymous'}`, defaultExpandedModule(syllabus, focus))
   return (
     <section aria-labelledby="modules-heading" className="mt-4 flex flex-col gap-4">
-      <h2 id="modules-heading" className="text-h2 text-ink">
+      <h2 id="modules-heading" className="sr-only">
         Modules
       </h2>
-      <ul id="curriculum-tracks" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {syllabus.map((entry) => (
-          <li key={entry.module.id}>
-            <ModuleCard entry={entry} next={plan.nextByModule.get(entry.module.id) ?? null} />
-          </li>
-        ))}
-      </ul>
+      <div id="curriculum-tracks" className="flex flex-col gap-4">
+        {syllabus.map((entry) => {
+          const next = plan.nextByModule.get(entry.module.id) ?? null
+          return (
+            <ModuleSection
+              key={entry.module.id}
+              entry={entry}
+              expanded={expanded.has(entry.module.id)}
+              onToggle={() => toggle(entry.module.id)}
+              renderTopics={(topics, firstRevealed) => (
+                <ol className="divide-y divide-rule overflow-hidden rounded-md border border-rule">
+                  {topics.map((row) => (
+                    <TopicRow key={row.topic.id} entry={row} isNext={row.topic.id === next?.topic.id} revealFocus={row.topic.name === firstRevealed} />
+                  ))}
+                </ol>
+              )}
+            />
+          )
+        })}
+      </div>
     </section>
   )
 }

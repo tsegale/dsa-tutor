@@ -23,10 +23,13 @@ import { StatusMarker } from '@/components/curriculum/StatusMarker'
 export function TopicRow({
   entry,
   isNext,
+  revealFocus = false,
 }: {
   entry: SyllabusTopic
   /** The module's next topic: the list's one primary action. */
   isNext: boolean
+  /** The first topic "Show all" revealed: focus moves to its action. */
+  revealFocus?: boolean
 }) {
   const { topic, number, state, openable, reason } = entry
   const action = topicAction(topic)
@@ -73,6 +76,7 @@ export function TopicRow({
         {openable ? (
           <Link
             to={topicPath(topic.name)}
+            data-reveal-focus={revealFocus ? topic.name : undefined}
             aria-label={`${action} ${number} ${topic.displayName}`}
             className={cn(
               // One primary button per list, on the next topic.
