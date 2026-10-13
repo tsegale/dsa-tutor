@@ -41,7 +41,9 @@ export async function register(dto: RegisterDto): Promise<AuthResponseDto> {
     },
   })
 
-  const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET!, {
+  // A seeded demo account (scripts/seed-demo-account.ts) signs in with a
+  // password but keeps the demo claim, so its AI calls stay capped.
+  const token = jwt.sign({ userId: user.id, role: user.role, ...(user.isDemo && { demo: true }) }, process.env.JWT_SECRET!, {
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   } as jwt.SignOptions)
 
@@ -85,7 +87,9 @@ export async function login(dto: LoginDto): Promise<AuthResponseDto> {
   const valid = await bcrypt.compare(dto.password, user.passwordHash)
   if (!valid) throw new Error('INVALID_CREDENTIALS')
 
-  const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET!, {
+  // A seeded demo account (scripts/seed-demo-account.ts) signs in with a
+  // password but keeps the demo claim, so its AI calls stay capped.
+  const token = jwt.sign({ userId: user.id, role: user.role, ...(user.isDemo && { demo: true }) }, process.env.JWT_SECRET!, {
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   } as jwt.SignOptions)
 

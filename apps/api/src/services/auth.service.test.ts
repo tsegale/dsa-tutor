@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { register } from './auth.service'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { login, register } from './auth.service'
 import type { RegisterDto } from '../dtos/auth.dto'
 
 vi.mock('../lib/prisma', () => ({
@@ -41,5 +43,37 @@ describe('register', () => {
     expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ role: 'STUDENT' }) }),
     )
+  })
+})
+
+describe('login', () => {
+  const account = async (isDemo: boolean) => ({
+    id: 'u1',
+    email: 'learner@example.test',
+    name: 'Learner',
+    role: 'STUDENT',
+    xpTotal: 0,
+    streakCount: 0,
+    passwordHash: await bcrypt.hash('right-password', 4),
+    lastActiveDate: null,
+    isDemo,
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('keeps the demo claim for a seeded demo account, so its AI calls stay capped', async () => {
+    const { prisma } = await import('../lib/prisma')
+    vi.mocked(prisma.user.findUnique).mockResolvedValue((await account(true)) as never)
+    const { token } = await login({ email: 'learner@example.test', password: 'right-password' })
+    expect(jwt.verify(token, 'test-secret')).toMatchObject({ userId: 'u1', demo: true })
+  })
+
+  it('issues no demo claim for an ordinary account', async () => {
+    const { prisma } = await import('../lib/prisma')
+    vi.mocked(prisma.user.findUnique).mockResolvedValue((await account(false)) as never)
+    const { token } = await login({ email: 'learner@example.test', password: 'right-password' })
+    expect(jwt.verify(token, 'test-secret')).not.toHaveProperty('demo')
   })
 })
