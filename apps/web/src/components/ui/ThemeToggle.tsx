@@ -1,3 +1,4 @@
+import { useSavePreferences } from '@/hooks/useSavePreferences'
 import { useThemeStore } from '@/store/useThemeStore'
 import { cn } from '@/lib/utils'
 
@@ -27,8 +28,10 @@ function ThemeIcon({ isDark }: { isDark: boolean }) {
  * from any page, not only the algorithm page. */
 export default function ThemeToggle({ className }: { className?: string }) {
   const theme = useThemeStore((state) => state.theme)
-  const toggleTheme = useThemeStore((state) => state.toggleTheme)
+  const save = useSavePreferences()
   const isDark = theme === 'dark'
+  // Saved as the learner's theme preference (Phase 6D), so a reload keeps it.
+  const toggleTheme = () => save.mutate({ theme: isDark ? 'LIGHT' : 'DARK' })
 
   return (
     <button

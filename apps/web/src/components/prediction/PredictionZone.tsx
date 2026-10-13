@@ -10,6 +10,7 @@ import type {
   PredictionResponse,
 } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
+import { selectHintDelaySeconds, usePreferencesStore } from '@/store/usePreferencesStore'
 import { workedStepNarration } from '@/utils/workedSteps'
 import WorkedStepNotice from './WorkedStepNotice'
 import { correctTileIdFor } from '@/utils/correctTile'
@@ -138,7 +139,6 @@ const HANDS_ON_DRAG_JUNCTIONS: Set<CriticalJunctionType> = new Set([
   CriticalJunctionType.HEAP_COMPARE,
 ])
 
-const PROACTIVE_HINT_DELAY_MS = 25000
 const AUTO_RESET_DELAY_MS = 1200
 const BOTTOM_OUT_ADVANCE_DELAY_MS = 1500
 
@@ -256,6 +256,8 @@ export default function PredictionZone({
   // the Quick Check would surface a junction late.
   const outcomeReportsRef = useRef<Promise<void>[]>([])
   const proactiveHintFiredRef = useRef(false)
+  // Seconds before a hint appears unasked at Full support; a participant always gets the default.
+  const hintDelaySeconds = usePreferencesStore(selectHintDelaySeconds)
   // Bumped whenever the current attempt's feedback is dismissed or
   // superseded (a new submission, a step change, "Try again") - the slow
   // submitPrediction call's UI side effects (mistake text, ladder hint,
@@ -376,16 +378,18 @@ export default function PredictionZone({
   // most once per step so it doesn't nag after a manual dismissal.
   useEffect(() => {
     if (!isVisible || scaffoldingLevel !== ScaffoldingLevel.HIGH) return
+    // The delay is a learning preference (Phase 6D): null turns it off.
+    if (hintDelaySeconds === null) return
     if (submissionState !== 'idle' || hint !== null || hintLoading) return
     if (proactiveHintFiredRef.current) return
 
     const timer = setTimeout(() => {
       proactiveHintFiredRef.current = true
       void handleRequestHint(true)
-    }, PROACTIVE_HINT_DELAY_MS)
+    }, hintDelaySeconds * 1000)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVisible, scaffoldingLevel, submissionState, hint, hintLoading, stepIndex])
+  }, [isVisible, scaffoldingLevel, submissionState, hint, hintLoading, stepIndex, hintDelaySeconds])
 
   async function handleRequestHint(proactive: boolean) {
     if (hint !== null || hintLoading || !snapshot) return

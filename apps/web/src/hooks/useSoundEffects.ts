@@ -2,7 +2,7 @@ import { useRef, useCallback } from 'react'
 
 type SoundType = 'correct' | 'incorrect' | 'badge' | 'xp' | 'levelup'
 
-const SOUND_ENABLED_KEY = 'dsa-tutor-sound-enabled'
+export const SOUND_ENABLED_KEY = 'dsa-tutor-sound-enabled'
 
 function createAudioContext(): AudioContext | null {
   try {

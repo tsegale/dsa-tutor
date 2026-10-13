@@ -1,14 +1,25 @@
 import { useState } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { SOUND_ENABLED_KEY } from '@/hooks/useSoundEffects'
+import { useSavePreferences } from '@/hooks/useSavePreferences'
 
-const SOUND_KEY = 'dsa-tutor-sound-enabled'
+function readSound(): boolean {
+  try {
+    return localStorage.getItem(SOUND_ENABLED_KEY) === 'true'
+  } catch {
+    // Blocked storage: sounds stay off.
+    return false
+  }
+}
 
 export default function SoundToggle() {
-  const [enabled, setEnabled] = useState(() => localStorage.getItem(SOUND_KEY) === 'true')
+  const [enabled, setEnabled] = useState(readSound)
+  const save = useSavePreferences()
 
+  // Saved as the learner's sound preference (Phase 6D); applied at once.
   function toggle() {
     const next = !enabled
-    localStorage.setItem(SOUND_KEY, String(next))
+    save.mutate({ sound: next })
     setEnabled(next)
   }
 

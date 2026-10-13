@@ -84,6 +84,13 @@ model User {
   susScore       Int?
   susSubmittedAt DateTime?
 
+  // Learning preferences set on the profile page (Phase 6D): scaffolding
+  // intensity, proactive hint delay, sound, reduced motion and theme, as one
+  // JSON object validated by the api (schemas/routes.ts profile.preferences).
+  // Null means the defaults. Ignored for an active study participant, whose
+  // learning settings are fixed so results stay comparable.
+  preferences    Json?
+
   sessions            Session[]
   userBadges          UserBadge[]
   topicMasteries      TopicMastery[]

@@ -1,3 +1,5 @@
+import { pinnedLevel } from '@/config/supportLevels'
+import { selectScaffolding, usePreferencesStore } from '@/store/usePreferencesStore'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { conditionFeatures } from '@/utils/studyCondition'
 import { useTopics } from '@/hooks/useTopics'
@@ -28,12 +30,14 @@ const OVERALL_BASIS = 'Your overall band, from mastery across your topics'
  * scaffolding indicator, and while the overall band's topics load. In the
  * workspace it is the live session level; elsewhere the overall band.
  */
-export function useHeaderSupport(inWorkspace: boolean): { assessment: SupportAssessment; basis: string } | null {
+export function useHeaderSupport(inWorkspace: boolean): { assessment: SupportAssessment; basis: string; pinned: boolean } | null {
   // The study condition's feature list decides, as it does for every other
   // tutor surface: Classic has no scaffolding indicator.
   const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
   const session = useSessionSupport()
   const overall = useOverallSupport()
-  if (inWorkspace) return features.scaffoldingPill ? { assessment: session, basis: SESSION_BASIS } : null
-  return overall ? { assessment: overall, basis: OVERALL_BASIS } : null
+  // In a session, a level pinned on the profile (Phase 6D) does not step down.
+  const pinned = pinnedLevel(usePreferencesStore(selectScaffolding)) !== null
+  if (inWorkspace) return features.scaffoldingPill ? { assessment: session, basis: SESSION_BASIS, pinned } : null
+  return overall ? { assessment: overall, basis: OVERALL_BASIS, pinned: false } : null
 }

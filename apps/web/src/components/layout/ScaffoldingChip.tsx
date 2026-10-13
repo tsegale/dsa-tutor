@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 // itself: the level, the reasoning masteryScore.ts gave, the mastery score,
 // and what changes at the next level down.
 
-function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis: string }) {
+function ChipView({ assessment, basis, pinned }: { assessment: SupportAssessment; basis: string; pinned: boolean }) {
   const { level } = assessment
   const { label, segments } = SUPPORT_LEVEL[level]
   return (
@@ -44,7 +44,9 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
           <dt className="text-small text-ink-2">Mastery score</dt>
           <dd className="text-mono text-ink">{assessment.score} / 100</dd>
         </dl>
-        <p className="mt-3 text-small text-ink-2">{nextLevelDownLine(level)}</p>
+        <p className="mt-3 text-small text-ink-2">
+          {pinned ? 'Support stays at this level. Choose Adaptive in your profile’s learning preferences to let it change with your answers.' : nextLevelDownLine(level)}
+        </p>
       </PopoverContent>
     </Popover>
   )
@@ -53,5 +55,5 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
 /** The global bar's chip; see useHeaderSupport for when it is absent. */
 export function ScaffoldingChip({ inWorkspace }: { inWorkspace: boolean }) {
   const support = useHeaderSupport(inWorkspace)
-  return support ? <ChipView assessment={support.assessment} basis={support.basis} /> : null
+  return support ? <ChipView assessment={support.assessment} basis={support.basis} pinned={support.pinned} /> : null
 }

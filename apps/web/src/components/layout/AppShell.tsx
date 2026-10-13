@@ -19,6 +19,7 @@ import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
 import { ScaffoldingChip } from './ScaffoldingChip'
 import { StudyChip } from './StudyChip'
+import { MotionPreference } from './MotionPreference'
 
 // The app's header, in two tiers (Phase 4A):
 // - The global bar (56px) is the same element list on every page that has it:
@@ -400,17 +401,19 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
  */
 export function AppShell({ context, children }: { context?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-paper">
-      <AppTopBar context={context} />
-      <div className="flex min-h-0 flex-1">
-        {/* The curriculum rail: pinned under the header tiers, scrolling on its own. */}
-        <div className={cn('sticky hidden shrink-0 lg:flex', context ? 'top-24 h-[calc(100vh-6rem)]' : 'top-14 h-[calc(100vh-3.5rem)]')}>
-          <CurriculumPanel />
+    <MotionPreference>
+      <div className="flex min-h-screen flex-col bg-paper">
+        <AppTopBar context={context} />
+        <div className="flex min-h-0 flex-1">
+          {/* The curriculum rail: pinned under the header tiers, scrolling on its own. */}
+          <div className={cn('sticky hidden shrink-0 lg:flex', context ? 'top-24 h-[calc(100vh-6rem)]' : 'top-14 h-[calc(100vh-3.5rem)]')}>
+            <CurriculumPanel />
+          </div>
+          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-6 pb-16 outline-none md:px-gutter [&_h1]:outline-none">
+            {children}
+          </main>
         </div>
-        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-6 pb-16 outline-none md:px-gutter [&_h1]:outline-none">
-          {children}
-        </main>
       </div>
-    </div>
+    </MotionPreference>
   )
 }

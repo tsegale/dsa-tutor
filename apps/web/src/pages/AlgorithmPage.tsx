@@ -5,7 +5,8 @@ import { Group, Panel, useDefaultLayout, usePanelRef, type LayoutStorage } from 
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlgorithmMode, CriticalJunctionType, ScaffoldingLevel } from '@dsa-tutor/types'
-import { SCAFFOLDING_LEVEL_NAME } from '@/config/supportLevels'
+import { SCAFFOLDING_LEVEL_NAME, pinnedLevel, pinnedReasoning } from '@/config/supportLevels'
+import { selectScaffolding, usePreferencesStore } from '@/store/usePreferencesStore'
 import type { AlgorithmSnapshot, AlgorithmTopicDTO } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectIsLiveJunction, selectIsWorkedStep } from '@/store/useAlgorithmStore'
 import { useAuth } from '@/context/AuthContext'
@@ -17,6 +18,7 @@ import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
 import { REQUEST_SESSION_EXIT_EVENT, requestSessionExit, type SessionExitDetail } from '@/components/layout/sessionExit'
 import { ShellNavigation } from '@/components/layout/shellNavigation'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
+import { MotionPreference } from '@/components/layout/MotionPreference'
 import { SoftLockNotice } from '@/components/curriculum/SoftLockNotice'
 import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
@@ -359,7 +361,16 @@ const workspaceLayoutStorage: LayoutStorage = {
 /** Collapsed side panels keep the existing 48px icon rail. */
 const COLLAPSED_RAIL_PX = 48
 
+/** "Always reduce motion" from the profile applies to the whole workspace (Phase 6D). */
 export default function AlgorithmPage() {
+  return (
+    <MotionPreference>
+      <AlgorithmWorkspace />
+    </MotionPreference>
+  )
+}
+
+function AlgorithmWorkspace() {
   const { algorithmName: algorithmNameParam } = useParams<{ algorithmName: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -382,6 +393,7 @@ export default function AlgorithmPage() {
   const setScaffoldingLevel = useAlgorithmStore((state) => state.setScaffoldingLevel)
   const setScaffoldingReasoning = useAlgorithmStore((state) => state.setScaffoldingReasoning)
   const setScaffoldingScore = useAlgorithmStore((state) => state.setScaffoldingScore)
+  const scaffoldingPreference = usePreferencesStore(selectScaffolding)
   const pendingRemediation = useMisconceptionStore((state) => state.pendingRemediation)
   const lastBottomedOutCategory = useMisconceptionStore((state) => state.lastBottomedOutCategory)
   const completePendingRemediation = useMisconceptionStore((state) => state.completePendingRemediation)
@@ -413,6 +425,15 @@ export default function AlgorithmPage() {
   // visualiser, never labelled as such. The status is already cached by
   // StudyGate, so this is known before the first paint.
   const isClassic = isClassicTopic(studyStatus, algorithmNameParam)
+
+  // A level pinned on the profile applies from the moment a topic opens, not
+  // only after the first answer (Phase 6D). Adaptive leaves the level alone.
+  useEffect(() => {
+    const pinned = pinnedLevel(scaffoldingPreference)
+    if (!pinned) return
+    setScaffoldingLevel(pinned)
+    setScaffoldingReasoning(pinnedReasoning(pinned, useAlgorithmStore.getState().scaffoldingScore))
+  }, [scaffoldingPreference, algorithmNameParam, setScaffoldingLevel, setScaffoldingReasoning])
 
   // Where the learner stopped, for Home's "Resume ... step 24 of 52" (Phase
   // 5A). The server keeps no step position; this device remembers it.
@@ -683,7 +704,11 @@ export default function AlgorithmPage() {
     const assessment = calculateMastery(nextMetrics)
     const currentLevel = useAlgorithmStore.getState().scaffoldingLevel
     const gatedLevel = gateScaffoldingReduction(currentLevel, assessment.recommendedLevel, nextMetrics.consecutiveCorrect)
-    setScaffoldingReasoning(assessment.reasoning)
+    // A level pinned on the profile (Phase 6D) replaces the adaptive one; a
+    // participant always adapts (selectScaffolding pins them to ADAPTIVE).
+    const pinned = pinnedLevel(selectScaffolding(usePreferencesStore.getState()))
+    const targetLevel = pinned ?? gatedLevel
+    setScaffoldingReasoning(pinned ? pinnedReasoning(pinned, assessment.overallScore) : assessment.reasoning)
     setScaffoldingScore(assessment.overallScore)
 
     if (sessionId) {
@@ -753,14 +778,14 @@ export default function AlgorithmPage() {
       )
     }
 
-    if (gatedLevel !== currentLevel) {
-      setScaffoldingLevel(gatedLevel)
-      setScaffoldingTransitionMessage(getTransitionMessage(currentLevel, gatedLevel))
+    if (targetLevel !== currentLevel) {
+      setScaffoldingLevel(targetLevel)
+      setScaffoldingTransitionMessage(getTransitionMessage(currentLevel, targetLevel))
 
       if (sessionId) {
         apiFetch(`/api/v1/sessions/${sessionId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ scaffoldingLevel: gatedLevel }),
+          body: JSON.stringify({ scaffoldingLevel: targetLevel }),
         }).catch(() => {
           // Best-effort: the local scaffolding level already reflects the
           // transition regardless of whether persistence lands.

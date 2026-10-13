@@ -38,6 +38,15 @@ export const auth = {
 // ------------------------------------------------------------- profile
 export const profile = {
   analytics: none,
+  preferences: {
+    body: z.strictObject({
+      scaffolding: z.enum(['ADAPTIVE', 'FULL', 'MINIMAL']),
+      hintDelaySeconds: z.union([z.literal(15), z.literal(25), z.literal(40), z.null()]),
+      sound: z.boolean(),
+      reducedMotion: z.enum(['SYSTEM', 'ALWAYS']),
+      theme: z.enum(['LIGHT', 'DARK', 'SYSTEM']),
+    }),
+  },
 } satisfies Record<string, RequestSchema>
 
 // ------------------------------------------------------------ sessions

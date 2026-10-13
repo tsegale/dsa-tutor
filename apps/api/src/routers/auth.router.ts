@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { register, login, createDemoAccount, changePassword } from '../services/auth.service'
 import { MIN_PASSWORD_LENGTH } from '../config/password'
+import { withDefaults } from '../services/preferences.service'
 import { demoCreationLimit } from '../middleware/demo'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -60,9 +61,10 @@ router.get('/me', authenticate, validate(S.auth.me), async (req: AuthRequest, re
         lastActiveDate: true,
         createdAt: true,
         isDemo: true,
+        preferences: true,
       },
     })
-    res.json({ data: user, error: null })
+    res.json({ data: { ...user, preferences: withDefaults(user.preferences) }, error: null })
   } catch {
     res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
   }

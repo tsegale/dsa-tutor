@@ -48,3 +48,19 @@ export function nextLevelDownLine(level: ScaffoldingLevel): string {
   const needed = CONSECUTIVE_REQUIRED_TO_REDUCE[level as keyof typeof CONSECUTIVE_REQUIRED_TO_REDUCE]
   return `At ${SUPPORT_LEVEL[next].label}: ${description.charAt(0).toLowerCase()}${description.slice(1)} Support steps down after ${needed} correct answers in a row.`
 }
+
+/**
+ * The level a learner pinned on their profile (Phase 6D), or null when
+ * support adapts. "Always full support" and "Minimal" are for free use and
+ * demos; ADAPTIVE is the mechanism under study, and a participant always has it.
+ */
+export function pinnedLevel(scaffolding: 'ADAPTIVE' | 'FULL' | 'MINIMAL'): ScaffoldingLevel | null {
+  if (scaffolding === 'FULL') return ScaffoldingLevel.HIGH
+  if (scaffolding === 'MINIMAL') return ScaffoldingLevel.LOW
+  return null
+}
+
+/** The support chip's reasoning while a level is pinned. */
+export function pinnedReasoning(level: ScaffoldingLevel, score: number): string {
+  return `Score ${score}/100. Set to ${SUPPORT_LEVEL[level].label} on your profile, so support does not adapt.`
+}

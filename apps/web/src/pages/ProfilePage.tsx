@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { IdentityHeader } from '@/components/profile/IdentityHeader'
 import { StudySection } from '@/components/profile/StudySection'
 import { AnalyticsSection } from '@/components/profile/AnalyticsSection'
+import { PreferencesSection } from '@/components/profile/PreferencesSection'
 
 // The learner and participant hub (Phase 6): identity, study participation
 // (participants only), and the guided tour. It must read as complete for a
@@ -44,6 +45,8 @@ export default function ProfilePage() {
         {studyStatus && <StudySection status={studyStatus} />}
 
         <AnalyticsSection />
+
+        <PreferencesSection />
 
         <Section title="Guided tour">
           <div className="flex flex-col items-start gap-3">

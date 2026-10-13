@@ -8,6 +8,7 @@ import { fetchStudyStatus } from '@/api/study'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
+import { PreferencesSync } from '@/components/layout/PreferencesSync'
 import { RouteFocus } from '@/components/layout/RouteFocus'
 import { lazyWithReload } from '@/utils/chunkReload'
 import { useThemeStore } from '@/store/useThemeStore'
@@ -221,6 +222,7 @@ export default function App() {
               </Routes>
             </Suspense>
             <GlobalOnboarding />
+            <PreferencesSync />
             <RouteFocus />
           </BrowserRouter>
           {/* One toast region for the whole app, styled to the tokens. */}

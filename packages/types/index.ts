@@ -647,6 +647,8 @@ export interface UserProfile {
   createdAt?: string
   /** A demo account: it has no password the learner can change. */
   isDemo?: boolean
+  /** Saved learning preferences, with defaults filled in (Phase 6D). */
+  preferences?: LearningPreferences
 }
 
 export interface AlgorithmTopicDTO {
@@ -885,4 +887,24 @@ export interface LearnerAnalyticsDto {
   modules: Array<{ track: string; topics: number; complete: number; meanMastery: number }>
   misconceptions: Array<{ category: string; detected: number; resolved: number; open: number }>
   recentSessions: Array<{ id: string; topic: string; mode: string; startTime: string; activeSeconds: number | null; predictions: number; correct: number }>
+}
+
+/** Learning preferences set on the profile page (Phase 6D). */
+export interface LearningPreferences {
+  /** ADAPTIVE is the mechanism under study; the other two are for free use and demos. */
+  scaffolding: 'ADAPTIVE' | 'FULL' | 'MINIMAL'
+  /** Seconds before a hint appears on its own at Full support, or null for never. */
+  hintDelaySeconds: 15 | 25 | 40 | null
+  sound: boolean
+  reducedMotion: 'SYSTEM' | 'ALWAYS'
+  theme: 'LIGHT' | 'DARK' | 'SYSTEM'
+}
+
+/** What every account starts with, and what an active participant always gets. */
+export const DEFAULT_LEARNING_PREFERENCES: LearningPreferences = {
+  scaffolding: 'ADAPTIVE',
+  hintDelaySeconds: 25,
+  sound: false,
+  reducedMotion: 'SYSTEM',
+  theme: 'SYSTEM',
 }

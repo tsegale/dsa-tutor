@@ -30,6 +30,8 @@ interface ThemeStoreState {
   theme: Theme
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
+  /** Drop the explicit choice and follow the OS preference (Phase 6D). */
+  followSystem: () => void
 }
 
 export const useThemeStore = create<ThemeStoreState>((set, get) => ({
@@ -46,5 +48,14 @@ export const useThemeStore = create<ThemeStoreState>((set, get) => ({
 
   toggleTheme() {
     get().setTheme(get().theme === 'dark' ? 'light' : 'dark')
+  },
+
+  followSystem() {
+    try {
+      localStorage.removeItem(THEME_STORAGE_KEY)
+    } catch {
+      // Blocked storage: the OS theme still applies for this visit.
+    }
+    set({ theme: prefersDark() ? 'dark' : 'light' })
   },
 }))
