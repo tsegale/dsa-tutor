@@ -1,9 +1,7 @@
 import { cn } from '@/lib/utils'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
-import { conditionFeatures } from '@/utils/studyCondition'
-import { useTopics } from '@/hooks/useTopics'
 import { SUPPORT_LEVEL, nextLevelDownLine } from '@/config/supportLevels'
-import { overallSupport, type SupportAssessment } from '@/utils/supportBand'
+import type { SupportAssessment } from '@/utils/supportBand'
+import { useHeaderSupport } from '@/hooks/useHeaderSupport'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -23,19 +21,6 @@ function Meter({ filled, className }: { filled: number; className?: string }) {
       ))}
     </span>
   )
-}
-
-/** The live session level, as the workspace's fading logic last set it. */
-function useSessionSupport(): SupportAssessment {
-  const level = useAlgorithmStore((state) => state.scaffoldingLevel)
-  const reasoning = useAlgorithmStore((state) => state.scaffoldingReasoning)
-  const score = useAlgorithmStore((state) => state.scaffoldingScore)
-  return { level, reasoning, score }
-}
-
-function useOverallSupport(): SupportAssessment | null {
-  const { data: topics } = useTopics()
-  return topics ? overallSupport(topics) : null
 }
 
 function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis: string }) {
@@ -76,25 +61,6 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
       </PopoverContent>
     </Popover>
   )
-}
-
-const SESSION_BASIS = 'This session, from your answers so far'
-const OVERALL_BASIS = 'Your overall band, from mastery across your topics'
-
-/**
- * The support state the header shows, or null where it must not show: in
- * Classic, the study's control condition, whose participants must not see a
- * scaffolding indicator, and while the overall band's topics load. In the
- * workspace it is the live session level; elsewhere the overall band.
- */
-export function useHeaderSupport(inWorkspace: boolean): { assessment: SupportAssessment; basis: string } | null {
-  // The study condition's feature list decides, as it does for every other
-  // tutor surface: Classic has no scaffolding indicator.
-  const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
-  const session = useSessionSupport()
-  const overall = useOverallSupport()
-  if (inWorkspace) return features.scaffoldingPill ? { assessment: session, basis: SESSION_BASIS } : null
-  return overall ? { assessment: overall, basis: OVERALL_BASIS } : null
 }
 
 /** The global bar's chip; see useHeaderSupport for when it is absent. */

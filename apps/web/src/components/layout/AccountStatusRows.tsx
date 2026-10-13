@@ -3,7 +3,7 @@ import { fetchStudyStatus } from '@/api/study'
 import { useAuth } from '@/context/AuthContext'
 import { SUPPORT_LEVEL } from '@/config/supportLevels'
 import { studyPhase } from '@/utils/studyPhase'
-import { useHeaderSupport } from './ScaffoldingChip'
+import { useHeaderSupport } from '@/hooks/useHeaderSupport'
 
 /**
  * Below 1024px the status chips leave the global bar (it would pass seven
