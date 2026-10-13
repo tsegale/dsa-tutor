@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import type { TopicDto } from '@dsa-tutor/types'
+import type { StudyStatusDto, TopicDto } from '@dsa-tutor/types'
 import { fetchStudyStatus, overridePosttest } from '@/api/study'
 import { Button } from '@/components/ui/button'
 import { STUDY_TOPIC_SLUGS } from '@/utils/misconceptionProbes'
@@ -15,6 +15,51 @@ function CheckIcon() {
 }
 
 /**
+ * The progress detail itself: topics complete, which ones, and the way into
+ * the post-test. Shown in Home's banner and in the header's study chip
+ * popover (Phase 4E). The copy fits both conditions, which are never
+ * labelled to participants.
+ */
+export function StudyProgressDetail({ status, topics, heading: Heading = 'h2' }: { status: StudyStatusDto; topics: TopicDto[]; heading?: 'h2' | 'p' }) {
+  const navigate = useNavigate()
+  const nameOf = (slug: string) => topics.find((t) => t.name === slug)?.displayName ?? slug
+  const done = new Set(status.topicsCompleted)
+  return (
+    <div className="flex flex-col gap-2">
+      <Heading className="text-small font-semibold text-ink">
+        Study progress: {done.size} of {STUDY_TOPIC_SLUGS.length} topics complete
+      </Heading>
+      <ul className="flex flex-wrap gap-2">
+        {STUDY_TOPIC_SLUGS.map((slug) => (
+          <li
+            key={slug}
+            className={
+              done.has(slug)
+                ? 'flex items-center gap-1 rounded-full bg-success-light px-2.5 py-0.5 text-micro text-success'
+                : 'rounded-full bg-surface-sunk px-2.5 py-0.5 text-micro text-ink-2'
+            }
+          >
+            {done.has(slug) && <CheckIcon />}
+            {nameOf(slug)}
+          </li>
+        ))}
+      </ul>
+      {status.posttestCompleted ? (
+        <p className="text-small text-ink-2">Post-test done - thank you.</p>
+      ) : status.posttestAvailable ? (
+        <div>
+          <Button size="sm" onClick={() => navigate('/assessment/post')}>
+            Take the post-test
+          </Button>
+        </div>
+      ) : (
+        <p className="text-micro text-ink-2">A topic is complete when you work through a run to the end, answering any questions it asks.</p>
+      )}
+    </div>
+  )
+}
+
+/**
  * A study participant's progress toward the post-test, and the only way into
  * it. Completion follows apps/api/src/config/topicCompletion.ts (tutor: final
  * step plus a conceptual answer; Classic: final step). The copy is worded to
@@ -23,7 +68,6 @@ function CheckIcon() {
  * records that it happened, so the write-up can report it.
  */
 export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: status } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus, staleTime: 60 * 1000 })
   const [overrideOpen, setOverrideOpen] = useState(false)
@@ -40,48 +84,12 @@ export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) 
 
   if (!status?.isParticipant || status.withdrawn || status.consentRequired || status.pretestRequired) return null
 
-  const nameOf = (slug: string) => topics.find((t) => t.name === slug)?.displayName ?? slug
-  const done = new Set(status.topicsCompleted)
-
   return (
     <section className="rounded-lg border border-border bg-card p-4" aria-label="Study progress">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-text-primary">
-            Study progress: {done.size} of {STUDY_TOPIC_SLUGS.length} topics complete
-          </h2>
-          <ul className="flex flex-wrap gap-2">
-            {STUDY_TOPIC_SLUGS.map((slug) => (
-              <li
-                key={slug}
-                className={
-                  done.has(slug)
-                    ? 'flex items-center gap-1 rounded-full bg-success-light px-2.5 py-0.5 text-xs text-success'
-                    : 'rounded-full bg-surface-sunk px-2.5 py-0.5 text-xs text-text-muted'
-                }
-              >
-                {done.has(slug) && <CheckIcon />}
-                {nameOf(slug)}
-              </li>
-            ))}
-          </ul>
-          {!status.posttestAvailable && (
-            <p className="text-xs text-text-muted">
-              A topic is complete when you work through a run to the end, answering any questions it asks.
-            </p>
-          )}
-        </div>
-
-        {status.posttestCompleted ? (
-          <p className="text-sm text-text-secondary">Post-test done - thank you.</p>
-        ) : status.posttestAvailable ? (
-          <Button onClick={() => navigate('/assessment/post')}>Take the post-test</Button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setOverrideOpen((open) => !open)}
-            className="text-xs text-text-muted underline"
-          >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <StudyProgressDetail status={status} topics={topics} />
+        {!status.posttestAvailable && !status.posttestCompleted && (
+          <button type="button" onClick={() => setOverrideOpen((open) => !open)} className="text-xs text-text-muted underline">
             Researcher override
           </button>
         )}

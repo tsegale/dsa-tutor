@@ -22,6 +22,7 @@ import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
 import { ScaffoldingChip } from './ScaffoldingChip'
+import { StudyChip } from './StudyChip'
 
 // The app's header, in two tiers (Phase 4A):
 // - The global bar (56px) is the same element list on every page that has it:
@@ -354,9 +355,17 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
           </div>
 
           <div className="flex shrink-0 items-center justify-end gap-2">
-            {/* Status chips, then a hairline, then search, theme and account.
-                An educator is not a learner being scaffolded: no chip. */}
-            {user?.role !== 'EDUCATOR' && <ScaffoldingChip inWorkspace={inWorkspace} />}
+            {/* Status chips, a hairline, then search, theme and account. The
+                group shows only when it holds a chip, so the hairline never
+                stands alone, and only from 1024px: below that the drawer
+                button joins the bar (Phase 4G moves the chips into the
+                account menu). An educator is not a learner being scaffolded,
+                so no scaffolding chip. */}
+            <div className="hidden items-center gap-2 lg:has-[button]:flex">
+              {user?.role !== 'EDUCATOR' && <ScaffoldingChip inWorkspace={inWorkspace} />}
+              <StudyChip />
+              <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
+            </div>
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}

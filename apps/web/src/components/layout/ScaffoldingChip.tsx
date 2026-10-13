@@ -40,41 +40,34 @@ function useOverallSupport(): SupportAssessment | null {
 function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis: string }) {
   const { level } = assessment
   const { label, segments } = SUPPORT_LEVEL[level]
-  // Below 1024px the drawer button joins the bar, so the chip leaves it to
-  // keep the bar at seven elements (Phase 4G moves it into the account menu).
   return (
-    <div className="hidden items-center gap-2 lg:flex">
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={`Support level: ${label}. Show why`}
-            className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule px-2.5 text-small whitespace-nowrap transition-colors duration-quick hover:border-rule-strong hover:bg-surface-sunk"
-          >
-            <span className="text-micro text-ink-2">Support</span>
-            <Meter filled={segments} />
-            <span className="font-medium text-ink">{label}</span>
-          </button>
-        </PopoverTrigger>
-        <PopoverContent aria-label="Why this level of support">
-          <p className="text-micro text-ink-2">{basis}</p>
-          <div className="mt-2 flex items-center gap-2.5">
-            <Meter filled={segments} className="[&>span]:h-4 [&>span]:w-1.5" />
-            <p className="text-h3 text-ink">{label}</p>
-            <span className="ml-auto text-mono-sm text-ink-2">Level {segments} of 4</span>
-          </div>
-          <p className="mt-3 text-small text-ink">{assessment.reasoning}</p>
-          <dl className="mt-3 flex items-baseline justify-between border-t border-rule pt-3">
-            <dt className="text-small text-ink-2">Mastery score</dt>
-            <dd className="text-mono text-ink">{assessment.score} / 100</dd>
-          </dl>
-          <p className="mt-3 text-small text-ink-2">{nextLevelDownLine(level)}</p>
-        </PopoverContent>
-      </Popover>
-      {/* The hairline between the status chips and search, theme and account:
-          rendered with the chip so it never stands alone. */}
-      <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Support level: ${label}. Show why`}
+          className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule px-2.5 text-small whitespace-nowrap transition-colors duration-quick hover:border-rule-strong hover:bg-surface-sunk"
+        >
+          <span className="text-micro text-ink-2">Support</span>
+          <Meter filled={segments} />
+          <span className="font-medium text-ink">{label}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent aria-label="Why this level of support">
+        <p className="text-micro text-ink-2">{basis}</p>
+        <div className="mt-2 flex items-center gap-2.5">
+          <Meter filled={segments} className="[&>span]:h-4 [&>span]:w-1.5" />
+          <p className="text-h3 text-ink">{label}</p>
+          <span className="ml-auto text-mono-sm text-ink-2">Level {segments} of 4</span>
+        </div>
+        <p className="mt-3 text-small text-ink">{assessment.reasoning}</p>
+        <dl className="mt-3 flex items-baseline justify-between border-t border-rule pt-3">
+          <dt className="text-small text-ink-2">Mastery score</dt>
+          <dd className="text-mono text-ink">{assessment.score} / 100</dd>
+        </dl>
+        <p className="mt-3 text-small text-ink-2">{nextLevelDownLine(level)}</p>
+      </PopoverContent>
+    </Popover>
   )
 }
 
