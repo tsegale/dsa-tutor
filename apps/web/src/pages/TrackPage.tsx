@@ -3,19 +3,21 @@ import { getTrackBySlug } from '@/data/tracks'
 import { moduleByNumber, moduleForTrack, moduleLabel, type Module } from '@/config/curriculum'
 import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { unmetLabel, type ModuleStatus } from '@/utils/moduleStatus'
-import { AppShell } from '@/components/layout/AppShell'
+import type { ModuleStatus } from '@/utils/moduleStatus'
+import { AppShell, Breadcrumb } from '@/components/layout/AppShell'
 import { ContextBar } from '@/components/layout/ContextBar'
-import { TopicRow } from '@/components/track/TopicRow'
+import { ModuleSection } from '@/components/home/ModuleSection'
+import { TopicGrid } from '@/components/home/TopicGrid'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/button'
 
-// A module's page: its topics as a numbered list in curriculum order,
-// numbered and marked exactly as the curriculum rail shows them. Reached as
-// /module/:number (the linkable form) or /track/:track (kept working).
+// A module's page: Home's module section and topic cards for this one module
+// (Phase 5D), numbered and marked exactly as the curriculum rail shows them.
+// Reached as /module/:number (the linkable form) or /track/:track (kept
+// working).
 
 function ModuleSkeleton() {
   return (
@@ -45,17 +47,12 @@ function ModuleSkeleton() {
   )
 }
 
-/** The module page's context bar: module number, title and progress. */
+/** The module page's context bar: its breadcrumb, then its progress. */
 function ModuleContext({ module, status }: { module: Module; status?: ModuleStatus }) {
   return (
     <ContextBar
       label="Module"
-      start={
-        <p className="flex min-w-0 items-baseline gap-2">
-          <span className="shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
-          <span className="truncate text-small font-medium text-ink">{module.title}</span>
-        </p>
-      }
+      start={<Breadcrumb crumbs={[{ label: 'Home', to: '/' }, { label: moduleLabel(module) }]} />}
       end={
         status && (
           <div className="flex shrink-0 items-center gap-3">
@@ -130,56 +127,36 @@ export default function TrackPage() {
   }
 
   const entry = syllabus.find((candidate) => candidate.module.id === module.id)
-  const totalMinutes = entry ? entry.topics.reduce((sum, t) => sum + t.topic.estimatedMinutes, 0) : 0
-  // The shared plan's next topic for this module, as its Home card names it.
+  // The shared plan's next topic for this module, as Home's section names it.
   const next = plan?.nextByModule.get(module.id) ?? null
 
+  // The same section and cards as Home (Phase 5D), for this module only:
+  // always open, every topic shown, its heading the page's h1.
   return (
     <AppShell context={<ModuleContext module={module} status={entry?.status} />}>
-      {/* Module number and completion are in the context bar above. */}
-      <header className="mb-6">
-        <div className="min-w-0">
-          <h1 className="text-h1 text-ink">{module.title}</h1>
-          <p className="mt-2 max-w-prose text-body text-ink-2">{module.subtitle}</p>
-          {entry && (
-            <p className="mt-3 text-mono-sm text-ink-2">
-              {entry.status.mean}% mean mastery · about {totalMinutes} min
-            </p>
-          )}
-        </div>
-      </header>
-
-      {entry?.status.state === 'locked' && entry.status.unmet && (
-        <p role="note" className="mb-4 rounded-md border border-rule bg-surface-sunk px-card py-row text-small text-ink">
-          {unmetLabel(entry.status.unmet)}. You can still open these topics; they build on{' '}
-          <Link to={`/module/${entry.status.unmet.module.number}`} className="font-medium text-accent-foreground underline">
-            {moduleLabel(entry.status.unmet.module)}
-          </Link>
-          .
-        </p>
-      )}
-
       {!entry ? (
-        <EmptyState
-          title={`There are no ${module.title} topics to open yet.`}
-          description="Pick another module from the curriculum, or search for a topic by name."
-          action={
-            <Button asChild size="sm">
-              <Link to="/">Back to Home</Link>
-            </Button>
-          }
-        />
+        <>
+          <h1 className="mb-6 text-h1 text-ink">{moduleLabel(module)}</h1>
+          <EmptyState
+            title={`There are no ${module.title} topics to open yet.`}
+            description="Pick another module from the curriculum, or search for a topic by name."
+            action={
+              <Button asChild size="sm">
+                <Link to="/">Back to Home</Link>
+              </Button>
+            }
+          />
+        </>
       ) : (
-        <section aria-labelledby="topics-heading">
-          <h2 id="topics-heading" className="sr-only">
-            Topics in order
-          </h2>
-          <ol className="divide-y divide-rule overflow-hidden rounded-md border border-rule bg-surface">
-            {entry.topics.map((topicEntry) => (
-              <TopicRow key={topicEntry.topic.id} entry={topicEntry} isNext={topicEntry.topic.id === next?.topic.id} />
-            ))}
-          </ol>
-        </section>
+        <ModuleSection
+          entry={entry}
+          expanded
+          headingLevel="h1"
+          showAllTopics
+          renderTopics={(topics) => (
+            <TopicGrid topics={topics} next={next} buildsOn={entry.status.state === 'locked' ? (entry.status.unmet?.module ?? null) : null} />
+          )}
+        />
       )}
     </AppShell>
   )

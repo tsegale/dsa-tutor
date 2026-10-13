@@ -22,9 +22,15 @@ export function ModuleSection({
   expanded,
   onToggle,
   renderTopics,
+  headingLevel: Heading = 'h2',
+  showAllTopics = false,
 }: {
   entry: SyllabusModule
   expanded: boolean
+  /** h1 on a module page, where this section is the page. */
+  headingLevel?: 'h1' | 'h2'
+  /** A module page lists every topic at once: it is the module's own page. */
+  showAllTopics?: boolean
   /** Omitted on a module page, where the one section is always open. */
   onToggle?: () => void
   /** Renders the visible topics; `firstRevealed` marks the topic focus moves to after "Show all". */
@@ -34,7 +40,7 @@ export function ModuleSection({
   const headingId = `module-${module.number}-heading`
   const bodyId = `module-${module.number}-topics`
   const locked = status.state === 'locked' && status.unmet
-  const [showAll, setShowAll] = useState(false)
+  const [showAll, setShowAll] = useState(showAllTopics)
   const [revealed, setRevealed] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
   const visible = showAll ? topics : topics.slice(0, INITIAL_TOPICS)
@@ -84,7 +90,7 @@ export function ModuleSection({
   return (
     <section aria-labelledby={headingId} className="rounded-md border border-rule bg-surface">
       <div className="px-card pt-card pb-row">
-        <h2 id={headingId} aria-label={moduleLabel(module)}>
+        <Heading id={headingId} aria-label={moduleLabel(module)}>
           {onToggle ? (
             <button
               type="button"
@@ -105,7 +111,7 @@ export function ModuleSection({
               {summary}
             </span>
           )}
-        </h2>
+        </Heading>
         <p className="mt-1 text-small text-ink-2">{module.subtitle}</p>
       </div>
 

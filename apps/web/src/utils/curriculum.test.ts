@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack } from '@dsa-tutor/types'
-import { MASTERED_AT, orderTopics, practiceAction, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
+import { MASTERED_AT, orderTopics, practiceAction, relativeDay, searchTopics, trackProgress } from './curriculum'
 
 const topic = (displayName: string, track: AlgorithmTrack, description = '') => ({ displayName, track, description })
 
@@ -84,15 +84,6 @@ describe('relativeDay', () => {
     expect(relativeDay(new Date(2026, 9, 8, 23, 0).toISOString(), now)).toBe('yesterday')
     expect(relativeDay(new Date(2026, 9, 4, 12, 0).toISOString(), now)).toBe('5 days ago')
     expect(relativeDay(new Date(2026, 8, 1, 12, 0).toISOString(), now)).not.toMatch(/ago|today|yesterday/)
-  })
-})
-
-describe('topicAction', () => {
-  it('starts, continues, then reviews as mastery grows', () => {
-    expect(topicAction({ masteryPercent: 0 })).toBe('Start')
-    expect(topicAction({ masteryPercent: 1 })).toBe('Continue')
-    expect(topicAction({ masteryPercent: MASTERED_AT - 1 })).toBe('Continue')
-    expect(topicAction({ masteryPercent: MASTERED_AT })).toBe('Review')
   })
 })
 

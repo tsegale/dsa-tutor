@@ -95,12 +95,6 @@ export function relativeDay(iso: string, now: Date = new Date()): string {
   return then.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
 
-/** The track-page action for a topic: Start it, Continue it, or Review it once complete. */
-export function topicAction(topic: Pick<TopicDto, 'masteryPercent'>): 'Start' | 'Continue' | 'Review' {
-  if (topic.masteryPercent === 0) return 'Start'
-  return isTopicComplete(topic) ? 'Review' : 'Continue'
-}
-
 /** A topic card's primary action (Phase 5C), never a passive label; none while its module is locked. */
 export function practiceAction(entry: { state: string; topic: Pick<TopicDto, 'masteryPercent'> }): 'Begin practice' | 'Continue practice' | 'Review' | null {
   if (entry.state === 'locked') return null

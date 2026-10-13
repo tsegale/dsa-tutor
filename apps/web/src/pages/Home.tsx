@@ -6,14 +6,14 @@ import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { nextStep } from '@/utils/nextStep'
 import { browserStorage, readLastPosition } from '@/utils/lastPosition'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { MODULES, type Module } from '@/config/curriculum'
-import { defaultExpandedModule, type LearningPlan, type SyllabusModule, type SyllabusTopic } from '@/utils/syllabus'
+import { MODULES } from '@/config/curriculum'
+import { defaultExpandedModule, type LearningPlan, type SyllabusModule } from '@/utils/syllabus'
 import { AppShell } from '@/components/layout/AppShell'
 import { NextStepBanner } from '@/components/home/NextStepBanner'
 import { ModuleSection } from '@/components/home/ModuleSection'
 import { useExpandedModules } from '@/hooks/useExpandedModules'
 import { ProgressStrip } from '@/components/home/ProgressStrip'
-import { TopicCard } from '@/components/home/TopicCard'
+import { TopicGrid } from '@/components/home/TopicGrid'
 import StudyProgressBanner from '@/components/dashboard/StudyProgressBanner'
 import WelcomeModal from '@/components/onboarding/WelcomeModal'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -163,17 +163,6 @@ function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan:
         })}
       </div>
     </section>
-  )
-}
-
-/** Topic cards, 3 / 2 / 1 columns at lg / md / sm (Phase 5C). */
-function TopicGrid({ topics, next, buildsOn, firstRevealed = null }: { topics: SyllabusTopic[]; next: SyllabusTopic | null; buildsOn: Module | null; firstRevealed?: string | null }) {
-  return (
-    <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {topics.map((row) => (
-        <TopicCard key={row.topic.id} entry={row} isNext={row.topic.id === next?.topic.id} buildsOn={buildsOn} revealFocus={row.topic.name === firstRevealed} />
-      ))}
-    </ul>
   )
 }
 
