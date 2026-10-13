@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack } from '@dsa-tutor/types'
-import { MASTERED_AT, orderTopics, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
+import { MASTERED_AT, orderTopics, practiceAction, relativeDay, searchTopics, topicAction, trackProgress } from './curriculum'
 
 const topic = (displayName: string, track: AlgorithmTrack, description = '') => ({ displayName, track, description })
 
@@ -93,5 +93,17 @@ describe('topicAction', () => {
     expect(topicAction({ masteryPercent: 1 })).toBe('Continue')
     expect(topicAction({ masteryPercent: MASTERED_AT - 1 })).toBe('Continue')
     expect(topicAction({ masteryPercent: MASTERED_AT })).toBe('Review')
+  })
+})
+
+describe('practiceAction', () => {
+  it('says what practising does next, never a passive label', () => {
+    expect(practiceAction({ state: 'available', topic: { masteryPercent: 0 } })).toBe('Begin practice')
+    expect(practiceAction({ state: 'in-progress', topic: { masteryPercent: 30 } })).toBe('Continue practice')
+    expect(practiceAction({ state: 'complete', topic: { masteryPercent: 85 } })).toBe('Review')
+  })
+
+  it('has no practice action while the module is locked', () => {
+    expect(practiceAction({ state: 'locked', topic: { masteryPercent: 0 } })).toBeNull()
   })
 })

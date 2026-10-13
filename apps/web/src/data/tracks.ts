@@ -71,3 +71,5 @@ export const trackPath = (id: AlgorithmTrack) => `/track/${getTrack(id).slug}`
 // Practice, not Demo: Practice is the default the study argues for, and
 // Demo stays one click away on the algorithm page (remediation doc 9.8).
 export const topicPath = (topicName: string) => `/algorithm/${topicName}?mode=PRACTICE`
+/** The same topic in Demo mode: the run plays without asking for predictions. */
+export const demoPath = (topicName: string) => `/algorithm/${topicName}?mode=DEMO`

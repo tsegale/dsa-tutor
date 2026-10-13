@@ -100,3 +100,10 @@ export function topicAction(topic: Pick<TopicDto, 'masteryPercent'>): 'Start' | 
   if (topic.masteryPercent === 0) return 'Start'
   return isTopicComplete(topic) ? 'Review' : 'Continue'
 }
+
+/** A topic card's primary action (Phase 5C), never a passive label; none while its module is locked. */
+export function practiceAction(entry: { state: string; topic: Pick<TopicDto, 'masteryPercent'> }): 'Begin practice' | 'Continue practice' | 'Review' | null {
+  if (entry.state === 'locked') return null
+  if (entry.topic.masteryPercent === 0) return 'Begin practice'
+  return isTopicComplete(entry.topic) ? 'Review' : 'Continue practice'
+}

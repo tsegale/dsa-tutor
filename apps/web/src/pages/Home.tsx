@@ -6,14 +6,14 @@ import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { nextStep } from '@/utils/nextStep'
 import { browserStorage, readLastPosition } from '@/utils/lastPosition'
 import { useStudyScope } from '@/hooks/useStudyScope'
-import { MODULES } from '@/config/curriculum'
-import { defaultExpandedModule, type LearningPlan, type SyllabusModule } from '@/utils/syllabus'
+import { MODULES, type Module } from '@/config/curriculum'
+import { defaultExpandedModule, type LearningPlan, type SyllabusModule, type SyllabusTopic } from '@/utils/syllabus'
 import { AppShell } from '@/components/layout/AppShell'
 import { NextStepBanner } from '@/components/home/NextStepBanner'
 import { ModuleSection } from '@/components/home/ModuleSection'
 import { useExpandedModules } from '@/hooks/useExpandedModules'
 import { ProgressStrip } from '@/components/home/ProgressStrip'
-import { TopicRow } from '@/components/track/TopicRow'
+import { TopicCard } from '@/components/home/TopicCard'
 import StudyProgressBanner from '@/components/dashboard/StudyProgressBanner'
 import WelcomeModal from '@/components/onboarding/WelcomeModal'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -156,11 +156,7 @@ function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan:
               expanded={expanded.has(entry.module.id)}
               onToggle={() => toggle(entry.module.id)}
               renderTopics={(topics, firstRevealed) => (
-                <ol className="divide-y divide-rule overflow-hidden rounded-md border border-rule">
-                  {topics.map((row) => (
-                    <TopicRow key={row.topic.id} entry={row} isNext={row.topic.id === next?.topic.id} revealFocus={row.topic.name === firstRevealed} />
-                  ))}
-                </ol>
+                <TopicGrid topics={topics} next={next} buildsOn={entry.status.state === 'locked' ? (entry.status.unmet?.module ?? null) : null} firstRevealed={firstRevealed} />
               )}
             />
           )
@@ -170,10 +166,21 @@ function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan:
   )
 }
 
+/** Topic cards, 3 / 2 / 1 columns at lg / md / sm (Phase 5C). */
+function TopicGrid({ topics, next, buildsOn, firstRevealed = null }: { topics: SyllabusTopic[]; next: SyllabusTopic | null; buildsOn: Module | null; firstRevealed?: string | null }) {
+  return (
+    <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {topics.map((row) => (
+        <TopicCard key={row.topic.id} entry={row} isNext={row.topic.id === next?.topic.id} buildsOn={buildsOn} revealFocus={row.topic.name === firstRevealed} />
+      ))}
+    </ul>
+  )
+}
+
 /**
  * An active study participant sees exactly their study topics, one per
- * module. Three one-topic module cards would look broken, so they are listed
- * directly, as the rows a module page uses, keeping their real numbers.
+ * module. Three one-topic module sections would look broken, so their cards
+ * are listed directly, keeping their real numbers.
  */
 function StudyTopics({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: LearningPlan }) {
   const rows = syllabus.flatMap((entry) => entry.topics)
@@ -186,11 +193,9 @@ function StudyTopics({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: Lea
         </h2>
         <p className="mt-1 text-small text-ink-2">These are the topics in your study. Each one opens the same way as in the full curriculum.</p>
       </div>
-      <ol id="curriculum-tracks" className="divide-y divide-rule overflow-hidden rounded-md border border-rule bg-surface">
-        {rows.map((row) => (
-          <TopicRow key={row.topic.id} entry={row} isNext={row.topic.id === next?.topic.id} />
-        ))}
-      </ol>
+      <div id="curriculum-tracks">
+        <TopicGrid topics={rows} next={next} buildsOn={null} />
+      </div>
     </section>
   )
 }
