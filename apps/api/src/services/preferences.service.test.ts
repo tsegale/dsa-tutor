@@ -1,11 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_LEARNING_PREFERENCES } from '@dsa-tutor/types'
+import { DEFAULT_LEARNING_PREFERENCES as API_DEFAULTS } from '../config/preferences'
 import { savePreferences, withDefaults } from './preferences.service'
 
 const { findUnique, update } = vi.hoisted(() => ({ findUnique: vi.fn(), update: vi.fn() }))
 vi.mock('../lib/prisma', () => ({ prisma: { user: { findUnique, update } } }))
 
 const chosen = { scaffolding: 'MINIMAL', hintDelaySeconds: 40, sound: true, reducedMotion: 'ALWAYS', theme: 'DARK' } as const
+
+describe('default preferences', () => {
+  it('match the shared defaults the web uses', () => {
+    expect(API_DEFAULTS).toEqual(DEFAULT_LEARNING_PREFERENCES)
+  })
+})
 
 describe('withDefaults', () => {
   it('fills in the defaults for nothing saved', () => {

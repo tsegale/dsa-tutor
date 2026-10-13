@@ -1,4 +1,5 @@
-import { DEFAULT_LEARNING_PREFERENCES, type LearningPreferences } from '@dsa-tutor/types'
+import type { LearningPreferences } from '@dsa-tutor/types'
+import { DEFAULT_LEARNING_PREFERENCES } from '../config/preferences'
 import { prisma } from '../lib/prisma'
 import { isActiveParticipant } from './study.service'
 
