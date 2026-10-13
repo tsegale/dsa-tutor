@@ -8,6 +8,7 @@ import { studyPhase } from '@/utils/studyPhase'
 import { AppShell } from '@/components/layout/AppShell'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { IdentityHeader } from '@/components/profile/IdentityHeader'
 
 // The account menu's Profile destination (Phase 4F): the account, the study
 // enrolment controls that used to sit in the menu (join, withdraw), and the
@@ -49,18 +50,8 @@ export default function ProfilePage() {
 
   return (
     <AppShell>
-      <h1 className="mb-6 text-h1 text-ink">Profile</h1>
-      <div className="flex max-w-2xl flex-col gap-4">
-        <Section title="Account">
-          <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-2 text-small">
-            <dt className="text-ink-2">Name</dt>
-            <dd className="text-ink">{user?.name}</dd>
-            <dt className="text-ink-2">Email</dt>
-            <dd className="break-all text-ink">{user?.email}</dd>
-            <dt className="text-ink-2">Role</dt>
-            <dd className="text-ink">{user?.role === 'EDUCATOR' ? 'Educator' : 'Student'}</dd>
-          </dl>
-        </Section>
+      <div className="flex flex-col gap-4">
+        {user ? <IdentityHeader user={user} /> : <h1 className="text-h1 text-ink">Profile</h1>}
 
         {/* Educators and demo accounts are never study participants (enrolment
             refuses a demo account), so neither gets a join offer. */}

@@ -13,7 +13,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Kbd } from '@/components/ui/Kbd'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import AccountIdentity from './AccountIdentity'
-import { AccountStats } from './AccountStats'
 import { AccountStatusRows } from './AccountStatusRows'
 import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
@@ -226,9 +225,9 @@ function NavMenu({ includeHome, includeModules, roleViews }: { includeHome: bool
 }
 
 /**
- * The avatar's menu (Phase 4F): who is signed in and as what, three learner
- * stats, then Profile and Log out. Study enrolment, withdrawal and the tour
- * live on the profile page.
+ * The avatar's menu: who is signed in and as what, then Profile and Log out
+ * (Phase 6A moved the day streak and XP to the profile page). Study
+ * enrolment, withdrawal and the tour live on the profile page too.
  */
 function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
   const go = useShellNavigate()
@@ -247,13 +246,6 @@ function AccountMenu({ inWorkspace }: { inWorkspace: boolean }) {
       <DropdownMenuContent align="end" className="min-w-64">
         <AccountIdentity />
         {isCompact && <AccountStatusRows inWorkspace={inWorkspace} />}
-        {/* An educator is not a learner here: no learner stats. */}
-        {user?.role !== 'EDUCATOR' && (
-          <>
-            <DropdownMenuSeparator />
-            <AccountStats />
-          </>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => go('/profile')}>Profile</DropdownMenuItem>
         <DropdownMenuItem

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
+import { MIN_PASSWORD_LENGTH } from '../config/password'
 import type { RegisterDto, LoginDto, AuthResponseDto } from '../dtos/auth.dto'
 
 /**
@@ -78,6 +79,20 @@ export async function updateStreak(userId: string): Promise<void> {
       lastActiveDate: new Date(),
     },
   })
+}
+
+/**
+ * Change a password, proving the current one first. Demo accounts are
+ * refused: a throwaway one has no password its user knows, and the seeded
+ * showcase account must not be changed from a presentation.
+ */
+export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true, isDemo: true } })
+  if (!user) throw new Error('NOT_FOUND')
+  if (user.isDemo) throw new Error('DEMO_ACCOUNT')
+  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) throw new Error('INVALID_CREDENTIALS')
+  if (newPassword.length < MIN_PASSWORD_LENGTH) throw new Error('WEAK_PASSWORD')
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(newPassword, 12) } })
 }
 
 export async function login(dto: LoginDto): Promise<AuthResponseDto> {

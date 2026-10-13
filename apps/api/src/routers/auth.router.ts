@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
-import { register, login, createDemoAccount } from '../services/auth.service'
+import { register, login, createDemoAccount, changePassword } from '../services/auth.service'
+import { MIN_PASSWORD_LENGTH } from '../config/password'
 import { demoCreationLimit } from '../middleware/demo'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -57,11 +58,35 @@ router.get('/me', authenticate, validate(S.auth.me), async (req: AuthRequest, re
         xpTotal: true,
         streakCount: true,
         lastActiveDate: true,
+        createdAt: true,
+        isDemo: true,
       },
     })
     res.json({ data: user, error: null })
   } catch {
     res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
+  }
+})
+
+const PASSWORD_ERRORS: Record<string, [number, string]> = {
+  INVALID_CREDENTIALS: [401, 'Your current password is incorrect'],
+  WEAK_PASSWORD: [400, `Use at least ${MIN_PASSWORD_LENGTH} characters`],
+  DEMO_ACCOUNT: [403, 'A demo account has no password to change'],
+  NOT_FOUND: [404, 'User not found'],
+}
+
+router.post('/password', authenticate, validate(S.auth.changePassword), async (req: AuthRequest, res: Response) => {
+  try {
+    await changePassword(req.userId!, req.body.currentPassword, req.body.newPassword)
+    res.json({ data: { changed: true }, error: null })
+  } catch (err) {
+    const code = err instanceof Error ? err.message : ''
+    const known = PASSWORD_ERRORS[code]
+    if (known) {
+      res.status(known[0]).json({ data: null, error: { code, message: known[1] } })
+      return
+    }
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Could not change the password' } })
   }
 })
 

@@ -643,6 +643,10 @@ export interface UserProfile {
   xpTotal: number
   streakCount: number
   lastActiveDate: string | null
+  /** When the account was created (ISO), shown as "member since". */
+  createdAt?: string
+  /** A demo account: it has no password the learner can change. */
+  isDemo?: boolean
 }
 
 export interface AlgorithmTopicDTO {

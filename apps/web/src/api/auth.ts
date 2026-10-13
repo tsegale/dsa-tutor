@@ -57,3 +57,11 @@ export function logout() {
 export function getToken(): string | null {
   return localStorage.getItem('dsa-tutor-token')
 }
+
+/** Change the signed-in user's password; the server checks the current one first (Phase 6A). */
+export function changePassword(currentPassword: string, newPassword: string) {
+  return apiFetch<{ changed: true }>('/api/v1/auth/password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+}

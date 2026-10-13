@@ -32,6 +32,7 @@ export const auth = {
   login: { body: z.strictObject({ email: nonEmpty(254), password: nonEmpty(200) }) },
   me: none,
   demo: none,
+  changePassword: { body: z.strictObject({ currentPassword: nonEmpty(200), newPassword: nonEmpty(200) }) },
 } satisfies Record<string, RequestSchema>
 
 // ------------------------------------------------------------ sessions
