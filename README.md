@@ -90,6 +90,8 @@ python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # bin/ o
 .venv/Scripts/uvicorn main:app --port 8000
 ```
 
+Run one PostgreSQL on port 5432, not two. If a native PostgreSQL install already uses it, either use that server (create the `dsa_tutor` database in it) and skip `docker compose up -d postgres`, or start Docker's on another port with `POSTGRES_HOST_PORT=5433 docker compose up -d postgres` and put `5433` in `DATABASE_URL`.
+
 The app works without the AI service: grading is local, and feedback falls back to the rule-based text.
 
 Checks:

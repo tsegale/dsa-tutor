@@ -54,7 +54,10 @@ services:
   postgres:
     image: postgres:15
     ports:
-      - "5432:5432"
+      # Set POSTGRES_HOST_PORT (e.g. 5433) when a native PostgreSQL already
+      # listens on 5432: two servers on one port means localhost reaches
+      # whichever answers first, and the api silently uses the wrong database.
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
