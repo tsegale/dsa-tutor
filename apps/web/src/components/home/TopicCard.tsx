@@ -52,8 +52,11 @@ export function TopicCard({
   return (
     <li
       className={cn(
-        'relative flex flex-col rounded-md border border-rule bg-surface p-card transition-shadow duration-quick',
-        openable && 'hover:shadow-e2 has-[a[data-card-link]:focus-visible]:ring-2 has-[a[data-card-link]:focus-visible]:ring-brand'
+        // content-visibility lets the browser skip layout and paint for cards
+        // off screen (Phase 5E: 66 cards with every section open); they stay
+        // in the DOM and accessibility tree, so Tab and find still reach them.
+        'relative flex flex-col rounded-md border border-rule bg-surface p-card transition-shadow duration-quick [contain-intrinsic-size:auto_18rem] [content-visibility:auto]',
+        openable && 'hover:shadow-e2'
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -79,8 +82,8 @@ export function TopicCard({
             data-card-link
             data-reveal-focus={revealFocus ? topic.name : undefined}
             aria-label={`${label}: ${number} ${topic.displayName}`}
-            // Stretched over the card; the ring shows on the card instead.
-            className="outline-none after:absolute after:inset-0 after:rounded-md after:content-['']"
+            // Stretched over the card, so its focus ring outlines the card.
+            className="outline-none after:absolute after:inset-0 after:rounded-md after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-brand"
           >
             {topic.displayName}
           </Link>
