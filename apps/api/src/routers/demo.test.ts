@@ -38,7 +38,8 @@ describe('POST /api/v1/auth/demo (4D.6)', () => {
     const res = await request(app).post('/api/v1/auth/demo').send({})
     expect(res.status).toBe(429)
     expect(res.body.error.code).toBe('DEMO_RATE_LIMITED')
-  })
+    // Six cost-12 bcrypt hashes: over 5s when every workspace tests at once.
+  }, 20_000)
 })
 
 describe('demo AI allowance', () => {
