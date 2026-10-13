@@ -124,6 +124,38 @@ function NavLink({ to, active, children }: { to: string; active: boolean; childr
   )
 }
 
+/**
+ * Educators only (Phase 4D): flip between the learner app and the educator
+ * dashboard in one click, visible without opening a menu. It takes the Home
+ * link's place, since "Student view" goes to Home. Students never get it in
+ * the DOM at all.
+ */
+function RoleSwitcher({ educatorView }: { educatorView: boolean }) {
+  const go = useShellNavigate()
+  const segment = (to: string, label: string, active: boolean) => (
+    <a
+      href={to}
+      aria-current={active ? 'page' : undefined}
+      onClick={(event) => {
+        event.preventDefault()
+        go(to)
+      }}
+      className={cn(
+        'inline-flex h-7 items-center rounded-[5px] px-3 text-small font-medium whitespace-nowrap transition-colors duration-quick',
+        active ? 'bg-surface text-ink shadow-e1 ring-1 ring-rule-strong' : 'text-ink-2 hover:text-ink'
+      )}
+    >
+      {label}
+    </a>
+  )
+  return (
+    <div role="group" aria-label="View" className="inline-flex items-center gap-0.5 rounded-sm bg-surface-sunk p-0.5">
+      {segment('/', 'Student view', !educatorView)}
+      {segment('/educator', 'Educator view', educatorView)}
+    </div>
+  )
+}
+
 function ModulesMenu({ active }: { active: boolean }) {
   const go = useShellNavigate()
   return (
@@ -305,9 +337,13 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
                 descriptor hides below 1024px; the wordmark stays. */}
             <DSATutorLogo variant="dark" taglineClassName="hidden lg:block" className="shrink-0" />
             <nav aria-label="Main" className="hidden items-center gap-5 md:flex">
-              <NavLink to="/" active={pathname === '/'}>
-                Home
-              </NavLink>
+              {user?.role === 'EDUCATOR' ? (
+                <RoleSwitcher educatorView={pathname.startsWith('/educator')} />
+              ) : (
+                <NavLink to="/" active={pathname === '/'}>
+                  Home
+                </NavLink>
+              )}
               {/* A study participant's three topics sit in three modules; a
                   one-topic module page would look broken, so Home lists them. */}
               {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}

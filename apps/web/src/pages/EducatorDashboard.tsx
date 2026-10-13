@@ -83,7 +83,7 @@ export default function EducatorDashboard() {
   return (
     <div className="min-h-screen bg-surface-sunk">
       <AnalyticsNav refetch={refetch} isFetching={isFetching} />
-      <main className="mx-auto max-w-7xl px-8 py-8">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-8 py-8 outline-none">
         {analytics && (
           <>
             <div style={{ marginBottom: 16 }}>
