@@ -1,27 +1,14 @@
-import { cn } from '@/lib/utils'
 import { SUPPORT_LEVEL, nextLevelDownLine } from '@/config/supportLevels'
 import type { SupportAssessment } from '@/utils/supportBand'
 import { useHeaderSupport } from '@/hooks/useHeaderSupport'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { SupportMeter } from '@/components/ui/SupportMeter'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // The scaffolding state, made visible in the global bar (Phase 4C). The chip
 // names the level and opens a popover in which the mechanism explains
 // itself: the level, the reasoning masteryScore.ts gave, the mastery score,
 // and what changes at the next level down.
-//
-// The meter is --ink-2 on --rule-strong, deliberately neither brand (brand
-// means interactive) nor a canvas state colour (those mean algorithm state).
-
-function Meter({ filled, className }: { filled: number; className?: string }) {
-  return (
-    <span aria-hidden="true" className={cn('inline-flex items-end gap-0.5', className)}>
-      {[0, 1, 2, 3].map((index) => (
-        <span key={index} className={cn('h-3 w-1 rounded-[1px]', index < filled ? 'bg-ink-2' : 'bg-rule-strong')} />
-      ))}
-    </span>
-  )
-}
 
 function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis: string }) {
   const { level } = assessment
@@ -38,7 +25,7 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
               className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule px-2.5 text-small whitespace-nowrap transition-colors duration-quick hover:border-rule-strong hover:bg-surface-sunk"
             >
               <span className="hidden text-micro text-ink-2 xl:inline">Support</span>
-              <Meter filled={segments} />
+              <SupportMeter filled={segments} />
               <span className="hidden font-medium text-ink xl:inline">{label}</span>
             </button>
           </PopoverTrigger>
@@ -48,7 +35,7 @@ function ChipView({ assessment, basis }: { assessment: SupportAssessment; basis:
       <PopoverContent aria-label="Why this level of support">
         <p className="text-micro text-ink-2">{basis}</p>
         <div className="mt-2 flex items-center gap-2.5">
-          <Meter filled={segments} className="[&>span]:h-4 [&>span]:w-1.5" />
+          <SupportMeter filled={segments} className="[&>span]:h-4 [&>span]:w-1.5" />
           <p className="text-h3 text-ink">{label}</p>
           <span className="ml-auto text-mono-sm text-ink-2">Level {segments} of 4</span>
         </div>

@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
 import { IdentityHeader } from '@/components/profile/IdentityHeader'
 import { StudySection } from '@/components/profile/StudySection'
+import { AnalyticsSection } from '@/components/profile/AnalyticsSection'
 
 // The learner and participant hub (Phase 6): identity, study participation
 // (participants only), and the guided tour. It must read as complete for a
@@ -41,6 +42,8 @@ export default function ProfilePage() {
 
         {/* Participants only; absent for everyone else, with no placeholder. */}
         {studyStatus && <StudySection status={studyStatus} />}
+
+        <AnalyticsSection />
 
         <Section title="Guided tour">
           <div className="flex flex-col items-start gap-3">

@@ -35,6 +35,11 @@ export const auth = {
   changePassword: { body: z.strictObject({ currentPassword: nonEmpty(200), newPassword: nonEmpty(200) }) },
 } satisfies Record<string, RequestSchema>
 
+// ------------------------------------------------------------- profile
+export const profile = {
+  analytics: none,
+} satisfies Record<string, RequestSchema>
+
 // ------------------------------------------------------------ sessions
 const sessionIdParams = z.strictObject({ sessionId: id })
 

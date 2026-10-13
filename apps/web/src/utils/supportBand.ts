@@ -21,10 +21,14 @@ export interface SupportAssessment {
  * also weighs the current streak and recent hints.
  */
 export function overallSupport(topics: readonly TopicDto[]): SupportAssessment {
-  if (!topics.some((topic) => topic.masteryPercent > 0)) {
+  return supportFromIndex(masteryIndex(topics), topics.some((topic) => topic.masteryPercent > 0))
+}
+
+/** The overall band for a mastery index, when the index is already known (the profile's summary row). */
+export function supportFromIndex(score: number, hasData: boolean): SupportAssessment {
+  if (!hasData) {
     return { level: ScaffoldingLevel.HIGH, score: 0, reasoning: 'No interaction data yet. Starting with maximum support.' }
   }
-  const score = masteryIndex(topics)
   const level =
     score >= LEVEL_THRESHOLDS.NONE
       ? ScaffoldingLevel.NONE

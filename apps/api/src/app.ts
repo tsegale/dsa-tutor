@@ -18,6 +18,7 @@ import assessmentsRouter from './routers/assessments.router'
 import researchRouter from './routers/research.router'
 import studyRouter from './routers/study.router'
 import misconceptionEventsRouter from './routers/misconceptionEvents.router'
+import profileRouter from './routers/profile.router'
 
 const app = express()
 
@@ -58,6 +59,7 @@ app.use('/api/v1/assessments', assessmentsRouter)
 app.use('/api/v1/research', researchRouter)
 app.use('/api/v1/study', studyRouter)
 app.use('/api/v1/misconception-events', misconceptionEventsRouter)
+app.use('/api/v1/profile', profileRouter)
 
 // OpenAPI spec generated from the live route table and zod schemas (4D.3).
 // Built once, on first request, when every router is registered.
