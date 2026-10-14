@@ -78,7 +78,7 @@ describe('computeMastery', () => {
   })
 
   it('leaves out criteria the topic does not offer instead of failing them', () => {
-    const mastery = computeMastery('shell-sort', answers(12, 0, 3), null)
+    const mastery = computeMastery('two-pointer', answers(12, 0, 3), null)
     expect(criterion(mastery, 'FEYNMAN').applicable).toBe(false)
     expect(criterion(mastery, 'CHALLENGE').applicable).toBe(false)
     expect(mastery.status).toBe('MASTERED')
@@ -137,7 +137,8 @@ describe('attemptIndexOf', () => {
 describe('applicable topics match the web', () => {
   const web = (file: string) => readFileSync(join(__dirname, '../../../web/src/utils', file), 'utf8')
   const seed = readFileSync(join(__dirname, '../../prisma/seed.ts'), 'utf8')
-  const slugFor = (displayName: string) => seed.match(new RegExp(`name: '([^']+)', displayName: '${displayName}'`))?.[1]
+  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const slugFor = (displayName: string) => seed.match(new RegExp(`name: '([^']+)', displayName: '${escape(displayName)}'`))?.[1]
 
   it('Feynman topics are the ones with a rubric', () => {
     const block = web('feynmanRubrics.ts').match(/new Set\(\[([\s\S]*?)\]\)/)![1]

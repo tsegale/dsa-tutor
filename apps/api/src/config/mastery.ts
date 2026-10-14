@@ -41,6 +41,28 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'bfs',
   'dfs',
   'bst',
+  // Modules 1 to 3 (Phase 8C).
+  'array-access',
+  'array-insert',
+  'array-delete',
+  'singly-linked-list',
+  'doubly-linked-list',
+  'circular-linked-list',
+  'stack',
+  'queue',
+  'circular-queue',
+  'deque',
+  'hash-table-chaining',
+  'hash-table-probing',
+  'recursion-factorial',
+  'recursion-fibonacci',
+  'jump-search',
+  'interpolation-search',
+  'exponential-search',
+  'shell-sort',
+  'heap-sort',
+  'counting-sort',
+  'radix-sort',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

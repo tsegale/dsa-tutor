@@ -19,10 +19,10 @@
 //
 // The mastery rubric (Phase 7B, config/mastery.ts) shows every status:
 // Bubble Sort and Binary Search Mastered with all four criteria met (three
-// inputs, a Feynman explanation at 80 or more, a passed challenge), Array
-// Access Mastered on the two criteria it offers, Linear Search Proficient
-// (its Feynman score is short of 80), the rest in progress, and Modules 5
-// and 6 not started.
+// inputs, a Feynman explanation at 80 or more, a passed challenge), Linear
+// Search Proficient (its Feynman score is short of 80), Array Access
+// Proficient (Feynman mode offered after its finished run, not yet taken),
+// the rest in progress, and Modules 5 and 6 not started.
 
 import type { MasteryRow } from '../config/mastery'
 
