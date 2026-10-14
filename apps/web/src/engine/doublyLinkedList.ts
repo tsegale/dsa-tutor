@@ -348,7 +348,7 @@ export function dllInsertAtEngine(values: number[], position: number): Algorithm
   snapshots.push(
     makeSnapshot({
       stepIndex: stepRef.current++,
-      description: `Inserting ${newValue} between ${prevNode.value} and ${nextNode ? nextNode.value : 'the end'}. After inserting between A and B, which TWO pointers change?`,
+      description: `Inserting ${newValue} between ${prevNode.value} and ${nextNode ? nextNode.value : 'the end'}. After inserting between A and B, which pointers are set?`,
       pseudocodeLine: LINE.NEW_LINKS,
       isPredictionRequired: true,
       state: baseState(nodes, { currentId: prevId }),

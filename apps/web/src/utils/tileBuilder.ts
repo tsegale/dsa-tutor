@@ -65,6 +65,58 @@ export function pivotSelectionTiles(array: number[], [low, high]: [number, numbe
   return tiles
 }
 
+interface LinkedListInsertState {
+  nodes: Array<{ id: string; value: number | string; next: string | null; prev?: string | null }>
+  headId: string | null
+  tailId: string | null
+  operationValue: number | string | null
+  insertPosition: number | null
+}
+
+/** Where a linked-list insert lands, from the position against the list before it. */
+export function linkedListInsertCase(s: Pick<LinkedListInsertState, 'nodes' | 'insertPosition'>): 'front' | 'append' | 'between' {
+  if (s.insertPosition === 0) return 'front'
+  if (s.insertPosition !== null && s.insertPosition >= s.nodes.length) return 'append'
+  return 'between'
+}
+
+const valueOf = (s: LinkedListInsertState, id: string | null) => s.nodes.find((n) => n.id === id)?.value
+
+/** "After inserting, what does the tail's .next pointer become?" */
+function sllAppendTiles(s: LinkedListInsertState): TileOption[] {
+  return [
+    { id: 'correct', label: `The new node (${s.operationValue})`, misconception: null },
+    { id: 'stays-null', label: 'null - the tail still ends the list', misconception: MisconceptionCategory.POINTER_CONFUSION },
+    { id: 'head', label: `The head (${valueOf(s, s.headId)})`, misconception: MisconceptionCategory.POINTER_CONFUSION },
+    { id: 'itself', label: `The tail itself (${valueOf(s, s.tailId)})`, misconception: MisconceptionCategory.POINTER_CONFUSION },
+  ]
+}
+
+/** "After inserting at the front / appending, which TWO pointers change?" in a doubly linked list. */
+function dllEndTiles(s: LinkedListInsertState, insertCase: 'front' | 'append'): TileOption[] {
+  const fresh = s.operationValue
+  const head = valueOf(s, s.headId)
+  const tail = valueOf(s, s.tailId)
+  const [end, other] = insertCase === 'front' ? [head, tail] : [tail, head]
+  const correct =
+    insertCase === 'front' ? `${fresh}.next = ${head} and ${head}.prev = ${fresh}` : `${tail}.next = ${fresh} and ${fresh}.prev = ${tail}`
+  const reversed =
+    insertCase === 'front' ? `${head}.next = ${fresh} and ${fresh}.prev = ${head}` : `${fresh}.next = ${tail} and ${tail}.prev = ${fresh}`
+  const wrongEnd =
+    insertCase === 'front' ? `${other}.next = ${fresh} and ${fresh}.prev = ${other}` : `${fresh}.next = ${other} and ${other}.prev = ${fresh}`
+  return [
+    { id: 'correct', label: correct, misconception: null },
+    {
+      id: 'one-only',
+      label: insertCase === 'front' ? `Only ${fresh}.next = ${end}` : `Only ${end}.next = ${fresh}`,
+      misconception: MisconceptionCategory.POINTER_CONFUSION,
+    },
+    { id: 'reversed', label: reversed, misconception: MisconceptionCategory.POINTER_CONFUSION },
+    // A one-node list has the same head and tail: this tile would repeat the right one.
+    ...(head !== tail ? [{ id: 'wrong-end', label: wrongEnd, misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION }] : []),
+  ]
+}
+
 function collectTreeValues(node: BSTNode | null): number[] {
   if (!node) return []
   return [...collectTreeValues(node.left), node.value, ...collectTreeValues(node.right)]
@@ -570,9 +622,10 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       const nextNode = isDFS ? frontierList[frontierList.length - 1] : frontierList[0]
       const allNodeIds = isLegacyBFS ? Object.keys(s.graph ?? {}) : (s.nodes ?? []).map((n) => n.id)
       const distractors = allNodeIds.filter((n) => n !== nextNode && !s.visited.includes(n)).slice(0, 3)
-      const reason = isDFS ? 'it is on top of the stack' : 'it was added to the queue first'
+      // Bare node names for every tile: a reason on the right one alone
+      // would mark it out (Phase 7A.2). The why follows in the feedback.
       return shuffleArray([
-        { id: nextNode, label: `${nextNode} - ${reason}`, misconception: null },
+        { id: nextNode, label: nextNode, misconception: null },
         ...distractors.map((d) => ({ id: d, label: d, misconception: MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION })),
       ])
     }
@@ -923,11 +976,14 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
     }
 
     case CriticalJunctionType.INSERT_BETWEEN: {
-      const s = snapshot.dataStructureState as {
-        nodes: Array<{ id: string; value: number | string; next: string | null; prev?: string | null }>
-        currentId: string | null
-      }
+      const s = snapshot.dataStructureState as LinkedListInsertState
       const isDLL = s.nodes.some((n) => n.prev !== undefined)
+      const insertCase = linkedListInsertCase(s)
+      // Appending (and, in a DLL, inserting at the front) asks about the
+      // pointers at that end, so the options name them (Phase 7A.2): the
+      // A-and-B options below only fit an insert between two nodes.
+      if (insertCase === 'append' && !isDLL) return shuffleArray(sllAppendTiles(s))
+      if (insertCase !== 'between' && isDLL) return shuffleArray(dllEndTiles(s, insertCase))
       if (isDLL) {
         return shuffleArray([
           {
@@ -1192,9 +1248,11 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
 
     case CriticalJunctionType.COLLISION_RESOLVE:
       return shuffleArray([
+        // Not "the front of the chain": prepending is a valid chaining
+        // implementation too, so it could not be a wrong option (7A.2).
         {
-          id: 'front-of-chain',
-          label: 'At the front of the chain',
+          id: 'replaces',
+          label: 'It replaces the item already in the bucket',
           misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
         },
         { id: 'back-of-chain', label: 'At the back of the chain', misconception: null },

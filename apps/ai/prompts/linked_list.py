@@ -51,12 +51,15 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
         "snapshot is actually asking."
     ),
     "INSERT_BETWEEN": (
-        "The student was asked what must happen to link a new node "
-        "between two existing ones. In a DLL this means updating all "
-        "four pointers (new.next, new.prev, and both neighbours' "
-        "pointers back to the new node); in an SLL it means saving the "
-        "next pointer before overwriting it. Ground the feedback in the "
-        "exact node names shown."
+        "The student was asked how a new node is linked in. Between two "
+        "nodes: in a DLL all four pointers are set (new.next, new.prev, "
+        "and both neighbours' pointers back to the new node); in an SLL "
+        "the new node's next is set before the previous node's next is "
+        "overwritten. Appending to an SLL: the old tail's .next becomes "
+        "the new node. Appending to or prepending in a DLL: exactly two "
+        "pointers change, the end node's pointer toward the new node and "
+        "the new node's pointer back. Ground the feedback in the exact "
+        "node values shown."
     ),
     "DELETE_RELINK": (
         "The student was asked how many pointers (SLL: 1, DLL: 2) or "

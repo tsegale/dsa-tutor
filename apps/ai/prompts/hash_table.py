@@ -32,10 +32,11 @@ Common errors to watch for:
   are always O(1) regardless of load factor or collision pattern - the
   average case is O(1) only with a good hash function and reasonable
   load factor; worst case (many collisions) degrades toward O(n).
-- STRUCTURAL_PROPERTY_VIOLATION: The student inserted a colliding key at
-  the front of a chain instead of the back (this implementation's
-  convention), or assumed linear probing checks a random slot instead of
-  the very next one.
+- STRUCTURAL_PROPERTY_VIOLATION: The student thought a colliding key
+  replaces the one already in its bucket, that it moves to a new bucket,
+  or that the insert fails, instead of joining the bucket's chain; or
+  assumed linear probing checks a random slot instead of the very next
+  one.
 - ORDER_OF_OPERATIONS: The student evaluated the hash function
   incorrectly (e.g. forgetting the modulo, or applying it to the wrong
   value).
@@ -49,9 +50,10 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     ),
     "COLLISION_RESOLVE": (
         "The student was asked where a new key goes when its bucket "
-        "already has entries (chaining). This implementation's "
-        "convention is the back of the chain - ground the feedback in "
-        "that convention and the existing chain's contents."
+        "already has entries (chaining). It joins that bucket's chain, at "
+        "the back in this implementation; nothing is replaced, moved to "
+        "another bucket or refused. Ground the feedback in the bucket "
+        "index and the chain's existing contents."
     ),
     "PROBE_NEXT": (
         "The student was asked which slot linear probing checks next "

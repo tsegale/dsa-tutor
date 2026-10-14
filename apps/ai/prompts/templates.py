@@ -46,7 +46,11 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   7A): guidance and comparison context for the pivot
 #                   question, with first-element, median-of-three and random
 #                   distractors.
-PROMPT_VERSION = "2026-10-14.1"
+#   2026-10-14.2    Junction audit (Phase 7A.2): COLLISION_RESOLVE guidance
+#                   drops "front of chain" as the misconception (prepending
+#                   is valid chaining); INSERT_BETWEEN guidance covers the
+#                   append and front cases the linked-list topics ask.
+PROMPT_VERSION = "2026-10-14.2"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one

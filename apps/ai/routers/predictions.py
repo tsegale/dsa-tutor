@@ -519,7 +519,23 @@ def _is_dll(ds: dict) -> bool:
     return any("prev" in n for n in nodes)
 
 
+def _insert_case(ds: dict) -> str:
+    """Mirrors the web's linkedListInsertCase: front, append or between."""
+    position = ds.get("insertPosition")
+    if position == 0:
+        return "front"
+    if isinstance(position, int) and position >= len(ds.get("nodes") or []):
+        return "append"
+    return "between"
+
+
 def _evaluate_insert_between(ds: dict, student_answer: str | None) -> bool:
+    insert_case = _insert_case(ds)
+    # An append (and a DLL front insert) asks about that end's pointers; its
+    # tiles mark the right one 'correct'. Only an insert between two nodes
+    # uses the A-and-B tiles.
+    if insert_case == "append" or (insert_case == "front" and _is_dll(ds)):
+        return student_answer == "correct"
     if _is_dll(ds):
         return student_answer == "all-four"
     return student_answer == "new-then-prev"
