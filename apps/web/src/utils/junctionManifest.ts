@@ -3,6 +3,7 @@ import { ALGORITHM_REGISTRY } from '@/engine/registry'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import { bstInsertEngine } from '@/engine/bst'
+import { rngFrom } from '@/utils/challengeGenerators'
 
 /**
  * The junction manifest: every junction type each algorithm can ask, read
@@ -27,6 +28,18 @@ const STUDY_RUNS: Record<string, (input: number[]) => AlgorithmSnapshot[]> = {
 }
 
 export function buildJunctionManifest(): Record<string, string[]> {
+  // The search entries pick a random target; a seeded source keeps the
+  // manifest the same on every run, so the fixture never flickers.
+  const random = Math.random
+  Math.random = rngFrom(20261014)
+  try {
+    return buildFromRuns()
+  } finally {
+    Math.random = random
+  }
+}
+
+function buildFromRuns(): Record<string, string[]> {
   const manifest: Record<string, string[]> = {}
   for (const entry of ALGORITHM_REGISTRY) {
     const types = new Set<string>()
