@@ -57,6 +57,10 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Trie Insert',
   'Trie Search',
   'Trie Delete',
+  'AVL Insert',
+  'AVL Delete',
+  'Red-Black Insert',
+  'Red-Black Delete',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

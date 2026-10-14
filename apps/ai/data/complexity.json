@@ -397,7 +397,18 @@
     "worstNote": "guaranteed by self-balancing",
     "space": "O(log n)",
     "spaceNote": "call stack, height is always O(log n)",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Descend one root-to-leaf path, O(h), then walk back up updating heights and balance factors, with at most one rotation (single or double), O(1). The balance rule (sibling subtrees differ in height by at most 1) keeps h below about 1.44 log2 n, so O(log n) is guaranteed: sorted input, which turns a plain BST into an O(n) chain, cannot make an AVL tree tall.",
+    "auxiliarySpace": "O(log n) stack frames for the recursive insert this run shows, guaranteed because the height is O(log n); each node also stores its height, O(n) extra across the tree.",
+    "contrast": {
+      "algorithm": "Binary Search Tree",
+      "point": "no rotations and simpler code, but sorted inserts build a chain and every operation degrades to O(n)"
+    },
+    "defend": {
+      "time": "why inserting into an AVL tree is O(log n) even on sorted input",
+      "alternative": "what a plain binary search tree does with the same input",
+      "space": "why the recursion is guaranteed to stay O(log n) deep"
+    }
   },
   "avl-delete": {
     "best": "O(log n)",
@@ -408,7 +419,18 @@
     "worstNote": "guaranteed by self-balancing",
     "space": "O(log n)",
     "spaceNote": "call stack, height is always O(log n)",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Find and remove the node as in a BST, O(h), then walk back up rebalancing. Unlike insert, a delete can need a rotation at every level on the way up, up to O(log n) rotations of O(1) each. The height stays below about 1.44 log2 n, so the whole delete is O(log n) guaranteed, on any input.",
+    "auxiliarySpace": "O(log n) stack frames for the recursion, guaranteed by the height bound; each node stores its height, O(n) extra across the tree.",
+    "contrast": {
+      "algorithm": "Red-Black Delete",
+      "point": "a looser balance rule (height up to 2 log2 n) needs at most three rotations per delete, trading slightly slower searches for cheaper updates"
+    },
+    "defend": {
+      "time": "why deleting from an AVL tree is O(log n) even though it can rotate at every level",
+      "alternative": "how that differs from insert, which needs at most one rotation",
+      "space": "what stack space the recursion needs"
+    }
   },
   "rb-insert": {
     "best": "O(log n)",
@@ -419,7 +441,18 @@
     "worstNote": "guaranteed by self-balancing",
     "space": "O(log n)",
     "spaceNote": "call stack, height is always O(log n)",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Insert as in a BST, O(h), then fix any red-red violation: recolouring can move it up two levels at a time, at most O(log n) times, and at most two rotations end it. The colour rules (no red node has a red child; every root-to-leaf path has the same number of black nodes) keep h at most 2 log2(n + 1), so O(log n) is guaranteed, sorted input included.",
+    "auxiliarySpace": "O(log n) for the path or recursion back up, guaranteed by the height bound; each node stores one colour bit.",
+    "contrast": {
+      "algorithm": "AVL Insert",
+      "point": "stricter balance (height about 1.44 log2 n), so faster searches, but more rebalancing work over many updates; red-black trees are what most standard libraries use for ordered maps"
+    },
+    "defend": {
+      "time": "why inserting into a red-black tree is O(log n) on any input",
+      "alternative": "why recolouring may climb the tree but no more than two rotations are ever needed",
+      "space": "what extra space the colours and the fix-up need"
+    }
   },
   "rb-delete": {
     "best": "O(log n)",
@@ -430,7 +463,18 @@
     "worstNote": "guaranteed by self-balancing",
     "space": "O(log n)",
     "spaceNote": "call stack, height is always O(log n)",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Remove as in a BST, O(h), then resolve the double-black: recolouring can push it up the tree O(log n) times, and at most three rotations finish it. With the height at most 2 log2(n + 1), the delete is O(log n) guaranteed, on any input.",
+    "auxiliarySpace": "O(log n) for the path or recursion back up; each node stores one colour bit.",
+    "contrast": {
+      "algorithm": "AVL Delete",
+      "point": "can need rotations at O(log n) levels where red-black needs at most three, in exchange for a more strictly balanced tree"
+    },
+    "defend": {
+      "time": "why deleting from a red-black tree is O(log n) on any input",
+      "alternative": "why it needs at most three rotations where an AVL delete may need O(log n)",
+      "space": "what extra space the fix-up needs"
+    }
   },
   "max-heap-insert": {
     "best": "O(1)",

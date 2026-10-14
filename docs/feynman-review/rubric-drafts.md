@@ -89,14 +89,16 @@ it, space against an alternative, clarity), generated from its facts.
 - **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(w) for the queue, where w is the widest level: about n/2 leaves at the bottom of a complete tree, so O(n), but only O(1) for a chain.), and contrasts it with a relevant alternative such as Inorder Traversal (the same O(n) time with an O(h) stack instead, small for a wide balanced tree and large for a deep chain: the opposite trade-off)
 - **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
-## Self-balancing trees
+## Self-balancing trees (live)
 
 ### avl-insert
 
 - **Inserting as in a BST first**: explains inserting as in a binary search tree first
 - **Balance factor within -1 to 1**: explains the balance factor (left height minus right height) and that it must stay within -1 to 1
 - **Choosing the rotation case**: explains choosing among the LL, RR, LR and RL rotations from where the imbalance is
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(log n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Descend one root-to-leaf path, O(h), then walk back up updating heights and balance factors, with at most one rotation (single or double), O(1). The balance rule (sibling subtrees differ in height by at most 1) keeps h below about 1.44 log2 n, so O(log n) is guaranteed: sorted input, which turns a plain BST into an O(n) chain, cannot make an AVL tree tall.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(log n) stack frames for the recursive insert this run shows, guaranteed because the height is O(log n); each node also stores its height, O(n) extra across the tree.), and contrasts it with a relevant alternative such as Binary Search Tree (no rotations and simpler code, but sorted inserts build a chain and every operation degrades to O(n))
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### avl-delete
 
@@ -104,21 +106,27 @@ it, space against an alternative, clarity), generated from its facts.
 - **Rechecking balance on the way up**: explains rechecking balance factors on the way back up to the root
 - **Possibly rotating at several levels**: explains that a deletion can need rotations at more than one level
 - **One rotation for insert, up to log n for delete**: contrasts this with insertion: an insert needs at most one rotation (single or double) to restore balance, while a delete can need rotations at up to O(log n) levels on the way to the root
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(log n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Find and remove the node as in a BST, O(h), then walk back up rebalancing. Unlike insert, a delete can need a rotation at every level on the way up, up to O(log n) rotations of O(1) each. The height stays below about 1.44 log2 n, so the whole delete is O(log n) guaranteed, on any input.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(log n) stack frames for the recursion, guaranteed by the height bound; each node stores its height, O(n) extra across the tree.), and contrasts it with a relevant alternative such as Red-Black Delete (a looser balance rule (height up to 2 log2 n) needs at most three rotations per delete, trading slightly slower searches for cheaper updates)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### rb-insert
 
 - **New nodes start red**: explains that a new node is inserted red
 - **A red-red violation and the uncle**: explains the red-red violation and checking the uncle's colour
 - **Recolour or rotate**: explains recolouring when the uncle is red and rotating when it is black
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(log n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Insert as in a BST, O(h), then fix any red-red violation: recolouring can move it up two levels at a time, at most O(log n) times, and at most two rotations end it. The colour rules (no red node has a red child; every root-to-leaf path has the same number of black nodes) keep h at most 2 log2(n + 1), so O(log n) is guaranteed, sorted input included.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(log n) for the path or recursion back up, guaranteed by the height bound; each node stores one colour bit.), and contrasts it with a relevant alternative such as AVL Insert (stricter balance (height about 1.44 log2 n), so faster searches, but more rebalancing work over many updates; red-black trees are what most standard libraries use for ordered maps)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### rb-delete
 
 - **Deleting, then fixing colours**: explains deleting as in a binary search tree, then fixing colours
 - **The double-black problem**: explains the double-black problem when a black node is removed
 - **Resolving it from the sibling**: explains resolving it by looking at the sibling's colour and its children
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(log n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Remove as in a BST, O(h), then resolve the double-black: recolouring can push it up the tree O(log n) times, and at most three rotations finish it. With the height at most 2 log2(n + 1), the delete is O(log n) guaranteed, on any input.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(log n) for the path or recursion back up; each node stores one colour bit.), and contrasts it with a relevant alternative such as AVL Delete (can need rotations at O(log n) levels where red-black needs at most three, in exchange for a more strictly balanced tree)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Heaps (live)
 
