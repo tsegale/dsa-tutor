@@ -47,7 +47,7 @@ export function hasChallengeGenerator(topicSlug: string | undefined): topicSlug 
 // --------------------------------------------------------------- seeding
 
 /** mulberry32: small, fast, and identical on every platform for a given seed. */
-function rngFrom(seed: number): () => number {
+export function rngFrom(seed: number): () => number {
   let a = seed >>> 0
   return () => {
     a = (a + 0x6d2b79f5) >>> 0

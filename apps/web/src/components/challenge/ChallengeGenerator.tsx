@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CHALLENGES_PER_TOPIC, COMPLEXITY_JUNCTION_ENABLED } from '@/config/pacing'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
@@ -67,6 +67,9 @@ async function framingFor(challenge: ChallengeCase, algorithmName: string): Prom
     return { hint: challenge.fallbackHint, aiGenerated: false, failureReason: 'error', promptVersion: null, aiModel: null }
   }
 }
+
+/** Starts a challenge from elsewhere on the page: the mastery panel's edge-case offer (Phase 7E). */
+export const START_CHALLENGE_EVENT = 'dsa-tutor:start-challenge'
 
 export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false)
@@ -153,6 +156,15 @@ export default function ChallengeGenerator({ difficulty }: ChallengeGeneratorPro
       setIsGenerating(false)
     }
   }
+
+  // The listener calls the latest handleGenerate, which closes over this render's props.
+  const generateRef = useRef(handleGenerate)
+  generateRef.current = handleGenerate
+  useEffect(() => {
+    const start = () => void generateRef.current()
+    window.addEventListener(START_CHALLENGE_EVENT, start)
+    return () => window.removeEventListener(START_CHALLENGE_EVENT, start)
+  }, [])
 
   if (!supported) return null
 

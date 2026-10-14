@@ -32,11 +32,20 @@ function proceduralOrdinals(snapshots: readonly AlgorithmSnapshot[]): Map<number
  * worked step at this level. Deterministic - of every PERFORM_ONE_IN[level]
  * procedural junctions in a run the last is performed, so a run opens with
  * demonstrations and two participants at the same level see the same
- * sequence. Conceptual junctions are never worked.
+ * sequence. Conceptual junctions are never worked. Junction types in
+ * `focus` (a focused re-run on what the learner missed, Phase 7E) are
+ * always performed, never worked.
  */
-export function isWorkedStep(snapshots: readonly AlgorithmSnapshot[], index: number, level: ScaffoldingLevel): boolean {
+export function isWorkedStep(
+  snapshots: readonly AlgorithmSnapshot[],
+  index: number,
+  level: ScaffoldingLevel,
+  focus: readonly string[] = [],
+): boolean {
   const ordinal = proceduralOrdinals(snapshots).get(index)
   if (ordinal === undefined) return false
+  const type = snapshots[index]?.criticalJunctionType
+  if (type && focus.includes(type)) return false
   const every = PERFORM_ONE_IN[level]
   return every > 1 && ordinal % every !== every - 1
 }

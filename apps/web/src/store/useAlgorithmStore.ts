@@ -35,6 +35,8 @@ export interface AlgorithmStoreState {
   // (cleared by any other setAlgorithm call), so the final-step
   // completion handler knows whether to award the challenge XP bonus.
   activeChallengeType: string | null
+  /** Junction types a focused re-run always asks (Phase 7E). Cleared by setAlgorithm. */
+  focusJunctionTypes: string[]
   sessionCorrectPredictions: number
   sessionTotalPredictions: number
   sessionHintsRequested: number
@@ -67,6 +69,8 @@ export interface AlgorithmStoreState {
   stepForward: () => void
   stepBackward: () => void
   resetAlgorithm: () => void
+  /** Restarts the current run asking every junction of these types (the mastery panel's accuracy offer). */
+  startFocusedRun: (junctionTypes: string[]) => void
   setMode: (mode: AlgorithmMode) => void
   setAlgorithm: (name: string, snapshots: AlgorithmSnapshot[]) => void
   toggleFocusMode: () => void
@@ -97,11 +101,15 @@ export interface AlgorithmStoreState {
 function isLiveJunctionAt(state: AlgorithmStoreState, index: number): boolean {
   if (state.classicMode) return false
   if (!state.snapshotArray[index]?.isPredictionRequired) return false
-  return !(state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel))
+  return !(state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel, state.focusJunctionTypes))
 }
 
 function isWorkedStepAt(state: AlgorithmStoreState, index: number): boolean {
-  return !state.classicMode && state.fadingEnabled && isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel)
+  return (
+    !state.classicMode &&
+    state.fadingEnabled &&
+    isWorkedStep(state.snapshotArray, index, state.segmentScaffoldingLevel, state.focusJunctionTypes)
+  )
 }
 
 const MAX_RECENT_MISCONCEPTIONS = 10
@@ -186,6 +194,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   currentChallengeExplanation: null,
   challengeHint: null,
   activeChallengeType: null,
+  focusJunctionTypes: [],
   sessionCorrectPredictions: 0,
   sessionTotalPredictions: 0,
   sessionHintsRequested: 0,
@@ -235,6 +244,13 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     scheduleNarrationAutoAdvance(get)
   },
 
+  startFocusedRun: (junctionTypes) => {
+    clearPlaybackInterval()
+    clearAutoAdvanceTimer()
+    set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel, focusJunctionTypes: junctionTypes }))
+    scheduleNarrationAutoAdvance(get)
+  },
+
   setMode: (mode) => {
     // Locked in Classic: the participant's condition is not theirs to change.
     if (get().classicMode) return
@@ -259,6 +275,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       // A freshly loaded array is not an AI challenge unless the caller
       // opts back in via setActiveChallengeType right after this call.
       activeChallengeType: null,
+      focusJunctionTypes: [],
     })
     scheduleNarrationAutoAdvance(get)
   },

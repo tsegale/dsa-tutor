@@ -1,4 +1,5 @@
 import type { AlgorithmSnapshot, MasteryCriterion, MasteryCriterionId, MasteryStatus, TopicMastery } from '@dsa-tutor/types'
+import { rngFrom } from './challengeGenerators'
 
 /** A topic with nothing logged yet: what the api returns before any answer. */
 export const EMPTY_MASTERY: TopicMastery = {
@@ -10,6 +11,7 @@ export const EMPTY_MASTERY: TopicMastery = {
     { id: 'CHALLENGE', applicable: false, met: false, value: null, threshold: 1, attempts: 0 },
   ],
   hintsPerStep: null,
+  missedJunctionTypes: [],
   masteredAt: null,
 }
 
@@ -152,4 +154,76 @@ export function masteryBreakdown(topics: ReadonlyArray<{ mastery: TopicMastery }
     criteria,
     mostMissed,
   }
+}
+
+export type MasteryOfferKind = 'FOCUSED_RUN' | 'PRACTISE_AGAIN' | 'NEW_INPUT' | 'FEYNMAN' | 'CHALLENGE'
+
+export interface MasteryOffer {
+  kind: MasteryOfferKind
+  criterion: MasteryCriterionId
+  label: string
+  detail: string
+}
+
+/** 'SWAP_DECISION' -> 'swap decision'. */
+export const junctionTypeName = (type: string) => type.toLowerCase().replace(/_/g, ' ')
+
+/**
+ * The one remediation offer for a topic (Phase 7E): the first unmet
+ * criterion it offers, in rubric order, turned into a single action. Never
+ * a list: the panel lists the criteria, this picks what to do next. Null
+ * before the topic is started and once it is mastered.
+ */
+export function nextMasteryOffer(mastery: TopicMastery): MasteryOffer | null {
+  if (mastery.status === 'NOT_STARTED' || mastery.status === 'MASTERED') return null
+  const criterion = mastery.criteria.find((c) => c.applicable && !c.met)
+  if (!criterion) return null
+  switch (criterion.id) {
+    case 'ACCURACY': {
+      const missed = mastery.missedJunctionTypes
+      if (missed.length > 0) {
+        const names = missed.slice(0, 2).map(junctionTypeName).join(' and ')
+        return { kind: 'FOCUSED_RUN', criterion: criterion.id, label: 'Practise the steps you missed', detail: `Asks every ${names} step, none shown as a worked example` }
+      }
+      const needed = Math.max(ACCURACY_MIN_ATTEMPTS - criterion.attempts, 1)
+      return { kind: 'PRACTISE_AGAIN', criterion: criterion.id, label: 'Practise again from the start', detail: `${needed} more first ${needed === 1 ? 'attempt' : 'attempts'} to go` }
+    }
+    case 'BREADTH':
+      return { kind: 'NEW_INPUT', criterion: criterion.id, label: 'Try a new input', detail: `${criterion.value ?? 0} of ${criterion.threshold} different inputs so far` }
+    case 'FEYNMAN':
+      return {
+        kind: 'FEYNMAN',
+        criterion: criterion.id,
+        label: 'Explain it in Feynman Mode',
+        detail: criterion.value === null ? `Scores ${criterion.threshold} or more to count` : `Best so far ${criterion.value}, needs ${criterion.threshold}`,
+      }
+    case 'CHALLENGE':
+      return {
+        kind: 'CHALLENGE',
+        criterion: criterion.id,
+        label: 'Start an AI Challenge',
+        detail: `An edge-case input; pass with ${CHALLENGE_PASS_ACCURACY}% right first time`,
+      }
+  }
+}
+
+// Topics whose engines expect a sorted array.
+const SORTED_INPUT_TOPICS = new Set(['binary-search', 'jump-search', 'interpolation-search', 'exponential-search'])
+
+/**
+ * A new practice input for the breadth offer, built from a seed, never by a
+ * model (the same seeded generator as the AI Challenge cases). The seed is
+ * the topic and how many inputs it has been practised on, so the next
+ * suggestion moves on once one is used. Same length as the topic's default
+ * input, distinct values 1-30.
+ */
+export function masteryPracticeInput(topicSlug: string, defaultLength: number, inputsSoFar: number): number[] {
+  let seed = 0x9e3779b9 ^ inputsSoFar
+  for (let i = 0; i < topicSlug.length; i++) seed = Math.imul(seed ^ topicSlug.charCodeAt(i), 0x01000193)
+  const random = rngFrom(seed)
+  const length = Math.max(defaultLength, 2)
+  const values = new Set<number>()
+  while (values.size < length) values.add(1 + Math.floor(random() * 30))
+  const array = [...values]
+  return SORTED_INPUT_TOPICS.has(topicSlug) ? array.sort((a, b) => a - b) : array
 }

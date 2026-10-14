@@ -4,7 +4,7 @@ import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { useParams } from 'react-router-dom'
 import { preloadPyodide } from '@/utils/pyodideRunner'
 import { motion } from 'framer-motion'
-import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { AlgorithmMode, type AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
@@ -22,10 +22,15 @@ import { floydWarshallEngine } from '@/engine/floydWarshall'
 import { MEDIUM_WEIGHTED } from '@/engine/graphPresets'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
-import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
-import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
-import { MasteryPanel } from '@/components/mastery/MasteryPanel'
+import ChallengeGenerator, { START_CHALLENGE_EVENT } from '@/components/challenge/ChallengeGenerator'
+import FeynmanModeButton, { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton'
+import { MasteryPanel, type MasteryOfferHandlers } from '@/components/mastery/MasteryPanel'
 import { useTopics } from '@/hooks/useTopics'
+import { useStudyScope } from '@/hooks/useStudyScope'
+import { CHALLENGES_PER_TOPIC } from '@/config/pacing'
+import { hasChallengeGenerator } from '@/utils/challengeGenerators'
+import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
+import { masteryPracticeInput } from '@/utils/mastery'
 import { cn } from '@/lib/utils'
 
 // Custom Array / Random must run the SAME algorithm currently loaded on
@@ -145,6 +150,10 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   // Not shown on a Classic topic, which has no junctions to answer.
   const { data: topics } = useTopics()
   const mastery = classicMode ? null : (topics?.find((topic) => topic.name === algorithmSlug)?.mastery ?? null)
+  const { restricted: activeParticipant } = useStudyScope()
+  const sessionPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
+  const challengesStarted = useAlgorithmStore((state) => state.challengesStarted)
+  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
 
   // Code Mode on: fetch the Python runtime now, in the background, so the
   // first code question does not wait on a ~13MB download.
@@ -179,6 +188,45 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
       engineForSlug(algorithmSlug, values, codeEditorMode, topMisconceptionOf(recentMisconceptions)),
     )
   }
+
+  // The mastery panel's one remediation offer (Phase 7E). An active
+  // participant gets none: their mastery is read-only, and nothing on it
+  // may change what the study asks them (Phase 7F).
+  function practise(run: () => void) {
+    const store = useAlgorithmStore.getState()
+    if (store.mode !== AlgorithmMode.PRACTICE) store.setMode(AlgorithmMode.PRACTICE)
+    run()
+  }
+  const offerHandlers: MasteryOfferHandlers | undefined =
+    activeParticipant || !mastery
+      ? undefined
+      : {
+          FOCUSED_RUN: () => practise(() => useAlgorithmStore.getState().startFocusedRun(mastery.missedJunctionTypes)),
+          PRACTISE_AGAIN: () => practise(() => useAlgorithmStore.getState().resetAlgorithm()),
+          NEW_INPUT:
+            algorithmSlug && !CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug)
+              ? () =>
+                  practise(() => {
+                    const breadth = mastery.criteria.find((c) => c.id === 'BREADTH')?.value ?? 0
+                    const length = getAlgorithmRegistryEntry(algorithmSlug)?.defaultInput.length ?? 6
+                    const values = masteryPracticeInput(algorithmSlug, length, breadth)
+                    setArrayInput(values.join(','))
+                    setInputError(null)
+                    const displayName = getAlgorithmRegistryEntry(algorithmSlug)?.displayName ?? algorithmName
+                    setAlgorithm(displayName, engineForSlug(algorithmSlug, values, codeEditorMode, topMisconceptionOf(recentMisconceptions)))
+                  })
+              : 'Pick a different value or preset in the controls above.',
+          FEYNMAN: !hasFeynmanRubric(algorithmName)
+            ? 'Feynman Mode is not available for this topic.'
+            : sessionPredictions === 0
+              ? 'Answer a junction in this session first, then Feynman Mode opens.'
+              : () => window.dispatchEvent(new CustomEvent(OPEN_FEYNMAN_MODAL_EVENT)),
+          CHALLENGE: !features.aiChallenge || !hasChallengeGenerator(algorithmSlug)
+            ? 'AI Challenge is not available for this topic.'
+            : challengesStarted >= CHALLENGES_PER_TOPIC
+              ? 'Challenge limit reached for this session; open the topic again for another.'
+              : () => practise(() => window.dispatchEvent(new CustomEvent(START_CHALLENGE_EVENT))),
+        }
 
   return (
     <motion.div
@@ -230,7 +278,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               </Button>
             </section>
           )}
-          {mastery && <MasteryPanel mastery={mastery} />}
+          {mastery && <MasteryPanel mastery={mastery} handlers={offerHandlers} />}
         </div>
 
         {/* Pinned outside the scroll container above so a tall Playback/

@@ -1,6 +1,7 @@
 import type { TopicMastery } from '@dsa-tutor/types'
 import { cn } from '@/lib/utils'
-import { CRITERION_LABEL, MASTERY_STATUS_LABEL, criterionView } from '@/utils/mastery'
+import { Button } from '@/components/ui/button'
+import { CRITERION_LABEL, MASTERY_STATUS_LABEL, criterionView, nextMasteryOffer, type MasteryOfferKind } from '@/utils/mastery'
 import { MasteryMark } from './MasteryMark'
 
 function MetIcon({ met }: { met: boolean }) {
@@ -17,13 +18,23 @@ function MetIcon({ met }: { met: boolean }) {
 }
 
 /**
+ * What each remediation offer does, or a reason it cannot run right now
+ * (a string). Absent for an active participant: their mastery is read-only
+ * and nothing on it may change what they are asked (Phase 7F).
+ */
+export type MasteryOfferHandlers = Record<MasteryOfferKind, (() => void) | string>
+
+/**
  * The topic page's mastery panel (Phase 7D): each criterion the topic offers,
  * with its current value, what meets it, and, while unmet, the one action
  * that would meet it. Criteria the topic does not offer are named once at the
  * foot. Hints per step is shown as information; it is never a criterion.
  */
-export function MasteryPanel({ mastery }: { mastery: TopicMastery }) {
+export function MasteryPanel({ mastery, handlers }: { mastery: TopicMastery; handlers?: MasteryOfferHandlers }) {
   const offered = mastery.criteria.filter((criterion) => criterion.applicable)
+  // One offer at a time (Phase 7E), never a list of what failed.
+  const offer = handlers ? nextMasteryOffer(mastery) : null
+  const run = offer && handlers ? handlers[offer.kind] : null
   const notOffered = mastery.criteria.filter((criterion) => !criterion.applicable)
 
   return (
@@ -58,6 +69,20 @@ export function MasteryPanel({ mastery }: { mastery: TopicMastery }) {
           )
         })}
       </ul>
+
+      {offer && run && (
+        <div className="flex flex-col gap-1.5 rounded-md bg-surface-sunk p-2">
+          <p className="text-micro text-ink-2">Next step for mastery</p>
+          {typeof run === 'function' ? (
+            <Button variant="secondary" size="sm" onClick={run} className="w-full">
+              {offer.label}
+            </Button>
+          ) : (
+            <p className="text-small text-ink">{offer.label}</p>
+          )}
+          <p className="text-micro text-ink-2">{typeof run === 'function' ? offer.detail : run}</p>
+        </div>
+      )}
 
       {notOffered.length > 0 && (
         <p className="text-micro text-ink-2">

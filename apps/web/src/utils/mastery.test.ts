@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import type { MasteryCriterion, TopicMastery } from '@dsa-tutor/types'
-import { EMPTY_MASTERY, criterionView, inputHashOf, masteryBreakdown } from './mastery'
+import { EMPTY_MASTERY, criterionView, inputHashOf, masteryBreakdown, masteryPracticeInput, nextMasteryOffer } from './mastery'
 
 describe('inputHashOf', () => {
   it('is the same for the same input and differs for a different one', () => {
@@ -82,5 +82,50 @@ describe('masteryBreakdown', () => {
     expect(breakdown.criteria.find((c) => c.id === 'FEYNMAN')).toMatchObject({ met: 1, total: 2 })
     expect(breakdown.criteria.find((c) => c.id === 'CHALLENGE')).toMatchObject({ met: 0, total: 0 })
     expect(breakdown.mostMissed).toBe('FEYNMAN')
+  })
+})
+
+describe('nextMasteryOffer', () => {
+  const withCriteria = (status: TopicMastery['status'], met: Partial<Record<MasteryCriterion['id'], boolean>>, missed: string[] = []): TopicMastery => ({
+    ...EMPTY_MASTERY,
+    status,
+    missedJunctionTypes: missed,
+    criteria: EMPTY_MASTERY.criteria.map((c) => ({ ...c, applicable: true, met: met[c.id] ?? false, attempts: c.id === 'ACCURACY' ? 12 : 0 })),
+  })
+
+  it('makes one offer, for the first unmet criterion in rubric order', () => {
+    expect(nextMasteryOffer(withCriteria('IN_PROGRESS', {}, ['PASS_COMPLETE']))).toMatchObject({ kind: 'FOCUSED_RUN', criterion: 'ACCURACY' })
+    expect(nextMasteryOffer(withCriteria('IN_PROGRESS', { ACCURACY: true }))?.kind).toBe('NEW_INPUT')
+    expect(nextMasteryOffer(withCriteria('PROFICIENT', { ACCURACY: true, BREADTH: true }))?.kind).toBe('FEYNMAN')
+    expect(nextMasteryOffer(withCriteria('PROFICIENT', { ACCURACY: true, BREADTH: true, FEYNMAN: true }))?.kind).toBe('CHALLENGE')
+  })
+
+  it('names the missed junction types in the focused run', () => {
+    expect(nextMasteryOffer(withCriteria('IN_PROGRESS', {}, ['SWAP_DECISION', 'PASS_COMPLETE']))?.detail).toBe(
+      'Asks every swap decision and pass complete step, none shown as a worked example',
+    )
+  })
+
+  it('offers practice again when accuracy is short of attempts, not of right answers', () => {
+    expect(nextMasteryOffer(withCriteria('IN_PROGRESS', {}, []))?.kind).toBe('PRACTISE_AGAIN')
+  })
+
+  it('offers nothing before a start or once mastered', () => {
+    expect(nextMasteryOffer(EMPTY_MASTERY)).toBeNull()
+    expect(nextMasteryOffer(withCriteria('MASTERED', {}))).toBeNull()
+  })
+})
+
+describe('masteryPracticeInput', () => {
+  it('is deterministic, distinct-valued, and moves on as inputs are used', () => {
+    const first = masteryPracticeInput('bubble-sort', 5, 2)
+    expect(masteryPracticeInput('bubble-sort', 5, 2)).toEqual(first)
+    expect(new Set(first).size).toBe(5)
+    expect(masteryPracticeInput('bubble-sort', 5, 3)).not.toEqual(first)
+  })
+
+  it('sorts the input for searches that need it', () => {
+    const input = masteryPracticeInput('binary-search', 8, 0)
+    expect(input).toEqual([...input].sort((a, b) => a - b))
   })
 })

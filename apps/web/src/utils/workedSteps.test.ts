@@ -146,3 +146,35 @@ describe('store: worked steps and segment boundaries', () => {
     expect(useAlgorithmStore.getState().stepIndex).toBe(worked + 1)
   })
 })
+
+describe('focused re-run (Phase 7E)', () => {
+  it('asks every junction of a focused type, even where support would show it worked', () => {
+    const snapshots = bubbleSortEngine([5, 3, 1, 4, 2])
+    const procedural = snapshots
+      .map((s, i) => [s, i] as const)
+      .filter(([s]) => s.isPredictionRequired && s.junctionDifficulty === JunctionDifficulty.PROCEDURAL)
+    expect(procedural.some(([, i]) => isWorkedStep(snapshots, i, ScaffoldingLevel.HIGH))).toBe(true)
+    for (const [s, i] of procedural) {
+      expect(isWorkedStep(snapshots, i, ScaffoldingLevel.HIGH, [s.criticalJunctionType!])).toBe(false)
+    }
+  })
+
+  it('leaves other junction types to the usual fading', () => {
+    const snapshots = bubbleSortEngine([5, 3, 1, 4, 2])
+    const worked = snapshots.map((_, i) => isWorkedStep(snapshots, i, ScaffoldingLevel.HIGH))
+    expect(snapshots.map((_, i) => isWorkedStep(snapshots, i, ScaffoldingLevel.HIGH, ['MERGE_DECISION']))).toEqual(worked)
+  })
+})
+
+describe('store: focused re-run', () => {
+  it('restarts the run with the focus, and a new load clears it', async () => {
+    const { useAlgorithmStore } = await import('@/store/useAlgorithmStore')
+    const store = useAlgorithmStore.getState()
+    store.setAlgorithm('Bubble Sort', bubbleSortEngine([5, 3, 1, 4, 2]))
+    useAlgorithmStore.setState({ stepIndex: 4 })
+    useAlgorithmStore.getState().startFocusedRun(['SWAP_DECISION'])
+    expect(useAlgorithmStore.getState()).toMatchObject({ stepIndex: 0, focusJunctionTypes: ['SWAP_DECISION'] })
+    useAlgorithmStore.getState().setAlgorithm('Bubble Sort', bubbleSortEngine([2, 1]))
+    expect(useAlgorithmStore.getState().focusJunctionTypes).toEqual([])
+  })
+})
