@@ -86,6 +86,9 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'floyd-warshall',
   'kruskal',
   'prim',
+  'cycle-detection',
+  'connected-components',
+  'topological-sort',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

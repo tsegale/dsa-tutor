@@ -790,7 +790,18 @@
     "worstNote": "no cycle - full traversal",
     "space": "O(V)",
     "spaceNote": "colours + call stack",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "A depth-first search visits each vertex once and examines each edge once, O(V + E). It can stop at the first back edge, so a graph with an early cycle finishes sooner; the worst case is a graph with no cycle at all, where every vertex and edge must be checked before it can say so.",
+    "auxiliarySpace": "O(V) for the three colours (unvisited, on the current path, finished), and the recursion can reach depth V along a long path.",
+    "contrast": {
+      "algorithm": "Topological Sort",
+      "point": "the same DFS at the same O(V + E), but it records the order nodes finish in, where cycle detection only asks whether an edge points back into the current path; a topological order exists exactly when cycle detection finds nothing"
+    },
+    "defend": {
+      "time": "why cycle detection is O(V + E), with a graph that has no cycle as its worst case",
+      "alternative": "how it differs from topological sort, which costs the same",
+      "space": "how deep the recursion can go"
+    }
   },
   "connected-components": {
     "best": "O(V + E)",
@@ -801,7 +812,18 @@
     "worstNote": "always",
     "space": "O(V)",
     "spaceNote": "component labels + queue",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Each vertex is labelled once and each edge examined once, whichever search runs from each unvisited vertex, so O(V + E) on any graph. The number of components changes how many searches start, not the total work.",
+    "auxiliarySpace": "O(V) for the component labels and the queue (a breadth-first search from each new start, as this run uses).",
+    "contrast": {
+      "algorithm": "Union-find",
+      "point": "finds the same components from an edge list, in close to O(E) with path compression, and keeps them up to date as edges are added, which a search cannot do without starting again"
+    },
+    "defend": {
+      "time": "why finding the components is O(V + E) however many components there are",
+      "alternative": "when union-find is the better tool",
+      "space": "what space the labels and the queue need"
+    }
   },
   "topological-sort": {
     "best": "O(V + E)",
@@ -812,7 +834,18 @@
     "worstNote": "always",
     "space": "O(V)",
     "spaceNote": "colours + call stack",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "One depth-first search visits each vertex once and each edge once, and adding a finished node to the front of the order is O(1): O(V + E) on any directed acyclic graph. No input is worse; a denser graph simply has more edges.",
+    "auxiliarySpace": "O(V) for the colours and the output order, and the recursion can reach depth V along a long chain of dependencies.",
+    "contrast": {
+      "algorithm": "Kahn's algorithm",
+      "point": "the same O(V + E), with a queue of nodes whose in-degree has reached zero instead of recursion, which also reports a cycle when nodes are left over"
+    },
+    "defend": {
+      "time": "why topological sort is O(V + E)",
+      "alternative": "how it relates to cycle detection, which costs the same but answers a different question",
+      "space": "how deep its recursion can go"
+    }
   },
   "grid-bfs": {
     "best": "O(1)",

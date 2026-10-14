@@ -66,6 +66,9 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Floyd-Warshall',
   "Kruskal's Algorithm",
   "Prim's Algorithm",
+  'Cycle Detection',
+  'Connected Components',
+  'Topological Sort',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

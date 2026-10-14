@@ -246,28 +246,34 @@ it, space against an alternative, clarity), generated from its facts.
 - **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for MST membership and O(E) for the rebuilt candidate list; a heap version holds up to O(E) entries; no recursion.), and contrasts it with a relevant alternative such as Kruskal's Algorithm (O(E log E) with a sort and union-find, better on a sparse graph, where the O(V²) array version of Prim is better on a dense one)
 - **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
-## Graph properties
+## Graph properties (live)
 
 ### cycle-detection
 
 - **Tracking the current DFS path**: explains running a depth-first search and tracking the nodes on the current path
 - **A back edge means a cycle**: explains that an edge back to a node on the current path (a back edge) means a cycle
 - **Back edges versus finished nodes**: contrasts a back edge with an edge to an already finished node
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(V + E) in both the worst and the average case, and what drives it, naming the input that produces the worst case: A depth-first search visits each vertex once and examines each edge once, O(V + E). It can stop at the first back edge, so a graph with an early cycle finishes sooner; the worst case is a graph with no cycle at all, where every vertex and edge must be checked before it can say so.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for the three colours (unvisited, on the current path, finished), and the recursion can reach depth V along a long path.), and contrasts it with a relevant alternative such as Topological Sort (the same DFS at the same O(V + E), but it records the order nodes finish in, where cycle detection only asks whether an edge points back into the current path; a topological order exists exactly when cycle detection finds nothing)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### connected-components
 
 - **A new search from each unvisited node**: explains starting a new search from each unvisited node
 - **One search, one component**: explains that every node one search reaches belongs to the same component
 - **Counting the searches**: explains that the number of searches started is the number of components
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(V + E) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Each vertex is labelled once and each edge examined once, whichever search runs from each unvisited vertex, so O(V + E) on any graph. The number of components changes how many searches start, not the total work.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for the component labels and the queue (a breadth-first search from each new start, as this run uses).), and contrasts it with a relevant alternative such as Union-find (finds the same components from an edge list, in close to O(E) with path compression, and keeps them up to date as edges are added, which a search cannot do without starting again)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### topological-sort
 
 - **Every edge points forward**: explains that it orders a directed acyclic graph so every edge goes from earlier to later
 - **Adding a node when it finishes**: explains adding a node to the front of the order once all its descendants are finished in DFS
 - **Impossible with a cycle**: mentions that a cycle makes a topological order impossible
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(V + E) in both the worst and the average case, and what drives it, naming the input that produces the worst case: One depth-first search visits each vertex once and each edge once, and adding a finished node to the front of the order is O(1): O(V + E) on any directed acyclic graph. No input is worse; a denser graph simply has more edges.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for the colours and the output order, and the recursion can reach depth V along a long chain of dependencies.), and contrasts it with a relevant alternative such as Kahn's algorithm (the same O(V + E), with a queue of nodes whose in-degree has reached zero instead of recursion, which also reports a cycle when nodes are left over)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Grid pathfinding
 
