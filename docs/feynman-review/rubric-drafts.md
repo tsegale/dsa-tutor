@@ -160,28 +160,34 @@ it, space against an alternative, clarity), generated from its facts.
 - **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the heap lives in the array, the children of i are at 2i + 1 and 2i + 2, and the sift-down is a loop with no recursion.), and contrasts it with a relevant alternative such as Unsorted array (O(1) to append a value, but O(n) to find and remove the minimum, where the heap does it in O(log n))
 - **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
-## Tries
+## Tries (live)
 
 ### trie-insert
 
 - **One child per character**: explains following one child per character from the root
 - **Creating missing nodes**: explains creating a new node when a character's child does not exist
 - **Marking the end of a word**: explains marking the last node as the end of a word
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(m) in both the worst and the average case, and what drives it, naming the input that produces the worst case: One step per character: follow, or create, the child for each of the m characters, each an O(1) lookup in the node's child map, so O(m) however many words the trie already holds. No word list makes it worse: a trie of a million words inserts a five-letter word in the same five steps as an empty one.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1) extra to walk, but up to m new nodes when the word shares no prefix with what is stored. The whole trie holds one node per distinct prefix, up to the total characters inserted, each with its own child map: that memory is the price of the speed.), and contrasts it with a relevant alternative such as Hash Table (Chaining) (also about O(m), to hash the key, with less memory per word, but it cannot answer a prefix query such as every word starting with "ca")
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### trie-search
 
 - **One child per character**: explains following one child per character from the root
 - **Failing at a missing character**: explains failing as soon as a character's child is missing
 - **Checking the end-of-word mark**: explains that the word is present only if the last node is marked as a word end
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(m) in both the worst and the average case, and what drives it, naming the input that produces the worst case: One step per character, each an O(1) child lookup, so O(m) for a word of length m, independent of how many words are stored. A search stops as soon as a character's child is missing (in one step if the first letter is absent), so the worst case is a word that is present, or a prefix of one, which takes all m steps.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): a pointer to the current node; nothing is copied.), and contrasts it with a relevant alternative such as Binary Search Tree (storing the same words, each of its O(log n) comparisons costs up to O(m) for two strings, so O(m log n), which grows with the number of words where the trie does not)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### trie-delete
 
 - **Finding the word's path**: explains finding the word's path character by character
 - **Unmarking the word end**: explains unmarking the end-of-word flag
 - **Pruning unused nodes**: explains pruning nodes that no other word uses
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(m) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Walking the word's path is m steps, unmarking its end is O(1), and pruning walks back along the same path removing nodes no other word uses, at most m more steps: O(m), independent of how many words are stored.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(m): the path of m + 1 nodes is kept so pruning can walk back up it (a recursive delete holds m stack frames instead).), and contrasts it with a relevant alternative such as Hash Table (Chaining) (removes a key in about O(m) to hash it, with nothing to prune, because words share no structure there; a trie must check each node on the path before freeing it)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Shortest paths
 

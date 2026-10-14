@@ -54,6 +54,9 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Max-Heap Delete',
   'Min-Heap Insert',
   'Min-Heap Delete',
+  'Trie Insert',
+  'Trie Search',
+  'Trie Delete',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

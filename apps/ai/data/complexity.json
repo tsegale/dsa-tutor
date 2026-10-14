@@ -529,7 +529,18 @@
     "worstNote": "m = word length, independent of trie size",
     "space": "O(total characters)",
     "spaceNote": "across all inserted words",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "One step per character: follow, or create, the child for each of the m characters, each an O(1) lookup in the node's child map, so O(m) however many words the trie already holds. No word list makes it worse: a trie of a million words inserts a five-letter word in the same five steps as an empty one.",
+    "auxiliarySpace": "O(1) extra to walk, but up to m new nodes when the word shares no prefix with what is stored. The whole trie holds one node per distinct prefix, up to the total characters inserted, each with its own child map: that memory is the price of the speed.",
+    "contrast": {
+      "algorithm": "Hash Table (Chaining)",
+      "point": "also about O(m), to hash the key, with less memory per word, but it cannot answer a prefix query such as every word starting with \"ca\""
+    },
+    "defend": {
+      "time": "why inserting a word into a trie is O(m) in its length, however many words are already stored",
+      "alternative": "what memory that costs compared with a hash table",
+      "space": "how many new nodes one insert can create"
+    }
   },
   "trie-search": {
     "best": "O(1)",
@@ -540,7 +551,18 @@
     "worstNote": "m = word length, independent of trie size",
     "space": "O(1)",
     "spaceNote": "no extra structure needed",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "One step per character, each an O(1) child lookup, so O(m) for a word of length m, independent of how many words are stored. A search stops as soon as a character's child is missing (in one step if the first letter is absent), so the worst case is a word that is present, or a prefix of one, which takes all m steps.",
+    "auxiliarySpace": "O(1): a pointer to the current node; nothing is copied.",
+    "contrast": {
+      "algorithm": "Binary Search Tree",
+      "point": "storing the same words, each of its O(log n) comparisons costs up to O(m) for two strings, so O(m log n), which grows with the number of words where the trie does not"
+    },
+    "defend": {
+      "time": "why searching a trie is O(m) whether it holds ten words or a million",
+      "alternative": "how that compares with a balanced tree of the same words",
+      "space": "what extra space a search needs"
+    }
   },
   "trie-delete": {
     "best": "O(m)",
@@ -549,9 +571,19 @@
     "averageNote": "",
     "worst": "O(m)",
     "worstNote": "m = word length, independent of trie size",
-    "space": "O(1)",
-    "spaceNote": "no extra structure needed",
-    "stable": false
+    "space": "O(m)",
+    "spaceNote": "path kept for pruning",
+    "stable": false,
+    "worstCaseTrigger": "Walking the word's path is m steps, unmarking its end is O(1), and pruning walks back along the same path removing nodes no other word uses, at most m more steps: O(m), independent of how many words are stored.",
+    "auxiliarySpace": "O(m): the path of m + 1 nodes is kept so pruning can walk back up it (a recursive delete holds m stack frames instead).",
+    "contrast": {
+      "algorithm": "Hash Table (Chaining)",
+      "point": "removes a key in about O(m) to hash it, with nothing to prune, because words share no structure there; a trie must check each node on the path before freeing it"
+    },
+    "defend": {
+      "time": "why deleting a word from a trie is O(m), pruning included",
+      "space": "why it keeps the path, O(m) extra, so it can prune the nodes no other word uses"
+    }
   },
   "bfs": {
     "best": "O(1)",
