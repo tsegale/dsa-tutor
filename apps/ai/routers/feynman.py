@@ -4,7 +4,8 @@ import re
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from prompts.complexity import COMPLEXITY_LABELS, complexity_criteria
+from prompts.complexity import COMPLEXITY_LABELS, complexity_criteria, topic_slug
+from prompts.feynman_rubrics import FOUNDATIONS_RUBRICS
 from prompts.registry import get_algorithm_context
 from prompts.templates import PROMPT_VERSION
 from services.claude_service import call_claude_for_feedback, model_name
@@ -171,6 +172,8 @@ FEYNMAN_RUBRIC.update(
         "binary_search_tree": _BST_RUBRIC,
     }
 )
+# Modules 1 to 3 (Phase 8C), keyed by slug; rubric_for resolves display names.
+FEYNMAN_RUBRIC.update(FOUNDATIONS_RUBRICS)
 
 FEYNMAN_PROMPT = """You are playing the role of a curious but confused beginner student who has never seen {algorithm_name} before.
 
@@ -315,6 +318,11 @@ def rubric_for(algorithm_name: str) -> tuple[str, list[tuple[str, str]]]:
     topics without a reviewed rubric, which the UI does not offer."""
     key = _normalize(algorithm_name)
     if key not in FEYNMAN_RUBRIC:
+        key = topic_slug(algorithm_name).replace("-", "_")
+    if key not in FEYNMAN_RUBRIC:
+        # Visible, not silent: a topic graded on the generic items gets
+        # scores that are not comparable with any other topic's.
+        logger.warning("feynman_rubric_missing: %s falls back to the generic rubric", algorithm_name)
         return ("default", DEFAULT_RUBRIC)
     return (key, [*FEYNMAN_RUBRIC[key], *complexity_criteria(algorithm_name)])
 

@@ -21,6 +21,28 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Breadth-First Search',
   'Depth-First Search',
   'Binary Search Tree',
+  // Modules 1 to 3 (Phase 8C).
+  'Array Access',
+  'Array Insertion',
+  'Array Deletion',
+  'Singly Linked List',
+  'Doubly Linked List',
+  'Circular Linked List',
+  'Stack',
+  'Queue',
+  'Circular Queue',
+  'Deque',
+  'Hash Table (Chaining)',
+  'Hash Table (Linear Probing)',
+  'Recursion: Factorial',
+  'Recursion: Fibonacci',
+  'Jump Search',
+  'Interpolation Search',
+  'Exponential Search',
+  'Shell Sort',
+  'Heap Sort',
+  'Counting Sort',
+  'Radix Sort (LSD)',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

@@ -75,3 +75,95 @@ def test_pivot_selection_guidance_is_graded():
     _context, _pseudocode, guidance = get_algorithm_context("quick-sort")
     assert "explanation step" not in guidance["PIVOT_SELECTION"]
     assert "median of three" in guidance["PIVOT_SELECTION"]
+
+
+# ---------------------------------------------------------------- Feynman (Phase 8C)
+
+CURRICULUM_PATH = Path(__file__).resolve().parents[2] / "web" / "src" / "config" / "curriculum.ts"
+FEYNMAN_WEB_PATH = Path(__file__).resolve().parents[2] / "web" / "src" / "utils" / "feynmanRubrics.ts"
+
+
+def _seeded_display_names() -> dict[str, str]:
+    text = SEED_PATH.read_text(encoding="utf-8")
+    topics_block = re.search(r"const TOPICS = \[(.*?)\n\] as const", text, re.DOTALL)
+    pairs = re.findall(r"name:\s*'([^']+)',\s*displayName:\s*'((?:[^'\\]|\\.)+)'", topics_block.group(1) if topics_block else "")
+    return {slug: display.replace("\\'", "'") for slug, display in pairs}
+
+
+def _module_topics(numbers: set[int]) -> list[str]:
+    text = CURRICULUM_PATH.read_text(encoding="utf-8")
+    topics: list[str] = []
+    for block in re.split(r"\n  \{\n", text):
+        number = re.search(r"number:\s*(\d+),", block)
+        listed = re.search(r"topics:\s*\[(.*?)\]", block, re.DOTALL)
+        if number and listed and int(number.group(1)) in numbers:
+            topics += re.findall(r"'([^']+)'", listed.group(1))
+    return topics
+
+
+DISPLAY_NAMES = _seeded_display_names()
+MODULES_1_TO_3 = _module_topics({1, 2, 3})
+FEYNMAN_REQUIRED = sorted(set(MODULES_1_TO_3) | {"bubble-sort", "binary-search", "bst"})
+
+
+def test_curriculum_and_seed_are_readable():
+    assert len(DISPLAY_NAMES) > 60
+    assert len(MODULES_1_TO_3) == 28
+
+
+@pytest.mark.parametrize("slug", sorted(DISPLAY_NAMES))
+def test_every_seeded_display_name_resolves_to_its_slug(slug: str):
+    from prompts.complexity import topic_slug
+
+    assert topic_slug(DISPLAY_NAMES[slug]) == slug
+    assert topic_slug(slug) == slug
+
+
+@pytest.mark.parametrize("slug", FEYNMAN_REQUIRED)
+def test_modules_1_to_3_have_a_real_feynman_rubric_with_the_three_complexity_criteria(slug: str):
+    from prompts.complexity import COMPLEXITY_LABELS
+    from routers.feynman import rubric_for
+
+    key, rubric = rubric_for(DISPLAY_NAMES[slug])
+    assert key != "default", f"{slug} falls back to the generic Feynman rubric"
+    labels = [label for _criterion, label in rubric]
+    assert tuple(labels[-3:]) == COMPLEXITY_LABELS, f"{slug} lacks the complexity criteria"
+    assert len(labels) >= 6, f"{slug} has fewer than three mechanics items"
+    assert len(set(labels)) == len(labels)
+
+
+def test_the_web_offers_feynman_mode_exactly_where_a_real_rubric_exists():
+    from routers.feynman import rubric_for
+
+    block = re.search(r"new Set\(\[(.*?)\]\)", FEYNMAN_WEB_PATH.read_text(encoding="utf-8"), re.DOTALL)
+    offered = set(re.findall(r"'([^']+)'", block.group(1) if block else ""))
+    for name in offered:
+        assert rubric_for(name)[0] != "default", f"the web offers Feynman mode for {name}, which has no rubric"
+    for slug in FEYNMAN_REQUIRED:
+        assert DISPLAY_NAMES[slug] in offered, f"the web does not offer Feynman mode for {slug}"
+
+
+def test_the_generic_fallback_logs_a_warning(caplog):
+    from routers.feynman import rubric_for
+
+    with caplog.at_level("WARNING"):
+        assert rubric_for("Maze via Prim's")[0] == "default"
+    assert "feynman_rubric_missing" in caplog.text
+
+
+def test_draft_rubrics_are_never_used_for_grading():
+    from prompts.feynman_rubric_drafts import DRAFT_FAMILIES
+    from routers.feynman import FEYNMAN_RUBRIC
+
+    drafts = {key for family in DRAFT_FAMILIES.values() for key in family}
+    assert len(drafts) == 35
+    assert not drafts & set(FEYNMAN_RUBRIC), "a draft rubric is live without review"
+
+
+def test_every_live_rubric_carries_the_complexity_criteria():
+    from prompts.complexity import COMPLEXITY_LABELS
+    from routers.feynman import FEYNMAN_RUBRIC, rubric_for
+
+    for key in FEYNMAN_RUBRIC:
+        labels = tuple(label for _criterion, label in rubric_for(key)[1][-3:])
+        assert labels == COMPLEXITY_LABELS, f"live rubric {key} has no complexity criteria"

@@ -116,7 +116,17 @@
     "worstNote": "poor gap sequence",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "It depends on the gap sequence: with the halving gaps used here, some inputs still force about n² moves, O(n²). Better sequences reach about O(n log² n) or O(n^1.5); nearly sorted input finishes quickly.",
+    "auxiliarySpace": "O(1): it sorts in place, holding one value while shifting.",
+    "contrast": {
+      "algorithm": "Insertion Sort",
+      "point": "the gap-1 pass alone, O(n²) on reverse-sorted input"
+    },
+    "defend": {
+      "time": "why Shell Sort beats insertion sort and what its gap sequence does to the worst case",
+      "space": "what extra space it needs"
+    }
   },
   "heap-sort": {
     "best": "O(n log n)",
@@ -127,7 +137,18 @@
     "worstNote": "always",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse: building the heap is O(n), and each of the n extractions sifts down at most log n levels, so O(n log n) on every input.",
+    "auxiliarySpace": "O(1): the heap lives in the array being sorted.",
+    "contrast": {
+      "algorithm": "Merge Sort",
+      "point": "also O(n log n) on every input, and stable, but needs O(n) extra memory"
+    },
+    "defend": {
+      "time": "why Heap Sort is O(n log n) on every input",
+      "alternative": "what it gives up against Merge Sort",
+      "space": "why it needs only O(1) extra space"
+    }
   },
   "counting-sort": {
     "best": "O(n + k)",
@@ -138,7 +159,18 @@
     "worstNote": "always",
     "space": "O(n + k)",
     "spaceNote": "count + output arrays",
-    "stable": true
+    "stable": true,
+    "worstCaseTrigger": "A wide range of values: the count array has one slot per possible value k, so time and space are O(n + k), which is slow when k is much larger than n. No input order is worse than another.",
+    "auxiliarySpace": "O(n + k): the count array of size k plus an output array of size n.",
+    "contrast": {
+      "algorithm": "Merge Sort",
+      "point": "comparison-based, O(n log n) whatever the range of values"
+    },
+    "defend": {
+      "time": "why Counting Sort is O(n + k) without comparing elements",
+      "alternative": "when the range k makes it worse than a comparison sort",
+      "space": "what space the count and output arrays take"
+    }
   },
   "radix-sort": {
     "best": "O(nk)",
@@ -147,9 +179,20 @@
     "averageNote": "",
     "worst": "O(nk)",
     "worstNote": "always",
-    "space": "O(n + k)",
-    "spaceNote": "buckets",
-    "stable": true
+    "space": "O(n + b)",
+    "spaceNote": "b buckets + output",
+    "stable": true,
+    "worstCaseTrigger": "Many digits: it makes one stable pass per digit, k passes of O(n + b) for b buckets (10 for decimal), so O(nk) with the base fixed; longer numbers mean more passes. Input order does not matter.",
+    "auxiliarySpace": "O(n + b): one digit's b buckets plus an output array.",
+    "contrast": {
+      "algorithm": "Counting Sort",
+      "point": "one pass over the whole value range, O(n + k), impractical when values are large"
+    },
+    "defend": {
+      "time": "why Radix Sort is O(nk) for k-digit numbers",
+      "alternative": "why each digit pass must be stable",
+      "space": "what space each pass needs"
+    }
   },
   "linear-search": {
     "best": "O(1)",
@@ -631,7 +674,17 @@
     "worstNote": "push/pop/peek",
     "space": "O(n)",
     "spaceNote": "n items on the stack",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse: push and pop touch only the top, so each is O(1) however many items are stored.",
+    "auxiliarySpace": "O(n) for the items; each operation needs O(1) extra.",
+    "contrast": {
+      "algorithm": "Queue",
+      "point": "also O(1) per operation, but first in, first out instead of last in, first out"
+    },
+    "defend": {
+      "time": "why push and pop are O(1) whatever the size of the stack",
+      "space": "what space the stack uses as it grows"
+    }
   },
   "queue": {
     "best": "O(1)",
@@ -642,7 +695,18 @@
     "worstNote": "enqueue/dequeue",
     "space": "O(n)",
     "spaceNote": "n items in the queue",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse: enqueue touches only the rear and dequeue only the front, so each is O(1). A plain array that shifted everything left on dequeue would be O(n).",
+    "auxiliarySpace": "O(n) for the items; each operation needs O(1) extra.",
+    "contrast": {
+      "algorithm": "Stack",
+      "point": "also O(1) per operation, but last in, first out"
+    },
+    "defend": {
+      "time": "why enqueue and dequeue are O(1)",
+      "alternative": "what goes wrong if dequeue shifts an array left",
+      "space": "what space the queue uses"
+    }
   },
   "circular-queue": {
     "best": "O(1)",
@@ -653,7 +717,17 @@
     "worstNote": "enqueue/dequeue",
     "space": "O(n)",
     "spaceNote": "fixed-capacity buffer",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse: front and rear advance with modulo capacity, so enqueue and dequeue are O(1) and nothing ever shifts.",
+    "auxiliarySpace": "O(capacity), fixed up front, however many items are in it.",
+    "contrast": {
+      "algorithm": "Queue",
+      "point": "a linear array queue either shifts on dequeue, O(n), or wastes the slots it has passed"
+    },
+    "defend": {
+      "time": "why wrapping with modulo keeps enqueue and dequeue O(1)",
+      "space": "why it uses a fixed O(capacity) buffer"
+    }
   },
   "deque": {
     "best": "O(1)",
@@ -664,7 +738,17 @@
     "worstNote": "either end",
     "space": "O(n)",
     "spaceNote": "n items in the deque",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse: each operation touches one end only, so adding or removing at either end is O(1).",
+    "auxiliarySpace": "O(n) for the items; each operation needs O(1) extra.",
+    "contrast": {
+      "algorithm": "Stack",
+      "point": "one end only, so it can do half of what a deque does"
+    },
+    "defend": {
+      "time": "why adding and removing at both ends of a deque is O(1)",
+      "space": "what space it uses"
+    }
   },
   "singly-linked-list": {
     "best": "O(1)",
@@ -675,7 +759,18 @@
     "worstNote": "insert/delete at back",
     "space": "O(n)",
     "spaceNote": "n nodes",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Appending or finding the last node: with only a head pointer, every node is followed once, O(n). Work at the front is O(1); searching by value is O(n) on average too.",
+    "auxiliarySpace": "O(n) for the nodes, each with one extra pointer; traversal itself uses O(1).",
+    "contrast": {
+      "algorithm": "Array",
+      "point": "O(1) access by index, but O(n) inserts at the front because of shifting"
+    },
+    "defend": {
+      "time": "why appending to a singly linked list without a tail pointer is O(n)",
+      "remedy": "how keeping a tail pointer makes it O(1)",
+      "space": "what memory each node costs compared with an array"
+    }
   },
   "doubly-linked-list": {
     "best": "O(1)",
@@ -686,7 +781,17 @@
     "worstNote": "search to the far end",
     "space": "O(n)",
     "spaceNote": "n nodes, two pointers each",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Searching for a value or reaching a middle position: nodes are walked one by one, O(n). With head and tail pointers, inserting or removing at either end is O(1).",
+    "auxiliarySpace": "O(n) for the nodes, each with two pointers (next and prev), so more memory per node than a singly linked list.",
+    "contrast": {
+      "algorithm": "Singly Linked List",
+      "point": "one pointer per node, but no way to step backwards or delete a node without its predecessor"
+    },
+    "defend": {
+      "time": "why inserting at either end of a doubly linked list is O(1) but searching is O(n)",
+      "space": "what the extra prev pointer costs and buys"
+    }
   },
   "circular-linked-list": {
     "best": "O(1)",
@@ -697,7 +802,17 @@
     "worstNote": "full loop traversal",
     "space": "O(n)",
     "spaceNote": "n nodes",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "A search for a value that is not there: traversal goes all the way round to the starting node, O(n). Inserting next to the tail (with a tail pointer) is O(1).",
+    "auxiliarySpace": "O(n) for the nodes; traversal uses O(1) and stops when it returns to where it began.",
+    "contrast": {
+      "algorithm": "Singly Linked List",
+      "point": "ends in null, so traversal stops there, but going round again means restarting from the head"
+    },
+    "defend": {
+      "time": "why a full traversal of a circular linked list is O(n) and how it knows when to stop",
+      "space": "what memory the list uses"
+    }
   },
   "array-access": {
     "best": "O(1)",
@@ -708,7 +823,18 @@
     "worstNote": "always",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse: the address is base + index x element size, one calculation whatever the index or the array length, so access is O(1) every time.",
+    "auxiliarySpace": "O(1): nothing beyond the index.",
+    "contrast": {
+      "algorithm": "Singly Linked List",
+      "point": "reaching the i-th node means following i next pointers, O(n)"
+    },
+    "defend": {
+      "time": "why reading any index of an array is O(1)",
+      "alternative": "why a linked list cannot do the same",
+      "space": "what extra space an access needs"
+    }
   },
   "array-insert": {
     "best": "O(1)",
@@ -719,7 +845,17 @@
     "worstNote": "insert at front",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Inserting at index 0: every one of the n elements shifts one place right, O(n). Inserting at the end shifts nothing, O(1); a random position shifts about n/2, still O(n).",
+    "auxiliarySpace": "O(1) extra: the shift happens in place (a full fixed-size array would need an O(n) copy into a larger one).",
+    "contrast": {
+      "algorithm": "Singly Linked List",
+      "point": "inserting after a node already in hand is O(1), with no shifting"
+    },
+    "defend": {
+      "time": "why inserting at the front of an array is O(n) but at the end is O(1)",
+      "space": "what extra space the shifting needs"
+    }
   },
   "array-delete": {
     "best": "O(1)",
@@ -730,7 +866,17 @@
     "worstNote": "delete at front",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Deleting index 0: every element after it shifts one place left, O(n). Deleting the last element shifts nothing, O(1); a random position shifts about n/2, still O(n).",
+    "auxiliarySpace": "O(1) extra: the elements shift in place.",
+    "contrast": {
+      "algorithm": "Singly Linked List",
+      "point": "unlinking a node is O(1) once you hold the node before it"
+    },
+    "defend": {
+      "time": "why deleting the first element of an array is O(n) but the last is O(1)",
+      "space": "what extra space the shifting needs"
+    }
   },
   "hash-table-chaining": {
     "best": "O(1)",
@@ -741,7 +887,18 @@
     "worstNote": "all keys collide",
     "space": "O(n)",
     "spaceNote": "n entries across buckets",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Every key hashing to the same bucket: one chain holds all n keys and a lookup scans it, O(n). A good hash spreading keys evenly keeps chains about n/capacity long, so the average is O(1) while the load factor stays low.",
+    "auxiliarySpace": "O(n + capacity): the buckets plus one chain entry per key.",
+    "contrast": {
+      "algorithm": "Hash Table (Linear Probing)",
+      "point": "no chains, but clusters form and probing slows as the table fills"
+    },
+    "defend": {
+      "time": "why lookups are O(1) on average but O(n) when every key collides",
+      "remedy": "how a good hash function and resizing keep chains short",
+      "space": "what space the buckets and chains take"
+    }
   },
   "hash-table-probing": {
     "best": "O(1)",
@@ -752,7 +909,18 @@
     "worstNote": "heavy clustering",
     "space": "O(n)",
     "spaceNote": "n entries in the table",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Heavy clustering: as the table fills, occupied slots run together, so an insert or lookup probes along a long run, up to O(n). With a low load factor most probes stop after a slot or two, O(1) on average.",
+    "auxiliarySpace": "O(capacity): one array of slots, no extra lists.",
+    "contrast": {
+      "algorithm": "Hash Table (Chaining)",
+      "point": "collisions go into per-bucket chains, so the table never fills, at the cost of the chain nodes"
+    },
+    "defend": {
+      "time": "why linear probing slows to O(n) as the load factor rises",
+      "remedy": "why keeping the load factor low (resizing) keeps it O(1)",
+      "space": "what space the table takes"
+    }
   },
   "two-pointer": {
     "best": "O(n)",
@@ -796,7 +964,18 @@
     "worstNote": "not found",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The target is absent or in the last block: it makes about √n jumps, then scans up to √n elements of a block, about 2√n checks, O(√n).",
+    "auxiliarySpace": "O(1): a jump size and two indices.",
+    "contrast": {
+      "algorithm": "Binary Search",
+      "point": "O(log n) on the same sorted array, but it jumps backwards through the range, which jump search avoids"
+    },
+    "defend": {
+      "time": "why a block size of √n gives O(√n)",
+      "alternative": "why binary search is still faster",
+      "space": "what extra space it needs"
+    }
   },
   "interpolation-search": {
     "best": "O(1)",
@@ -807,7 +986,17 @@
     "worstNote": "non-uniform distribution",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Unevenly spread values: the position estimate keeps landing near one end, so each probe removes only a few elements, up to O(n). On uniformly spread values each estimate lands close, O(log log n) on average.",
+    "auxiliarySpace": "O(1): low, high and the probe index.",
+    "contrast": {
+      "algorithm": "Binary Search",
+      "point": "always halves, so a guaranteed O(log n) whatever the values"
+    },
+    "defend": {
+      "time": "why interpolation search is O(log log n) on uniform data but O(n) on skewed data",
+      "space": "what extra space it needs"
+    }
   },
   "exponential-search": {
     "best": "O(1)",
@@ -818,7 +1007,18 @@
     "worstNote": "bounded binary search",
     "space": "O(1)",
     "spaceNote": "in-place",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "A target near the end: the bound doubles about log i times to pass position i, then binary search covers a range of size about i, so O(log i), at most O(log n). A target near the start is found in a few steps.",
+    "auxiliarySpace": "O(1) iteratively: the bound plus binary search's low, high and mid.",
+    "contrast": {
+      "algorithm": "Binary Search",
+      "point": "O(log n) over the whole array, while exponential search is O(log i) for a target at position i"
+    },
+    "defend": {
+      "time": "why exponential search is O(log i) for a target at position i",
+      "alternative": "when that beats plain binary search",
+      "space": "what extra space it needs"
+    }
   },
   "recursion-factorial": {
     "best": "O(n)",
@@ -829,7 +1029,17 @@
     "worstNote": "always n recursive calls",
     "space": "O(n)",
     "spaceNote": "call stack depth",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "No input is worse for a given n: factorial(n) makes exactly n calls, each doing O(1) work, so it is O(n).",
+    "auxiliarySpace": "O(n) stack frames: every call waits on the one below it until the base case returns.",
+    "contrast": {
+      "algorithm": "an iterative loop",
+      "point": "the same O(n) time with O(1) space, since nothing waits on a stack"
+    },
+    "defend": {
+      "time": "why factorial makes n recursive calls",
+      "space": "why the recursion uses O(n) stack space and what a loop would use"
+    }
   },
   "recursion-fibonacci": {
     "best": "O(2ⁿ)",
@@ -840,6 +1050,17 @@
     "worstNote": "naive, no memoisation",
     "space": "O(n)",
     "spaceNote": "max call stack depth",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Naive recursion: fib(n) calls fib(n - 1) and fib(n - 2), and each of those branches again, so the call tree roughly doubles each level, O(2ⁿ). The same values are recomputed many times.",
+    "auxiliarySpace": "O(n) stack frames: only one path of the call tree, at most n calls deep, is on the stack at a time.",
+    "contrast": {
+      "algorithm": "memoised Fibonacci",
+      "point": "stores each value once, so O(n) time"
+    },
+    "defend": {
+      "time": "why naive recursive Fibonacci is O(2ⁿ)",
+      "remedy": "how memoisation brings it down to O(n)",
+      "space": "why its stack is only O(n) deep"
+    }
   }
 }

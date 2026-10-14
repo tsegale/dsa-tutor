@@ -54,7 +54,10 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   what drives it, space against an alternative, clarity),
 #                   written from data/complexity.json, and the prompt names
 #                   the challenge the student was set (Phase 8B).
-PROMPT_VERSION = "2026-10-14.3"
+#   2026-10-14.4    Real Feynman rubrics for every Module 1 to 3 topic (21
+#                   new), each with the three complexity criteria; the
+#                   generic fallback now logs a warning (Phase 8C).
+PROMPT_VERSION = "2026-10-14.4"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one

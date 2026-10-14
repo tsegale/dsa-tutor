@@ -14,13 +14,34 @@ COMPLEXITY: dict[str, dict] = json.loads(
     (Path(__file__).resolve().parents[1] / "data" / "complexity.json").read_text(encoding="utf-8")
 )
 
-# Display names whose normalised form is not the topic slug's.
+# Display names whose normalised form is not the topic slug's. Every
+# seeded display name resolves (tests/test_registry_coverage.py).
 _ALIASES = {
     "binary_search_tree": "bst",
     "breadth_first_search": "bfs",
     "depth_first_search": "dfs",
     "dijkstras_algorithm": "dijkstra",
     "radix_sort_(lsd)": "radix-sort",
+    "array_insertion": "array-insert",
+    "array_deletion": "array-delete",
+    "hash_table_(chaining)": "hash-table-chaining",
+    "hash_table_(linear_probing)": "hash-table-probing",
+    "recursion:_factorial": "recursion-factorial",
+    "recursion:_fibonacci": "recursion-fibonacci",
+    "grid_a*": "grid-astar",
+    "kruskals_algorithm": "kruskal",
+    "maze_via_kruskals": "maze-kruskal",
+    "maze_via_prims": "maze-prim",
+    "prims_algorithm": "prim",
+    "red_black_delete": "rb-delete",
+    "red_black_insert": "rb-insert",
+    "sliding_window_(fixed)": "sliding-window-fixed",
+    "sliding_window_(variable)": "sliding-window-variable",
+    "inorder_traversal": "tree-inorder",
+    "level_order_traversal": "tree-level-order",
+    "postorder_traversal": "tree-postorder",
+    "preorder_traversal": "tree-preorder",
+    "two_pointer_technique": "two-pointer",
 }
 
 TIME_LABEL = "Time complexity and what drives it"
@@ -33,11 +54,15 @@ def _normalize(algorithm_name: str) -> str:
     return algorithm_name.lower().replace(" ", "_").replace("-", "_").replace("'", "")
 
 
+def topic_slug(algorithm_name: str) -> str:
+    """The topic slug for a slug or display name ("Hash Table (Chaining)" -> "hash-table-chaining")."""
+    key = _normalize(algorithm_name)
+    return _ALIASES.get(key, key.replace("_", "-"))
+
+
 def complexity_for(algorithm_name: str) -> dict | None:
     """The facts for a topic slug or display name, or None."""
-    key = _normalize(algorithm_name)
-    slug = _ALIASES.get(key, key.replace("_", "-"))
-    return COMPLEXITY.get(slug)
+    return COMPLEXITY.get(topic_slug(algorithm_name))
 
 
 def has_complexity_facts(entry: dict | None) -> bool:
