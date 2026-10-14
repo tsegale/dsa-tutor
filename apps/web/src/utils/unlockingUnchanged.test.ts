@@ -22,6 +22,7 @@ const SEEDED = [...seedSource.matchAll(/\{ name: '([^']+)', displayName: '((?:[^
     estimatedMinutes: 5,
     isLocked: isLocked === 'true',
     masteryPercent: 0,
+    practiceRunCompleted: false,
     mastery: EMPTY_MASTERY,
   }),
 )

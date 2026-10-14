@@ -14,6 +14,7 @@ const topic = (name: string, track: AlgorithmTrack, masteryPercent = 0, displayN
   estimatedMinutes: 5,
   isLocked: false,
   masteryPercent,
+  practiceRunCompleted: false,
   mastery: EMPTY_MASTERY,
 })
 

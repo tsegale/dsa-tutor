@@ -50,6 +50,13 @@ export const CHALLENGES_PER_TOPIC = 2
 export const STUDY_BUDGET_MINUTES = 30
 
 /**
+ * Feynman mode's inline offer at the end of a run (Phase 8A) loses its
+ * emphasis once the topic session passes its share of the budget: the
+ * three study topics split STUDY_BUDGET_MINUTES. Still offered, never pushed.
+ */
+export const FEYNMAN_OFFER_EMPHASIS_MINUTES = STUDY_BUDGET_MINUTES / 3
+
+/**
  * Timing telemetry (Week 2 2F): how often each topic session writes its
  * wall-clock and active (tab visible) seconds. It is also written whenever
  * the page is hidden, so a closed tab loses at most this much.

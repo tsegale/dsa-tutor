@@ -1,11 +1,10 @@
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
+import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
 import { cn } from '@/lib/utils'
 
 export const OPEN_FEYNMAN_MODAL_EVENT = 'dsa-tutor:open-feynman-modal'
 
-function BrainIcon() {
+export function BrainIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <path
@@ -17,11 +16,14 @@ function BrainIcon() {
   )
 }
 
+/**
+ * Feynman mode on demand (Phase 8A): locked until a Practice run of the
+ * topic is complete, then always available, here and from the rail. A
+ * locked or unavailable button always says why in its tooltip.
+ */
 export default function FeynmanModeButton() {
-  const totalPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
-  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
-  const rubricAvailable = hasFeynmanRubric(algorithmName)
-  const disabled = totalPredictions === 0 || !rubricAvailable
+  const { state, reason } = useFeynmanAccess()
+  const disabled = state !== 'AVAILABLE'
 
   const button = (
     <button
@@ -36,7 +38,7 @@ export default function FeynmanModeButton() {
       )}
     >
       <BrainIcon />
-      Feynman Mode
+      Feynman mode
     </button>
   )
 
@@ -45,9 +47,7 @@ export default function FeynmanModeButton() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent>
-        {!rubricAvailable ? 'Feynman Mode is not yet available for this topic' : 'Complete some practice steps first'}
-      </TooltipContent>
+      <TooltipContent>{reason}</TooltipContent>
     </Tooltip>
   )
 }

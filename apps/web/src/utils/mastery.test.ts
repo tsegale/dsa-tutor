@@ -51,7 +51,7 @@ describe('criterionView', () => {
 
   it('names the gap in data the learner can act on', () => {
     expect(criterionView(crit('BREADTH', { value: 2 })).action).toBe('Practise on a different input (2 of 3)')
-    expect(criterionView(crit('FEYNMAN', {})).action).toBe('Explain this algorithm in Feynman Mode (not yet attempted)')
+    expect(criterionView(crit('FEYNMAN', {})).action).toBe('Explain this algorithm in Feynman mode (not yet attempted)')
     expect(criterionView(crit('ACCURACY', { value: 100, attempts: 4 })).action).toBe('Answer 6 more junctions in Practice mode (4 of 10)')
     expect(criterionView(crit('ACCURACY', { value: 70, attempts: 20 }))).toMatchObject({ value: '70%', threshold: '85%' })
   })

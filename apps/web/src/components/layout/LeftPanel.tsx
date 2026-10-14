@@ -29,8 +29,8 @@ import { useTopics } from '@/hooks/useTopics'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { CHALLENGES_PER_TOPIC } from '@/config/pacing'
 import { hasChallengeGenerator } from '@/utils/challengeGenerators'
-import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
 import { masteryPracticeInput } from '@/utils/mastery'
+import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
 import { cn } from '@/lib/utils'
 
 // Custom Array / Random must run the SAME algorithm currently loaded on
@@ -151,7 +151,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const { data: topics } = useTopics()
   const mastery = classicMode ? null : (topics?.find((topic) => topic.name === algorithmSlug)?.mastery ?? null)
   const { restricted: activeParticipant } = useStudyScope()
-  const sessionPredictions = useAlgorithmStore((state) => state.sessionTotalPredictions)
+  const feynman = useFeynmanAccess()
   const challengesStarted = useAlgorithmStore((state) => state.challengesStarted)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
 
@@ -216,11 +216,10 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                     setAlgorithm(displayName, engineForSlug(algorithmSlug, values, codeEditorMode, topMisconceptionOf(recentMisconceptions)))
                   })
               : 'Pick a different value or preset in the controls above.',
-          FEYNMAN: !hasFeynmanRubric(algorithmName)
-            ? 'Feynman Mode is not available for this topic.'
-            : sessionPredictions === 0
-              ? 'Answer a junction in this session first, then Feynman Mode opens.'
-              : () => window.dispatchEvent(new CustomEvent(OPEN_FEYNMAN_MODAL_EVENT)),
+          FEYNMAN:
+            feynman.state === 'AVAILABLE'
+              ? () => window.dispatchEvent(new CustomEvent(OPEN_FEYNMAN_MODAL_EVENT))
+              : (feynman.reason ?? 'Feynman mode is not available here.'),
           CHALLENGE: !features.aiChallenge || !hasChallengeGenerator(algorithmSlug)
             ? 'AI Challenge is not available for this topic.'
             : challengesStarted >= CHALLENGES_PER_TOPIC

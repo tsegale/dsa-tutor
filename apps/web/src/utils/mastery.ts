@@ -100,9 +100,9 @@ export function criterionView(criterion: MasteryCriterion): CriterionView {
     case 'FEYNMAN': {
       let action: string | null = null
       if (!criterion.met) {
-        if (criterion.attempts === 0) action = 'Explain this algorithm in Feynman Mode (not yet attempted)'
-        else if (criterion.value === null) action = 'Explain it again in Feynman Mode (last one was not graded)'
-        else action = `Explain it again in Feynman Mode (best ${criterion.value}, needs ${criterion.threshold})`
+        if (criterion.attempts === 0) action = 'Explain this algorithm in Feynman mode (not yet attempted)'
+        else if (criterion.value === null) action = 'Explain it again in Feynman mode (last one was not graded)'
+        else action = `Explain it again in Feynman mode (best ${criterion.value}, needs ${criterion.threshold})`
       }
       return { ...base, value: criterion.value === null ? '-' : String(criterion.value), threshold: String(criterion.threshold), action }
     }
@@ -194,7 +194,7 @@ export function nextMasteryOffer(mastery: TopicMastery): MasteryOffer | null {
       return {
         kind: 'FEYNMAN',
         criterion: criterion.id,
-        label: 'Explain it in Feynman Mode',
+        label: 'Explain it in Feynman mode',
         detail: criterion.value === null ? `Scores ${criterion.threshold} or more to count` : `Best so far ${criterion.value}, needs ${criterion.threshold}`,
       }
     case 'CHALLENGE':

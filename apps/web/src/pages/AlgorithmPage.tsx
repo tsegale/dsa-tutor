@@ -38,6 +38,9 @@ import StreakToast from '@/components/ui/StreakToast'
 import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToast'
 import FeynmanModal from '@/components/feynman/FeynmanModal'
 import { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton'
+import { FeynmanOffer } from '@/components/feynman/FeynmanOffer'
+import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
+import { FEYNMAN_OFFER_EMPHASIS_MINUTES } from '@/config/pacing'
 import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
 import RemediationModal from '@/components/prediction/RemediationModal'
 import BottomOutModal from '@/components/prediction/BottomOutModal'
@@ -585,7 +588,12 @@ function AlgorithmWorkspace() {
   // back to the final step and forward again within the same practice
   // run. Reset when a fresh run starts (stepIndex back to 0) so a genuine
   // new completion can trigger it again.
-  const feynmanShownRef = useRef(false)
+  // Feynman mode's inline offer (Phase 8A), tied to the run that reached
+  // its final step: Later hides it for that run only.
+  const [feynmanOffer, setFeynmanOffer] = useState<{ run: readonly AlgorithmSnapshot[]; emphasis: boolean } | null>(null)
+  const feynmanOfferDismissedRef = useRef<readonly AlgorithmSnapshot[] | null>(null)
+  const sessionStartedAtRef = useRef(Date.now())
+  const feynmanAccessState = useFeynmanAccess().state
 
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
@@ -873,8 +881,8 @@ function AlgorithmWorkspace() {
     return () => window.removeEventListener(SWITCH_TAB_PSEUDOCODE_EVENT, handleSwitchTab)
   }, [])
 
-  // Left panel's "Feynman Mode" button opens the same modal the automatic
-  // full-run trigger below opens - it just skips the completion wait.
+  // The left panel's "Feynman mode" button and the mastery panel's offer
+  // open the same modal as the inline offer at the end of a run.
   useEffect(() => {
     function handleOpenFeynman() {
       setShowFeynman(true)
@@ -900,12 +908,6 @@ function AlgorithmWorkspace() {
 
   useEffect(() => {
     setMistakePath(null)
-  }, [stepIndex])
-
-  useEffect(() => {
-    if (stepIndex === 0) {
-      feynmanShownRef.current = false
-    }
   }, [stepIndex])
 
   // Topic-completion signal (apps/api/src/config/topicCompletion.ts): a
@@ -1002,26 +1004,27 @@ function AlgorithmWorkspace() {
     }
   }, [])
 
-  // Feynman Technique mode: when the learner completes a full run in
-  // Practice Mode, give the completion animation a beat to finish, then
-  // ask them to explain the algorithm back. Never triggers in Demo Mode.
+  // Feynman mode (Phase 8A): a Practice run reaching its final step unlocks
+  // it for the topic and offers it inline, never as a modal. Demo runs are
+  // watched, not done, and Classic never shows Feynman: neither unlocks it.
   useEffect(() => {
-    const snapshot = useAlgorithmStore.getState().snapshotArray[stepIndex]
-    if (
-      !snapshot?.isFinalStep ||
-      mode !== AlgorithmMode.PRACTICE ||
-      showFeynman ||
-      feynmanShownRef.current ||
-      !hasFeynmanRubric(useAlgorithmStore.getState().algorithmName)
-    )
-      return
+    const { snapshotArray: run, algorithmName: name } = useAlgorithmStore.getState()
+    if (!run[stepIndex]?.isFinalStep || mode !== AlgorithmMode.PRACTICE || isClassic || !algorithmNameParam) return
+    useAlgorithmStore.getState().notePracticeRunCompleted(algorithmNameParam)
+    if (!hasFeynmanRubric(name) || feynmanOfferDismissedRef.current === run) return
+    const minutes = (Date.now() - sessionStartedAtRef.current) / 60_000
+    setFeynmanOffer((current) => (current?.run === run ? current : { run, emphasis: minutes <= FEYNMAN_OFFER_EMPHASIS_MINUTES }))
+  }, [stepIndex, mode, isClassic, algorithmNameParam])
 
-    const timer = setTimeout(() => {
-      feynmanShownRef.current = true
-      setShowFeynman(true)
-    }, 1500)
-    return () => clearTimeout(timer)
-  }, [stepIndex, mode, showFeynman])
+  // The rail's on-demand link (?feynman=1) opens Feynman mode once the
+  // session exists, and only where it is available.
+  const feynmanLinkOpenedRef = useRef(false)
+  useEffect(() => {
+    if (feynmanLinkOpenedRef.current || searchParams.get('feynman') !== '1') return
+    if (!sessionId || feynmanAccessState !== 'AVAILABLE') return
+    feynmanLinkOpenedRef.current = true
+    setShowFeynman(true)
+  }, [searchParams, sessionId, feynmanAccessState])
 
   function openExplanationTab() {
     setExplanationLinkVisible(false)
@@ -1068,7 +1071,9 @@ function AlgorithmWorkspace() {
     setMistakeHint(null)
     setMistakeCounterfactual(null)
     setHint(null)
-    feynmanShownRef.current = false
+    setFeynmanOffer(null)
+    feynmanOfferDismissedRef.current = null
+    sessionStartedAtRef.current = Date.now()
     predictionStatsRef.current = { correct: 0, total: 0, hints: 0, selfCorrections: 0 }
     lastAttemptRef.current = null
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1209,6 +1214,20 @@ function AlgorithmWorkspace() {
       </div>
 
       <TransportBar />
+
+      {feynmanOffer && feynmanOffer.run === snapshotArray && !showFeynman && (
+        <FeynmanOffer
+          emphasis={feynmanOffer.emphasis}
+          onOpen={() => {
+            setFeynmanOffer(null)
+            setShowFeynman(true)
+          }}
+          onLater={() => {
+            feynmanOfferDismissedRef.current = feynmanOffer.run
+            setFeynmanOffer(null)
+          }}
+        />
+      )}
 
       <PredictionZone
         onSubmit={handlePredictionSubmit}

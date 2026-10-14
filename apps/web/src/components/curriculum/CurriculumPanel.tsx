@@ -13,6 +13,9 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/button'
 import { StatusMarker } from './StatusMarker'
 import { MasteryMark } from '@/components/mastery/MasteryMark'
+import { BrainIcon } from '@/components/feynman/FeynmanModeButton'
+import { useStudyScope } from '@/hooks/useStudyScope'
+import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
 import { ChevronIcon, LockIcon } from './icons'
 
 // The curriculum as a syllabus, in a persistent left rail: one accordion
@@ -67,6 +70,10 @@ export interface CurriculumPanelProps {
 export function CurriculumPanel({ currentTopicName = null, variant = 'rail', className }: CurriculumPanelProps) {
   const { user } = useAuth()
   const go = useShellNavigate()
+  // Feynman mode on demand from the rail (Phase 8A). Not for an active
+  // participant: shown on two of their three topics, it would reveal which
+  // one is their Classic topic.
+  const feynmanOnDemand = !useStudyScope().restricted
   const { topicsQuery, syllabus, plan } = useLearningPlan()
   const { data: topics, isLoading, isFetching, refetch } = topicsQuery
 
@@ -194,6 +201,7 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', cla
                 currentTopicName={currentTopicName}
                 focusTopicName={focusTopicName}
                 go={go}
+                feynmanOnDemand={feynmanOnDemand}
               />
             ))}
           </div>
@@ -210,6 +218,7 @@ function ModuleSection({
   currentTopicName,
   focusTopicName,
   go,
+  feynmanOnDemand,
 }: {
   entry: SyllabusModule
   open: boolean
@@ -217,6 +226,7 @@ function ModuleSection({
   currentTopicName: string | null
   focusTopicName: string | null
   go: (to: string) => void
+  feynmanOnDemand: boolean
 }) {
   const { module, status, topics } = entry
   const bodyId = useId()
@@ -285,8 +295,10 @@ function ModuleSection({
                 </span>
               </>
             )
+            // Once a Practice run is complete, Feynman mode stays one click away.
+            const explainable = feynmanOnDemand && openable && topic.practiceRunCompleted && hasFeynmanRubric(topic.displayName)
             const rowClass = cn(
-              'flex h-8 items-center gap-2.5 rounded-sm pr-3 pl-3',
+              'flex h-8 min-w-0 flex-1 items-center gap-2.5 rounded-sm pr-3 pl-3',
               isCurrent ? 'bg-brand-soft' : 'hover:bg-surface-sunk'
             )
             return (
@@ -295,7 +307,7 @@ function ModuleSection({
                 data-topic={topic.name}
                 // The connector: a 1px rule from below this marker to the next,
                 // drawn on the item itself so it reflows and collapses with it.
-                className="relative mx-2 [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:top-[25px] [&:not(:last-child)]:after:left-[18.5px] [&:not(:last-child)]:after:h-3.5 [&:not(:last-child)]:after:w-px [&:not(:last-child)]:after:bg-rule [&:not(:last-child)]:after:content-['']"
+                className="relative mx-2 flex items-center [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:top-[25px] [&:not(:last-child)]:after:left-[18.5px] [&:not(:last-child)]:after:h-3.5 [&:not(:last-child)]:after:w-px [&:not(:last-child)]:after:bg-rule [&:not(:last-child)]:after:content-['']"
               >
                 {openable ? (
                   <Link
@@ -316,6 +328,20 @@ function ModuleSection({
                   <span aria-disabled="true" title={reason ?? undefined} className={cn(rowClass, 'cursor-not-allowed')}>
                     {content}
                   </span>
+                )}
+                {explainable && (
+                  <Link
+                    to={`/algorithm/${topic.name}?mode=PRACTICE&feynman=1`}
+                    aria-label={`Feynman mode: explain ${topic.displayName}`}
+                    title="Feynman mode"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      go(`/algorithm/${topic.name}?mode=PRACTICE&feynman=1`)
+                    }}
+                    className="ml-0.5 flex size-7 shrink-0 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink"
+                  >
+                    <BrainIcon />
+                  </Link>
                 )}
               </li>
             )

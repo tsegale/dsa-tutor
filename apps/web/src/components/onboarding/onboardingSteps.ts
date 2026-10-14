@@ -82,9 +82,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 9,
-    title: 'AI Challenge and Feynman Mode',
+    title: 'AI Challenge and Feynman mode',
     description:
-      'AI Challenge generates an array specifically targeting your most common mistake. Feynman Mode asks you to explain the algorithm back in your own words - teaching it is the real test of understanding it.',
+      'AI Challenge generates an array specifically targeting your most common mistake. Feynman mode asks you to explain the algorithm back in your own words - teaching it is the real test of understanding it.',
     targetId: 'ai-tools-section',
     position: 'right',
     requiresAlgorithmPage: true,

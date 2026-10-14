@@ -37,6 +37,8 @@ export interface AlgorithmStoreState {
   activeChallengeType: string | null
   /** Junction types a focused re-run always asks (Phase 7E). Cleared by setAlgorithm. */
   focusJunctionTypes: string[]
+  /** Topics whose Practice run reached its final step in this visit: unlocks Feynman mode (Phase 8A). */
+  practiceRunCompletedTopics: string[]
   sessionCorrectPredictions: number
   sessionTotalPredictions: number
   sessionHintsRequested: number
@@ -71,6 +73,7 @@ export interface AlgorithmStoreState {
   resetAlgorithm: () => void
   /** Restarts the current run asking every junction of these types (the mastery panel's accuracy offer). */
   startFocusedRun: (junctionTypes: string[]) => void
+  notePracticeRunCompleted: (topicSlug: string) => void
   setMode: (mode: AlgorithmMode) => void
   setAlgorithm: (name: string, snapshots: AlgorithmSnapshot[]) => void
   toggleFocusMode: () => void
@@ -195,6 +198,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   challengeHint: null,
   activeChallengeType: null,
   focusJunctionTypes: [],
+  practiceRunCompletedTopics: [],
   sessionCorrectPredictions: 0,
   sessionTotalPredictions: 0,
   sessionHintsRequested: 0,
@@ -250,6 +254,11 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel, focusJunctionTypes: junctionTypes }))
     scheduleNarrationAutoAdvance(get)
   },
+
+  notePracticeRunCompleted: (topicSlug) =>
+    set((state) =>
+      state.practiceRunCompletedTopics.includes(topicSlug) ? state : { practiceRunCompletedTopics: [...state.practiceRunCompletedTopics, topicSlug] },
+    ),
 
   setMode: (mode) => {
     // Locked in Classic: the participant's condition is not theirs to change.
