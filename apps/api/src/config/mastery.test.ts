@@ -134,6 +134,7 @@ describe('applicable topics match the web', () => {
 
   it('the web passes a challenge run at the same accuracy', () => {
     expect(web('mastery.ts')).toContain(`CHALLENGE_PASS_ACCURACY = ${MASTERY_RUBRIC.challengePassAccuracy}`)
+    expect(web('mastery.ts')).toContain(`ACCURACY_MIN_ATTEMPTS = ${MASTERY_RUBRIC.accuracyMinAttempts}`)
   })
 
   it('challenge topics are the ones with a generator', () => {

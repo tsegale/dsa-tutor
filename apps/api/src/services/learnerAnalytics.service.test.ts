@@ -14,11 +14,12 @@ const interaction = (sessionId: string, predictionCorrect: boolean | null, hints
 describe('summariseLearner', () => {
   const input = {
     topics: [
-      { track: 'SORTING', masteryPercent: 90, isLocked: false },
-      { track: 'SORTING', masteryPercent: 60, isLocked: false },
-      { track: 'SORTING', masteryPercent: 30, isLocked: false },
-      { track: 'TREES', masteryPercent: 0, isLocked: false },
-      { track: 'TREES', masteryPercent: 0, isLocked: true },
+      // 90% is not Mastered by itself: the rubric decides (Phase 7B).
+      { track: 'SORTING', masteryPercent: 90, isLocked: false, mastery: { status: 'PROFICIENT' as const } },
+      { track: 'SORTING', masteryPercent: 60, isLocked: false, mastery: { status: 'MASTERED' as const } },
+      { track: 'SORTING', masteryPercent: 30, isLocked: false, mastery: { status: 'IN_PROGRESS' as const } },
+      { track: 'TREES', masteryPercent: 0, isLocked: false, mastery: { status: 'NOT_STARTED' as const } },
+      { track: 'TREES', masteryPercent: 0, isLocked: true, mastery: { status: 'NOT_STARTED' as const } },
     ],
     interactions: [
       interaction('s1', true, 0, 100, 'HIGH'),

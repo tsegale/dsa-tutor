@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma'
 import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
-import { TOPIC_COMPLETE_PERCENT, TOPIC_MASTERED_PERCENT } from '../config/topicProgress'
+import { TOPIC_COMPLETE_PERCENT } from '../config/topicProgress'
 import { getAllTopics } from './topic.service'
 import type { TopicDto } from '../dtos/topic.dto'
 import type { LearnerAnalyticsDto } from '../dtos/learnerAnalytics.dto'
@@ -36,7 +36,7 @@ export interface SessionRow {
  * session closes with predictions, so it lags and is often missing.
  */
 export function summariseLearner(input: {
-  topics: Pick<TopicDto, 'track' | 'masteryPercent' | 'isLocked'>[]
+  topics: Array<Pick<TopicDto, 'track' | 'masteryPercent' | 'isLocked'> & { mastery: Pick<TopicDto['mastery'], 'status'> }>
   interactions: ScoredInteraction[]
   practiceSeconds: number
   misconceptions: { category: string; status: string; count: number }[]
@@ -81,7 +81,8 @@ export function summariseLearner(input: {
       topicsTotal: topics.length,
       topicsStarted: topics.filter((t) => t.masteryPercent > 0).length,
       topicsCompleted: topics.filter((t) => t.masteryPercent >= TOPIC_COMPLETE_PERCENT).length,
-      topicsMastered: topics.filter((t) => t.masteryPercent >= TOPIC_MASTERED_PERCENT).length,
+      // The mastery rubric's Mastered (Phase 7B), so the profile never means two things by it.
+      topicsMastered: topics.filter((t) => t.mastery.status === 'MASTERED').length,
       practiceSeconds: input.practiceSeconds,
       predictions: answered.length,
       correctPredictions: correct,
