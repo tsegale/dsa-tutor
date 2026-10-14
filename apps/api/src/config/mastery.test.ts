@@ -137,12 +137,17 @@ describe('attemptIndexOf', () => {
 describe('applicable topics match the web', () => {
   const web = (file: string) => readFileSync(join(__dirname, '../../../web/src/utils', file), 'utf8')
   const seed = readFileSync(join(__dirname, '../../prisma/seed.ts'), 'utf8')
-  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const slugFor = (displayName: string) => seed.match(new RegExp(`name: '([^']+)', displayName: '${escape(displayName)}'`))?.[1]
+  // Display name to slug, from the seed (display names may hold an escaped \').
+  const slugByName = new Map(
+    [...seed.matchAll(/name: '([^']+)', displayName: '((?:[^'\\]|\\.)+)'/g)].map((m) => [m[2].replace(/\\'/g, "'"), m[1]]),
+  )
+  const slugFor = (displayName: string) => slugByName.get(displayName)
+  // Web list entries are single- or double-quoted ("Dijkstra's Algorithm").
+  const quoted = (text: string) => [...text.matchAll(/'([^']+)'|"([^"]+)"/g)].map((m) => m[1] ?? m[2])
 
   it('Feynman topics are the ones with a rubric', () => {
     const block = web('feynmanRubrics.ts').match(/new Set\(\[([\s\S]*?)\]\)/)![1]
-    const names = [...block.matchAll(/'([^']+)'/g)].map((m) => m[1])
+    const names = quoted(block)
     expect(names.length).toBeGreaterThan(5)
     expect(names.map(slugFor).sort()).toEqual([...FEYNMAN_TOPICS].sort())
   })

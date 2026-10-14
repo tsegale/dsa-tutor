@@ -63,6 +63,24 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'heap-sort',
   'counting-sort',
   'radix-sort',
+  // Modules 4 to 6, as each family's rubric goes live (Phase 8.1).
+  'tree-inorder',
+  'tree-preorder',
+  'tree-postorder',
+  'tree-level-order',
+  'bst-search',
+  'bst-delete',
+  'max-heap-insert',
+  'max-heap-delete',
+  'min-heap-insert',
+  'min-heap-delete',
+  'trie-insert',
+  'trie-search',
+  'trie-delete',
+  'avl-insert',
+  'avl-delete',
+  'rb-insert',
+  'rb-delete',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

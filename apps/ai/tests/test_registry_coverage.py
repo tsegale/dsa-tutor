@@ -136,7 +136,8 @@ def test_the_web_offers_feynman_mode_exactly_where_a_real_rubric_exists():
     from routers.feynman import rubric_for
 
     block = re.search(r"new Set\(\[(.*?)\]\)", FEYNMAN_WEB_PATH.read_text(encoding="utf-8"), re.DOTALL)
-    offered = set(re.findall(r"'([^']+)'", block.group(1) if block else ""))
+    # Single- or double-quoted entries ("Dijkstra's Algorithm").
+    offered = {a or b for a, b in re.findall(r"'([^']+)'|\"([^\"]+)\"", block.group(1) if block else "")}
     for name in offered:
         assert rubric_for(name)[0] != "default", f"the web offers Feynman mode for {name}, which has no rubric"
     for slug in FEYNMAN_REQUIRED:

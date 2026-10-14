@@ -104,7 +104,7 @@ describe('seeded mastery statuses (Phase 7F)', () => {
 
 describe('seeded Feynman states (Phase 8F)', () => {
   const web = readFileSync(join(__dirname, '../../../web/src/utils/feynmanRubrics.ts'), 'utf8')
-  const offeredNames = new Set([...web.match(/new Set\(\[([\s\S]*?)\]\)/)![1].matchAll(/'([^']+)'/g)].map((m) => m[1]))
+  const offeredNames = new Set([...web.match(/new Set\(\[([\s\S]*?)\]\)/)![1].matchAll(/'([^']+)'|"([^"]+)"/g)].map((m) => m[1] ?? m[2]))
   const seed = readFileSync(join(__dirname, '../../prisma/seed.ts'), 'utf8')
   const displayName = (slug: string) => seed.match(new RegExp(`name: '${slug}', displayName: '([^']+)'`))?.[1] ?? ''
   const hasRubric = (slug: string) => offeredNames.has(displayName(slug))
