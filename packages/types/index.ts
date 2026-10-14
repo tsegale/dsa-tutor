@@ -693,6 +693,9 @@ export interface TopicMastery {
   criteria: MasteryCriterion[]
   /** Hints requested per answered junction. Reported, never a criterion. */
   hintsPerStep: number | null
+  /** Junction types answered wrong first time in the accuracy window, most
+   * missed first: what a focused re-run asks (Phase 7E). */
+  missedJunctionTypes: string[]
   /** When every applicable criterion was first met. Mastered stays once earned. */
   masteredAt: string | null
 }

@@ -18,6 +18,7 @@ function row(overrides: Partial<MasteryRow>): MasteryRow {
     promptKey: null,
     rubricScore: null,
     masteryScoreAtTime: 0,
+    criticalJunctionType: 'SWAP_DECISION',
     createdAt: new Date(clock),
     ...overrides,
   }
@@ -107,6 +108,19 @@ describe('computeMastery', () => {
   it('ignores rows that are not answers (worked steps, challenge loads)', () => {
     const rows = [row({ interactionType: 'WORKED_STEP', predictionCorrect: null }), row({ interactionType: 'CHALLENGE_ATTEMPT', predictionCorrect: null })]
     expect(computeMastery('bubble-sort', rows, null).status).toBe('NOT_STARTED')
+  })
+})
+
+describe('missed junction types', () => {
+  it('lists types missed first time in the window, most missed first, ignoring later retries', () => {
+    const rows = [
+      row({ predictionCorrect: false, criticalJunctionType: 'PASS_COMPLETE' }),
+      row({ predictionCorrect: false, criticalJunctionType: 'SWAP_DECISION' }),
+      row({ predictionCorrect: false, attemptIndex: 2, criticalJunctionType: 'EARLY_TERMINATION' }),
+      row({ predictionCorrect: false, criticalJunctionType: 'SWAP_DECISION' }),
+      row({ criticalJunctionType: 'ALGORITHM_COMPLETE' }),
+    ]
+    expect(computeMastery('bubble-sort', rows, null).missedJunctionTypes).toEqual(['SWAP_DECISION', 'PASS_COMPLETE'])
   })
 })
 

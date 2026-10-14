@@ -16,6 +16,7 @@ const MASTERY_ROW_SELECT = {
   rubricScore: true,
   masteryScoreAtTime: true,
   createdAt: true,
+  criticalJunctionType: true,
   junctionDifficulty: true,
 } as const
 

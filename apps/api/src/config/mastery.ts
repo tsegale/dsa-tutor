@@ -58,6 +58,7 @@ export interface MasteryRow {
   promptKey: string | null
   rubricScore: number | null
   masteryScoreAtTime: number
+  criticalJunctionType: string | null
   createdAt: Date
 }
 
@@ -135,6 +136,15 @@ export function computeMastery(topicSlug: string, rows: readonly MasteryRow[], m
     attempts: challengeRows.length,
   }
 
+  // What a focused re-run asks (Phase 7E): the junction types missed first
+  // time in the same window accuracy reads, most missed first.
+  const misses = new Map<string, number>()
+  for (const row of firstAttempts) {
+    if (row.predictionCorrect || !row.criticalJunctionType) continue
+    misses.set(row.criticalJunctionType, (misses.get(row.criticalJunctionType) ?? 0) + 1)
+  }
+  const missedJunctionTypes = [...misses.entries()].sort((a, b) => b[1] - a[1]).map(([type]) => type)
+
   const criteria = [accuracy, breadth, feynman, challenge]
   const allMet = criteria.every((criterion) => !criterion.applicable || criterion.met)
   const started = scored.length > 0 || feynmanRows.length > 0 || challengeRows.length > 0
@@ -153,6 +163,7 @@ export function computeMastery(topicSlug: string, rows: readonly MasteryRow[], m
     status,
     criteria,
     hintsPerStep: resolved.length > 0 ? Math.round((hints / resolved.length) * 10) / 10 : null,
+    missedJunctionTypes,
     masteredAt: masteredAt?.toISOString() ?? null,
   }
 }
