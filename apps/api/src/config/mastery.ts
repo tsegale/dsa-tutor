@@ -81,6 +81,9 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'avl-delete',
   'rb-insert',
   'rb-delete',
+  'dijkstra',
+  'bellman-ford',
+  'floyd-warshall',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

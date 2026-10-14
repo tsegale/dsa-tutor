@@ -61,6 +61,9 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'AVL Delete',
   'Red-Black Insert',
   'Red-Black Delete',
+  "Dijkstra's Algorithm",
+  'Bellman-Ford',
+  'Floyd-Warshall',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

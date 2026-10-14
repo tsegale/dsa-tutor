@@ -197,7 +197,7 @@ it, space against an alternative, clarity), generated from its facts.
 - **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(m): the path of m + 1 nodes is kept so pruning can walk back up it (a recursive delete holds m stack frames instead).), and contrasts it with a relevant alternative such as Hash Table (Chaining) (removes a key in about O(m) to hash it, with nothing to prune, because words share no structure there; a trie must check each node on the path before freeing it)
 - **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
-## Shortest paths
+## Shortest paths (live)
 
 ### dijkstra
 
@@ -213,14 +213,18 @@ it, space against an alternative, clarity), generated from its facts.
 - **Relaxing every edge each pass**: explains relaxing every edge in each pass
 - **Why V - 1 passes are enough**: explains running V - 1 passes, since a shortest path has at most V - 1 edges
 - **Detecting a negative cycle**: explains that a further pass that still improves a distance reveals a negative cycle
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(V × E) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Each pass relaxes every one of the E edges, and up to V - 1 passes are needed because a shortest path uses at most V - 1 edges, so O(V × E). The worst case is a graph with long shortest paths whose edges are listed in an unhelpful order, so each pass extends the correct distances by only one more edge. This run stops early once a pass changes nothing, so a graph that settles after one pass costs only O(E); there is no tighter average, because it depends on the edge order.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for the distance and parent tables; the edge list is the input itself, and there is no recursion.), and contrasts it with a relevant alternative such as Dijkstra's Algorithm (O((V + E) log V) with a binary heap, much faster, but wrong with negative edge weights, which Bellman-Ford handles and can detect as a negative cycle)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### floyd-warshall
 
 - **A matrix of all-pairs distances**: explains the distance matrix between every pair of nodes
 - **Trying each node as a stop on the way**: explains trying each node k as an intermediate: dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])
 - **All shortest paths once every k is tried**: explains that after every k is tried, the matrix holds all shortest paths
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(V³) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Three nested loops: for each of the V possible intermediate nodes k it checks every pair (i, j), V² pairs, so V³ updates whatever the graph. No input is better or worse, and there is no early exit.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V²) for the distance matrix, updated in place, plus another O(V²) if a next-hop matrix is kept to rebuild the paths. No recursion.), and contrasts it with a relevant alternative such as Dijkstra's Algorithm from every source (V runs of O((V + E) log V), about O(V E log V): faster on a sparse graph, but it needs non-negative weights, while Floyd-Warshall is simpler, allows negative edges and wins on a dense graph where E is close to V²)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Minimum spanning trees
 

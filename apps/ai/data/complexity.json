@@ -702,7 +702,18 @@
     "worstNote": "all V-1 passes needed",
     "space": "O(V)",
     "spaceNote": "distances + parents",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Each pass relaxes every one of the E edges, and up to V - 1 passes are needed because a shortest path uses at most V - 1 edges, so O(V × E). The worst case is a graph with long shortest paths whose edges are listed in an unhelpful order, so each pass extends the correct distances by only one more edge. This run stops early once a pass changes nothing, so a graph that settles after one pass costs only O(E); there is no tighter average, because it depends on the edge order.",
+    "auxiliarySpace": "O(V) for the distance and parent tables; the edge list is the input itself, and there is no recursion.",
+    "contrast": {
+      "algorithm": "Dijkstra's Algorithm",
+      "point": "O((V + E) log V) with a binary heap, much faster, but wrong with negative edge weights, which Bellman-Ford handles and can detect as a negative cycle"
+    },
+    "defend": {
+      "time": "why Bellman-Ford is O(V × E) and never needs more than V - 1 passes",
+      "alternative": "why stopping early still leaves it slower than Dijkstra",
+      "space": "what space it needs"
+    }
   },
   "floyd-warshall": {
     "best": "O(V³)",
@@ -713,7 +724,18 @@
     "worstNote": "always",
     "space": "O(V²)",
     "spaceNote": "the distance matrix",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Three nested loops: for each of the V possible intermediate nodes k it checks every pair (i, j), V² pairs, so V³ updates whatever the graph. No input is better or worse, and there is no early exit.",
+    "auxiliarySpace": "O(V²) for the distance matrix, updated in place, plus another O(V²) if a next-hop matrix is kept to rebuild the paths. No recursion.",
+    "contrast": {
+      "algorithm": "Dijkstra's Algorithm from every source",
+      "point": "V runs of O((V + E) log V), about O(V E log V): faster on a sparse graph, but it needs non-negative weights, while Floyd-Warshall is simpler, allows negative edges and wins on a dense graph where E is close to V²"
+    },
+    "defend": {
+      "time": "why Floyd-Warshall is O(V³) on every graph",
+      "alternative": "when running Dijkstra from every source beats it",
+      "space": "why it needs O(V²) space"
+    }
   },
   "kruskal": {
     "best": "O(E log E)",
