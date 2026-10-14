@@ -661,6 +661,40 @@ export interface AlgorithmTopicDTO {
   estimatedMinutes: number
   isLocked: boolean
   masteryPercent: number
+  /** The mastery rubric (Phase 7B). A badge and a progress signal only:
+   * nothing unlocks or locks on it. */
+  mastery: TopicMastery
+}
+
+/** not started -> in progress -> proficient (accuracy and breadth) -> mastered (every applicable criterion). */
+export type MasteryStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PROFICIENT' | 'MASTERED'
+
+export type MasteryCriterionId = 'ACCURACY' | 'BREADTH' | 'FEYNMAN' | 'CHALLENGE'
+
+export interface MasteryCriterion {
+  id: MasteryCriterionId
+  /** False when the topic does not offer it yet (no Feynman rubric, no
+   * challenge generator): it is left out of Mastered rather than failed. */
+  applicable: boolean
+  met: boolean
+  /** ACCURACY: percent of recent first attempts correct. BREADTH: distinct
+   * inputs. FEYNMAN: best score of 100. CHALLENGE: challenges passed. Null
+   * when there is nothing to measure yet. */
+  value: number | null
+  threshold: number
+  /** ACCURACY: first attempts counted (the recent window). FEYNMAN and
+   * CHALLENGE: attempts made. BREADTH: unused (0). */
+  attempts: number
+}
+
+export interface TopicMastery {
+  status: MasteryStatus
+  /** In the fixed order ACCURACY, BREADTH, FEYNMAN, CHALLENGE. */
+  criteria: MasteryCriterion[]
+  /** Hints requested per answered junction. Reported, never a criterion. */
+  hintsPerStep: number | null
+  /** When every applicable criterion was first met. Mastered stays once earned. */
+  masteredAt: string | null
 }
 
 /** Alias kept for call sites that refer to this shape as `TopicDto`. */

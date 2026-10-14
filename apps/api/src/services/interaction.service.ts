@@ -1,6 +1,8 @@
 import { prisma } from '../lib/prisma'
 import type { CreateInteractionDto, InteractionDto } from '../dtos/interaction.dto'
 import { xpForInteraction } from '../config/xp'
+import { MASTERY_INTERACTION_TYPES } from '../config/mastery'
+import { refreshTopicMasteryAfterWrite } from './mastery.service'
 
 export async function logInteraction(dto: CreateInteractionDto): Promise<InteractionDto> {
   const interaction = await prisma.interaction.create({
@@ -24,6 +26,8 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       aiMisconceptionCategory: dto.aiMisconceptionCategory ?? null,
       bottomedOut: dto.bottomedOut ?? false,
       hintIndexAtResolve: dto.hintIndexAtResolve ?? 0,
+      attemptIndex: dto.attemptIndex ?? null,
+      inputHash: dto.inputHash ?? null,
       aiLatencyMs: dto.aiLatencyMs ?? null,
       aiModel: dto.aiModel ?? null,
       promptVersion: dto.promptVersion ?? null,
@@ -37,9 +41,14 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
   // XP follows from the row just written (4D.5), to the session's owner -
   // the router has already checked the caller owns the session.
   const xp = xpForInteraction(interaction)
-  if (xp > 0) {
-    const { userId } = await prisma.session.findUniqueOrThrow({ where: { id: dto.sessionId }, select: { userId: true } })
-    await prisma.user.update({ where: { id: userId }, data: { xpTotal: { increment: xp } } })
+  const feedsMastery = (MASTERY_INTERACTION_TYPES as readonly string[]).includes(interaction.interactionType)
+  if (xp > 0 || feedsMastery) {
+    const session = await prisma.session.findUniqueOrThrow({
+      where: { id: dto.sessionId },
+      select: { userId: true, algorithmTopicId: true, algorithmTopic: { select: { name: true } } },
+    })
+    if (xp > 0) await prisma.user.update({ where: { id: session.userId }, data: { xpTotal: { increment: xp } } })
+    if (feedsMastery) await refreshTopicMasteryAfterWrite(session.userId, session.algorithmTopicId, session.algorithmTopic.name)
   }
   return toInteractionDto(interaction)
 }

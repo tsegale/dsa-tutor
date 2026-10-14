@@ -22,6 +22,10 @@ export interface CreateInteractionDto {
   aiMisconceptionCategory?: string | null
   bottomedOut?: boolean
   hintIndexAtResolve?: number
+  /** Which attempt at the junction this answer was, from 1 (Phase 7B). */
+  attemptIndex?: number | null
+  /** Hash of the run's starting state, for the breadth criterion. */
+  inputHash?: string | null
   aiLatencyMs?: number | null
   aiModel?: string | null
   promptVersion?: string | null

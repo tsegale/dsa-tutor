@@ -2,6 +2,8 @@ import { prisma } from '../lib/prisma'
 import { SCORED_INTERACTION_TYPES } from '../config/interactionTypes'
 import { STUDY_TOPICS } from '../config/studyTopics'
 import { isActiveParticipant } from './study.service'
+import { masteredAtByTopic, masteryRowsByTopic } from './mastery.service'
+import { computeMastery } from '../config/mastery'
 import type { TopicDto } from '../dtos/topic.dto'
 
 export async function getAllTopics(userId: string): Promise<TopicDto[]> {
@@ -14,7 +16,7 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
   // consented yet, and withdrawn participants) sees the full catalogue.
   const restrictToStudyTopics = isActiveParticipant(user ?? { participantCode: null, consentAt: null, withdrawnAt: null })
 
-  const [topics, interactions] = await Promise.all([
+  const [topics, interactions, rubricRows, masteredAt] = await Promise.all([
     prisma.algorithmTopic.findMany({
       where: restrictToStudyTopics ? { name: { in: [...STUDY_TOPICS] } } : undefined,
       orderBy: [{ track: 'asc' }, { order: 'asc' }],
@@ -24,6 +26,8 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
       where: { session: { userId, mode: 'PRACTICE' }, interactionType: { in: [...SCORED_INTERACTION_TYPES] } },
       select: { predictionCorrect: true, session: { select: { algorithmTopicId: true } } },
     }),
+    masteryRowsByTopic(userId),
+    masteredAtByTopic(userId),
   ])
 
   const interactionsByTopicId = new Map<string, typeof interactions>()
@@ -52,7 +56,9 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
       description: topic.description,
       estimatedMinutes: topic.estimatedMinutes,
       isLocked: topic.isLocked,
+      // Unlocking reads masteryPercent only (Phase 3.1A); mastery is display.
       masteryPercent,
+      mastery: computeMastery(topic.name, rubricRows.get(topic.id) ?? [], masteredAt.get(topic.id) ?? null),
     }
   })
 }

@@ -1,3 +1,5 @@
+import type { TopicMastery } from '@dsa-tutor/types'
+
 export interface TopicDto {
   id: string
   name: string
@@ -8,4 +10,5 @@ export interface TopicDto {
   estimatedMinutes: number
   isLocked: boolean
   masteryPercent: number
+  mastery: TopicMastery
 }

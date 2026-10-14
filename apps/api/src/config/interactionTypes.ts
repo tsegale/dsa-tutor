@@ -12,6 +12,10 @@ export const INTERACTION_TYPES = [
   // One row per AI Challenge loaded (Week 2 2D): promptKey names the case
   // and seed, misconceptionCategory the targeted category. Not an answer.
   'CHALLENGE_ATTEMPT',
+  // One row when an AI Challenge run reaches its final step (Phase 7B):
+  // predictionCorrect is whether it was passed, rubricScore its first-attempt
+  // accuracy. Mastery's edge-case criterion reads it. Not an answer.
+  'CHALLENGE_RESULT',
   // One row per step viewed on a Classic topic (Week 3 3B): stepIndex and
   // timeSpentSeconds, no prediction. Time on task and steps viewed compare
   // across conditions from this one table. Not an answer.

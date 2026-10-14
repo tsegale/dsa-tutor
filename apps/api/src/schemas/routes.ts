@@ -112,6 +112,8 @@ export const interactions = {
       aiMisconceptionCategory: category.nullable().optional(),
       bottomedOut: z.boolean().optional(),
       hintIndexAtResolve: nonNegativeInt.optional(),
+      attemptIndex: z.int().min(1).max(20).nullable().optional(),
+      inputHash: z.string().regex(/^[0-9a-f]{8,64}$/).nullable().optional(),
       aiLatencyMs: z.number().min(0).nullable().optional(),
       aiModel: shortText.nullable().optional(),
       promptVersion: shortText.nullable().optional(),

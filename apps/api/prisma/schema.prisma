@@ -170,6 +170,14 @@ model Interaction {
   interactionType        String   @default("PREDICTION")
   createdAt              DateTime @default(now())
 
+  // Mastery rubric inputs (Phase 7B). attemptIndex: which attempt at its
+  // junction an answer was, from 1 (rows from before 7B derive it from
+  // hintIndexAtResolve, see config/mastery.ts attemptIndexOf). inputHash:
+  // the run's starting state, so breadth counts distinct inputs. On the
+  // row, not the Session: one session runs many inputs.
+  attemptIndex           Int?
+  inputHash              String?
+
   // What the student actually saw from the feedback mechanism - without
   // these the platform's core contribution (AI-generated, scaffolding-
   // calibrated feedback) leaves no trace for the study to evaluate.
@@ -263,6 +271,11 @@ model TopicMastery {
   correctPredictions Int
   lastPracticedAt    DateTime
   updatedAt          DateTime @updatedAt
+  // The mastery rubric (Phase 7B, config/mastery.ts): each criterion's
+  // value, threshold and met state, and when every applicable one was
+  // first met. Mastered never gates unlocking.
+  criteriaMet        Json?
+  masteredAt         DateTime?
 
   user           User           @relation(fields: [userId], references: [id])
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
