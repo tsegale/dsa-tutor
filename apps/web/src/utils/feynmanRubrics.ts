@@ -69,6 +69,10 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Cycle Detection',
   'Connected Components',
   'Topological Sort',
+  'Grid BFS',
+  'Grid DFS',
+  'Grid Dijkstra',
+  'Grid A*',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

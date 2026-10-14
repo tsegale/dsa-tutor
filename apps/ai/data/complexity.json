@@ -856,7 +856,18 @@
     "worstNote": "no path exists - full grid explored",
     "space": "O(rows × cols)",
     "spaceNote": "visited + frontier",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. BFS dequeues each cell once and checks its four neighbours, O(V + E) = O(rows × cols). The worst case is a target that cannot be reached, or sits in the far corner, so the whole grid is explored. A nearby target ends it early, but in open space the explored region still grows with the distance to the target, so the average is O(rows × cols) too.",
+    "auxiliarySpace": "O(rows × cols) for the visited marks and the queue, which holds one ring of cells at the same distance from the start.",
+    "contrast": {
+      "algorithm": "Grid DFS",
+      "point": "the same O(rows × cols) bound, but its first path is not necessarily the shortest, where BFS's is on an unweighted grid"
+    },
+    "defend": {
+      "time": "why BFS on a grid is O(rows × cols), using V = rows × cols and E about 4V",
+      "alternative": "why its first path to the target is a shortest one",
+      "space": "what the queue and the visited marks cost"
+    }
   },
   "grid-dfs": {
     "best": "O(1)",
@@ -867,7 +878,18 @@
     "worstNote": "no path exists - full grid explored",
     "space": "O(rows × cols)",
     "spaceNote": "visited + stack",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. DFS visits each cell at most once and checks its four neighbours, O(V + E) = O(rows × cols). The worst case is an unreachable target, or a search that wanders into a large dead-end region first; nothing makes it worse than visiting every cell, and the average is the same bound.",
+    "auxiliarySpace": "O(rows × cols): the visited marks, and a stack (or recursion) that can hold almost every cell along one long winding path.",
+    "contrast": {
+      "algorithm": "Grid BFS",
+      "point": "the same cost, with a guaranteed shortest path, where DFS returns the first path it stumbles on"
+    },
+    "defend": {
+      "time": "why DFS on a grid is O(rows × cols)",
+      "alternative": "why the path it finds is often not the shortest",
+      "space": "how deep its stack can get on a winding grid"
+    }
   },
   "grid-dijkstra": {
     "best": "O(1)",
@@ -878,7 +900,18 @@
     "worstNote": "no path exists",
     "space": "O(rows × cols)",
     "spaceNote": "visited + frontier",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. Each cell is finalised once, and this run picks the next cell by scanning the whole frontier, up to O(V) per step, so O(V²) = O((rows × cols)²); relaxing about 4V edges adds only O(V). The worst case is an unreachable target, which finalises every cell. With a binary heap it would be O(V log V). On this unweighted grid it expands the same cells, in the same order, as BFS.",
+    "auxiliarySpace": "O(rows × cols) for the cost table, the visited marks and the frontier.",
+    "contrast": {
+      "algorithm": "Grid A*",
+      "point": "the same structure with each cell ranked by its cost plus a Manhattan estimate to the target, so it usually expands far fewer cells"
+    },
+    "defend": {
+      "time": "why Dijkstra on a grid is O((rows × cols)²) with a linear-scan frontier",
+      "alternative": "what a binary heap would make it, given that on an unweighted grid it expands the same cells as BFS",
+      "space": "what space it needs"
+    }
   },
   "grid-astar": {
     "best": "O(1)",
@@ -889,7 +922,18 @@
     "worstNote": "no path exists - degrades toward Dijkstra",
     "space": "O(rows × cols)",
     "spaceNote": "visited + frontier",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. A* is grid Dijkstra with a Manhattan-distance estimate to the target added to each cell's priority. The frontier scan is still up to O(V) per step, so O(V²) = O((rows × cols)²) in the worst case, an unreachable target, where every cell is expanded anyway. When a path exists the heuristic pulls the search toward the target, so in open space it expands roughly the cells near the straight line between them: far fewer than the whole grid on average.",
+    "auxiliarySpace": "O(rows × cols) for the cost so far (g), the visited marks and the frontier.",
+    "contrast": {
+      "algorithm": "Grid Dijkstra",
+      "point": "the same shortest-path guarantee when the heuristic never overestimates, but it expands cells in every direction instead of toward the target"
+    },
+    "defend": {
+      "time": "why A* on a grid is O((rows × cols)²) in the worst case but usually expands far fewer cells",
+      "alternative": "why the Manhattan heuristic must never overestimate",
+      "space": "what space it needs"
+    }
   },
   "maze-generation": {
     "best": "O(rows × cols)",

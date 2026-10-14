@@ -89,6 +89,10 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'cycle-detection',
   'connected-components',
   'topological-sort',
+  'grid-bfs',
+  'grid-dfs',
+  'grid-dijkstra',
+  'grid-astar',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

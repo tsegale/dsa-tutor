@@ -10,7 +10,7 @@ BST, BFS and DFS already have reviewed rubrics in routers/feynman.py.
 """
 
 # Families whose complexity facts are written and approved (Phase 8.1B).
-LIVE_FAMILIES: frozenset[str] = frozenset({"Tree traversals", "Binary search tree operations", "Heaps", "Tries", "Self-balancing trees", "Shortest paths", "Minimum spanning trees", "Graph properties"})
+LIVE_FAMILIES: frozenset[str] = frozenset({"Tree traversals", "Binary search tree operations", "Heaps", "Tries", "Self-balancing trees", "Shortest paths", "Minimum spanning trees", "Graph properties", "Grid pathfinding"})
 
 # Approved to stay on the generic rubric, by decision (see the Maze
 # generation family below): never promoted, never given complexity criteria.

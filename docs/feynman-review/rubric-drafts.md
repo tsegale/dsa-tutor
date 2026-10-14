@@ -275,7 +275,7 @@ it, space against an alternative, clarity), generated from its facts.
 - **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for the colours and the output order, and the recursion can reach depth V along a long chain of dependencies.), and contrasts it with a relevant alternative such as Kahn's algorithm (the same O(V + E), with a queue of nodes whose in-degree has reached zero instead of recursion, which also reports a cycle when nodes are left over)
 - **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
-## Grid pathfinding
+## Grid pathfinding (live)
 
 ### grid-bfs
 
@@ -283,7 +283,9 @@ it, space against an alternative, clarity), generated from its facts.
 - **Expanding by distance with a queue**: explains expanding cells in order of distance with a queue
 - **Shortest path in an unweighted grid**: explains that in an unweighted grid this finds a shortest path
 - **Visited cells and walls**: explains marking visited cells and skipping walls
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(rows × cols) in both the worst and the average case, and what drives it, naming the input that produces the worst case: The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. BFS dequeues each cell once and checks its four neighbours, O(V + E) = O(rows × cols). The worst case is a target that cannot be reached, or sits in the far corner, so the whole grid is explored. A nearby target ends it early, but in open space the explored region still grows with the distance to the target, so the average is O(rows × cols) too.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(rows × cols) for the visited marks and the queue, which holds one ring of cells at the same distance from the start.), and contrasts it with a relevant alternative such as Grid DFS (the same O(rows × cols) bound, but its first path is not necessarily the shortest, where BFS's is on an unweighted grid)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### grid-dfs
 
@@ -291,7 +293,9 @@ it, space against an alternative, clarity), generated from its facts.
 - **Going deep, then backtracking**: explains following one direction as far as possible before backtracking
 - **A path, not always the shortest**: explains that it finds a path but not necessarily the shortest
 - **Visited cells and walls**: explains marking visited cells and skipping walls
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(rows × cols) in both the worst and the average case, and what drives it, naming the input that produces the worst case: The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. DFS visits each cell at most once and checks its four neighbours, O(V + E) = O(rows × cols). The worst case is an unreachable target, or a search that wanders into a large dead-end region first; nothing makes it worse than visiting every cell, and the average is the same bound.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(rows × cols): the visited marks, and a stack (or recursion) that can hold almost every cell along one long winding path.), and contrasts it with a relevant alternative such as Grid BFS (the same cost, with a guaranteed shortest path, where DFS returns the first path it stumbles on)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### grid-dijkstra
 
@@ -299,7 +303,9 @@ it, space against an alternative, clarity), generated from its facts.
 - **Expanding the cheapest cell**: explains expanding the cell with the smallest known cost next
 - **Updating neighbours' costs**: explains updating a neighbour's cost when reaching it through this cell is cheaper
 - **Handling different cell costs**: explains why this handles cells with different movement costs
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O((rows × cols)²) in both the worst and the average case, and what drives it, naming the input that produces the worst case: The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. Each cell is finalised once, and this run picks the next cell by scanning the whole frontier, up to O(V) per step, so O(V²) = O((rows × cols)²); relaxing about 4V edges adds only O(V). The worst case is an unreachable target, which finalises every cell. With a binary heap it would be O(V log V). On this unweighted grid it expands the same cells, in the same order, as BFS.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(rows × cols) for the cost table, the visited marks and the frontier.), and contrasts it with a relevant alternative such as Grid A* (the same structure with each cell ranked by its cost plus a Manhattan estimate to the target, so it usually expands far fewer cells)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### grid-astar
 
@@ -307,7 +313,9 @@ it, space against an alternative, clarity), generated from its facts.
 - **Ranking by f = g + h**: explains ranking cells by f = g + h: cost so far plus the estimate to the goal
 - **A heuristic that never overestimates**: explains that the heuristic, such as Manhattan distance, must not overestimate
 - **Exploring fewer cells than Dijkstra**: explains that the heuristic steers the search toward the goal, so fewer cells are explored
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity (worst O((rows × cols)²), average O(rows × cols)) and what drives it, naming the input that produces the worst case and why the average differs: The grid is an implicit graph: V = rows × cols cells, each with at most four neighbours computed from its row and column, so E is about 4V. A* is grid Dijkstra with a Manhattan-distance estimate to the target added to each cell's priority. The frontier scan is still up to O(V) per step, so O(V²) = O((rows × cols)²) in the worst case, an unreachable target, where every cell is expanded anyway. When a path exists the heuristic pulls the search toward the target, so in open space it expands roughly the cells near the straight line between them: far fewer than the whole grid on average.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(rows × cols) for the cost so far (g), the visited marks and the frontier.), and contrasts it with a relevant alternative such as Grid Dijkstra (the same shortest-path guarantee when the heuristic never overestimates, but it expands cells in every direction instead of toward the target)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Maze generation
 
