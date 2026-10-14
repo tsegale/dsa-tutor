@@ -60,7 +60,10 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #   2026-10-14.5    Feynman follow-up: exactly one question, about the first
 #                   missed criterion with complexity first (time, space,
 #                   clarity), trimmed to one question in code (Phase 8D).
-PROMPT_VERSION = "2026-10-14.5"
+#   2026-10-14.6    Feynman time criterion states an equal worst and average
+#                   bound once, without asking why the average differs
+#                   (Phase 8.1A).
+PROMPT_VERSION = "2026-10-14.6"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one

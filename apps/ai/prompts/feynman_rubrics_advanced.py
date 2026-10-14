@@ -1,18 +1,31 @@
-"""Draft Feynman mechanics rubrics for Modules 4 to 6 (Phase 8C), written in
-batches by family. NOT USED for grading: rubric_for never reads this module.
-A draft goes live only after review, by moving it into feynman_rubrics.py
-(with its complexity facts in data/complexity.json) and adding the topic's
-display name to the web's utils/feynmanRubrics.ts. The review sheet is
-docs/feynman-review/rubric-drafts.md (scripts/export_rubric_drafts.py).
+"""Feynman mechanics rubrics for Modules 4 to 6 (Phase 8C, approved in
+Phase 8.1 with six edits), by family. A family is graded only once its
+complexity facts are written in data/complexity.json and approved: then it
+joins LIVE_FAMILIES, rubric_for uses it, and the web offers Feynman mode on
+its topics (utils/feynmanRubrics.ts). Families not yet live are never used.
+The review sheet is docs/feynman-review/rubric-drafts.md
+(scripts/export_rubric_drafts.py).
 
 BST, BFS and DFS already have reviewed rubrics in routers/feynman.py.
 """
 
-DRAFT_FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
+# Families whose complexity facts are written and approved (Phase 8.1B).
+LIVE_FAMILIES: frozenset[str] = frozenset()
+
+# Approved to stay on the generic rubric, by decision (see the Maze
+# generation family below): never promoted, never given complexity criteria.
+GENERIC_BY_DECISION: tuple[str, ...] = ("maze_generation", "maze_prim", "maze_kruskal")
+
+FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
     "Two pointers and sliding windows": {
         "two_pointer": [
             ("explains starting one pointer at each end of a sorted array", "Pointers at both ends of a sorted array"),
-            ("explains moving the left pointer right when the sum is too small and the right pointer left when it is too large", "Which pointer moves, and why"),
+            (
+                "explains the rule for which pointer moves: each step moves the pointer whose element can no longer be "
+                "part of any answer, so one candidate is discarded per step; in the sorted pair-sum this runs here, the "
+                "left pointer moves when the sum is too small and the right pointer when it is too large",
+                "Which pointer moves, and why",
+            ),
             ("explains that the sorted order is what makes discarding one end safe", "Why sorting makes it safe to discard an end"),
         ],
         "sliding_window_fixed": [
@@ -70,6 +83,11 @@ DRAFT_FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
             ("explains deleting as in a binary search tree first", "Deleting as in a BST first"),
             ("explains rechecking balance factors on the way back up to the root", "Rechecking balance on the way up"),
             ("explains that a deletion can need rotations at more than one level", "Possibly rotating at several levels"),
+            (
+                "contrasts this with insertion: an insert needs at most one rotation (single or double) to restore "
+                "balance, while a delete can need rotations at up to O(log n) levels on the way to the root",
+                "One rotation for insert, up to log n for delete",
+            ),
         ],
         "rb_insert": [
             ("explains that a new node is inserted red", "New nodes start red"),
@@ -169,26 +187,52 @@ DRAFT_FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
     },
     "Grid pathfinding": {
         "grid_bfs": [
+            (
+                "explains that the grid is an implicit graph: each cell's neighbours are computed from its row and "
+                "column (up, down, left, right) rather than stored, so V = rows x cols and E is about 4V",
+                "The grid as a graph: V = rows x cols, E about 4V",
+            ),
             ("explains expanding cells in order of distance with a queue", "Expanding by distance with a queue"),
             ("explains that in an unweighted grid this finds a shortest path", "Shortest path in an unweighted grid"),
             ("explains marking visited cells and skipping walls", "Visited cells and walls"),
         ],
         "grid_dfs": [
+            (
+                "explains that the grid is an implicit graph: each cell's neighbours are computed from its row and "
+                "column (up, down, left, right) rather than stored, so V = rows x cols and E is about 4V",
+                "The grid as a graph: V = rows x cols, E about 4V",
+            ),
             ("explains following one direction as far as possible before backtracking", "Going deep, then backtracking"),
             ("explains that it finds a path but not necessarily the shortest", "A path, not always the shortest"),
             ("explains marking visited cells and skipping walls", "Visited cells and walls"),
         ],
         "grid_dijkstra": [
+            (
+                "explains that the grid is an implicit graph: each cell's neighbours are computed from its row and "
+                "column (up, down, left, right) rather than stored, so V = rows x cols and E is about 4V",
+                "The grid as a graph: V = rows x cols, E about 4V",
+            ),
             ("explains expanding the cell with the smallest known cost next", "Expanding the cheapest cell"),
             ("explains updating a neighbour's cost when reaching it through this cell is cheaper", "Updating neighbours' costs"),
             ("explains why this handles cells with different movement costs", "Handling different cell costs"),
         ],
         "grid_astar": [
+            (
+                "explains that the grid is an implicit graph: each cell's neighbours are computed from its row and "
+                "column (up, down, left, right) rather than stored, so V = rows x cols and E is about 4V",
+                "The grid as a graph: V = rows x cols, E about 4V",
+            ),
             ("explains ranking cells by f = g + h: cost so far plus the estimate to the goal", "Ranking by f = g + h"),
             ("explains that the heuristic, such as Manhattan distance, must not overestimate", "A heuristic that never overestimates"),
             ("explains that the heuristic steers the search toward the goal, so fewer cells are explored", "Exploring fewer cells than Dijkstra"),
         ],
     },
+    # Maze generation (Phase 8.1A decision): the mechanics items below are
+    # approved, but these three topics get no complexity criteria and stay on
+    # the generic rubric. Their running time is a by-product of the graph
+    # algorithm each one adapts (DFS, Prim, Kruskal), already assessed on
+    # those topics, and what a maze topic teaches is the shape of the maze
+    # each method produces, not a bound to defend. Not to be promoted.
     "Maze generation": {
         "maze_generation": [
             ("explains carving passages by a randomised depth-first search", "Carving with a randomised DFS"),
@@ -207,3 +251,8 @@ DRAFT_FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
         ],
     },
 }
+
+
+def live_rubrics() -> dict[str, list[tuple[str, str]]]:
+    """The mechanics items of every live family, by topic key."""
+    return {key: items for family, topics in FAMILIES.items() if family in LIVE_FAMILIES for key, items in topics.items()}

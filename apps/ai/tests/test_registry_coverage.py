@@ -151,13 +151,15 @@ def test_the_generic_fallback_logs_a_warning(caplog):
     assert "feynman_rubric_missing" in caplog.text
 
 
-def test_draft_rubrics_are_never_used_for_grading():
-    from prompts.feynman_rubric_drafts import DRAFT_FAMILIES
+def test_only_live_families_are_used_for_grading_and_mazes_never_are():
+    from prompts.feynman_rubrics_advanced import FAMILIES, GENERIC_BY_DECISION, LIVE_FAMILIES
     from routers.feynman import FEYNMAN_RUBRIC
 
-    drafts = {key for family in DRAFT_FAMILIES.values() for key in family}
-    assert len(drafts) == 35
-    assert not drafts & set(FEYNMAN_RUBRIC), "a draft rubric is live without review"
+    assert sum(len(topics) for topics in FAMILIES.values()) == 35
+    for family, topics in FAMILIES.items():
+        for key in topics:
+            assert (key in FEYNMAN_RUBRIC) == (family in LIVE_FAMILIES), f"{key} live state does not match its family"
+    assert not set(GENERIC_BY_DECISION) & set(FEYNMAN_RUBRIC)
 
 
 def test_every_live_rubric_carries_the_complexity_criteria():

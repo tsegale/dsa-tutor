@@ -67,3 +67,15 @@ def test_the_challenge_reaches_the_grader(monkeypatch):
             },
         )
     assert f"They were asked to: {challenge}" in seen["prompt"]
+
+
+def test_equal_worst_and_average_bounds_are_stated_once():
+    from prompts.complexity import COMPLEXITY
+
+    for slug in ("dijkstra", "merge-sort", "heap-sort"):
+        entry = COMPLEXITY[slug]
+        assert entry["worst"] == entry["average"], slug
+        time = complexity_criteria(slug)[0][0]
+        assert "why the average differs" not in time, slug
+        assert f"{entry['worst']} in both the worst and the average case" in time, slug
+    assert "why the average differs" in complexity_criteria("quick-sort")[0][0]

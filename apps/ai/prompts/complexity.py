@@ -77,13 +77,20 @@ def complexity_criteria(algorithm_name: str) -> list[tuple[str, str]]:
     if not has_complexity_facts(entry):
         return []
     contrast = entry["contrast"]
-    return [
-        (
+    # Where worst and average are the same bound it is stated once, and the
+    # criterion does not ask why the average differs (Phase 8.1A).
+    if entry["worst"] == entry["average"]:
+        time = (
+            f"states the time complexity, {entry['worst']} in both the worst and the average case, and what drives it, "
+            f"naming the input that produces the worst case: {entry['worstCaseTrigger']}"
+        )
+    else:
+        time = (
             f"states the time complexity (worst {entry['worst']}, average {entry['average']}) and what drives it, "
-            f"naming the input that produces the worst case and why the average differs or does not: "
-            f"{entry['worstCaseTrigger']}",
-            TIME_LABEL,
-        ),
+            f"naming the input that produces the worst case and why the average differs: {entry['worstCaseTrigger']}"
+        )
+    return [
+        (time, TIME_LABEL),
         (
             f"accounts for the auxiliary space, including recursion stack frames where they apply "
             f"({entry['auxiliarySpace']}), and contrasts it with a relevant alternative such as "

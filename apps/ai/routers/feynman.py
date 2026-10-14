@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from prompts.complexity import CLARITY_LABEL, COMPLEXITY_LABELS, SPACE_LABEL, TIME_LABEL, complexity_criteria, topic_slug
 from prompts.feynman_rubrics import FOUNDATIONS_RUBRICS
+from prompts.feynman_rubrics_advanced import live_rubrics
 from prompts.registry import get_algorithm_context
 from prompts.templates import PROMPT_VERSION
 from services.claude_service import call_claude_for_feedback, model_name
@@ -174,6 +175,8 @@ FEYNMAN_RUBRIC.update(
 )
 # Modules 1 to 3 (Phase 8C), keyed by slug; rubric_for resolves display names.
 FEYNMAN_RUBRIC.update(FOUNDATIONS_RUBRICS)
+# Modules 4 to 6: only the families whose complexity facts are approved.
+FEYNMAN_RUBRIC.update(live_rubrics())
 
 FEYNMAN_PROMPT = """You are playing the role of a curious but confused beginner student who has never seen {algorithm_name} before.
 
