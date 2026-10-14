@@ -4,7 +4,7 @@ import re
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from prompts.complexity import COMPLEXITY_LABELS, complexity_criteria, topic_slug
+from prompts.complexity import CLARITY_LABEL, COMPLEXITY_LABELS, SPACE_LABEL, TIME_LABEL, complexity_criteria, topic_slug
 from prompts.feynman_rubrics import FOUNDATIONS_RUBRICS
 from prompts.registry import get_algorithm_context
 from prompts.templates import PROMPT_VERSION
@@ -192,8 +192,10 @@ Respond ONLY with a valid JSON object matching this exact schema:
     <one entry per rubric concept, in the order given, using the exact labels>
   ],
   "feedback_summary": "<2-3 sentences of feedback written as the confused beginner student, praising what was clear and noting what confused you. Use first person, conversational, not academic>",
-  "follow_up_question": "<a single follow-up question you still have as the confused beginner, targeting the most important missing concept. null if every concept was met>"
+  "follow_up_question": "<exactly one follow-up question you still have as the confused beginner, about the single most important missing concept. null if every concept was met>"
 }}
+
+The most important missing concept is the first one not met in this order: "{time_label}", then "{space_label}", then "{clarity_label}", then the other concepts in the order listed. Ask about that one only, in one question, without naming the answer.
 
 The feedback_summary and follow_up_question must sound like a real confused student, not a teacher or AI.
 Example feedback_summary: "Ok that mostly made sense! I get that you swap them if the left one is bigger. But I am confused, do you always have to go through the whole list every time? What happens if it is already sorted?"
@@ -276,6 +278,15 @@ def _judgement_failure(rubric: list[tuple[str, str]], data: object) -> str | Non
     return None
 
 
+def one_question(text: str | None) -> str | None:
+    """A follow-up is one question, not a list (Phase 8D): everything after
+    the first question mark is dropped."""
+    if not text:
+        return None
+    end = text.find("?")
+    return text[: end + 1].strip() if end != -1 else text.strip()
+
+
 def score_feynman_response(rubric: list[tuple[str, str]], data: dict) -> FeynmanResponse:
     """Turns the model's per-concept booleans into a score, completeness
     flag and missing-concepts list computed in code - the model is asked
@@ -305,7 +316,7 @@ def score_feynman_response(rubric: list[tuple[str, str]], data: dict) -> Feynman
     return FeynmanResponse(
         score=score,
         feedback_summary=data.get("feedback_summary", ""),
-        follow_up_question=None if is_complete else data.get("follow_up_question"),
+        follow_up_question=None if is_complete else one_question(data.get("follow_up_question")),
         missing_concepts=missing_concepts,
         is_complete=is_complete,
         rubric_results=rubric_results,
@@ -351,6 +362,9 @@ async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
         algorithm_name=request.algorithm_name,
         completion_context=request.completion_context,
         challenge=f"They were asked to: {request.challenge_prompt}\n" if request.challenge_prompt else "",
+        time_label=TIME_LABEL,
+        space_label=SPACE_LABEL,
+        clarity_label=CLARITY_LABEL,
         student_explanation=request.student_explanation,
         rubric=rubric_text,
     )
