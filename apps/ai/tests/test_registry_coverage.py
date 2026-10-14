@@ -170,3 +170,27 @@ def test_every_live_rubric_carries_the_complexity_criteria():
     for key in FEYNMAN_RUBRIC:
         labels = tuple(label for _criterion, label in rubric_for(key)[1][-3:])
         assert labels == COMPLEXITY_LABELS, f"live rubric {key} has no complexity criteria"
+
+
+MODULES_4_TO_6 = _module_topics({4, 5, 6})
+
+
+def test_modules_4_to_6_are_readable():
+    assert len(MODULES_4_TO_6) == 38
+
+
+@pytest.mark.parametrize("slug", MODULES_4_TO_6)
+def test_modules_4_to_6_have_a_real_rubric_except_the_maze_topics(slug: str):
+    from prompts.complexity import COMPLEXITY_LABELS
+    from prompts.feynman_rubrics_advanced import GENERIC_BY_DECISION
+    from routers.feynman import rubric_for
+
+    key, rubric = rubric_for(DISPLAY_NAMES[slug])
+    if slug.replace("-", "_") in GENERIC_BY_DECISION:
+        # Phase 8.1A decision: the maze topics stay on the generic rubric.
+        assert key == "default"
+        return
+    assert key != "default", f"{slug} falls back to the generic Feynman rubric"
+    labels = [label for _criterion, label in rubric]
+    assert tuple(labels[-3:]) == COMPLEXITY_LABELS, f"{slug} lacks the complexity criteria"
+    assert len(labels) >= 6, f"{slug} has fewer than three mechanics items"
