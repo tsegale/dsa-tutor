@@ -46,7 +46,13 @@ export default function FeynmanModeButton() {
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      {/* A disabled button fires no pointer or focus events, so the reason
+          lives on a focusable wrapper: hover and keyboard both reach it. */}
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="block rounded-md focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none">
+          {button}
+        </span>
+      </TooltipTrigger>
       <TooltipContent>{reason}</TooltipContent>
     </Tooltip>
   )
