@@ -8,6 +8,7 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
+import { useMasteryRefresh } from '@/hooks/useMasteryRefresh'
 import FeynmanAvatar from './FeynmanAvatar'
 
 interface FeynmanModalProps {
@@ -93,6 +94,7 @@ export default function FeynmanModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [xpAwarded, setXpAwarded] = useState<number | null>(null)
   const openedAtRef = useRef(Date.now())
+  const refreshMastery = useMasteryRefresh()
 
   async function finalizeSession(finalResult: FeynmanResponse, submittedText: string) {
     setTerminal(true)
@@ -135,7 +137,7 @@ export default function FeynmanModal({
           feedbackText: finalResult.feedbackSummary || null,
           hintText: finalResult.followUpQuestion,
         }),
-      }).catch(() => {
+      }).then(refreshMastery, () => {
         // Interaction logging is best-effort; must never block the flow.
       })
     }

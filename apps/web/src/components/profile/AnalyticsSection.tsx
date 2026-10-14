@@ -12,6 +12,8 @@ import { SupportMeter } from '@/components/ui/SupportMeter'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { TrajectoryPanel } from './TrajectoryPanel'
+import { useTopics } from '@/hooks/useTopics'
+import { CRITERION_LABEL, masteryBreakdown } from '@/utils/mastery'
 
 // The profile's longitudinal analytics (Phase 6C): one request, every figure
 // computed by the server (GET /api/v1/profile/analytics). Numbers are mono
@@ -49,7 +51,7 @@ function SummaryRow({ summary }: { summary: LearnerAnalyticsDto['summary'] }) {
       <Figure label="Cumulative mastery index" note="Mean mastery across your topics">
         {summary.masteryIndex}%
       </Figure>
-      <Figure label="Topics started · completed · mastered" note={`Of ${summary.topicsTotal}; mastered means 80% or more`}>
+      <Figure label="Topics started · completed · mastered" note={`Of ${summary.topicsTotal}; mastered means every mastery criterion met`}>
         {summary.topicsStarted} · {summary.topicsCompleted} · {summary.topicsMastered}
       </Figure>
       <Figure label="Practice time" note="Time with the workspace open and in view">
@@ -190,6 +192,46 @@ function RecentSessions({ rows }: { rows: LearnerAnalyticsDto['recentSessions'] 
   )
 }
 
+// Phase 7D: across every started topic, how often each mastery criterion is
+// met, so the learner sees which one they most often miss. Read from the
+// topic list the rest of the app already holds: no extra request.
+function MasteryCriteria() {
+  const { data: topics } = useTopics()
+  if (!topics) return <Skeleton className="h-32 w-full rounded-md" />
+  const breakdown = masteryBreakdown(topics)
+  if (breakdown.started === 0) {
+    return <p className="text-small text-ink-2">Start a topic in Practice mode and its mastery criteria appear here.</p>
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Figure label="Topics mastered" note={`Of ${breakdown.started} started`}>
+          {breakdown.mastered}
+        </Figure>
+        <Figure label="Topics proficient" note="Accuracy and breadth met">
+          {breakdown.proficient}
+        </Figure>
+        <Figure label="Most often missed" note="The criterion unmet on the largest share of your topics">
+          <span className="font-sans text-body font-medium">{breakdown.mostMissed ? CRITERION_LABEL[breakdown.mostMissed] : 'None'}</span>
+        </Figure>
+      </dl>
+      <ul className="flex flex-col gap-2.5">
+        {breakdown.criteria.map((row) => (
+          <li key={row.id} className="grid grid-cols-[minmax(0,12rem)_1fr_auto] items-center gap-3">
+            <span className="text-small text-ink">{row.label}</span>
+            <span className="h-1.5 overflow-hidden rounded-full bg-rule" aria-hidden="true">
+              <span className="block h-full rounded-full bg-state-sorted" style={{ width: `${row.total ? (row.met / row.total) * 100 : 0}%` }} />
+            </span>
+            <span className="text-mono-sm text-ink-2 tabular-nums">
+              {row.total ? `${row.met} of ${row.total}` : 'not offered'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export function AnalyticsSection() {
   const { data, isLoading, isError, isFetching, refetch } = useQuery({ queryKey: ['profile', 'analytics'], queryFn: fetchLearnerAnalytics, staleTime: 30 * 1000 })
 
@@ -218,6 +260,9 @@ export function AnalyticsSection() {
           </Card>
           <Card title="Mastery by module" description="Mean mastery and topics complete in each module.">
             <ModuleBars modules={data.modules} />
+          </Card>
+          <Card title="Mastery criteria" description="How often each criterion is met across the topics you have started. Hints per step is shown on each topic, for reference, and is never a criterion.">
+            <MasteryCriteria />
           </Card>
           <Card title="Misconceptions" description="Patterns the tutor noticed in your answers, and whether later answers showed them resolved.">
             <Misconceptions rows={data.misconceptions} />

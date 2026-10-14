@@ -1,4 +1,4 @@
-import type { AlgorithmSnapshot, TopicMastery } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot, MasteryCriterion, MasteryCriterionId, MasteryStatus, TopicMastery } from '@dsa-tutor/types'
 
 /** A topic with nothing logged yet: what the api returns before any answer. */
 export const EMPTY_MASTERY: TopicMastery = {
@@ -43,3 +43,113 @@ export function inputHashOf(snapshots: readonly AlgorithmSnapshot[]): string | n
  * which mastery.test.ts there checks.
  */
 export const CHALLENGE_PASS_ACCURACY = 85
+
+/** Fewer first attempts than this and accuracy is not yet judged. Mirrors MASTERY_RUBRIC.accuracyMinAttempts. */
+export const ACCURACY_MIN_ATTEMPTS = 10
+
+export const MASTERY_STATUS_LABEL: Record<MasteryStatus, string> = {
+  NOT_STARTED: 'Not started',
+  IN_PROGRESS: 'In progress',
+  PROFICIENT: 'Proficient',
+  MASTERED: 'Mastered',
+}
+
+export const CRITERION_LABEL: Record<MasteryCriterionId, string> = {
+  ACCURACY: 'First-attempt accuracy',
+  BREADTH: 'Different inputs',
+  FEYNMAN: 'Feynman explanation',
+  CHALLENGE: 'Edge-case challenge',
+}
+
+export interface CriterionView {
+  id: MasteryCriterionId
+  label: string
+  /** The current value, as data (shown in mono). */
+  value: string
+  /** What meets it, as data. */
+  threshold: string
+  met: boolean
+  /** The one action that would meet it. Null once met: no criterion is shown unmet without one. */
+  action: string | null
+}
+
+/** How one applicable criterion reads on the mastery panel. */
+export function criterionView(criterion: MasteryCriterion): CriterionView {
+  const base = { id: criterion.id, label: CRITERION_LABEL[criterion.id], met: criterion.met }
+  switch (criterion.id) {
+    case 'ACCURACY': {
+      const { value, attempts, threshold } = criterion
+      let action: string | null = null
+      if (!criterion.met) {
+        if (attempts === 0) action = 'Answer junctions in Practice mode (no first attempts yet)'
+        else if (attempts < ACCURACY_MIN_ATTEMPTS)
+          action = `Answer ${ACCURACY_MIN_ATTEMPTS - attempts} more junctions in Practice mode (${attempts} of ${ACCURACY_MIN_ATTEMPTS})`
+        else action = `Practise again to reach ${threshold}% right first time (now ${value}% over your last ${attempts})`
+      }
+      return { ...base, value: value === null ? '-' : `${value}%`, threshold: `${threshold}%`, action }
+    }
+    case 'BREADTH':
+      return {
+        ...base,
+        value: String(criterion.value ?? 0),
+        threshold: String(criterion.threshold),
+        action: criterion.met ? null : `Practise on a different input (${criterion.value ?? 0} of ${criterion.threshold})`,
+      }
+    case 'FEYNMAN': {
+      let action: string | null = null
+      if (!criterion.met) {
+        if (criterion.attempts === 0) action = 'Explain this algorithm in Feynman Mode (not yet attempted)'
+        else if (criterion.value === null) action = 'Explain it again in Feynman Mode (last one was not graded)'
+        else action = `Explain it again in Feynman Mode (best ${criterion.value}, needs ${criterion.threshold})`
+      }
+      return { ...base, value: criterion.value === null ? '-' : String(criterion.value), threshold: String(criterion.threshold), action }
+    }
+    case 'CHALLENGE':
+      return {
+        ...base,
+        value: String(criterion.value ?? 0),
+        threshold: String(criterion.threshold),
+        action: criterion.met
+          ? null
+          : criterion.attempts === 0
+            ? 'Take an AI Challenge on this topic (not yet attempted)'
+            : `Pass an AI Challenge, ${CHALLENGE_PASS_ACCURACY}% right first time (${criterion.attempts} tried)`,
+      }
+  }
+}
+
+export interface MasteryBreakdown {
+  mastered: number
+  proficient: number
+  started: number
+  /** Per criterion, over started topics that offer it. */
+  criteria: Array<{ id: MasteryCriterionId; label: string; met: number; total: number }>
+  /** The criterion most often unmet, by share, or null with nothing to compare. */
+  mostMissed: MasteryCriterionId | null
+}
+
+/** The profile's view across every topic: how many are mastered, and which criterion is most often missing. */
+export function masteryBreakdown(topics: ReadonlyArray<{ mastery: TopicMastery }>): MasteryBreakdown {
+  const started = topics.filter((topic) => topic.mastery.status !== 'NOT_STARTED')
+  const ids: MasteryCriterionId[] = ['ACCURACY', 'BREADTH', 'FEYNMAN', 'CHALLENGE']
+  const criteria = ids.map((id) => {
+    const offered = started.map((topic) => topic.mastery.criteria.find((c) => c.id === id)).filter((c) => c?.applicable)
+    return { id, label: CRITERION_LABEL[id], met: offered.filter((c) => c!.met).length, total: offered.length }
+  })
+  let mostMissed: MasteryCriterionId | null = null
+  let worst = 0
+  for (const criterion of criteria) {
+    const missedShare = criterion.total > 0 ? (criterion.total - criterion.met) / criterion.total : 0
+    if (missedShare > worst) {
+      worst = missedShare
+      mostMissed = criterion.id
+    }
+  }
+  return {
+    mastered: topics.filter((topic) => topic.mastery.status === 'MASTERED').length,
+    proficient: topics.filter((topic) => topic.mastery.status === 'PROFICIENT').length,
+    started: started.length,
+    criteria,
+    mostMissed,
+  }
+}

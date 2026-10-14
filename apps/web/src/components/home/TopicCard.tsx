@@ -8,6 +8,8 @@ import type { SyllabusTopic } from '@/utils/syllabus'
 import { buttonVariants } from '@/components/ui/button'
 import { ProgressRing } from '@/components/ui/progress'
 import { LockIcon } from '@/components/curriculum/icons'
+import { MasteryMark } from '@/components/mastery/MasteryMark'
+import { CriteriaSegments } from '@/components/mastery/CriteriaSegments'
 
 function CheckIcon() {
   return (
@@ -25,7 +27,10 @@ function CheckIcon() {
  * action. The drawn button is the link's visible label, not a second control.
  *
  * States differ at a glance: a check in --state-sorted when complete, the
- * brand dot while in progress, a padlock when the module is locked. A locked
+ * brand dot while in progress, a padlock when the module is locked. Mastery
+ * (Phase 7D) takes the marker's place once Proficient (a half ring) or
+ * Mastered (a filled check), and four segments under the ring show which
+ * criteria are met. Mastery is display only: it never changes what opens. A locked
  * card still opens (the soft lock) and says what it builds on. Its text drops
  * to --ink-2, not --ink-3: the card stays interactive, and --ink-3 (3.2:1)
  * would fail contrast for text a learner has to read.
@@ -48,6 +53,8 @@ export function TopicCard({
   const locked = state === 'locked'
   const action = practiceAction(entry)
   const label = action ?? (buildsOn ? `Open, builds on Module ${buildsOn.number}` : 'Open')
+  const { status } = topic.mastery
+  const masteryMarked = status === 'MASTERED' || status === 'PROFICIENT'
 
   return (
     <li
@@ -61,18 +68,22 @@ export function TopicCard({
     >
       <div className="flex items-start justify-between gap-3">
         <span className="flex items-center gap-1.5">
-          {state === 'complete' && <CheckIcon />}
-          {state === 'in-progress' && <span aria-hidden="true" className="size-2 rounded-full bg-brand" />}
+          {masteryMarked && <MasteryMark status={status} />}
+          {!masteryMarked && state === 'complete' && <CheckIcon />}
+          {!masteryMarked && state === 'in-progress' && <span aria-hidden="true" className="size-2 rounded-full bg-brand" />}
           {locked && <LockIcon />}
           <span className="text-mono-sm text-ink-2">{number}</span>
         </span>
-        <ProgressRing
-          value={topic.masteryPercent}
-          size={48}
-          strokeWidth={4}
-          tone={isTopicComplete(topic) ? 'success' : 'brand'}
-          ariaLabel={`${topic.displayName} mastery`}
-        />
+        <span className="flex w-12 flex-col items-stretch gap-1.5">
+          <ProgressRing
+            value={topic.masteryPercent}
+            size={48}
+            strokeWidth={4}
+            tone={isTopicComplete(topic) ? 'success' : 'brand'}
+            ariaLabel={`${topic.displayName} mastery`}
+          />
+          {status !== 'NOT_STARTED' && <CriteriaSegments mastery={topic.mastery} />}
+        </span>
       </div>
 
       <h3 className={cn('mt-2 text-h3', locked ? 'text-ink-2' : 'text-ink')}>

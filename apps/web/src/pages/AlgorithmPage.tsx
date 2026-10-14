@@ -99,6 +99,7 @@ import { twoSumSortedEngine } from '@/engine/twoPointer'
 import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { CHALLENGE_PASS_ACCURACY, inputHashOf } from '@/utils/mastery'
+import { useMasteryRefresh } from '@/hooks/useMasteryRefresh'
 import { cn } from '@/lib/utils'
 
 /** One VIEW_STEP interaction: a step viewed in Classic, with the time spent on it. */
@@ -589,6 +590,7 @@ function AlgorithmWorkspace() {
   // Cumulative, session-scoped counters feeding badge condition checks.
   // Refs (not state) because nothing here needs to trigger a re-render.
   const predictionStatsRef = useRef({ correct: 0, total: 0, hints: 0, selfCorrections: 0 })
+  const refreshMastery = useMasteryRefresh()
   // Remembers only the most recently recorded (stepIndex, wasIncorrect)
   // pair, so a correct result immediately following an incorrect one AT
   // THE SAME junction can be recognised as a self-correction rather than
@@ -754,6 +756,7 @@ function AlgorithmWorkspace() {
         }),
       })
         .then(async (interaction) => {
+          refreshMastery()
           // The response half of misconception handling (detection is
           // Phase 4's tile-derived ground-truth label) is scoped to the
           // three fully instrumented study topics - see
@@ -970,11 +973,11 @@ function AlgorithmWorkspace() {
         rubricScore: accuracy,
         inputHash: inputHashOf(snapshotArray),
       }),
-    }).catch(() => {
+    }).then(refreshMastery, () => {
       // Lets the next visit to the final step retry a lost write.
       run.reported = false
     })
-  }, [stepIndex, sessionId, currentTopic, algorithmNameParam])
+  }, [stepIndex, sessionId, currentTopic, algorithmNameParam, refreshMastery])
 
   // Logging parity (Week 3 3B.6): in Classic there are no predictions, so
   // each step viewed is one VIEW_STEP row with the time spent on it. Time on

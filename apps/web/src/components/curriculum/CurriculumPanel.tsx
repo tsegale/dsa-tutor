@@ -12,6 +12,7 @@ import { Progress, ProgressRing } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/button'
 import { StatusMarker } from './StatusMarker'
+import { MasteryMark } from '@/components/mastery/MasteryMark'
 import { ChevronIcon, LockIcon } from './icons'
 
 // The curriculum as a syllabus, in a persistent left rail: one accordion
@@ -272,6 +273,7 @@ function ModuleSection({
                 <span title={topic.displayName} className={cn('min-w-0 flex-1 truncate text-small', state === 'locked' ? 'text-ink-2' : 'text-ink', isCurrent && 'font-semibold')}>
                   {topic.displayName}
                 </span>
+                <MasteryMark status={topic.mastery.status} className="size-3.5" />
                 {preview ? (
                   <span className="shrink-0 rounded-full bg-surface-sunk px-1.5 text-micro text-ink-2">Preview</span>
                 ) : (

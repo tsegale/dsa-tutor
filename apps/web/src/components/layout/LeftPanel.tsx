@@ -24,6 +24,8 @@ import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
+import { MasteryPanel } from '@/components/mastery/MasteryPanel'
+import { useTopics } from '@/hooks/useTopics'
 import { cn } from '@/lib/utils'
 
 // Custom Array / Random must run the SAME algorithm currently loaded on
@@ -137,7 +139,12 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
   const recentMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions)
   // Classic (the study's plain visualiser) has no AI tools or Code Mode.
-  const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
+  const classicMode = useAlgorithmStore((state) => state.classicMode)
+  const features = conditionFeatures(classicMode)
+  // Shares the ['topics'] cache; each topic carries its mastery (Phase 7D).
+  // Not shown on a Classic topic, which has no junctions to answer.
+  const { data: topics } = useTopics()
+  const mastery = classicMode ? null : (topics?.find((topic) => topic.name === algorithmSlug)?.mastery ?? null)
 
   // Code Mode on: fetch the Python runtime now, in the background, so the
   // first code question does not wait on a ~13MB download.
@@ -223,6 +230,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               </Button>
             </section>
           )}
+          {mastery && <MasteryPanel mastery={mastery} />}
         </div>
 
         {/* Pinned outside the scroll container above so a tall Playback/
