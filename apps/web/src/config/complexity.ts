@@ -47,3 +47,17 @@ export function feynmanChallenge(topicSlug: string | undefined): string | null {
   const clauses = [defend.time, defend.remedy, defend.alternative, defend.space].filter((clause): clause is string => Boolean(clause))
   return `Explain ${joinClauses(clauses)}.`
 }
+
+/**
+ * The three complexity criteria every Feynman rubric ends with, by label.
+ * Mirrors TIME_LABEL, SPACE_LABEL and CLARITY_LABEL in apps/ai/prompts/
+ * complexity.py (its tests check they match).
+ */
+export const COMPLEXITY_CRITERIA_LABELS: readonly string[] = [
+  'Time complexity and what drives it',
+  'Space used, and a comparison',
+  'Explained so a junior developer would follow',
+]
+
+/** The stored 0-100 Feynman score as the "n of 10" the learner sees. */
+export const scoreOutOfTen = (score: number) => Math.round(score / 10)

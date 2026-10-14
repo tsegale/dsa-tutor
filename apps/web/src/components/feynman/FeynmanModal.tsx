@@ -9,7 +9,8 @@ import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { useParams } from 'react-router-dom'
-import { feynmanChallenge } from '@/config/complexity'
+import { feynmanChallenge, scoreOutOfTen } from '@/config/complexity'
+import { FeynmanCriteria } from './FeynmanCriteria'
 import { useMasteryRefresh } from '@/hooks/useMasteryRefresh'
 import FeynmanAvatar from './FeynmanAvatar'
 
@@ -290,7 +291,7 @@ export default function FeynmanModal({
             {result.score !== null && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary">
-                  Explanation score: {result.score}/100
+                  Explanation score: <span className="text-mono-sm text-ink">{scoreOutOfTen(result.score)} of 10</span>
                 </span>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-surface-sunk dark:bg-dark-border">
                   <div
@@ -301,23 +302,7 @@ export default function FeynmanModal({
               </div>
             )}
 
-            {result.missingConcepts.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary">
-                  Concepts to review:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {result.missingConcepts.map((concept) => (
-                    <span
-                      key={concept}
-                      className="rounded-full bg-ai-light px-2.5 py-0.5 text-xs text-ai-foreground"
-                    >
-                      {concept}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            {result.rubricResults.length > 0 && <FeynmanCriteria results={result.rubricResults} />}
 
             {!terminal && awaitingFollowUp && result.followUpQuestion && (
               <div className="flex flex-col gap-2 border-t border-border pt-3 dark:border-dark-border">
@@ -336,7 +321,7 @@ export default function FeynmanModal({
                   disabled={followUpAnswer.trim().length === 0}
                   className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Submit Answer
+                  Submit answer
                 </button>
                 <button
                   type="button"
@@ -354,7 +339,7 @@ export default function FeynmanModal({
                   {result.isComplete ? (
                     <>
                       <CheckmarkIcon />
-                      <span>Great explanation! You clearly understand {algorithmName}.</span>
+                      <span>Your explanation meets every criterion, complexity included.</span>
                     </>
                   ) : (
                     <span className="text-text-primary dark:text-dark-text-primary">

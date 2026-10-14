@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COMPLEXITY, feynmanChallenge } from './complexity'
+import { COMPLEXITY, feynmanChallenge, scoreOutOfTen } from './complexity'
 
 describe('feynmanChallenge', () => {
   it('names the specific claims to defend, from the shared complexity facts', () => {
@@ -27,5 +27,11 @@ describe('complexity facts', () => {
       expect(facts.auxiliarySpace, slug).toBeTruthy()
       expect(facts.contrast?.algorithm, slug).toBeTruthy()
     }
+  })
+})
+
+describe('scoreOutOfTen', () => {
+  it('shows the stored 0-100 score as n of 10', () => {
+    expect([0, 38, 75, 100].map(scoreOutOfTen)).toEqual([0, 4, 8, 10])
   })
 })
