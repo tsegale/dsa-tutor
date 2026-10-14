@@ -78,7 +78,7 @@ describe('computeMastery', () => {
   })
 
   it('leaves out criteria the topic does not offer instead of failing them', () => {
-    const mastery = computeMastery('two-pointer', answers(12, 0, 3), null)
+    const mastery = computeMastery('maze-prim', answers(12, 0, 3), null)
     expect(criterion(mastery, 'FEYNMAN').applicable).toBe(false)
     expect(criterion(mastery, 'CHALLENGE').applicable).toBe(false)
     expect(mastery.status).toBe('MASTERED')

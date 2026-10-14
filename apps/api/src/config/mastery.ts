@@ -93,6 +93,9 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'grid-dfs',
   'grid-dijkstra',
   'grid-astar',
+  'two-pointer',
+  'sliding-window-fixed',
+  'sliding-window-variable',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

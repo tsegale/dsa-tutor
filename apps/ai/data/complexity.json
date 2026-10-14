@@ -1234,7 +1234,18 @@
     "worstNote": "single pass",
     "space": "O(1)",
     "spaceNote": "two pointers only",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Each step moves one pointer inward and the loop stops when they meet, so at most n - 1 steps: O(n). The worst case is no pair that works, or the pair found last, which walks the pointers all the way together; a pair found early ends sooner. The scan needs a sorted array: this run sorts a copy of its input first, O(n log n), which dominates when the input arrives unsorted.",
+    "auxiliarySpace": "O(1) for the scan: two indices. The sorted copy this run makes first is O(n).",
+    "contrast": {
+      "algorithm": "Hash set, one pass",
+      "point": "finds a pair with the target sum in O(n) on unsorted input, but needs O(n) extra space, where two pointers need only O(1) once the array is sorted"
+    },
+    "defend": {
+      "time": "why two pointers find a pair in O(n) on a sorted array",
+      "alternative": "what sorting the input first adds, against checking every pair in O(n²)",
+      "space": "why the scan needs only O(1) extra space where a hash set needs O(n)"
+    }
   },
   "sliding-window-fixed": {
     "best": "O(n)",
@@ -1245,7 +1256,18 @@
     "worstNote": "single pass",
     "space": "O(1)",
     "spaceNote": "running sum only",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The first window sums k elements; each slide after that adds the element entering and subtracts the one leaving, O(1), for n - k slides: O(n) on any input. No input is worse. Recomputing every window from scratch would be O(n × k).",
+    "auxiliarySpace": "O(1): the running sum, the best sum so far and two indices.",
+    "contrast": {
+      "algorithm": "Recomputing each window",
+      "point": "the simplest code, O(n × k), which is O(n²) when the window size grows with n"
+    },
+    "defend": {
+      "time": "why a fixed window of size k is O(n), not O(n × k)",
+      "alternative": "what recomputing each window from scratch would cost",
+      "space": "what extra space it keeps"
+    }
   },
   "sliding-window-variable": {
     "best": "O(n)",
@@ -1256,7 +1278,18 @@
     "worstNote": "each pointer moves at most n times",
     "space": "O(1)",
     "spaceNote": "running sum only",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The right pointer moves n times and the left pointer at most n times, and neither ever moves back, so the total work is at most 2n moves: O(n), even though a while loop sits inside the for loop. An input that makes the window grow and shrink over and over is the worst case, and it still costs at most 2n moves.",
+    "auxiliarySpace": "O(1): the running sum, the best length and two indices. It works because the values are non-negative, so adding an element never shrinks the sum and removing one never grows it.",
+    "contrast": {
+      "algorithm": "Checking every subarray",
+      "point": "O(n²) with prefix sums (O(n³) without), but it also works with negative values, which the shrinking window cannot handle"
+    },
+    "defend": {
+      "time": "why the variable window is O(n) even with a while loop inside the for loop",
+      "alternative": "why it relies on the values being non-negative",
+      "space": "what extra space it keeps"
+    }
   },
   "jump-search": {
     "best": "O(1)",

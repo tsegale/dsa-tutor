@@ -8,28 +8,34 @@ generic rubric by decision (reason recorded in that file).
 Each topic is graded on its mechanics items plus three complexity criteria (time and what drives
 it, space against an alternative, clarity), generated from its facts.
 
-## Two pointers and sliding windows
+## Two pointers and sliding windows (live)
 
 ### two-pointer
 
 - **Pointers at both ends of a sorted array**: explains starting one pointer at each end of a sorted array
 - **Which pointer moves, and why**: explains the rule for which pointer moves: each step moves the pointer whose element can no longer be part of any answer, so one candidate is discarded per step; in the sorted pair-sum this runs here, the left pointer moves when the sum is too small and the right pointer when it is too large
 - **Why sorting makes it safe to discard an end**: explains that the sorted order is what makes discarding one end safe
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Each step moves one pointer inward and the loop stops when they meet, so at most n - 1 steps: O(n). The worst case is no pair that works, or the pair found last, which walks the pointers all the way together; a pair found early ends sooner. The scan needs a sorted array: this run sorts a copy of its input first, O(n log n), which dominates when the input arrives unsorted.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1) for the scan: two indices. The sorted copy this run makes first is O(n).), and contrasts it with a relevant alternative such as Hash set, one pass (finds a pair with the target sum in O(n) on unsorted input, but needs O(n) extra space, where two pointers need only O(1) once the array is sorted)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### sliding-window-fixed
 
 - **A fixed-size window sliding along**: explains keeping a window of fixed size k that slides one place at a time
 - **Updating the sum in O(1) per slide**: explains updating the window sum by adding the entering element and subtracting the leaving one
 - **Tracking the best window**: mentions tracking the best window seen so far
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: The first window sums k elements; each slide after that adds the element entering and subtracts the one leaving, O(1), for n - k slides: O(n) on any input. No input is worse. Recomputing every window from scratch would be O(n × k).
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the running sum, the best sum so far and two indices.), and contrasts it with a relevant alternative such as Recomputing each window (the simplest code, O(n × k), which is O(n²) when the window size grows with n)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### sliding-window-variable
 
 - **Growing the window from the right**: explains growing the window from the right while it still satisfies the condition
 - **Shrinking from the left when it breaks**: explains shrinking it from the left once the condition breaks
 - **Each element enters and leaves once**: explains that each element enters and leaves the window at most once
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: The right pointer moves n times and the left pointer at most n times, and neither ever moves back, so the total work is at most 2n moves: O(n), even though a while loop sits inside the for loop. An input that makes the window grow and shrink over and over is the worst case, and it still costs at most 2n moves.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the running sum, the best length and two indices. It works because the values are non-negative, so adding an element never shrinks the sum and removing one never grows it.), and contrasts it with a relevant alternative such as Checking every subarray (O(n²) with prefix sums (O(n³) without), but it also works with negative values, which the shrinking window cannot handle)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Binary search tree operations (live)
 

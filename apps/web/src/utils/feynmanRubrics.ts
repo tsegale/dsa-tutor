@@ -73,6 +73,9 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Grid DFS',
   'Grid Dijkstra',
   'Grid A*',
+  'Two Pointer Technique',
+  'Sliding Window (Fixed)',
+  'Sliding Window (Variable)',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {
