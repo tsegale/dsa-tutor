@@ -269,7 +269,18 @@
     "worstNote": "skewed tree",
     "space": "O(h)",
     "spaceNote": "call stack, h = tree height",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Each comparison moves one level down, so a search costs one root-to-leaf path, O(h). Values inserted in sorted order build a chain, h = n, so the worst case is O(n); a tree built from a random insert order has expected height about 2 ln n, so the average is O(log n).",
+    "auxiliarySpace": "O(1) iteratively; a recursive search holds one stack frame per level, O(h), which is O(n) on a chain.",
+    "contrast": {
+      "algorithm": "Binary Search",
+      "point": "a guaranteed O(log n) on a sorted array with no tree at all, but each insert into that array costs O(n) shifting, which a balanced tree avoids"
+    },
+    "defend": {
+      "time": "why searching a BST is O(log n) on average but O(n) when values were inserted in sorted order",
+      "alternative": "what binary search on a sorted array gives and loses by comparison",
+      "space": "what space a recursive search needs"
+    }
   },
   "bst-delete": {
     "best": "O(log n)",
@@ -280,7 +291,18 @@
     "worstNote": "skewed tree",
     "space": "O(h)",
     "spaceNote": "call stack, h = tree height",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Finding the node walks one root-to-leaf path, O(h); with two children, finding the in-order successor continues down the same subtree, still within O(h). So a delete is O(h): O(log n) on average for a randomly built tree, O(n) on a chain built from sorted values. The case (leaf, one child, two children) changes the constant work, not the bound.",
+    "auxiliarySpace": "O(1) iteratively (the node, its parent and the successor); a recursive delete uses O(h) stack frames, O(n) on a chain.",
+    "contrast": {
+      "algorithm": "AVL Delete",
+      "point": "the same three cases followed by rebalancing on the way up, so the height, and every delete, stays O(log n) guaranteed"
+    },
+    "defend": {
+      "time": "why deleting from a BST is O(h), even when the node has two children",
+      "alternative": "why a tree built from sorted values makes that O(n), which a self-balancing tree prevents",
+      "space": "what space the delete needs"
+    }
   },
   "tree-inorder": {
     "best": "O(n)",

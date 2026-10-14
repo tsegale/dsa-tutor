@@ -31,21 +31,25 @@ it, space against an alternative, clarity), generated from its facts.
 - **Each element enters and leaves once**: explains that each element enters and leaves the window at most once
 - Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
 
-## Binary search tree operations
+## Binary search tree operations (live)
 
 ### bst-search
 
 - **Going left or right by comparison**: explains comparing the target with the current node and going left if smaller, right if larger
 - **Stopping at a match or an empty child**: explains stopping when the target is found or an empty child is reached
 - **Discarding a subtree each step**: explains that the ordering invariant lets each step discard a whole subtree
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity (worst O(n), average O(log n)) and what drives it, naming the input that produces the worst case and why the average differs: Each comparison moves one level down, so a search costs one root-to-leaf path, O(h). Values inserted in sorted order build a chain, h = n, so the worst case is O(n); a tree built from a random insert order has expected height about 2 ln n, so the average is O(log n).
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1) iteratively; a recursive search holds one stack frame per level, O(h), which is O(n) on a chain.), and contrasts it with a relevant alternative such as Binary Search (a guaranteed O(log n) on a sorted array with no tree at all, but each insert into that array costs O(n) shifting, which a balanced tree avoids)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### bst-delete
 
 - **Removing a leaf directly**: explains removing a leaf directly
 - **Promoting the only child**: explains replacing a node that has one child with that child
 - **Using the in-order successor for two children**: explains replacing a node that has two children with its in-order successor, then deleting the successor
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity (worst O(n), average O(log n)) and what drives it, naming the input that produces the worst case and why the average differs: Finding the node walks one root-to-leaf path, O(h); with two children, finding the in-order successor continues down the same subtree, still within O(h). So a delete is O(h): O(log n) on average for a randomly built tree, O(n) on a chain built from sorted values. The case (leaf, one child, two children) changes the constant work, not the bound.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1) iteratively (the node, its parent and the successor); a recursive delete uses O(h) stack frames, O(n) on a chain.), and contrasts it with a relevant alternative such as AVL Delete (the same three cases followed by rebalancing on the way up, so the height, and every delete, stays O(log n) guaranteed)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Tree traversals (live)
 

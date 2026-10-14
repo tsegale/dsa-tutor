@@ -48,6 +48,8 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Preorder Traversal',
   'Postorder Traversal',
   'Level Order Traversal',
+  'BST Search',
+  'BST Delete',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {
