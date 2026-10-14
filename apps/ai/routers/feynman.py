@@ -4,6 +4,7 @@ import re
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from prompts.complexity import COMPLEXITY_LABELS, complexity_criteria
 from prompts.registry import get_algorithm_context
 from prompts.templates import PROMPT_VERSION
 from services.claude_service import call_claude_for_feedback, model_name
@@ -23,6 +24,10 @@ class FeynmanRequest(BaseModel):
     # only for the anti-gaming overlap check below - never fed back to
     # the model as part of the grading prompt.
     step_descriptions: list[str] = []
+    # The complexity claims the student was asked to defend (Phase 8B),
+    # built by the web from the same facts the rubric's time and space
+    # criteria use. Context for the grader, never a criterion of its own.
+    challenge_prompt: str | None = None
 
 
 class FeynmanRubricItemResult(BaseModel):
@@ -170,7 +175,7 @@ FEYNMAN_RUBRIC.update(
 FEYNMAN_PROMPT = """You are playing the role of a curious but confused beginner student who has never seen {algorithm_name} before.
 
 A peer student just explained {algorithm_name} to you after completing this exercise: {completion_context}
-
+{challenge}
 Their explanation was:
 "{student_explanation}"
 
@@ -204,7 +209,8 @@ DEFAULT_RUBRIC = [
 
 # An explanation judged "complete" (no follow-up needed) once at least this
 # fraction of rubric concepts are met - mirrors the old score >= 75 cutoff,
-# now computed in code instead of asked of the model.
+# now computed in code instead of asked of the model - and, where the rubric
+# has them, every complexity criterion is met (Phase 8B: the interview bar).
 COMPLETION_THRESHOLD = 0.75
 
 _STOPWORDS = {
@@ -287,9 +293,11 @@ def score_feynman_response(rubric: list[tuple[str, str]], data: dict) -> Feynman
         FeynmanRubricItemResult(concept_label=label, met=met_by_label.get(label, False)) for _criterion, label in rubric
     ]
     met_count = sum(1 for r in rubric_results if r.met)
+    # Complexity items weigh the same as mechanics items in the score.
     score = round((met_count / len(rubric_results)) * 100) if rubric_results else 0
     missing_concepts = [r.concept_label for r in rubric_results if not r.met]
-    is_complete = bool(rubric_results) and (met_count / len(rubric_results)) >= COMPLETION_THRESHOLD
+    complexity_met = all(r.met for r in rubric_results if r.concept_label in COMPLEXITY_LABELS)
+    is_complete = bool(rubric_results) and (met_count / len(rubric_results)) >= COMPLETION_THRESHOLD and complexity_met
 
     return FeynmanResponse(
         score=score,
@@ -302,8 +310,13 @@ def score_feynman_response(rubric: list[tuple[str, str]], data: dict) -> Feynman
 
 
 def rubric_for(algorithm_name: str) -> tuple[str, list[tuple[str, str]]]:
+    """A topic's mechanics items followed by its three complexity criteria
+    (Phase 8B). The generic default has no complexity items: it only grades
+    topics without a reviewed rubric, which the UI does not offer."""
     key = _normalize(algorithm_name)
-    return (key, FEYNMAN_RUBRIC[key]) if key in FEYNMAN_RUBRIC else ("default", DEFAULT_RUBRIC)
+    if key not in FEYNMAN_RUBRIC:
+        return ("default", DEFAULT_RUBRIC)
+    return (key, [*FEYNMAN_RUBRIC[key], *complexity_criteria(algorithm_name)])
 
 
 @router.post("/", response_model=FeynmanResponse)
@@ -329,6 +342,7 @@ async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
     prompt = FEYNMAN_PROMPT.format(
         algorithm_name=request.algorithm_name,
         completion_context=request.completion_context,
+        challenge=f"They were asked to: {request.challenge_prompt}\n" if request.challenge_prompt else "",
         student_explanation=request.student_explanation,
         rubric=rubric_text,
     )

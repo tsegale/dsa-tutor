@@ -1,0 +1,845 @@
+{
+  "bubble-sort": {
+    "best": "O(n)",
+    "bestNote": "sorted",
+    "average": "O(n²)",
+    "averageNote": "",
+    "worst": "O(n²)",
+    "worstNote": "reverse sorted",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": true,
+    "worstCaseTrigger": "Reverse-sorted input: every comparison swaps, pass k makes n - k comparisons, and the total is n(n-1)/2. Sorted input stops after one pass with no swaps, O(n); random input still needs about n²/4 swaps, so the average stays O(n²).",
+    "auxiliarySpace": "O(1): it sorts in place with one temporary for the swap, and there is no recursion.",
+    "contrast": {
+      "algorithm": "Insertion Sort",
+      "point": "also O(n²) and in place, but far fewer writes on nearly sorted input"
+    },
+    "defend": {
+      "time": "why Bubble Sort is O(n²) on reverse-sorted input",
+      "remedy": "how the early-exit check makes sorted input O(n)",
+      "space": "why it needs only O(1) extra space"
+    }
+  },
+  "selection-sort": {
+    "best": "O(n²)",
+    "bestNote": "always",
+    "average": "O(n²)",
+    "averageNote": "",
+    "worst": "O(n²)",
+    "worstNote": "always",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false,
+    "worstCaseTrigger": "No input is worse than another: every pass scans the whole unsorted region for its minimum, so it always makes n(n-1)/2 comparisons, sorted or not. Best, average and worst are all O(n²).",
+    "auxiliarySpace": "O(1): in place, with one swap per pass.",
+    "contrast": {
+      "algorithm": "Insertion Sort",
+      "point": "adapts to sorted input in O(n), which Selection Sort cannot, though Selection Sort makes at most n - 1 swaps"
+    },
+    "defend": {
+      "time": "why Selection Sort is O(n²) even on sorted input",
+      "alternative": "why it still makes at most n - 1 swaps",
+      "space": "what extra space it needs"
+    }
+  },
+  "insertion-sort": {
+    "best": "O(n)",
+    "bestNote": "sorted",
+    "average": "O(n²)",
+    "averageNote": "",
+    "worst": "O(n²)",
+    "worstNote": "reverse sorted",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": true,
+    "worstCaseTrigger": "Reverse-sorted input: each key shifts past every element before it, about n²/2 shifts. Sorted input shifts nothing, O(n); on random input each key moves about halfway back, so the average is still O(n²).",
+    "auxiliarySpace": "O(1): in place, holding only the current key.",
+    "contrast": {
+      "algorithm": "Merge Sort",
+      "point": "O(n log n) on every input, at the cost of O(n) extra memory"
+    },
+    "defend": {
+      "time": "why Insertion Sort is O(n²) on reverse-sorted input but O(n) on sorted input",
+      "space": "what extra space it needs"
+    }
+  },
+  "merge-sort": {
+    "best": "O(n log n)",
+    "bestNote": "always",
+    "average": "O(n log n)",
+    "averageNote": "",
+    "worst": "O(n log n)",
+    "worstNote": "always",
+    "space": "O(n)",
+    "spaceNote": "auxiliary array",
+    "stable": true,
+    "worstCaseTrigger": "No input is worse than another: the array halves about log n times and every level merges all n elements, so best, average and worst are all O(n log n).",
+    "auxiliarySpace": "O(n) for the merge buffer, plus O(log n) stack frames for the recursion depth.",
+    "contrast": {
+      "algorithm": "Quick Sort",
+      "point": "the same average time in place with an O(log n) stack, but an O(n²) worst case"
+    },
+    "defend": {
+      "time": "why Merge Sort is O(n log n) on every input",
+      "space": "why it needs O(n) extra memory and how deep its recursion goes"
+    }
+  },
+  "quick-sort": {
+    "best": "O(n log n)",
+    "bestNote": "good pivot",
+    "average": "O(n log n)",
+    "averageNote": "",
+    "worst": "O(n²)",
+    "worstNote": "sorted input",
+    "space": "O(log n)",
+    "spaceNote": "call stack",
+    "stable": false,
+    "worstCaseTrigger": "Sorted or reverse-sorted input with this last-element pivot: each partition peels off one element, so there are n levels of about n comparisons, O(n²). On random input the pivot splits near the middle on average, giving about log n levels and O(n log n).",
+    "auxiliarySpace": "O(log n) for the stack of pending ranges (the recursion) when splits are balanced, O(n) when every split is lopsided; partitioning itself is in place.",
+    "contrast": {
+      "algorithm": "Merge Sort",
+      "point": "guaranteed O(n log n), but O(n) extra memory"
+    },
+    "defend": {
+      "time": "why Quick Sort degrades to O(n²)",
+      "remedy": "how a randomised or median-of-three pivot prevents it",
+      "space": "what space the recursion costs"
+    }
+  },
+  "shell-sort": {
+    "best": "O(n log n)",
+    "bestNote": "nearly sorted",
+    "average": "O(n log² n)",
+    "averageNote": "gap-sequence dependent",
+    "worst": "O(n²)",
+    "worstNote": "poor gap sequence",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "heap-sort": {
+    "best": "O(n log n)",
+    "bestNote": "always",
+    "average": "O(n log n)",
+    "averageNote": "",
+    "worst": "O(n log n)",
+    "worstNote": "always",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "counting-sort": {
+    "best": "O(n + k)",
+    "bestNote": "always",
+    "average": "O(n + k)",
+    "averageNote": "",
+    "worst": "O(n + k)",
+    "worstNote": "always",
+    "space": "O(n + k)",
+    "spaceNote": "count + output arrays",
+    "stable": true
+  },
+  "radix-sort": {
+    "best": "O(nk)",
+    "bestNote": "k = digit count",
+    "average": "O(nk)",
+    "averageNote": "",
+    "worst": "O(nk)",
+    "worstNote": "always",
+    "space": "O(n + k)",
+    "spaceNote": "buckets",
+    "stable": true
+  },
+  "linear-search": {
+    "best": "O(1)",
+    "bestNote": "first element",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "not found",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": true,
+    "worstCaseTrigger": "The target is last or absent: every one of the n elements is checked. At best it is first, O(1); on average about n/2 checks, still O(n).",
+    "auxiliarySpace": "O(1): a single index.",
+    "contrast": {
+      "algorithm": "Binary Search",
+      "point": "O(log n), but only on sorted data"
+    },
+    "defend": {
+      "time": "why Linear Search is O(n) when the target is missing",
+      "alternative": "when Binary Search would be faster and what it requires",
+      "space": "what extra space it uses"
+    }
+  },
+  "binary-search": {
+    "best": "O(1)",
+    "bestNote": "midpoint",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "not found",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": true,
+    "worstCaseTrigger": "The target is absent: each comparison halves the range, so it takes about log2 n + 1 comparisons before the range is empty. The average is also O(log n), because most positions are only reached after nearly every halving.",
+    "auxiliarySpace": "O(1) iteratively (low, high and mid); a recursive version adds O(log n) stack frames.",
+    "contrast": {
+      "algorithm": "Linear Search",
+      "point": "works on unsorted data, but needs O(n)"
+    },
+    "defend": {
+      "time": "why Binary Search needs only O(log n) comparisons",
+      "alternative": "why the array must be sorted for that to hold",
+      "space": "what space the iterative and recursive versions need"
+    }
+  },
+  "bst": {
+    "best": "O(log n)",
+    "bestNote": "balanced",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "skewed tree",
+    "space": "O(n)",
+    "spaceNote": "tree nodes",
+    "stable": false,
+    "worstCaseTrigger": "Inserting values in sorted order: each goes to the right of the last, so the tree becomes a chain and an operation walks O(n) nodes. Random insert order keeps the height near log n, so the average is O(log n).",
+    "auxiliarySpace": "O(n) for the nodes; an operation needs O(1) extra iteratively, or O(h) stack frames recursively, where h is the height.",
+    "contrast": {
+      "algorithm": "AVL Tree",
+      "point": "rebalances with rotations so the height stays O(log n) for any insert order"
+    },
+    "defend": {
+      "time": "why a binary search tree is O(log n) when balanced but O(n) when values arrive sorted",
+      "remedy": "how a self-balancing tree such as AVL prevents it",
+      "space": "what memory the tree and a recursive operation use"
+    }
+  },
+  "bst-search": {
+    "best": "O(log n)",
+    "bestNote": "balanced, target near root",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "skewed tree",
+    "space": "O(h)",
+    "spaceNote": "call stack, h = tree height",
+    "stable": false
+  },
+  "bst-delete": {
+    "best": "O(log n)",
+    "bestNote": "balanced",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "skewed tree",
+    "space": "O(h)",
+    "spaceNote": "call stack, h = tree height",
+    "stable": false
+  },
+  "tree-inorder": {
+    "best": "O(n)",
+    "bestNote": "every node visited once",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "every node visited once",
+    "space": "O(h)",
+    "spaceNote": "call stack, h = tree height",
+    "stable": false
+  },
+  "tree-preorder": {
+    "best": "O(n)",
+    "bestNote": "every node visited once",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "every node visited once",
+    "space": "O(h)",
+    "spaceNote": "call stack, h = tree height",
+    "stable": false
+  },
+  "tree-postorder": {
+    "best": "O(n)",
+    "bestNote": "every node visited once",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "every node visited once",
+    "space": "O(h)",
+    "spaceNote": "call stack, h = tree height",
+    "stable": false
+  },
+  "tree-level-order": {
+    "best": "O(n)",
+    "bestNote": "every node visited once",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "every node visited once",
+    "space": "O(w)",
+    "spaceNote": "queue holds one level, w = max width",
+    "stable": false
+  },
+  "avl-insert": {
+    "best": "O(log n)",
+    "bestNote": "guaranteed by self-balancing",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "guaranteed by self-balancing",
+    "space": "O(log n)",
+    "spaceNote": "call stack, height is always O(log n)",
+    "stable": false
+  },
+  "avl-delete": {
+    "best": "O(log n)",
+    "bestNote": "guaranteed by self-balancing",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "guaranteed by self-balancing",
+    "space": "O(log n)",
+    "spaceNote": "call stack, height is always O(log n)",
+    "stable": false
+  },
+  "rb-insert": {
+    "best": "O(log n)",
+    "bestNote": "guaranteed by self-balancing",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "guaranteed by self-balancing",
+    "space": "O(log n)",
+    "spaceNote": "call stack, height is always O(log n)",
+    "stable": false
+  },
+  "rb-delete": {
+    "best": "O(log n)",
+    "bestNote": "guaranteed by self-balancing",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "guaranteed by self-balancing",
+    "space": "O(log n)",
+    "spaceNote": "call stack, height is always O(log n)",
+    "stable": false
+  },
+  "max-heap-insert": {
+    "best": "O(1)",
+    "bestNote": "new value already satisfies the property",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "sifts up to the root",
+    "space": "O(n)",
+    "spaceNote": "the array itself",
+    "stable": false
+  },
+  "max-heap-delete": {
+    "best": "O(1)",
+    "bestNote": "heap has 0 or 1 elements",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "sifts down to a leaf",
+    "space": "O(n)",
+    "spaceNote": "the array itself",
+    "stable": false
+  },
+  "min-heap-insert": {
+    "best": "O(1)",
+    "bestNote": "new value already satisfies the property",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "sifts up to the root",
+    "space": "O(n)",
+    "spaceNote": "the array itself",
+    "stable": false
+  },
+  "min-heap-delete": {
+    "best": "O(1)",
+    "bestNote": "heap has 0 or 1 elements",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "sifts down to a leaf",
+    "space": "O(n)",
+    "spaceNote": "the array itself",
+    "stable": false
+  },
+  "trie-insert": {
+    "best": "O(m)",
+    "bestNote": "m = word length",
+    "average": "O(m)",
+    "averageNote": "",
+    "worst": "O(m)",
+    "worstNote": "m = word length, independent of trie size",
+    "space": "O(total characters)",
+    "spaceNote": "across all inserted words",
+    "stable": false
+  },
+  "trie-search": {
+    "best": "O(1)",
+    "bestNote": "first character missing",
+    "average": "O(m)",
+    "averageNote": "m = word length",
+    "worst": "O(m)",
+    "worstNote": "m = word length, independent of trie size",
+    "space": "O(1)",
+    "spaceNote": "no extra structure needed",
+    "stable": false
+  },
+  "trie-delete": {
+    "best": "O(m)",
+    "bestNote": "m = word length",
+    "average": "O(m)",
+    "averageNote": "",
+    "worst": "O(m)",
+    "worstNote": "m = word length, independent of trie size",
+    "space": "O(1)",
+    "spaceNote": "no extra structure needed",
+    "stable": false
+  },
+  "bfs": {
+    "best": "O(1)",
+    "bestNote": "start = target",
+    "average": "O(V + E)",
+    "averageNote": "V nodes, E edges",
+    "worst": "O(V + E)",
+    "worstNote": "full traversal",
+    "space": "O(V)",
+    "spaceNote": "queue + visited",
+    "stable": false,
+    "worstCaseTrigger": "Every vertex is enqueued once and every edge examined once (twice in an undirected graph), so O(V + E) on any graph: no input is worse, only larger.",
+    "auxiliarySpace": "O(V) for the queue and the visited set; the queue can hold a whole level at once.",
+    "contrast": {
+      "algorithm": "Depth-First Search",
+      "point": "the same O(V + E), with a stack as deep as the longest path instead of a queue as wide as a level"
+    },
+    "defend": {
+      "time": "why BFS is O(V + E)",
+      "alternative": "why it finds shortest paths in an unweighted graph and DFS does not",
+      "space": "how large the queue can grow"
+    }
+  },
+  "dfs": {
+    "best": "O(1)",
+    "bestNote": "start = target",
+    "average": "O(V + E)",
+    "averageNote": "V nodes, E edges",
+    "worst": "O(V + E)",
+    "worstNote": "full traversal",
+    "space": "O(V)",
+    "spaceNote": "stack + visited",
+    "stable": false,
+    "worstCaseTrigger": "Each vertex is visited once and each edge examined once, so O(V + E) on any graph: no input is worse, only larger.",
+    "auxiliarySpace": "O(V) for the visited set, and the stack (or recursion) can reach depth V along a long path.",
+    "contrast": {
+      "algorithm": "Breadth-First Search",
+      "point": "the same O(V + E), with a queue as wide as a level instead of a stack as deep as a path"
+    },
+    "defend": {
+      "time": "why DFS is O(V + E)",
+      "space": "how deep the stack or recursion can go, and when that becomes a problem"
+    }
+  },
+  "dijkstra": {
+    "best": "O(E)",
+    "bestNote": "target finalised almost immediately",
+    "average": "O(V² + E)",
+    "averageNote": "linear-scan priority queue",
+    "worst": "O(V² + E)",
+    "worstNote": "every node finalised",
+    "space": "O(V)",
+    "spaceNote": "distances + parents",
+    "stable": false,
+    "worstCaseTrigger": "This implementation finds the next closest node by scanning every unvisited node, O(V) for each of V steps, and relaxes each edge once: O(V² + E) on any graph. A binary heap makes each extraction and update O(log V), giving O((V + E) log V), which wins on sparse graphs.",
+    "auxiliarySpace": "O(V) for the distance and parent tables and the visited set; a heap version adds up to O(E) heap entries.",
+    "contrast": {
+      "algorithm": "Bellman-Ford",
+      "point": "handles negative edge weights, at O(V × E)"
+    },
+    "defend": {
+      "time": "why Dijkstra with a binary heap is O((V + E) log V)",
+      "alternative": "what changes if you use an array instead"
+    }
+  },
+  "bellman-ford": {
+    "best": "O(E)",
+    "bestNote": "converges after one pass",
+    "average": "O(V × E)",
+    "averageNote": "",
+    "worst": "O(V × E)",
+    "worstNote": "all V-1 passes needed",
+    "space": "O(V)",
+    "spaceNote": "distances + parents",
+    "stable": false
+  },
+  "floyd-warshall": {
+    "best": "O(V³)",
+    "bestNote": "always - no early exit",
+    "average": "O(V³)",
+    "averageNote": "",
+    "worst": "O(V³)",
+    "worstNote": "always",
+    "space": "O(V²)",
+    "spaceNote": "the distance matrix",
+    "stable": false
+  },
+  "kruskal": {
+    "best": "O(E log E)",
+    "bestNote": "dominated by the sort",
+    "average": "O(E log E)",
+    "averageNote": "",
+    "worst": "O(E log E)",
+    "worstNote": "dominated by the sort",
+    "space": "O(V)",
+    "spaceNote": "union-find structure",
+    "stable": false
+  },
+  "prim": {
+    "best": "O(V²)",
+    "bestNote": "linear-scan candidate search",
+    "average": "O(V²)",
+    "averageNote": "",
+    "worst": "O(V²)",
+    "worstNote": "linear-scan candidate search",
+    "space": "O(V)",
+    "spaceNote": "MST membership + candidate edges",
+    "stable": false
+  },
+  "cycle-detection": {
+    "best": "O(V + E)",
+    "bestNote": "cycle found early",
+    "average": "O(V + E)",
+    "averageNote": "",
+    "worst": "O(V + E)",
+    "worstNote": "no cycle - full traversal",
+    "space": "O(V)",
+    "spaceNote": "colours + call stack",
+    "stable": false
+  },
+  "connected-components": {
+    "best": "O(V + E)",
+    "bestNote": "always - every node/edge visited once",
+    "average": "O(V + E)",
+    "averageNote": "",
+    "worst": "O(V + E)",
+    "worstNote": "always",
+    "space": "O(V)",
+    "spaceNote": "component labels + queue",
+    "stable": false
+  },
+  "topological-sort": {
+    "best": "O(V + E)",
+    "bestNote": "always - every node/edge visited once",
+    "average": "O(V + E)",
+    "averageNote": "",
+    "worst": "O(V + E)",
+    "worstNote": "always",
+    "space": "O(V)",
+    "spaceNote": "colours + call stack",
+    "stable": false
+  },
+  "grid-bfs": {
+    "best": "O(1)",
+    "bestNote": "start adjacent to end",
+    "average": "O(rows × cols)",
+    "averageNote": "",
+    "worst": "O(rows × cols)",
+    "worstNote": "no path exists - full grid explored",
+    "space": "O(rows × cols)",
+    "spaceNote": "visited + frontier",
+    "stable": false
+  },
+  "grid-dfs": {
+    "best": "O(1)",
+    "bestNote": "start adjacent to end",
+    "average": "O(rows × cols)",
+    "averageNote": "",
+    "worst": "O(rows × cols)",
+    "worstNote": "no path exists - full grid explored",
+    "space": "O(rows × cols)",
+    "spaceNote": "visited + stack",
+    "stable": false
+  },
+  "grid-dijkstra": {
+    "best": "O(1)",
+    "bestNote": "start adjacent to end",
+    "average": "O((rows × cols)²)",
+    "averageNote": "linear-scan priority queue",
+    "worst": "O((rows × cols)²)",
+    "worstNote": "no path exists",
+    "space": "O(rows × cols)",
+    "spaceNote": "visited + frontier",
+    "stable": false
+  },
+  "grid-astar": {
+    "best": "O(1)",
+    "bestNote": "start adjacent to end",
+    "average": "O(rows × cols)",
+    "averageNote": "far fewer cells than Dijkstra, heuristic-guided",
+    "worst": "O((rows × cols)²)",
+    "worstNote": "no path exists - degrades toward Dijkstra",
+    "space": "O(rows × cols)",
+    "spaceNote": "visited + frontier",
+    "stable": false
+  },
+  "maze-generation": {
+    "best": "O(rows × cols)",
+    "bestNote": "always - every cell carved once",
+    "average": "O(rows × cols)",
+    "averageNote": "",
+    "worst": "O(rows × cols)",
+    "worstNote": "always",
+    "space": "O(rows × cols)",
+    "spaceNote": "visited set + backtracking stack",
+    "stable": false
+  },
+  "maze-prim": {
+    "best": "O(rows × cols)",
+    "bestNote": "always - every cell carved once",
+    "average": "O(rows × cols)",
+    "averageNote": "",
+    "worst": "O(rows × cols)",
+    "worstNote": "always",
+    "space": "O(rows × cols)",
+    "spaceNote": "frontier wall list",
+    "stable": false
+  },
+  "maze-kruskal": {
+    "best": "O(rows × cols × α(n))",
+    "bestNote": "always - α is the near-constant inverse Ackermann function",
+    "average": "O(rows × cols × α(n))",
+    "averageNote": "",
+    "worst": "O(rows × cols × α(n))",
+    "worstNote": "always",
+    "space": "O(rows × cols)",
+    "spaceNote": "union-find structure + shuffled wall list",
+    "stable": false
+  },
+  "stack": {
+    "best": "O(1)",
+    "bestNote": "push/pop/peek",
+    "average": "O(1)",
+    "averageNote": "",
+    "worst": "O(1)",
+    "worstNote": "push/pop/peek",
+    "space": "O(n)",
+    "spaceNote": "n items on the stack",
+    "stable": false
+  },
+  "queue": {
+    "best": "O(1)",
+    "bestNote": "enqueue/dequeue",
+    "average": "O(1)",
+    "averageNote": "",
+    "worst": "O(1)",
+    "worstNote": "enqueue/dequeue",
+    "space": "O(n)",
+    "spaceNote": "n items in the queue",
+    "stable": false
+  },
+  "circular-queue": {
+    "best": "O(1)",
+    "bestNote": "enqueue/dequeue",
+    "average": "O(1)",
+    "averageNote": "",
+    "worst": "O(1)",
+    "worstNote": "enqueue/dequeue",
+    "space": "O(n)",
+    "spaceNote": "fixed-capacity buffer",
+    "stable": false
+  },
+  "deque": {
+    "best": "O(1)",
+    "bestNote": "either end",
+    "average": "O(1)",
+    "averageNote": "",
+    "worst": "O(1)",
+    "worstNote": "either end",
+    "space": "O(n)",
+    "spaceNote": "n items in the deque",
+    "stable": false
+  },
+  "singly-linked-list": {
+    "best": "O(1)",
+    "bestNote": "insert/delete at front",
+    "average": "O(n)",
+    "averageNote": "search or delete by value",
+    "worst": "O(n)",
+    "worstNote": "insert/delete at back",
+    "space": "O(n)",
+    "spaceNote": "n nodes",
+    "stable": false
+  },
+  "doubly-linked-list": {
+    "best": "O(1)",
+    "bestNote": "insert/delete at either end",
+    "average": "O(n)",
+    "averageNote": "search or delete by value",
+    "worst": "O(n)",
+    "worstNote": "search to the far end",
+    "space": "O(n)",
+    "spaceNote": "n nodes, two pointers each",
+    "stable": false
+  },
+  "circular-linked-list": {
+    "best": "O(1)",
+    "bestNote": "insert at tail",
+    "average": "O(n)",
+    "averageNote": "search or delete by value",
+    "worst": "O(n)",
+    "worstNote": "full loop traversal",
+    "space": "O(n)",
+    "spaceNote": "n nodes",
+    "stable": false
+  },
+  "array-access": {
+    "best": "O(1)",
+    "bestNote": "always",
+    "average": "O(1)",
+    "averageNote": "",
+    "worst": "O(1)",
+    "worstNote": "always",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "array-insert": {
+    "best": "O(1)",
+    "bestNote": "insert at end",
+    "average": "O(n)",
+    "averageNote": "shifts remaining elements",
+    "worst": "O(n)",
+    "worstNote": "insert at front",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "array-delete": {
+    "best": "O(1)",
+    "bestNote": "delete at end",
+    "average": "O(n)",
+    "averageNote": "shifts remaining elements",
+    "worst": "O(n)",
+    "worstNote": "delete at front",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "hash-table-chaining": {
+    "best": "O(1)",
+    "bestNote": "no collision",
+    "average": "O(1)",
+    "averageNote": "good hash, low load factor",
+    "worst": "O(n)",
+    "worstNote": "all keys collide",
+    "space": "O(n)",
+    "spaceNote": "n entries across buckets",
+    "stable": false
+  },
+  "hash-table-probing": {
+    "best": "O(1)",
+    "bestNote": "no collision",
+    "average": "O(1)",
+    "averageNote": "good hash, low load factor",
+    "worst": "O(n)",
+    "worstNote": "heavy clustering",
+    "space": "O(n)",
+    "spaceNote": "n entries in the table",
+    "stable": false
+  },
+  "two-pointer": {
+    "best": "O(n)",
+    "bestNote": "single pass",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "single pass",
+    "space": "O(1)",
+    "spaceNote": "two pointers only",
+    "stable": false
+  },
+  "sliding-window-fixed": {
+    "best": "O(n)",
+    "bestNote": "single pass",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "single pass",
+    "space": "O(1)",
+    "spaceNote": "running sum only",
+    "stable": false
+  },
+  "sliding-window-variable": {
+    "best": "O(n)",
+    "bestNote": "each pointer moves at most n times",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "each pointer moves at most n times",
+    "space": "O(1)",
+    "spaceNote": "running sum only",
+    "stable": false
+  },
+  "jump-search": {
+    "best": "O(1)",
+    "bestNote": "first block",
+    "average": "O(√n)",
+    "averageNote": "",
+    "worst": "O(√n)",
+    "worstNote": "not found",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "interpolation-search": {
+    "best": "O(1)",
+    "bestNote": "exact estimate",
+    "average": "O(log log n)",
+    "averageNote": "uniformly distributed data",
+    "worst": "O(n)",
+    "worstNote": "non-uniform distribution",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "exponential-search": {
+    "best": "O(1)",
+    "bestNote": "target near the start",
+    "average": "O(log n)",
+    "averageNote": "",
+    "worst": "O(log n)",
+    "worstNote": "bounded binary search",
+    "space": "O(1)",
+    "spaceNote": "in-place",
+    "stable": false
+  },
+  "recursion-factorial": {
+    "best": "O(n)",
+    "bestNote": "always n recursive calls",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "always n recursive calls",
+    "space": "O(n)",
+    "spaceNote": "call stack depth",
+    "stable": false
+  },
+  "recursion-fibonacci": {
+    "best": "O(2ⁿ)",
+    "bestNote": "naive, no memoisation",
+    "average": "O(2ⁿ)",
+    "averageNote": "",
+    "worst": "O(2ⁿ)",
+    "worstNote": "naive, no memoisation",
+    "space": "O(n)",
+    "spaceNote": "max call stack depth",
+    "stable": false
+  }
+}

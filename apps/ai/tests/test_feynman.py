@@ -200,18 +200,19 @@ def _post(body=None):
 def _all_labels(met: set[int]):
     return [
         {"concept_label": label, "met": i in met}
-        for i, (_criterion, label) in enumerate(FEYNMAN_RUBRIC["binary_search_tree"])
+        for i, (_criterion, label) in enumerate(feynman.rubric_for("binary_search_tree")[1])
     ]
 
 
 def test_graded_explanation_reports_rubric_key_and_provenance(monkeypatch):
     _stub(monkeypatch, {"rubric_results": _all_labels({0, 1, 2}), "feedback_summary": "Ok I think I get it.", "follow_up_question": "Why?"})
     body = _post()
-    assert body["score"] == 60
+    # 3 of 8: five mechanics items and three complexity criteria, weighted equally.
+    assert body["score"] == 38
     assert body["rubric_key"] == "binary_search_tree"
     assert body["ai_generated"] is True
     assert body["prompt_version"] == PROMPT_VERSION
-    assert [r["met"] for r in body["rubric_results"]] == [True, True, True, False, False]
+    assert [r["met"] for r in body["rubric_results"]] == [True, True, True, False, False, False, False, False]
 
 
 def test_reused_wording_gets_a_follow_up_and_no_score(monkeypatch):

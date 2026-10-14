@@ -50,7 +50,11 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   drops "front of chain" as the misconception (prepending
 #                   is valid chaining); INSERT_BETWEEN guidance covers the
 #                   append and front cases the linked-list topics ask.
-PROMPT_VERSION = "2026-10-14.2"
+#   2026-10-14.3    Feynman rubrics gain three complexity criteria (time and
+#                   what drives it, space against an alternative, clarity),
+#                   written from data/complexity.json, and the prompt names
+#                   the challenge the student was set (Phase 8B).
+PROMPT_VERSION = "2026-10-14.3"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one
