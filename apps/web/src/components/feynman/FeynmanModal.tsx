@@ -8,6 +8,8 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
+import { useParams } from 'react-router-dom'
+import { feynmanChallenge } from '@/config/complexity'
 import { useMasteryRefresh } from '@/hooks/useMasteryRefresh'
 import FeynmanAvatar from './FeynmanAvatar'
 
@@ -81,6 +83,8 @@ export default function FeynmanModal({
   isFullCompletion,
 }: FeynmanModalProps) {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
+  // The complexity claims to defend (Phase 8B), from the topic's facts.
+  const challenge = feynmanChallenge(useParams<{ algorithmName: string }>().algorithmName)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const addXP = useAlgorithmStore((state) => state.addXP)
   const { play } = useSoundEffects()
@@ -155,6 +159,7 @@ export default function FeynmanModal({
         completionContext,
         sessionId,
         stepDescriptions: useAlgorithmStore.getState().snapshotArray.slice(0, stepIndex + 1).map((s) => s.description),
+        challengePrompt: challenge,
       })
       setResult(response)
       if (response.isComplete || !response.followUpQuestion) {
@@ -182,6 +187,7 @@ export default function FeynmanModal({
         completionContext,
         sessionId,
         stepDescriptions: useAlgorithmStore.getState().snapshotArray.slice(0, stepIndex + 1).map((s) => s.description),
+        challengePrompt: challenge,
       })
       setResult(response)
       await finalizeSession(response, combined)
@@ -212,6 +218,13 @@ export default function FeynmanModal({
                 </p>
               </div>
             </div>
+
+            {challenge && (
+              <div className="border-l-4 border-secondary pl-3">
+                <p className="text-micro text-ink-2">Your challenge</p>
+                <p className="text-sm text-ink">{challenge}</p>
+              </div>
+            )}
 
             <textarea
               value={explanation}

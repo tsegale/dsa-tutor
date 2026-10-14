@@ -500,6 +500,9 @@ export interface FeynmanRequest {
    * (see StepLog). Used only for the anti-gaming overlap check on the AI
    * service - never fed back into the grading prompt. */
   stepDescriptions?: string[]
+  /** The complexity claims the student was asked to defend (Phase 8B),
+   * from the topic's facts (apps/web config/complexity.ts). */
+  challengePrompt?: string | null
 }
 
 export interface FeynmanRubricItemResult {

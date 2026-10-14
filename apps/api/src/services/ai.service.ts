@@ -197,6 +197,7 @@ export async function proxyFeynman(request: FeynmanRequest): Promise<FeynmanResp
       completion_context: request.completionContext,
       session_id: request.sessionId,
       step_descriptions: request.stepDescriptions ?? [],
+      challenge_prompt: request.challengePrompt ?? null,
     }),
   })
   if (!response.ok) throw new Error(`AI feynman error: ${response.status}`)

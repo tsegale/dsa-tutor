@@ -185,6 +185,7 @@ export const ai = {
       completionContext: longText,
       sessionId: id,
       stepDescriptions: z.array(longText).max(500).optional(),
+      challengePrompt: longText.nullable().optional(),
     }),
   },
   challenges: {
