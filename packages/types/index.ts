@@ -661,6 +661,9 @@ export interface AlgorithmTopicDTO {
   estimatedMinutes: number
   isLocked: boolean
   masteryPercent: number
+  /** A Practice run of this topic has reached its final step, in any
+   * session (Session.reachedFinalStep). Unlocks Feynman mode (Phase 8A). */
+  practiceRunCompleted: boolean
   /** The mastery rubric (Phase 7B). A badge and a progress signal only:
    * nothing unlocks or locks on it. */
   mastery: TopicMastery

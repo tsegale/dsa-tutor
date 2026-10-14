@@ -16,7 +16,7 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
   // consented yet, and withdrawn participants) sees the full catalogue.
   const restrictToStudyTopics = isActiveParticipant(user ?? { participantCode: null, consentAt: null, withdrawnAt: null })
 
-  const [topics, interactions, rubricRows, masteredAt] = await Promise.all([
+  const [topics, interactions, rubricRows, masteredAt, completedRuns] = await Promise.all([
     prisma.algorithmTopic.findMany({
       where: restrictToStudyTopics ? { name: { in: [...STUDY_TOPICS] } } : undefined,
       orderBy: [{ track: 'asc' }, { order: 'asc' }],
@@ -28,7 +28,16 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
     }),
     masteryRowsByTopic(userId),
     masteredAtByTopic(userId),
+    // Feynman unlocks after a completed Practice run (Phase 8A). The web
+    // sets reachedFinalStep only for Practice runs (Demo never counts), and
+    // Classic runs, which also set it, never offer Feynman.
+    prisma.session.findMany({
+      where: { userId, reachedFinalStep: true, mode: { not: 'CLASSIC' } },
+      select: { algorithmTopicId: true },
+      distinct: ['algorithmTopicId'],
+    }),
   ])
+  const completed = new Set(completedRuns.map((row) => row.algorithmTopicId))
 
   const interactionsByTopicId = new Map<string, typeof interactions>()
   for (const interaction of interactions) {
@@ -58,6 +67,7 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
       isLocked: topic.isLocked,
       // Unlocking reads masteryPercent only (Phase 3.1A); mastery is display.
       masteryPercent,
+      practiceRunCompleted: completed.has(topic.id),
       mastery: computeMastery(topic.name, rubricRows.get(topic.id) ?? [], masteredAt.get(topic.id) ?? null),
     }
   })

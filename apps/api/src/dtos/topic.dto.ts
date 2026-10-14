@@ -10,5 +10,6 @@ export interface TopicDto {
   estimatedMinutes: number
   isLocked: boolean
   masteryPercent: number
+  practiceRunCompleted: boolean
   mastery: TopicMastery
 }
