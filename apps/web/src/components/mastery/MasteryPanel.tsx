@@ -59,7 +59,7 @@ export function MasteryPanel({ mastery, handlers }: { mastery: TopicMastery; han
                 <p className="flex items-baseline justify-between gap-2 text-small text-ink">
                   <span>{view.label}</span>
                   <span className="shrink-0 text-mono-sm text-ink-2">
-                    <span className={cn(view.met && 'text-state-sorted-ink')}>{view.value}</span> / {view.threshold}
+                    <span className={cn(view.met && 'text-ink')}>{view.value}</span> / {view.threshold}
                   </span>
                 </p>
                 <span className="sr-only">{view.met ? 'Met.' : 'Not met.'}</span>
