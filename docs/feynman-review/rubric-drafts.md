@@ -120,35 +120,45 @@ it, space against an alternative, clarity), generated from its facts.
 - **Resolving it from the sibling**: explains resolving it by looking at the sibling's colour and its children
 - Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
 
-## Heaps
+## Heaps (live)
 
 ### max-heap-insert
 
 - **Adding at the next leaf**: explains adding the new value at the end of the array (the next leaf)
 - **Sifting up past smaller parents**: explains sifting up: swapping with the parent while the value is larger
 - **Finding the parent in the array**: explains the array layout: the parent of i is at (i - 1) / 2
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Building a heap bottom-up is O(n), not O(n log n)**: explains that building a heap of n values by n inserts is O(n log n), but bottom-up heapify (sifting down from the last parent back to the root) builds it in O(n), because most nodes sit near the bottom and sift down only a level or two
+- **Time complexity and what drives it** (complexity): states the time complexity (worst O(log n), average O(1)) and what drives it, naming the input that produces the worst case and why the average differs: The new value starts at the next leaf and sifts up, at most one swap per level of a complete tree of height floor(log2 n), so O(log n). The worst case is a value larger than everything in the heap, which climbs all the way to the root. On random values most of the tree is near the bottom, so a new value stops after about 1.6 swaps on average: O(1) expected.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the heap lives in the array, the parent of i is found at (i - 1) / 2, and the sift-up is a loop with no recursion.), and contrasts it with a relevant alternative such as Sorted array (the maximum is always at one end, O(1) to read, but every insert shifts elements, O(n), where the heap only promises O(1) access to the maximum)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### max-heap-delete
 
 - **Moving the last leaf to the root**: explains removing the root, the maximum, and moving the last leaf to the root
 - **Sifting down past the larger child**: explains sifting down: swapping with the larger child while it is larger
 - **Finding the children in the array**: explains the array layout: the children of i are at 2i + 1 and 2i + 2
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(log n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Removing the root moves the last leaf to the top, and it sifts down one level per swap, comparing with both children, so O(log n). The worst case and the usual case are the same: the moved leaf is one of the smaller values, so it nearly always sinks most of the way back to the bottom. The average is O(log n) too.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the heap lives in the array, the children of i are at 2i + 1 and 2i + 2, and the sift-down is a loop with no recursion.), and contrasts it with a relevant alternative such as Unsorted array (O(1) to append a value, but O(n) to find and remove the maximum, where the heap does it in O(log n))
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### min-heap-insert
 
 - **Adding at the next leaf**: explains adding the new value at the end of the array (the next leaf)
 - **Sifting up past larger parents**: explains sifting up: swapping with the parent while the value is smaller
 - **Finding the parent in the array**: explains the array layout: the parent of i is at (i - 1) / 2
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Building a heap bottom-up is O(n), not O(n log n)**: explains that building a heap of n values by n inserts is O(n log n), but bottom-up heapify (sifting down from the last parent back to the root) builds it in O(n), because most nodes sit near the bottom and sift down only a level or two
+- **Time complexity and what drives it** (complexity): states the time complexity (worst O(log n), average O(1)) and what drives it, naming the input that produces the worst case and why the average differs: The new value starts at the next leaf and sifts up, at most one swap per level of a complete tree of height floor(log2 n), so O(log n). The worst case is a value smaller than everything in the heap, which climbs all the way to the root. On random values most of the tree is near the bottom, so a new value stops after about 1.6 swaps on average: O(1) expected.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the heap lives in the array, the parent of i is found at (i - 1) / 2, and the sift-up is a loop with no recursion.), and contrasts it with a relevant alternative such as Sorted array (the minimum is always at one end, O(1) to read, but every insert shifts elements, O(n), where the heap only promises O(1) access to the minimum)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### min-heap-delete
 
 - **Moving the last leaf to the root**: explains removing the root, the minimum, and moving the last leaf to the root
 - **Sifting down past the smaller child**: explains sifting down: swapping with the smaller child while it is smaller
 - **Finding the children in the array**: explains the array layout: the children of i are at 2i + 1 and 2i + 2
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(log n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Removing the root moves the last leaf to the top, and it sifts down one level per swap, comparing with both children, so O(log n). The worst case and the usual case are the same: the moved leaf is one of the larger values, so it nearly always sinks most of the way back to the bottom. The average is O(log n) too.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(1): the heap lives in the array, the children of i are at 2i + 1 and 2i + 2, and the sift-down is a loop with no recursion.), and contrasts it with a relevant alternative such as Unsorted array (O(1) to append a value, but O(n) to find and remove the minimum, where the heap does it in O(log n))
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Tries
 

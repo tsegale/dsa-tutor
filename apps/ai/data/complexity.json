@@ -435,13 +435,24 @@
   "max-heap-insert": {
     "best": "O(1)",
     "bestNote": "new value already satisfies the property",
-    "average": "O(log n)",
-    "averageNote": "",
+    "average": "O(1)",
+    "averageNote": "random values, about 1.6 swaps",
     "worst": "O(log n)",
     "worstNote": "sifts up to the root",
     "space": "O(n)",
     "spaceNote": "the array itself",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The new value starts at the next leaf and sifts up, at most one swap per level of a complete tree of height floor(log2 n), so O(log n). The worst case is a value larger than everything in the heap, which climbs all the way to the root. On random values most of the tree is near the bottom, so a new value stops after about 1.6 swaps on average: O(1) expected.",
+    "auxiliarySpace": "O(1): the heap lives in the array, the parent of i is found at (i - 1) / 2, and the sift-up is a loop with no recursion.",
+    "contrast": {
+      "algorithm": "Sorted array",
+      "point": "the maximum is always at one end, O(1) to read, but every insert shifts elements, O(n), where the heap only promises O(1) access to the maximum"
+    },
+    "defend": {
+      "time": "why inserting into a max-heap is O(log n) in the worst case but O(1) on average",
+      "alternative": "why building a heap from n values bottom-up is O(n), not the O(n log n) of n inserts",
+      "space": "what extra space it needs"
+    }
   },
   "max-heap-delete": {
     "best": "O(1)",
@@ -452,18 +463,40 @@
     "worstNote": "sifts down to a leaf",
     "space": "O(n)",
     "spaceNote": "the array itself",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Removing the root moves the last leaf to the top, and it sifts down one level per swap, comparing with both children, so O(log n). The worst case and the usual case are the same: the moved leaf is one of the smaller values, so it nearly always sinks most of the way back to the bottom. The average is O(log n) too.",
+    "auxiliarySpace": "O(1): the heap lives in the array, the children of i are at 2i + 1 and 2i + 2, and the sift-down is a loop with no recursion.",
+    "contrast": {
+      "algorithm": "Unsorted array",
+      "point": "O(1) to append a value, but O(n) to find and remove the maximum, where the heap does it in O(log n)"
+    },
+    "defend": {
+      "time": "why removing the maximum from a heap is O(log n)",
+      "alternative": "why the leaf moved to the root usually sinks almost to the bottom",
+      "space": "what extra space it needs"
+    }
   },
   "min-heap-insert": {
     "best": "O(1)",
     "bestNote": "new value already satisfies the property",
-    "average": "O(log n)",
-    "averageNote": "",
+    "average": "O(1)",
+    "averageNote": "random values, about 1.6 swaps",
     "worst": "O(log n)",
     "worstNote": "sifts up to the root",
     "space": "O(n)",
     "spaceNote": "the array itself",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "The new value starts at the next leaf and sifts up, at most one swap per level of a complete tree of height floor(log2 n), so O(log n). The worst case is a value smaller than everything in the heap, which climbs all the way to the root. On random values most of the tree is near the bottom, so a new value stops after about 1.6 swaps on average: O(1) expected.",
+    "auxiliarySpace": "O(1): the heap lives in the array, the parent of i is found at (i - 1) / 2, and the sift-up is a loop with no recursion.",
+    "contrast": {
+      "algorithm": "Sorted array",
+      "point": "the minimum is always at one end, O(1) to read, but every insert shifts elements, O(n), where the heap only promises O(1) access to the minimum"
+    },
+    "defend": {
+      "time": "why inserting into a min-heap is O(log n) in the worst case but O(1) on average",
+      "alternative": "why building a heap from n values bottom-up is O(n), not the O(n log n) of n inserts",
+      "space": "what extra space it needs"
+    }
   },
   "min-heap-delete": {
     "best": "O(1)",
@@ -474,7 +507,18 @@
     "worstNote": "sifts down to a leaf",
     "space": "O(n)",
     "spaceNote": "the array itself",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Removing the root moves the last leaf to the top, and it sifts down one level per swap, comparing with both children, so O(log n). The worst case and the usual case are the same: the moved leaf is one of the larger values, so it nearly always sinks most of the way back to the bottom. The average is O(log n) too.",
+    "auxiliarySpace": "O(1): the heap lives in the array, the children of i are at 2i + 1 and 2i + 2, and the sift-down is a loop with no recursion.",
+    "contrast": {
+      "algorithm": "Unsorted array",
+      "point": "O(1) to append a value, but O(n) to find and remove the minimum, where the heap does it in O(log n)"
+    },
+    "defend": {
+      "time": "why removing the minimum from a heap is O(log n)",
+      "alternative": "why the leaf moved to the root usually sinks almost to the bottom",
+      "space": "what extra space it needs"
+    }
   },
   "trie-insert": {
     "best": "O(m)",

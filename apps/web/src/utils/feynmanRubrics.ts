@@ -50,6 +50,10 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Level Order Traversal',
   'BST Search',
   'BST Delete',
+  'Max-Heap Insert',
+  'Max-Heap Delete',
+  'Min-Heap Insert',
+  'Min-Heap Delete',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

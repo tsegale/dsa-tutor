@@ -10,7 +10,7 @@ BST, BFS and DFS already have reviewed rubrics in routers/feynman.py.
 """
 
 # Families whose complexity facts are written and approved (Phase 8.1B).
-LIVE_FAMILIES: frozenset[str] = frozenset({"Tree traversals", "Binary search tree operations"})
+LIVE_FAMILIES: frozenset[str] = frozenset({"Tree traversals", "Binary search tree operations", "Heaps"})
 
 # Approved to stay on the generic rubric, by decision (see the Maze
 # generation family below): never promoted, never given complexity criteria.
@@ -105,6 +105,12 @@ FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
             ("explains adding the new value at the end of the array (the next leaf)", "Adding at the next leaf"),
             ("explains sifting up: swapping with the parent while the value is larger", "Sifting up past smaller parents"),
             ("explains the array layout: the parent of i is at (i - 1) / 2", "Finding the parent in the array"),
+            (
+                "explains that building a heap of n values by n inserts is O(n log n), but bottom-up heapify "
+                "(sifting down from the last parent back to the root) builds it in O(n), because most nodes sit near the "
+                "bottom and sift down only a level or two",
+                "Building a heap bottom-up is O(n), not O(n log n)",
+            ),
         ],
         "max_heap_delete": [
             ("explains removing the root, the maximum, and moving the last leaf to the root", "Moving the last leaf to the root"),
@@ -115,6 +121,12 @@ FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
             ("explains adding the new value at the end of the array (the next leaf)", "Adding at the next leaf"),
             ("explains sifting up: swapping with the parent while the value is smaller", "Sifting up past larger parents"),
             ("explains the array layout: the parent of i is at (i - 1) / 2", "Finding the parent in the array"),
+            (
+                "explains that building a heap of n values by n inserts is O(n log n), but bottom-up heapify "
+                "(sifting down from the last parent back to the root) builds it in O(n), because most nodes sit near the "
+                "bottom and sift down only a level or two",
+                "Building a heap bottom-up is O(n), not O(n log n)",
+            ),
         ],
         "min_heap_delete": [
             ("explains removing the root, the minimum, and moving the last leaf to the root", "Moving the last leaf to the root"),
