@@ -47,35 +47,43 @@ it, space against an alternative, clarity), generated from its facts.
 - **Using the in-order successor for two children**: explains replacing a node that has two children with its in-order successor, then deleting the successor
 - Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
 
-## Tree traversals
+## Tree traversals (live)
 
 ### tree-inorder
 
 - **Left, node, right**: explains the order: left subtree, then the node, then the right subtree
 - **Sorted order on a BST**: explains that on a binary search tree this visits values in sorted order
 - **The stack remembers where to return**: explains that the recursion (or an explicit stack) remembers where to return
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Every node is visited exactly once and each visit does O(1) work, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(h) for the recursion (or the explicit stack this run shows), where h is the height: about log n for a balanced tree, but n for a skewed one, such as a BST built from sorted values.), and contrasts it with a relevant alternative such as Morris in-order traversal (O(1) extra space, by temporarily threading right pointers back to ancestors, at the cost of modifying the tree during the walk)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### tree-preorder
 
 - **Node, left, right**: explains the order: the node first, then its left subtree, then its right
 - **A use: copying the tree**: mentions a use, such as copying a tree or printing its structure
 - **The stack remembers where to return**: explains that the recursion (or an explicit stack) remembers where to return
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Every node is visited exactly once and each visit does O(1) work, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(h) for the recursion (or the explicit stack this run shows), where h is the height: about log n for a balanced tree, but n for a skewed one.), and contrasts it with a relevant alternative such as Level Order Traversal (the same O(n) time, but its queue holds a whole level, about n/2 nodes at the bottom of a complete tree, where pre-order holds one root-to-leaf path)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### tree-postorder
 
 - **Left, right, node**: explains the order: left subtree, right subtree, then the node
 - **A use: children before the parent**: mentions a use, such as deleting a tree or evaluating an expression tree, where children come first
 - **The stack remembers where to return**: explains that the recursion (or an explicit stack) remembers where to return
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Every node is visited exactly once, after both of its subtrees, and each visit does O(1) work, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(h) for the recursion (or the explicit stack this run shows), where h is the height: about log n for a balanced tree, but n for a skewed one.), and contrasts it with a relevant alternative such as Level Order Traversal (the same O(n) time, but a queue as wide as the widest level instead of a stack as deep as the tree: less memory on a deep, narrow tree and more on a wide, shallow one)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### tree-level-order
 
 - **Level by level, left to right**: explains visiting nodes level by level, left to right
 - **Using a queue of children**: explains using a queue: dequeue a node, visit it, enqueue its children
 - **How it differs from depth-first orders**: contrasts it with the depth-first traversals that use a stack
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(n) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Every node is enqueued and dequeued exactly once, O(1) each, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(w) for the queue, where w is the widest level: about n/2 leaves at the bottom of a complete tree, so O(n), but only O(1) for a chain.), and contrasts it with a relevant alternative such as Inorder Traversal (the same O(n) time with an O(h) stack instead, small for a wide balanced tree and large for a deep chain: the opposite trade-off)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Self-balancing trees
 

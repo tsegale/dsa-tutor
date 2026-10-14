@@ -291,7 +291,17 @@
     "worstNote": "every node visited once",
     "space": "O(h)",
     "spaceNote": "call stack, h = tree height",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Every node is visited exactly once and each visit does O(1) work, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.",
+    "auxiliarySpace": "O(h) for the recursion (or the explicit stack this run shows), where h is the height: about log n for a balanced tree, but n for a skewed one, such as a BST built from sorted values.",
+    "contrast": {
+      "algorithm": "Morris in-order traversal",
+      "point": "O(1) extra space, by temporarily threading right pointers back to ancestors, at the cost of modifying the tree during the walk"
+    },
+    "defend": {
+      "time": "why an in-order traversal is O(n) whatever the shape of the tree",
+      "space": "why its stack is O(h), which only reaches O(n) on a skewed tree"
+    }
   },
   "tree-preorder": {
     "best": "O(n)",
@@ -302,7 +312,17 @@
     "worstNote": "every node visited once",
     "space": "O(h)",
     "spaceNote": "call stack, h = tree height",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Every node is visited exactly once and each visit does O(1) work, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.",
+    "auxiliarySpace": "O(h) for the recursion (or the explicit stack this run shows), where h is the height: about log n for a balanced tree, but n for a skewed one.",
+    "contrast": {
+      "algorithm": "Level Order Traversal",
+      "point": "the same O(n) time, but its queue holds a whole level, about n/2 nodes at the bottom of a complete tree, where pre-order holds one root-to-leaf path"
+    },
+    "defend": {
+      "time": "why a pre-order traversal is O(n) whatever the shape of the tree",
+      "space": "why it needs O(h) stack space, which only reaches O(n) on a skewed tree"
+    }
   },
   "tree-postorder": {
     "best": "O(n)",
@@ -313,7 +333,17 @@
     "worstNote": "every node visited once",
     "space": "O(h)",
     "spaceNote": "call stack, h = tree height",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Every node is visited exactly once, after both of its subtrees, and each visit does O(1) work, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.",
+    "auxiliarySpace": "O(h) for the recursion (or the explicit stack this run shows), where h is the height: about log n for a balanced tree, but n for a skewed one.",
+    "contrast": {
+      "algorithm": "Level Order Traversal",
+      "point": "the same O(n) time, but a queue as wide as the widest level instead of a stack as deep as the tree: less memory on a deep, narrow tree and more on a wide, shallow one"
+    },
+    "defend": {
+      "time": "why a post-order traversal is O(n) even though each node waits for both subtrees",
+      "space": "why its stack is O(h), which only reaches O(n) on a skewed tree"
+    }
   },
   "tree-level-order": {
     "best": "O(n)",
@@ -324,7 +354,17 @@
     "worstNote": "every node visited once",
     "space": "O(w)",
     "spaceNote": "queue holds one level, w = max width",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Every node is enqueued and dequeued exactly once, O(1) each, so O(n) on any tree: no shape is worse for time, and the average is the same. Shape only changes the space.",
+    "auxiliarySpace": "O(w) for the queue, where w is the widest level: about n/2 leaves at the bottom of a complete tree, so O(n), but only O(1) for a chain.",
+    "contrast": {
+      "algorithm": "Inorder Traversal",
+      "point": "the same O(n) time with an O(h) stack instead, small for a wide balanced tree and large for a deep chain: the opposite trade-off"
+    },
+    "defend": {
+      "time": "why level-order traversal is O(n)",
+      "space": "why its queue grows with the widest level, up to about n/2 nodes"
+    }
   },
   "avl-insert": {
     "best": "O(log n)",

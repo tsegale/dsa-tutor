@@ -43,6 +43,11 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Heap Sort',
   'Counting Sort',
   'Radix Sort (LSD)',
+  // Modules 4 to 6, family by family as each is approved (Phase 8.1).
+  'Inorder Traversal',
+  'Preorder Traversal',
+  'Postorder Traversal',
+  'Level Order Traversal',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {
