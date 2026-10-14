@@ -746,18 +746,40 @@
     "worstNote": "dominated by the sort",
     "space": "O(V)",
     "spaceNote": "union-find structure",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "Sorting the E edges dominates: O(E log E). Each union-find check afterwards is cheap (this run uses path compression without union by rank, about O(log V) amortised), so O(E log E) on every graph; since E is at most V², log E is at most 2 log V, which makes it O(E log V) as well. No input order is worse; only a denser graph costs more.",
+    "auxiliarySpace": "O(V) for the union-find parent table, plus O(E) for the sorted copy of the edge list; no recursion.",
+    "contrast": {
+      "algorithm": "Prim's Algorithm",
+      "point": "grows one tree from a start node and suits a dense graph (O(V²) with a key array), where Kruskal suits a sparse graph given as an edge list"
+    },
+    "defend": {
+      "time": "why Kruskal is O(E log E) and why the sort dominates",
+      "alternative": "what union-find with path compression contributes",
+      "space": "what space the union-find needs"
+    }
   },
   "prim": {
-    "best": "O(V²)",
-    "bestNote": "linear-scan candidate search",
-    "average": "O(V²)",
+    "best": "O(V × E log E)",
+    "bestNote": "candidates rebuilt and sorted each step",
+    "average": "O(V × E log E)",
     "averageNote": "",
-    "worst": "O(V²)",
-    "worstNote": "linear-scan candidate search",
+    "worst": "O(V × E log E)",
+    "worstNote": "candidates rebuilt and sorted each step",
     "space": "O(V)",
     "spaceNote": "MST membership + candidate edges",
-    "stable": false
+    "stable": false,
+    "worstCaseTrigger": "This run rebuilds the list of edges leaving the tree at every step, O(E), and sorts it, O(E log E), once for each of the V nodes it adds: O(V × E log E), written to show the candidates clearly rather than for speed. No input order is worse; only a denser graph is. The standard array version keeps one cheapest-edge key per node outside the tree and is O(V²); with a binary heap it is O(E log V).",
+    "auxiliarySpace": "O(V) for MST membership and O(E) for the rebuilt candidate list; a heap version holds up to O(E) entries; no recursion.",
+    "contrast": {
+      "algorithm": "Kruskal's Algorithm",
+      "point": "O(E log E) with a sort and union-find, better on a sparse graph, where the O(V²) array version of Prim is better on a dense one"
+    },
+    "defend": {
+      "time": "why Prim's algorithm is O(V²) with a key array and O(E log V) with a binary heap",
+      "alternative": "why this run, which rebuilds and sorts the candidates every step, costs more than either",
+      "space": "what space it needs"
+    }
   },
   "cycle-detection": {
     "best": "O(V + E)",

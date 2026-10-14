@@ -226,21 +226,25 @@ it, space against an alternative, clarity), generated from its facts.
 - **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V²) for the distance matrix, updated in place, plus another O(V²) if a next-hop matrix is kept to rebuild the paths. No recursion.), and contrasts it with a relevant alternative such as Dijkstra's Algorithm from every source (V runs of O((V + E) log V), about O(V E log V): faster on a sparse graph, but it needs non-negative weights, while Floyd-Warshall is simpler, allows negative edges and wins on a dense graph where E is close to V²)
 - **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
-## Minimum spanning trees
+## Minimum spanning trees (live)
 
 ### kruskal
 
 - **Cheapest edges first**: explains sorting the edges by weight and considering the cheapest first
 - **Skipping edges that form a cycle**: explains skipping an edge whose endpoints are already connected, since it would form a cycle
 - **Union-find to track components**: explains using union-find to check and merge components
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(E log E) in both the worst and the average case, and what drives it, naming the input that produces the worst case: Sorting the E edges dominates: O(E log E). Each union-find check afterwards is cheap (this run uses path compression without union by rank, about O(log V) amortised), so O(E log E) on every graph; since E is at most V², log E is at most 2 log V, which makes it O(E log V) as well. No input order is worse; only a denser graph costs more.
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for the union-find parent table, plus O(E) for the sorted copy of the edge list; no recursion.), and contrasts it with a relevant alternative such as Prim's Algorithm (grows one tree from a start node and suits a dense graph (O(V²) with a key array), where Kruskal suits a sparse graph given as an edge list)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ### prim
 
 - **Growing from one node**: explains growing the tree from a starting node
 - **Adding the cheapest edge out of the tree**: explains always adding the cheapest edge from the tree to a node not yet in it
 - **Stopping when all nodes are in**: explains stopping once every node is in the tree
-- Complexity facts still to write (worst-case trigger, auxiliary space, contrast).
+- **Time complexity and what drives it** (complexity): states the time complexity, O(V × E log E) in both the worst and the average case, and what drives it, naming the input that produces the worst case: This run rebuilds the list of edges leaving the tree at every step, O(E), and sorts it, O(E log E), once for each of the V nodes it adds: O(V × E log E), written to show the candidates clearly rather than for speed. No input order is worse; only a denser graph is. The standard array version keeps one cheapest-edge key per node outside the tree and is O(V²); with a binary heap it is O(E log V).
+- **Space used, and a comparison** (complexity): accounts for the auxiliary space, including recursion stack frames where they apply (O(V) for MST membership and O(E) for the rebuilt candidate list; a heap version holds up to O(E) entries; no recursion.), and contrasts it with a relevant alternative such as Kruskal's Algorithm (O(E log E) with a sort and union-find, better on a sparse graph, where the O(V²) array version of Prim is better on a dense one)
+- **Explained so a junior developer would follow** (complexity): explains the complexity so a junior developer would follow it: each bound comes with the mechanism behind it in plain words; stating notation such as O(n log n) with no reason does not meet this
 
 ## Graph properties
 
