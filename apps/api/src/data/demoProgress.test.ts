@@ -101,3 +101,22 @@ describe('seeded mastery statuses (Phase 7F)', () => {
     expect(linear.criteria.filter((c) => c.applicable && !c.met).map((c) => c.id)).toEqual(['FEYNMAN'])
   })
 })
+
+describe('seeded Feynman states (Phase 8F)', () => {
+  const web = readFileSync(join(__dirname, '../../../web/src/utils/feynmanRubrics.ts'), 'utf8')
+  const offeredNames = new Set([...web.match(/new Set\(\[([\s\S]*?)\]\)/)![1].matchAll(/'([^']+)'/g)].map((m) => m[1]))
+  const seed = readFileSync(join(__dirname, '../../prisma/seed.ts'), 'utf8')
+  const displayName = (slug: string) => seed.match(new RegExp(`name: '${slug}', displayName: '([^']+)'`))?.[1] ?? ''
+  const hasRubric = (slug: string) => offeredNames.has(displayName(slug))
+
+  it('has a topic with Feynman mode completed at the passing score', () => {
+    const done = sessions.filter((s) => s.extras.some((e) => e.interactionType === 'FEYNMAN' && (e.rubricScore ?? 0) >= 80))
+    expect(done.map((s) => s.topic)).toContain('bubble-sort')
+  })
+
+  it('has a topic where Feynman mode is unlocked by a finished run but not yet taken', () => {
+    const offered = sessions.filter((s) => s.reachedFinalStep && hasRubric(s.topic) && !s.extras.some((e) => e.interactionType === 'FEYNMAN'))
+    expect(offered.length).toBeGreaterThan(0)
+    expect(offered.map((s) => s.topic)).toContain('selection-sort')
+  })
+})
