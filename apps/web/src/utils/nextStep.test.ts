@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack, Difficulty, type TopicDto } from '@dsa-tutor/types'
+import { EMPTY_MASTERY } from './mastery'
 import { buildSyllabus, planNext } from './syllabus'
 import { nextStep, whenPhrase } from './nextStep'
 
@@ -13,6 +14,7 @@ const topic = (name: string, track: AlgorithmTrack, masteryPercent = 0, displayN
   estimatedMinutes: 5,
   isLocked: false,
   masteryPercent,
+  mastery: EMPTY_MASTERY,
 })
 
 const NOW = new Date('2026-10-13T12:00:00')

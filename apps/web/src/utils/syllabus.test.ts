@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlgorithmTrack, Difficulty, type TopicDto } from '@dsa-tutor/types'
+import { EMPTY_MASTERY } from './mastery'
 import { buildSyllabus, defaultExpandedModule, expandedStorageKey, moduleOfTopic, planNext, readExpanded, writeExpanded } from './syllabus'
 
 const topic = (name: string, track: AlgorithmTrack, masteryPercent = 0, isLocked = false): TopicDto => ({
@@ -12,6 +13,7 @@ const topic = (name: string, track: AlgorithmTrack, masteryPercent = 0, isLocked
   estimatedMinutes: 5,
   isLocked,
   masteryPercent,
+  mastery: EMPTY_MASTERY,
 })
 
 const FULL = [

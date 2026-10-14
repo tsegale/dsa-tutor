@@ -98,6 +98,7 @@ import { fibonacciEngine } from '@/engine/recursionFibonacci'
 import { twoSumSortedEngine } from '@/engine/twoPointer'
 import { fixedWindowEngine, variableWindowEngine } from '@/engine/slidingWindow'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
+import { CHALLENGE_PASS_ACCURACY, inputHashOf } from '@/utils/mastery'
 import { cn } from '@/lib/utils'
 
 /** One VIEW_STEP interaction: a step viewed in Classic, with the time spent on it. */
@@ -632,6 +633,7 @@ function AlgorithmWorkspace() {
 
   function handlePredictionResult(detail: PredictionOutcomeDetail) {
     predictionStatsRef.current.total += 1
+    tallyChallengeAnswer(detail)
     useAlgorithmStore.getState().recordPredictionResult(detail.correct, detail.hintsRequestedForStep)
 
     // Correct or bottomed-out both mean this junction is done with retries;
@@ -742,6 +744,8 @@ function AlgorithmWorkspace() {
           promptVersion: detail.promptVersion ?? null,
           aiModel: detail.aiModel ?? null,
           hintIndexAtResolve: detail.hintIndexAtResolve,
+          attemptIndex: detail.attemptIndex,
+          inputHash: inputHashOf(useAlgorithmStore.getState().snapshotArray),
           // So a human rater reviewing this interaction later (research
           // misconception export) can see what the student was actually
           // looking at, not just its step index.
@@ -920,6 +924,57 @@ function AlgorithmWorkspace() {
       reachedFinalStepSentRef.current = null
     })
   }, [stepIndex, mode, sessionId, isClassic])
+
+  // The AI Challenge run in progress (Phase 7B): its first-attempt tally,
+  // tied to the run's snapshot array so a fresh load starts a fresh tally.
+  // When the run reaches its final step it is logged once as a
+  // CHALLENGE_RESULT, which the mastery rubric's edge-case criterion reads.
+  const challengeRunRef = useRef<{
+    snapshots: readonly AlgorithmSnapshot[]
+    caseId: string
+    firstAttempts: number
+    firstCorrect: number
+    reported: boolean
+  } | null>(null)
+
+  function tallyChallengeAnswer(detail: PredictionOutcomeDetail) {
+    const { activeChallengeType, snapshotArray } = useAlgorithmStore.getState()
+    if (!activeChallengeType || detail.attemptIndex !== 1) return
+    if (challengeRunRef.current?.snapshots !== snapshotArray) {
+      challengeRunRef.current = { snapshots: snapshotArray, caseId: activeChallengeType, firstAttempts: 0, firstCorrect: 0, reported: false }
+    }
+    challengeRunRef.current.firstAttempts += 1
+    if (detail.correct) challengeRunRef.current.firstCorrect += 1
+  }
+
+  useEffect(() => {
+    const { snapshotArray, activeChallengeType, scaffoldingLevel } = useAlgorithmStore.getState()
+    const run = challengeRunRef.current
+    if (!snapshotArray[stepIndex]?.isFinalStep || !sessionId || !activeChallengeType) return
+    if (!run || run.snapshots !== snapshotArray || run.reported || run.firstAttempts === 0) return
+    run.reported = true
+    const accuracy = Math.round((run.firstCorrect / run.firstAttempts) * 100)
+    apiFetch('/api/v1/interactions', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId,
+        stepIndex,
+        predictionSubmitted: null,
+        predictionCorrect: accuracy >= CHALLENGE_PASS_ACCURACY,
+        misconceptionCategory: null,
+        hintsRequested: 0,
+        timeSpentSeconds: 0,
+        scaffoldingLevelAtTime: scaffoldingLevel,
+        interactionType: 'CHALLENGE_RESULT',
+        promptKey: `${currentTopic?.name ?? algorithmNameParam}.${run.caseId}`,
+        rubricScore: accuracy,
+        inputHash: inputHashOf(snapshotArray),
+      }),
+    }).catch(() => {
+      // Lets the next visit to the final step retry a lost write.
+      run.reported = false
+    })
+  }, [stepIndex, sessionId, currentTopic, algorithmNameParam])
 
   // Logging parity (Week 3 3B.6): in Classic there are no predictions, so
   // each step viewed is one VIEW_STEP row with the time spent on it. Time on

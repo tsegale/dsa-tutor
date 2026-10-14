@@ -87,6 +87,8 @@ export interface PredictionOutcomeDetail {
   hintIndexAtResolve: number
   /** The learner's first answer at this junction, right or wrong (see isFirstAttempt). */
   firstAttempt: boolean
+  /** Which answer at this junction this was, from 1 (the mastery rubric's first-attempt accuracy). */
+  attemptIndex: number
   /** Why displayed feedback fell back (validator rule, "truncated",
    * "stream_disconnected", ...); null when everything shown was AI text. */
   aiFailureReason?: string | null
@@ -600,6 +602,8 @@ export default function PredictionZone({
       aiMisconceptionCategory: correct ? null : (response?.aiMisconceptionCategory ?? null),
       hintIndexAtResolve: attempt,
       firstAttempt: isFirstAttempt(verdictCorrect, attempt),
+      // attempt is the wrong-attempt counter, already bumped by a wrong answer.
+      attemptIndex: verdictCorrect ? attempt + 1 : attempt,
       optionCount: currentTiles.length,
       promptVersion: response?.promptVersion ?? null,
       aiModel: response?.aiModel ?? null,
@@ -836,6 +840,7 @@ export default function PredictionZone({
       // Code submissions carry no misconception category, so the loop
       // never acts on them either way.
       firstAttempt: true,
+      attemptIndex: 1,
       isCodeEval: true,
       codeEvalBuggyState:
         !result.isLogicallyCorrect && !result.hasSyntaxError && result.executeVisually && result.resultingState
