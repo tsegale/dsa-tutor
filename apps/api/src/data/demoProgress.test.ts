@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { DEMO_PLAN, PREDICTIONS_PER_TOPIC, buildDemoProgress, nextLevel } from './demoProgress'
+import { DEMO_PLAN, PREDICTIONS_PER_TOPIC, buildDemoProgress, demoMasteryRows, nextLevel } from './demoProgress'
+import { computeMastery } from '../config/mastery'
 
 const NOW = new Date('2026-10-13T12:00:00Z')
 const sessions = buildDemoProgress(NOW)
@@ -72,5 +73,31 @@ describe('seeded support fading', () => {
     expect(nextLevel('HIGH', 90, 2)).toBe('HIGH')
     expect(nextLevel('HIGH', 90, 3)).toBe('MEDIUM')
     expect(nextLevel('LOW', 30, 0)).toBe('HIGH')
+  })
+})
+
+describe('seeded mastery statuses (Phase 7F)', () => {
+  const statuses = new Map(sessions.map((session) => [session.topic, computeMastery(session.topic, demoMasteryRows(session), null)]))
+  const seed = readFileSync(join(__dirname, '../../prisma/seed.ts'), 'utf8')
+  const seeded = [...seed.matchAll(/\{ name: '([^']+)', displayName: /g)].map((m) => m[1])
+
+  it('masters at least two topics with all four criteria offered and met', () => {
+    const full = [...statuses.entries()].filter(
+      ([, mastery]) => mastery.status === 'MASTERED' && mastery.criteria.every((c) => c.applicable && c.met),
+    )
+    expect(full.map(([topic]) => topic).sort()).toEqual(['binary-search', 'bubble-sort'])
+  })
+
+  it('shows every other status at least once, including untouched topics', () => {
+    const counts = [...statuses.values()].map((mastery) => mastery.status)
+    expect(counts).toContain('PROFICIENT')
+    expect(counts).toContain('IN_PROGRESS')
+    expect(seeded.filter((topic) => !statuses.has(topic)).length).toBeGreaterThan(0)
+  })
+
+  it('leaves the Proficient topic one clear step short: its Feynman explanation', () => {
+    const linear = statuses.get('linear-search')!
+    expect(linear.status).toBe('PROFICIENT')
+    expect(linear.criteria.filter((c) => c.applicable && !c.met).map((c) => c.id)).toEqual(['FEYNMAN'])
   })
 })

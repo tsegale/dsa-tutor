@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { buildDemoProgress } from '../src/data/demoProgress'
+import { buildDemoProgress, demoMasteryRows } from '../src/data/demoProgress'
+import { computeMastery, meetsEveryCriterion } from '../src/config/mastery'
 
 // The showcase demo account (Phase 3.1E): a signed-in learner with realistic
 // progress across the curriculum, for walkthroughs and screenshots.
@@ -47,6 +48,14 @@ async function main() {
   }
 
   const correct = sessions.reduce((sum, s) => sum + s.interactions.filter((i) => i.predictionCorrect).length, 0)
+  // The mastery rubric per topic, as the api stores it after each write
+  // (services/mastery.service.ts), so TopicMastery matches what the
+  // account shows.
+  const masteries = sessions.map((session) => {
+    const rows = demoMasteryRows(session)
+    const mastery = computeMastery(session.topic, rows, null)
+    return { session, mastery, masteredAt: meetsEveryCriterion(mastery) ? (rows.at(-1)?.createdAt ?? now) : null }
+  })
   const passwordHash = await bcrypt.hash(password, 12)
 
   await prisma.$transaction(async (tx) => {
@@ -86,13 +95,43 @@ async function main() {
         },
       })
       await tx.interaction.createMany({
-        data: session.interactions.map((interaction) => ({
-          ...interaction,
-          sessionId: created.id,
-          interactionType: 'PREDICTION',
-        })),
+        data: [
+          ...session.interactions.map((interaction) => ({
+            ...interaction,
+            sessionId: created.id,
+            interactionType: 'PREDICTION',
+          })),
+          ...session.extras.map((extra) => ({
+            ...extra,
+            sessionId: created.id,
+            misconceptionCategory: null,
+            predictionSubmitted: null,
+            hintsRequested: 0,
+            scaffoldingLevelAtTime: session.finalLevel,
+          })),
+        ],
       })
     }
+
+    await tx.topicMastery.createMany({
+      data: masteries.map(({ session, mastery, masteredAt }) => {
+        const answered = session.interactions.length
+        const right = session.interactions.filter((i) => i.predictionCorrect).length
+        const percent = Math.round((right / answered) * 100)
+        return {
+          userId: user.id,
+          algorithmTopicId: topicId.get(session.topic)!,
+          overallScore: percent,
+          conceptualScore: percent,
+          proceduralScore: percent,
+          totalPredictions: answered,
+          correctPredictions: right,
+          lastPracticedAt: session.endTime ?? session.startTime,
+          criteriaMet: mastery.criteria.map((criterion) => ({ ...criterion })),
+          masteredAt,
+        }
+      }),
+    })
 
     await tx.user.update({
       where: { id: user.id },
@@ -100,7 +139,11 @@ async function main() {
     })
   }, { maxWait: 20_000, timeout: 180_000 })
 
-  console.log(`Demo account seeded: ${email} (${sessions.length} topics started, ${correct} correct predictions)`)
+  const count = (status: string) => masteries.filter(({ mastery, masteredAt }) => (masteredAt ? 'MASTERED' : mastery.status) === status).length
+  console.log(
+    `Demo account seeded: ${email} (${sessions.length} topics started, ${correct} correct predictions; ` +
+      `${count('MASTERED')} mastered, ${count('PROFICIENT')} proficient, ${count('IN_PROGRESS')} in progress)`,
+  )
 }
 
 main()
