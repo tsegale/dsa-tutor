@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine, type ArrayOperationState } from './arrayOperations'
+import { CriticalJunctionType } from '@dsa-tutor/types'
 
 function lastState(snapshots: AlgorithmSnapshots): ArrayOperationState {
   return snapshots[snapshots.length - 1].dataStructureState as ArrayOperationState
@@ -198,5 +199,53 @@ describe('arrayDeleteEngine', () => {
 
     expect(junctionSteps.length).toBe(1)
     expect(junctionSteps[0].isFinalStep).toBe(true)
+  })
+})
+
+describe('array access is constant time in the animation too', () => {
+  // It used to step from index 0 up to the target, narrating "Locating
+  // index 1 on the way to index 2". That is a linear scan, and it is the
+  // misconception this topic exists to dispel: it contradicted the
+  // pseudocode beside it ("return arr[index]", no loop), the complexity
+  // table (O(1) always) and the Theory tab. A student watching it would
+  // reasonably have concluded that indexing costs O(n).
+
+  it('never narrates walking towards the target', () => {
+    for (const length of [5, 12, 40]) {
+      const input = Array.from({ length }, (_unused, i) => i * 10)
+      for (const target of [0, Math.floor(length / 2), length - 1]) {
+        for (const snapshot of arrayAccessEngine(input, target)) {
+          expect(snapshot.description).not.toMatch(/on the way to/i)
+        }
+      }
+    }
+  })
+
+  it('takes the same number of steps whatever the index', () => {
+    // The clearest statement of O(1) the animation can make: reaching the
+    // last element is no more work than reaching the first.
+    const input = Array.from({ length: 20 }, (_unused, i) => i * 10)
+    const counts = new Set([0, 1, 9, 19].map((target) => arrayAccessEngine(input, target).length))
+    expect(counts.size).toBe(1)
+  })
+
+  it('takes the same number of steps whatever the array length', () => {
+    const counts = new Set(
+      [5, 20, 100].map((length) => arrayAccessEngine(Array.from({ length }, (_u, i) => i), 0).length),
+    )
+    expect(counts.size).toBe(1)
+  })
+
+  it('only ever marks the target index as active', () => {
+    const input = [10, 20, 30, 40, 50]
+    for (const snapshot of arrayAccessEngine(input, 3)) {
+      for (const index of snapshot.activeIndices) expect(index).toBe(3)
+    }
+  })
+
+  it('still asks the student what is stored there', () => {
+    const junctions = arrayAccessEngine([10, 20, 30, 40, 50], 2).filter((s) => s.isPredictionRequired)
+    expect(junctions).toHaveLength(1)
+    expect(junctions[0].criticalJunctionType).toBe(CriticalJunctionType.INDEX_ACCESS)
   })
 })

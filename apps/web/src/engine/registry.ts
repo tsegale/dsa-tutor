@@ -71,6 +71,26 @@ export interface AlgorithmRegistryEntry {
   defaultTarget?: number
 }
 
+/**
+ * The value a search demonstration should look for.
+ *
+ * Every search entry used to pass `Math.random() * 20 + 1`, so pressing
+ * Apply or Random hunted an arbitrary number that was usually not in the
+ * array at all: the run showed a failed search, and showed a different one
+ * each press, which is no use to a student comparing two runs or to a
+ * study that needs the same topic to behave the same way twice.
+ *
+ * The second-to-last element is in the array by construction, and it is
+ * never the first thing any of these algorithms probes, so the mechanism
+ * (halving, jumping, doubling, scanning) is visible before the answer
+ * arrives. For a one or two element array it degrades to the first
+ * element, which is all there is to find.
+ */
+export function searchTargetFor(input: number[]): number {
+  if (input.length === 0) return 0
+  return input[Math.max(0, input.length - 2)]
+}
+
 /** bstSearchEngine/bstDeleteEngine and the traversal engines all operate
  * on an existing tree root rather than a value array - build one from
  * `input` via bstInsertEngine's final snapshot, matching AlgorithmPage's
@@ -726,7 +746,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'linear-search',
     displayName: 'Linear Search',
-    engineFunction: (input) => linearSearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    engineFunction: (input) => linearSearchEngine(input, searchTargetFor(input)),
     track: AlgorithmTrack.SEARCHING,
     difficulty: Difficulty.BEGINNER,
     description: 'Check each element one by one until the target is found.',
@@ -737,18 +757,21 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'binary-search',
     displayName: 'Binary Search',
-    engineFunction: (input) => binarySearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    engineFunction: (input) => binarySearchEngine(input, searchTargetFor(input)),
     track: AlgorithmTrack.SEARCHING,
     difficulty: Difficulty.BEGINNER,
     description: 'Search a sorted array by repeatedly halving the search space.',
     estimatedMinutes: 6,
     defaultInput: [1, 3, 5, 7, 9, 11, 15, 19],
-    defaultTarget: 7,
+    // 7 sits exactly on the first midpoint, so the default run found it on
+    // probe one and Module 2's headline algorithm demonstrated no halving
+    // at all. 15 takes three probes and two halvings.
+    defaultTarget: 15,
   },
   {
     algorithmName: 'jump-search',
     displayName: 'Jump Search',
-    engineFunction: (input) => jumpSearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    engineFunction: (input) => jumpSearchEngine(input, searchTargetFor(input)),
     track: AlgorithmTrack.SEARCHING,
     difficulty: Difficulty.BEGINNER,
     description: 'Jump ahead by √n steps then search linearly within the block.',
@@ -759,7 +782,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'interpolation-search',
     displayName: 'Interpolation Search',
-    engineFunction: (input) => interpolationSearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    engineFunction: (input) => interpolationSearchEngine(input, searchTargetFor(input)),
     track: AlgorithmTrack.SEARCHING,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Estimate the probe position using the value distribution.',
@@ -770,7 +793,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'exponential-search',
     displayName: 'Exponential Search',
-    engineFunction: (input) => exponentialSearchEngine(input, Math.floor(Math.random() * 20) + 1),
+    engineFunction: (input) => exponentialSearchEngine(input, searchTargetFor(input)),
     track: AlgorithmTrack.SEARCHING,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Double the search bound then apply binary search.',

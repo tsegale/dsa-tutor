@@ -105,23 +105,45 @@ export function arrayAccessEngine(input: number[], targetIndex: number): Algorit
     return snapshots
   }
 
-  for (let i = 0; i <= targetIndex; i++) {
-    const isTarget = i === targetIndex
-    snapshots.push(
-      makeSnapshot({
-        stepIndex: stepIndex++,
-        description: isTarget
-          ? `Reached index ${targetIndex}. What value is stored here?`
-          : `Locating index ${i} on the way to index ${targetIndex}.`,
-        pseudocodeLine: isTarget ? ACCESS_LINE.RETURN : ACCESS_LINE.BOUNDS_CHECK,
-        isPredictionRequired: isTarget,
-        state: baseState({ resultIndex: isTarget ? targetIndex : null }),
-        activeIndices: [i],
-        criticalJunctionType: isTarget ? CriticalJunctionType.INDEX_ACCESS : null,
-        junctionDifficulty: isTarget ? JunctionDifficulty.PROCEDURAL : null,
-      }),
-    )
-  }
+  // No walk to the target.
+  //
+  // This used to step from index 0 up to targetIndex, narrating "Locating
+  // index 1 on the way to index 2", which is a linear scan: precisely the
+  // misconception this topic exists to dispel, and contradicting the
+  // pseudocode beside it ("return arr[index]", no loop), the complexity
+  // table (O(1) always) and the Theory tab's lockers analogy. A student
+  // watching it would have reasonably concluded that indexing costs O(n).
+  //
+  // The address arithmetic is the content instead: one multiplication and
+  // one addition, whatever the index. The canvas draws the same sum as an
+  // overlay (utils/arrayOverlays.ts), using the same base and cell size
+  // the Theory tab sketches.
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description:
+        `Index ${targetIndex} is in bounds. Its address is the base address plus ` +
+        `${targetIndex} times the element size: one multiplication and one addition, ` +
+        `no matter how long the array is.`,
+      pseudocodeLine: ACCESS_LINE.BOUNDS_CHECK,
+      isPredictionRequired: false,
+      state: baseState(),
+      activeIndices: [targetIndex],
+    }),
+  )
+
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepIndex++,
+      description: `Jumped straight to index ${targetIndex} in one step. What value is stored here?`,
+      pseudocodeLine: ACCESS_LINE.RETURN,
+      isPredictionRequired: true,
+      state: baseState({ resultIndex: targetIndex }),
+      activeIndices: [targetIndex],
+      criticalJunctionType: CriticalJunctionType.INDEX_ACCESS,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    }),
+  )
 
   snapshots.push(
     makeSnapshot({

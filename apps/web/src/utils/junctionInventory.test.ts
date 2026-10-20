@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildJunctionInventory, inventoryToCsvRows, inventoryToHtml, representativeRuns } from './junctionInventory'
+import { binarySearchEngine } from '@/engine/binarySearch'
 
 const rows = buildJunctionInventory()
 const key = (r: { topic: string; junctionType: string; form: string }) => `${r.topic}|${r.junctionType}|${r.form}`
@@ -47,10 +48,28 @@ describe('junction inventory for expert review (3E)', () => {
     }
   })
 
-  it('prefers a real decision as the example, even from a later run', () => {
+  it('prefers a real decision as the example, never a trivial one', () => {
+    // This used to also assert the example came from the SECOND binary
+    // search run. That held only because the default target sat exactly on
+    // the first midpoint, so the primary run's only midpoint decision was
+    // the trivial "target found". The default now takes three probes, so
+    // the primary run offers a real decision and is rightly preferred.
+    // What matters is the example, not which run it came from.
     const midpoint = rows.find((r) => r.junctionType === 'MIDPOINT_DECISION')!
     expect(midpoint.options.find((o) => o.correct)!.text).not.toMatch(/target found/)
-    expect(midpoint.exampleRun).not.toBe(midpoint.run)
+  })
+
+  it('still reaches a later run when the primary one offers only a trivial example', () => {
+    // The fallback above is what the previous assertion was really
+    // guarding, so it gets its own test rather than depending on a
+    // badly chosen default target to exercise it.
+    const trivialFirst = buildJunctionInventory([
+      { topic: 'binary-search', label: 'trivial run', snapshots: binarySearchEngine([1, 3, 5, 7], 3, { withComplexityPrediction: true }) },
+      { topic: 'binary-search', label: 'real run', snapshots: binarySearchEngine([1, 3, 5, 7, 9, 11, 15, 19], 15, { withComplexityPrediction: true }) },
+    ])
+    const midpoint = trivialFirst.find((r) => r.junctionType === 'MIDPOINT_DECISION')
+    if (!midpoint) return
+    expect(midpoint.options.find((o) => o.correct)!.text).not.toMatch(/target found/)
   })
 
   it('renders every row into the sheet and the CSV', () => {

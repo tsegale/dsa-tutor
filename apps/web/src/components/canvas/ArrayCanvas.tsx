@@ -9,6 +9,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
+import { extractMemoryView, extractSearchRange, extractShiftView, hex } from '@/utils/arrayOverlays'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 import { useResolveColour } from './useResolveColour'
 
@@ -112,6 +113,17 @@ const JUMP_SEARCH_LEGEND: Partial<Record<BarState, string>> = {
   swapping: 'Found',
   sorted: 'Unvisited',
 }
+// Array access, insert and delete never compare, swap or sort anything,
+// so the sorting slots above described operations the algorithm does not
+// perform. These name what the states actually mean here.
+const ARRAY_OPERATION_LEGEND: Partial<Record<BarState, string>> = {
+  neutral: 'Untouched',
+  comparing: 'Target',
+  swapping: 'Moving',
+  sorted: 'Settled',
+}
+const ARRAY_OPERATION_SLUGS = new Set(['array-access', 'array-insert', 'array-delete'])
+
 // Search states come from the search's own state (the midpoint compared,
 // the eliminated range, the found index), not the sorting slots - the old
 // mapping labelled the compared midpoint "Eliminated" and the found element
@@ -131,6 +143,7 @@ const SEARCH_ALGORITHM_SLUGS = new Set([
 
 function legendForContext(canvasType: CanvasType, algorithmSlug: string | undefined): Partial<Record<BarState, string>> {
   if (canvasType === CanvasType.SLIDING_WINDOW) return SLIDING_WINDOW_LEGEND
+  if (algorithmSlug && ARRAY_OPERATION_SLUGS.has(algorithmSlug)) return ARRAY_OPERATION_LEGEND
   if (algorithmSlug === 'jump-search') return JUMP_SEARCH_LEGEND
   if (algorithmSlug && SEARCH_ALGORITHM_SLUGS.has(algorithmSlug)) return SEARCH_LEGEND
   return DEFAULT_LEGEND
@@ -435,6 +448,23 @@ export default function ArrayCanvas({
   const twoPointer = useMemo(
     () => (canvasType === CanvasType.TWO_POINTER ? extractTwoPointer(snapshot?.dataStructureState) : { left: null, right: null }),
     [canvasType, snapshot],
+  )
+  // Colour alone was carrying the whole story on these: a binary search
+  // step recoloured some bars and left the student to infer that the range
+  // had halved, and a shift was only visible as the numbers being somewhere
+  // else in the next frame. See utils/arrayOverlays.ts.
+  const valueCount = useMemo(() => extractDisplayValues(snapshot?.dataStructureState).length, [snapshot])
+  const searchRange = useMemo(
+    () => (isSearch || algorithmSlug === 'jump-search' ? extractSearchRange(snapshot?.dataStructureState, valueCount) : null),
+    [isSearch, algorithmSlug, snapshot, valueCount],
+  )
+  const memoryView = useMemo(
+    () => extractMemoryView(snapshot?.dataStructureState, valueCount),
+    [snapshot, valueCount],
+  )
+  const shiftView = useMemo(
+    () => extractShiftView(snapshot?.dataStructureState, valueCount),
+    [snapshot, valueCount],
   )
   const windowOverlay = useMemo(
     () => (canvasType === CanvasType.SLIDING_WINDOW ? extractWindow(snapshot?.dataStructureState) : { start: null, end: null, sum: null }),
@@ -791,6 +821,116 @@ export default function ArrayCanvas({
             )}
           </>
         )}
+
+      {/* The part of the array still in play. The band shrinking by half
+          is what binary search does; recolouring alone left that to be
+          inferred. Drawn behind nothing: it sits over the bars at low
+          opacity so the values stay readable through it. */}
+      {searchRange && bars[searchRange.low] && bars[searchRange.high] && (
+        <>
+          <motion.rect
+            layout
+            x={bars[searchRange.low].x - 4}
+            y={PADDING - 10}
+            width={bars[searchRange.high].x + bars[searchRange.high].width - bars[searchRange.low].x + 8}
+            height={height - PADDING * 2 + 20}
+            rx={6}
+            // Outline only. A fill over the live range washes the whole
+            // canvas on the first step, where the range is still the
+            // whole array, and the shrinking is the signal anyway.
+            fill="none"
+            stroke="var(--state-current)"
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+            transition={barMove}
+            pointerEvents="none"
+          />
+          <motion.text
+            layout
+            x={bars[searchRange.low].x - 4}
+            y={PADDING - 16}
+            className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
+            transition={barMove}
+          >
+            {`still in play: ${searchRange.high - searchRange.low + 1} of ${valueCount}`}
+          </motion.text>
+        </>
+      )}
+
+      {/* Array access looks exactly like a linear search on a bar chart,
+          so the one thing that makes it constant time is invisible. The
+          address arithmetic is the content. Base and cell size match the
+          Theory tab's schematic for this topic. */}
+      {memoryView && bars[memoryView.index] && (
+        <g pointerEvents="none">
+          <motion.rect
+            layout
+            x={bars[memoryView.index].x}
+            y={height - PADDING + 6}
+            width={bars[memoryView.index].width}
+            height={18}
+            rx={3}
+            fill="color-mix(in srgb, var(--state-current) 18%, transparent)"
+            transition={barMove}
+          />
+          <motion.text
+            layout
+            x={bars[memoryView.index].x + bars[memoryView.index].width / 2}
+            y={height - PADDING + 19}
+            textAnchor="middle"
+            className="fill-text-primary font-mono text-[10px] dark:fill-dark-text-primary"
+            transition={barMove}
+          >
+            {hex(memoryView.address)}
+          </motion.text>
+          {/* Above the baseline, not below it: the index axis labels live
+              down there and the two ran into each other. */}
+          <text
+            x={PADDING}
+            y={PADDING - 16}
+            className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary"
+          >
+            {`base ${hex(memoryView.base)} + ${memoryView.index} x ${memoryView.cellBytes} = ${hex(memoryView.address)}`}
+          </text>
+        </g>
+      )}
+
+      {/* Which cells move, and which way. The cost of an insert or a
+          delete is the shifting, and between two frames that read only as
+          the numbers having landed somewhere else. */}
+      {shiftView && bars[shiftView.from] && bars[shiftView.to] && (
+        <g pointerEvents="none">
+          {bars.slice(shiftView.from, shiftView.to + 1).map((bar) => {
+            const span = bar.width * 0.5
+            const dx = shiftView.direction === 'right' ? span : -span
+            const midX = bar.x + bar.width / 2
+            const y = height - PADDING + 14
+            return (
+              <g key={`shift-${bar.index}`}>
+                <line
+                  x1={midX - dx / 2}
+                  y1={y}
+                  x2={midX + dx / 2}
+                  y2={y}
+                  stroke="var(--state-current)"
+                  strokeWidth={1.5}
+                />
+                <polygon
+                  points={`${midX + dx / 2},${y} ${midX + dx / 2 - Math.sign(dx) * 5},${y - 3} ${midX + dx / 2 - Math.sign(dx) * 5},${y + 3}`}
+                  fill="var(--state-current)"
+                />
+              </g>
+            )
+          })}
+          <text
+            x={PADDING}
+            y={PADDING - 16}
+            className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
+          >
+            {`${shiftView.to - shiftView.from + 1} ${shiftView.to === shiftView.from ? 'cell shifts' : 'cells shift'} ${shiftView.direction}`}
+          </text>
+        </g>
+      )}
 
       {canvasType === CanvasType.SLIDING_WINDOW &&
         windowOverlay.start !== null &&
