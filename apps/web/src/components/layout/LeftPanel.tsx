@@ -40,6 +40,19 @@ import { cn } from '@/lib/utils'
 // the page, not always Bubble Sort - otherwise applying a custom array
 // while viewing e.g. Binary Search would silently swap the canvas back
 // to Bubble Sort while the rest of the page still says Binary Search.
+//
+// The cases below exist only for the engines that need options this
+// switch knows about and the registry's plain engineFunction does not
+// (complexity-prediction junctions, Code Mode, misconception targeting).
+// Everything else now falls through to the registry entry for the open
+// topic, which is where every engine is already declared.
+//
+// It used to fall through to Bubble Sort instead, and three topics had no
+// case: Apply on Array Access, Array Insertion or Array Deletion replaced
+// the canvas with a 34-step Bubble Sort run while the header still said
+// Array Access. A hand-maintained copy of the registry drifted from it,
+// so the fallback is the registry itself now and a topic added there gets
+// a working Apply without touching this file.
 function engineForSlug(
   slug: string | undefined,
   values: number[],
@@ -75,12 +88,19 @@ function engineForSlug(
       // falling through to Bubble Sort.
       return floydWarshallEngine(MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id), MEDIUM_WEIGHTED.adjacency)
     case 'bubble-sort':
-    default:
       return bubbleSortEngine(values, {
         withComplexityPrediction: complexityJunctionEnabled(),
         codeEditorMode,
         topMisconception,
       })
+    default: {
+      const entry = getAlgorithmRegistryEntry(slug ?? '')
+      // Bubble Sort only when the route names a topic the registry does
+      // not know, which should not happen: the page would not have
+      // rendered a canvas for it either.
+      if (!entry) return bubbleSortEngine(values)
+      return entry.engineFunction(values)
+    }
   }
 }
 
@@ -123,6 +143,17 @@ function ChevronIcon({ pointRight }: { pointRight: boolean }) {
     </svg>
   )
 }
+
+/**
+ * Topics whose run is not built from a numeric array, so the generic
+ * "Custom array" box has nothing to act on and is not shown.
+ *
+ * Floyd-Warshall is the only one: it operates on a fixed small weighted
+ * graph via the MATRIX canvas, and it has no contextual controls of its
+ * own either, so it would otherwise fall through to the generic box and
+ * offer an input that changes nothing when applied.
+ */
+export const FIXED_INPUT_SLUGS = new Set(['floyd-warshall'])
 
 function parseArrayInput(input: string): number[] | null {
   const parts = input
@@ -265,6 +296,13 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
           <PipelineTracker stages={pipeline} />
           {algorithmSlug && CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug) ? (
             <AlgorithmControls slug={algorithmSlug} />
+          ) : algorithmSlug && FIXED_INPUT_SLUGS.has(algorithmSlug) ? (
+            <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+              <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">Input</h3>
+              <p className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
+                This algorithm runs on a fixed weighted graph, so there is no array to change.
+              </p>
+            </section>
           ) : (
             <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
               <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
