@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { AlgorithmMode } from '@dsa-tutor/types'
 import { conditionFeatures } from '@/utils/studyCondition'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -8,6 +9,7 @@ import { workedStepNarration } from '@/utils/workedSteps'
 import PseudocodePanel from '@/components/canvas/PseudocodePanel'
 import ComplexityPanel from '@/components/canvas/ComplexityPanel'
 import TheoryPanel from '@/components/canvas/TheoryPanel'
+import DemoAssistant from '@/components/tutor/DemoAssistant'
 import StepLog from './StepLog'
 import ScaffoldingFader from './ScaffoldingFader'
 import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
@@ -166,6 +168,11 @@ export default function RightPanel({
   // Classic (the study's plain visualiser) has no AI Tutor tab.
   const features = conditionFeatures(useAlgorithmStore((state) => state.classicMode))
   const pseudocodeLine = useAlgorithmStore((state) => selectCurrentSnapshot(state)?.pseudocodeLine ?? null)
+  // Demo mode has no predictions, so every box in the AI Tutor tab below
+  // (mistake analysis, Socratic hint, scaffolding fader) is empty there and
+  // the tab was a dead end. Demo gets a free-form assistant instead; the
+  // Socratic machinery stays with Practice and Hands-on.
+  const isDemo = useAlgorithmStore((state) => state.mode === AlgorithmMode.DEMO)
 
   function expandToTab(tab: number) {
     if (collapsed) onToggle()
@@ -301,16 +308,25 @@ export default function RightPanel({
               <TheoryPanel />
             </TabsContent>
             {features.aiTutorTab && (
-            <TabsContent value="1" className="flex flex-1 flex-col gap-3 overflow-y-auto">
-              <ScaffoldingFader />
-              <MistakeAnalysisToast
-                message={mistakeAnalysis}
-                hint={mistakeHint}
-                counterfactualTrace={mistakeCounterfactual}
-                pseudocodeLine={pseudocodeLine}
-                onDismiss={onDismissMistake}
-              />
-              <SocraticGuidanceBox hint={hint} predictionResolved={predictionResolved} />
+            <TabsContent
+              value="1"
+              className={cn('flex flex-1 flex-col gap-3', isDemo ? 'min-h-0 overflow-hidden' : 'overflow-y-auto')}
+            >
+              {isDemo ? (
+                <DemoAssistant />
+              ) : (
+                <>
+                  <ScaffoldingFader />
+                  <MistakeAnalysisToast
+                    message={mistakeAnalysis}
+                    hint={mistakeHint}
+                    counterfactualTrace={mistakeCounterfactual}
+                    pseudocodeLine={pseudocodeLine}
+                    onDismiss={onDismissMistake}
+                  />
+                  <SocraticGuidanceBox hint={hint} predictionResolved={predictionResolved} />
+                </>
+              )}
             </TabsContent>
             )}
             <TabsContent value="2" className="flex-1 overflow-y-auto">
