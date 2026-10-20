@@ -4,104 +4,57 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { login, register, startDemo } from '@/api/auth'
 import { useAuth } from '@/context/AuthContext'
-import { cn } from '@/lib/utils'
 import { DSATutorLogo } from '@/components/brand'
+import AuthTrace from '@/components/brand/AuthTrace'
+import { MODULES } from '@/config/curriculum'
 
-type Role = 'student' | 'instructor'
+/**
+ * Sign in.
+ *
+ * The left half is the argument that this is a working engine: a binary
+ * search actually running, and the curriculum stated in figures. The right
+ * half is the form, as plain as it can be.
+ *
+ * There is no "I am a student / instructor" switch any more. It never
+ * changed how the account authenticated, only where the browser went
+ * afterwards, so an educator who forgot to flick it landed on the student
+ * home. The server already returns the account's real role; that is what
+ * decides now, and it cannot be got wrong.
+ */
 
-const inputClassName =
-  'w-full rounded-md border-2 border-border px-3 py-2 text-sm outline-none transition-colors focus:border-text-muted'
+const TOPIC_COUNT = MODULES.reduce((total, module) => total + module.topics.length, 0)
 
-function BrainIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path
-        d="M9.5 3a3 3 0 0 0-3 3v.3A3 3 0 0 0 5 12a3 3 0 0 0 1.5 5.7V18a3 3 0 0 0 3 3M14.5 3a3 3 0 0 1 3 3v.3A3 3 0 0 1 19 12a3 3 0 0 1-1.5 5.7V18a3 3 0 0 1-3 3M9.5 3v18M14.5 3v18"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
+// Each topic moves through these in order. Named here because the number is
+// part of what the figures below are claiming.
+const STAGES = ['Demo', 'Practice', 'Hands-on', 'Code', 'Feynman'] as const
 
-function ArrowsExchangeIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path d="M3 8h13l-3-3M21 16H8l3 3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function ChartLineIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path d="M3 17l6-6 4 4 8-8M15 7h6v6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-interface Pillar {
-  iconBg: string
-  icon: React.ReactNode
-  title: string
-  desc: string
-}
-
-const PILLARS: Pillar[] = [
-  {
-    iconBg: 'var(--brand-pillar-indigo)',
-    icon: <BrainIcon />,
-    title: 'Socratic AI guidance',
-    desc: 'Real-time misconception feedback powered by Claude, not generic hints',
-  },
-  {
-    iconBg: 'var(--brand-pillar-teal)',
-    icon: <ArrowsExchangeIcon />,
-    title: 'Active state manipulation',
-    desc: 'Drag, swap, and execute array or tree operations directly on the canvas',
-  },
-  {
-    iconBg: 'var(--brand-pillar-amber)',
-    icon: <ChartLineIcon />,
-    title: 'Adaptive scaffolding (ZPD)',
-    desc: 'Hints fade automatically as your mastery score rises, support only where needed',
-  },
+const FIGURES = [
+  { value: String(MODULES.length), label: 'modules' },
+  { value: String(TOPIC_COUNT), label: 'topics' },
+  { value: String(STAGES.length), label: 'stages each' },
 ]
 
-// For reviewers and visitors (4D.6): straight in, no registration. Demo
-// accounts never join the study and have a capped AI allowance.
-function TryDemo() {
-  const navigate = useNavigate()
-  const { refreshUser } = useAuth()
-  const [error, setError] = useState<string | null>(null)
-  const [isStarting, setIsStarting] = useState(false)
+const inputClassName =
+  'w-full rounded-md border border-rule bg-surface px-3 py-2 text-body text-ink outline-none transition-colors placeholder:text-ink-placeholder focus:border-brand focus:ring-2 focus:ring-brand/20'
 
-  async function handleClick() {
-    setError(null)
-    setIsStarting(true)
-    try {
-      await startDemo()
-      await refreshUser()
-      navigate('/')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not start the demo')
-      setIsStarting(false)
-    }
-  }
+const tabTriggerClassName =
+  'flex-1 rounded-none border-b-[1.5px] border-rule bg-transparent py-2.5 text-small font-medium text-ink-2 shadow-none transition-colors data-[state=active]:border-brand data-[state=active]:bg-transparent data-[state=active]:text-ink data-[state=active]:shadow-none'
 
+/** Where an account goes after it authenticates, by its real role. */
+function homeFor(role: string): string {
+  return role === 'EDUCATOR' || role === 'ADMIN' ? '/educator' : '/'
+}
+
+function FieldError({ message }: { message: string | null }) {
+  if (!message) return null
   return (
-    <div className="mt-8 border-t border-border pt-6 text-center">
-      <p className="mb-2 text-[11px] text-text-muted">Just looking?</p>
-      <Button type="button" variant="outline" className="w-full" onClick={() => void handleClick()} disabled={isStarting}>
-        {isStarting ? 'Starting...' : 'Try the demo without an account'}
-      </Button>
-      <p className="mt-2 text-[11px] text-text-muted">A temporary account for one day. It never counts as study data.</p>
-      {error && <p className="mt-2 text-xs text-error">{error}</p>}
-    </div>
+    <p role="alert" className="text-small text-error">
+      {message}
+    </p>
   )
 }
 
-function LoginForm({ role }: { role: Role }) {
+function LoginForm() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   const [email, setEmail] = useState('')
@@ -114,11 +67,11 @@ function LoginForm({ role }: { role: Role }) {
     setError(null)
     setIsSubmitting(true)
     try {
-      await login(email, password)
+      const result = await login(email, password)
       await refreshUser()
-      navigate(role === 'instructor' ? '/educator' : '/')
+      navigate(homeFor(result.user.role))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Could not sign in')
     } finally {
       setIsSubmitting(false)
     }
@@ -127,12 +80,13 @@ function LoginForm({ role }: { role: Role }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="login-email" className="text-sm font-medium text-text-primary">
+        <label htmlFor="login-email" className="text-small font-medium text-ink">
           Email
         </label>
         <input
           id="login-email"
           type="email"
+          autoComplete="email"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -140,21 +94,22 @@ function LoginForm({ role }: { role: Role }) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="login-password" className="text-sm font-medium text-text-primary">
+        <label htmlFor="login-password" className="text-small font-medium text-ink">
           Password
         </label>
         <input
           id="login-password"
           type="password"
+          autoComplete="current-password"
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className={inputClassName}
         />
       </div>
-      {error && <p className="text-sm text-error">{error}</p>}
-      <Button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-brand-indigo hover:bg-brand-indigo/90">
-        {isSubmitting ? 'Logging in...' : 'Login'}
+      <FieldError message={error} />
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? 'Signing in' : 'Sign in'}
       </Button>
     </form>
   )
@@ -174,14 +129,13 @@ function RegisterForm() {
     setError(null)
     setIsSubmitting(true)
     try {
-      // Self-registration always creates a STUDENT account (see apps/api
-      // auth.service.ts) - educators are provisioned separately, so this
-      // always lands on the student home, never /educator.
-      await register(email, password, name)
+      // Self-registration always creates a STUDENT account (apps/api
+      // auth.service.ts); educators are provisioned separately.
+      const result = await register(email, password, name)
       await refreshUser()
-      navigate('/')
+      navigate(homeFor(result.user.role))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(err instanceof Error ? err.message : 'Could not create the account')
     } finally {
       setIsSubmitting(false)
     }
@@ -190,12 +144,13 @@ function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="register-name" className="text-sm font-medium text-text-primary">
+        <label htmlFor="register-name" className="text-small font-medium text-ink">
           Name
         </label>
         <input
           id="register-name"
           type="text"
+          autoComplete="name"
           required
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -203,12 +158,13 @@ function RegisterForm() {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="register-email" className="text-sm font-medium text-text-primary">
+        <label htmlFor="register-email" className="text-small font-medium text-ink">
           Email
         </label>
         <input
           id="register-email"
           type="email"
+          autoComplete="email"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -216,132 +172,157 @@ function RegisterForm() {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="register-password" className="text-sm font-medium text-text-primary">
+        <label htmlFor="register-password" className="text-small font-medium text-ink">
           Password
         </label>
         <input
           id="register-password"
           type="password"
+          autoComplete="new-password"
           required
           minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className={inputClassName}
+          aria-describedby="register-password-hint"
         />
+        <p id="register-password-hint" className="text-micro font-normal text-ink-2">
+          At least 8 characters.
+        </p>
       </div>
-      {error && <p className="text-sm text-error">{error}</p>}
-      <Button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-brand-indigo hover:bg-brand-indigo/90">
-        {isSubmitting ? 'Creating account...' : 'Register'}
+      <FieldError message={error} />
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? 'Creating account' : 'Create account'}
       </Button>
     </form>
   )
 }
 
-export default function AuthPage() {
-  const [role, setRole] = useState<Role>('student')
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+// For reviewers and visitors (4D.6): straight in, no registration. Demo
+// accounts never join the study and have a capped AI allowance.
+function TryDemo() {
+  const navigate = useNavigate()
+  const { refreshUser } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const [isStarting, setIsStarting] = useState(false)
+
+  async function handleClick() {
+    setError(null)
+    setIsStarting(true)
+    try {
+      const result = await startDemo()
+      await refreshUser()
+      navigate(homeFor(result.user.role))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start the demo')
+      setIsStarting(false)
+    }
+  }
 
   return (
-    <div className="flex h-screen w-full">
-      <div
-        className="hidden flex-col justify-between p-8 text-white md:flex"
-        style={{ width: '45%', backgroundColor: 'var(--brand-indigo)' }}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-rule" />
+        <span className="text-micro text-ink-2">or</span>
+        <span className="h-px flex-1 bg-rule" />
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => void handleClick()}
+        disabled={isStarting}
       >
-        <DSATutorLogo variant="white" showTagline />
+        {isStarting ? 'Starting' : 'Explore without an account'}
+      </Button>
+      <p className="text-micro font-normal text-ink-2">
+        A temporary account that lasts one day. It never counts as study data.
+      </p>
+      <FieldError message={error} />
+    </div>
+  )
+}
 
-        <div className="flex flex-1 flex-col justify-center gap-6 py-8">
-          <div>
-            <h1 className="text-[18px] leading-[1.5] font-medium text-white">
-              Master data structures through adaptive AI scaffolding and active state manipulation
-            </h1>
-            <p className="mt-3 text-[12px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              A research-grade ITS grounded in Vygotsky's Zone of Proximal Development, not a passive visualiser
+export default function AuthPage() {
+  return (
+    <div className="flex min-h-screen w-full flex-col lg:flex-row">
+      {/* The evidence half. Inked ground with no brand colour inside it:
+          the one saturated thing on this page should be the button you are
+          meant to press. bg-ink/text-paper rather than a literal dark, so
+          the panel inverts with the theme like the tooltip does. */}
+      <section className="hidden flex-col justify-between bg-ink p-10 lg:flex lg:w-[52%] xl:p-14">
+        <DSATutorLogo variant="inverted" showTagline />
+
+        {/* my-auto rather than relying on justify-between alone: on a tall
+            viewport that stranded the logo and the footer at the extremes
+            with the argument floating in a lot of empty ground. */}
+        <div className="my-auto flex max-w-[460px] flex-col gap-9 py-10">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-h1 text-paper">An algorithms course that watches you think.</h1>
+            <p className="text-body text-paper/60">
+              Every topic is worked in five stages, from watching it run to explaining it back.
+              The tutor reads what you predict at each decision point and answers the mistake you
+              actually made.
             </p>
           </div>
 
-          <div className="flex flex-col" style={{ gap: 8 }}>
-            {PILLARS.map((pillar) => (
-              <div
-                key={pillar.title}
-                className="flex gap-2.5 rounded-[10px] bg-white/[0.08] dark:bg-white/[0.12]"
-                style={{ border: '0.5px solid rgba(255,255,255,0.15)', padding: '10px 12px' }}
-              >
-                <div
-                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-white"
-                  style={{ backgroundColor: pillar.iconBg }}
-                >
-                  {pillar.icon}
+          <AuthTrace />
+
+          <div className="flex flex-col gap-4">
+            <dl className="flex gap-8">
+              {FIGURES.map((figure) => (
+                <div key={figure.label} className="flex flex-col gap-0.5">
+                  <dt className="sr-only">{figure.label}</dt>
+                  <dd className="font-mono text-[26px] leading-none text-paper">{figure.value}</dd>
+                  <p className="text-micro font-normal text-paper/50">{figure.label}</p>
                 </div>
-                <div>
-                  <p className="text-[11px] font-medium text-brand-on-indigo">{pillar.title}</p>
-                  <p className="mt-0.5 text-[10px] leading-[1.35] text-brand-on-indigo-muted">{pillar.desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </dl>
+            <p className="font-mono text-[11px] text-paper/35">{STAGES.join('  ->  ')}</p>
           </div>
         </div>
-      </div>
 
-      <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-center bg-background px-10 py-16">
-        <div className="w-full max-w-[320px]">
-          <h1 className="mb-8 text-center text-lg font-semibold text-text-primary md:hidden">DSA Tutor</h1>
+        <p className="text-micro font-normal text-paper/40">
+          Honours research project, Department of Computer Science, University of Namibia.
+        </p>
+      </section>
 
-          {activeTab === 'login' && (
-            <div className="mb-6">
-              <p className="text-micro mb-2 text-text-muted">I am a</p>
-              <div className="flex gap-0.5 rounded-lg border-[0.5px] border-border bg-surface-sunk p-[3px]">
-                {(['student', 'instructor'] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setRole(option)}
-                    className={cn(
-                      'flex-1 rounded-md py-1.5 text-sm font-medium capitalize transition-colors',
-                      role === option
-                        ? 'border-[0.5px] border-border bg-card text-tone-indigo'
-                        : 'border-[0.5px] border-transparent text-text-secondary',
-                    )}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* The form half. */}
+      <main className="flex flex-1 items-center justify-center bg-paper px-6 py-12 sm:px-10">
+        <div className="flex w-full max-w-[380px] flex-col gap-7">
+          <div className="flex flex-col items-center gap-3 lg:hidden">
+            <DSATutorLogo showTagline />
+          </div>
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
-            <TabsList className="w-full bg-transparent p-0">
-              <TabsTrigger
-                value="login"
-                className="flex-1 rounded-none border-b-2 border-transparent bg-transparent text-text-secondary shadow-none data-[state=active]:border-tone-indigo data-[state=active]:bg-transparent data-[state=active]:text-tone-indigo data-[state=active]:shadow-none"
-              >
-                Login
+          {/* Not "Sign in": that word is already the tab and the button,
+              and saying it three times in one column reads as a mistake. */}
+          <div className="flex flex-col gap-1">
+            <h2 className="text-h2 text-ink">Your account</h2>
+            <p className="text-small text-ink-2">
+              Sign in to pick up where you left the curriculum, or create one to start it.
+            </p>
+          </div>
+
+          <Tabs defaultValue="login" className="gap-6">
+            <TabsList className="w-full gap-0 bg-transparent p-0">
+              <TabsTrigger value="login" className={tabTriggerClassName}>
+                Sign in
               </TabsTrigger>
-              <TabsTrigger
-                value="register"
-                className="flex-1 rounded-none border-b-2 border-transparent bg-transparent text-text-secondary shadow-none data-[state=active]:border-tone-indigo data-[state=active]:bg-transparent data-[state=active]:text-tone-indigo data-[state=active]:shadow-none"
-              >
-                Register
+              <TabsTrigger value="register" className={tabTriggerClassName}>
+                Create account
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="login" className="mt-6">
-              <LoginForm role={role} />
+            <TabsContent value="login">
+              <LoginForm />
             </TabsContent>
-            <TabsContent value="register" className="mt-6">
+            <TabsContent value="register">
               <RegisterForm />
             </TabsContent>
           </Tabs>
 
           <TryDemo />
-
-          <p className="mt-8 text-center text-[11px] text-text-muted">
-            Forgot password?{' '}
-            <button type="button" className="font-medium text-tone-indigo hover:underline">
-              Reset it
-            </button>
-          </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
