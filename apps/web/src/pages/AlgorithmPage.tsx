@@ -430,6 +430,13 @@ function AlgorithmWorkspace() {
   // visualiser, never labelled as such. The status is already cached by
   // StudyGate, so this is known before the first paint.
   const isClassic = isClassicTopic(studyStatus, algorithmNameParam)
+  // Has this learner worked this topic before? A completed Practice run in
+  // any session, or any mastery recorded against it. Decides whether the
+  // topic opens in Demo (meet it) or Practice (continue it); undefined
+  // while the topic list is still loading, which the mode effect waits on.
+  const topicSeenBefore = currentTopic
+    ? currentTopic.practiceRunCompleted || currentTopic.masteryPercent > 0
+    : undefined
 
   // A level pinned on the profile applies from the moment a topic opens, not
   // only after the first answer (Phase 6D). Adaptive leaves the level alone.
@@ -1045,16 +1052,33 @@ function AlgorithmWorkspace() {
   // first click "did nothing"). useLayoutEffect fires before paint, so
   // there's nothing on screen yet for a click to race against.
   useLayoutEffect(() => {
-    // Practice (predicting, not just watching) is the default the study
-    // argues for - Demo is one explicit click away via the mode toggle or
-    // an explicit ?mode=DEMO link, never the silent fallback (see
-    // remediation doc 9.8).
-    // Classic ignores ?mode= entirely and locks the mode (see
-    // utils/studyCondition.ts), so no link reaches a tutor mode.
     setClassicMode(isClassic)
-    if (!isClassic) setMode(initialMode(searchParams.get('mode'), false))
+  }, [isClassic, setClassicMode])
+
+  // Seeded once per topic, and only once the topic list has arrived, so a
+  // later refetch can never stomp a mode the student chose by hand.
+  const seededModeFor = useRef<string | null>(null)
+  useLayoutEffect(() => {
+    if (isClassic) return
+    // Waiting on the topic list: which mode is right depends on whether
+    // this learner has worked the topic, and guessing before it lands
+    // would visibly flip the mode under them a moment later.
+    if (topicSeenBefore === undefined) return
+    if (seededModeFor.current === algorithmNameParam) return
+    seededModeFor.current = algorithmNameParam ?? null
+    // A topic the learner has not worked yet opens in Demo, the first step
+    // of the pipeline, where the Theory briefing is the opening tab. One
+    // they have already worked opens in Practice, so returning does not
+    // make them watch it again. A study participant always starts in
+    // Practice (remediation doc 9.8). See utils/studyCondition.ts.
+    setMode(
+      initialMode(searchParams.get('mode'), false, {
+        participant: isActiveParticipant,
+        seenBefore: topicSeenBefore,
+      }),
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClassic])
+  }, [isClassic, isActiveParticipant, topicSeenBefore, algorithmNameParam])
 
   // Leaving the page must not leave the store locked in Classic.
   useEffect(() => () => setClassicMode(false), [setClassicMode])

@@ -65,7 +65,46 @@ describe('Classic serves no tutor affordances', () => {
     expect(initialMode('practice', true)).toBe(AlgorithmMode.DEMO)
     expect(initialMode('PRACTICE', true)).toBe(AlgorithmMode.DEMO)
     expect(initialMode('HANDS_ON', true)).toBe(AlgorithmMode.DEMO)
-    expect(initialMode(null, false)).toBe(AlgorithmMode.PRACTICE)
+  })
+})
+
+describe('initialMode outside Classic', () => {
+  it('opens a topic the learner has not worked in Demo', () => {
+    // Demo is step one of the pipeline and the only mode where the Theory
+    // briefing is the opening tab. Starting in Practice meant a first-time
+    // learner was asked to predict before anything had explained the
+    // algorithm to them.
+    expect(initialMode(null, false, { seenBefore: false })).toBe(AlgorithmMode.DEMO)
+  })
+
+  it('opens a topic they have already worked in Practice', () => {
+    expect(initialMode(null, false, { seenBefore: true })).toBe(AlgorithmMode.PRACTICE)
+  })
+
+  it('always starts a study participant in Practice', () => {
+    // Remediation doc 9.8: the study is about predicting rather than
+    // watching, so Demo must never be a participant's silent default. That
+    // argument is about participants, not about every student's first
+    // encounter with a topic.
+    expect(initialMode(null, false, { participant: true, seenBefore: false })).toBe(AlgorithmMode.PRACTICE)
+    expect(initialMode(null, false, { participant: true, seenBefore: true })).toBe(AlgorithmMode.PRACTICE)
+  })
+
+  it('lets an explicit mode in the URL win, even for a participant', () => {
+    expect(initialMode('DEMO', false, { participant: true, seenBefore: true })).toBe(AlgorithmMode.DEMO)
+    expect(initialMode('HANDS_ON', false, { seenBefore: false })).toBe(AlgorithmMode.HANDS_ON)
+  })
+
+  it('ignores a mode it does not recognise rather than failing open', () => {
+    expect(initialMode('nonsense', false, { seenBefore: true })).toBe(AlgorithmMode.PRACTICE)
+    expect(initialMode('demo', false, { seenBefore: true })).toBe(AlgorithmMode.PRACTICE)
+  })
+
+  it('defaults to Demo when nothing is known about the topic yet', () => {
+    // The page waits for the topic list before seeding, so this is the
+    // safe fallback rather than the normal path: watching is never the
+    // wrong thing to be shown first.
+    expect(initialMode(null, false)).toBe(AlgorithmMode.DEMO)
   })
 })
 

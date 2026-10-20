@@ -83,10 +83,41 @@ export function conditionFeatures(classic: boolean): ConditionFeatures {
   }
 }
 
-/** The page's starting mode. Classic ignores ?mode= entirely, so no link reaches a tutor mode. */
-export function initialMode(modeParam: string | null, classic: boolean): AlgorithmMode {
+export interface InitialModeContext {
+  /** An active, consented, non-withdrawn study participant. */
+  participant?: boolean
+  /** This learner has already worked this topic: a completed Practice run,
+   * or any mastery recorded against it. */
+  seenBefore?: boolean
+}
+
+/**
+ * The page's starting mode.
+ *
+ * Classic ignores ?mode= entirely, so no link reaches a tutor mode, and an
+ * explicit ?mode=DEMO always wins elsewhere.
+ *
+ * Otherwise this is the first step of the learning pipeline: Demo is where
+ * a learner meets an algorithm, which is why the Theory briefing is the
+ * opening tab there. A topic they have already worked opens in Practice
+ * instead, so coming back does not make them watch the animation again.
+ *
+ * A study participant always starts in Practice. Remediation doc 9.8
+ * argues Demo must never be the silent fallback for them, because the
+ * study is about predicting rather than watching, and that argument is
+ * about participants specifically; it should not decide what an ordinary
+ * student meets on their first encounter with a topic.
+ */
+export function initialMode(
+  modeParam: string | null,
+  classic: boolean,
+  context: InitialModeContext = {},
+): AlgorithmMode {
   if (classic) return AlgorithmMode.DEMO
-  return modeParam === 'DEMO' ? AlgorithmMode.DEMO : AlgorithmMode.PRACTICE
+  if (modeParam === 'DEMO') return AlgorithmMode.DEMO
+  if (modeParam === 'HANDS_ON') return AlgorithmMode.HANDS_ON
+  if (context.participant) return AlgorithmMode.PRACTICE
+  return context.seenBefore ? AlgorithmMode.PRACTICE : AlgorithmMode.DEMO
 }
 
 /** Whether runs built now get the complexity-prediction junction: never in Classic. */
