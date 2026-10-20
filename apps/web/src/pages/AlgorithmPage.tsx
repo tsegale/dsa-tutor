@@ -1054,11 +1054,16 @@ function AlgorithmWorkspace() {
     </div>
   ) : (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+      {/* Only reachable for a slug the registry does not know, since every
+          curriculum topic has an entry - so this is a bad link, not a
+          topic waiting to be built. It used to say "Bubble Sort is the
+          only one available right now", which was true of the very first
+          build and has been wrong for 65 topics since. */}
       <span className="text-lg font-semibold text-text-primary">
-        {currentTopic?.displayName ?? algorithmNameParam} coming soon
+        We don't have a topic called "{algorithmNameParam}"
       </span>
       <span className="text-sm text-text-muted">
-        This algorithm hasn't been built yet. Bubble Sort is the only one available right now.
+        Check the link, or pick a topic from the curriculum panel on the left.
       </span>
     </div>
   )

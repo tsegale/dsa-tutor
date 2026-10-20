@@ -33,6 +33,7 @@ const PYTHON_NAMES = new Set([
   'return', 'break', 'continue', 'pass', 'def', 'lambda', 'len', 'range', 'min', 'max', 'abs',
   'sum', 'sorted', 'reversed', 'enumerate', 'int', 'float', 'str', 'bool', 'list', 'dict', 'set',
   'tuple', 'append', 'pop', 'insert', 'ord', 'chr', 'divmod', 'round',
+  'import', 'from', 'as', 'del', 'global', 'try', 'except', 'with',
 ])
 
 /** The default run for a topic, with Code Mode deliberately applied by hand
@@ -162,21 +163,39 @@ describe('every code challenge', () => {
       .split('\n')
       .map((line) => line.replace(/#.*$/, ''))
       .join('\n')
+      // A string literal is data, not a name: node["value"] reads a dict
+      // key, it does not reference a variable called value.
+      .replace(/"[^"]*"|'[^']*'/g, '""')
 
     // Names the starter itself introduces are fine, wherever they come
-    // from: `for k in ...`, `tmp = ...`, and the read-back the student is
-    // asked to set.
+    // from: a loop variable, a local it assigns, a helper it defines and
+    // that helper's parameters, a lambda's parameter, a module it imports,
+    // and the read-back the student is asked to set.
     const introduced = new Set<string>([challenge.readBack])
-    for (const match of body.matchAll(/(?:for\s+|^\s*)([a-z_][a-z0-9_]*)\s*(?:,\s*[a-z_][a-z0-9_]*\s*)*(?:=[^=]|\bin\b)/gim)) {
-      introduced.add(match[1])
+    const addAll = (list: string) => {
+      for (const part of list.split(',')) {
+        const name = part.trim().split('=')[0].trim()
+        if (/^[a-z_][a-z0-9_]*$/i.test(name)) introduced.add(name)
+      }
     }
+    for (const match of body.matchAll(/^\s*import\s+([a-z_][a-z0-9_]*)/gim)) introduced.add(match[1])
+    for (const match of body.matchAll(/\bdef\s+([a-z_][a-z0-9_]*)\s*\(([^)]*)\)/gi)) {
+      introduced.add(match[1])
+      addAll(match[2])
+    }
+    for (const match of body.matchAll(/\blambda\s+([^:]*):/gi)) addAll(match[1])
+    for (const match of body.matchAll(/^\s*([a-z_][a-z0-9_ ,]*?)\s*=[^=]/gim)) addAll(match[1])
+    for (const match of body.matchAll(/\bfor\s+([a-z_][a-z0-9_ ,]*?)\s+in\b/gi)) addAll(match[1])
 
     for (const match of body.matchAll(/\b([a-z_][a-z0-9_]*)\b/gi)) {
       const name = match[0]
       if (PYTHON_NAMES.has(name) || given.has(name) || introduced.has(name)) continue
-      // Attribute and method names are not free variables.
+      // Attribute and method names are not free variables, and neither is
+      // a keyword argument (min(..., key=...)).
       const before = body.slice(0, match.index ?? 0)
       if (before.endsWith('.')) continue
+      const after = body.slice((match.index ?? 0) + name.length)
+      if (/^\s*=[^=]/.test(after) && /[(,]\s*$/.test(before)) continue
       expect.fail(`${slug}: the starter uses '${name}', which the sandbox is never given`)
     }
   })

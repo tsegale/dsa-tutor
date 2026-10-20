@@ -179,14 +179,24 @@ function runGridSearch(
   let found = false
 
   while (frontier.length > 0) {
-    if ((algorithmType === 'dijkstra' || algorithmType === 'astar') && frontier.length >= 2) {
+    // All four pathfinders ask this, not only the two weighted ones. Grid
+    // BFS and DFS had no junction of any kind, so Practice on them was 562
+    // and 33 steps of watching: the mode was offered and never asked
+    // anything. What comes off the frontier next is exactly as definite
+    // for a queue or a stack as it is for a priority queue, and the
+    // contrast between the four answers is the point of this module.
+    if (frontier.length >= 2) {
       popsSincePrompt++
       if (popsSincePrompt % PROMPT_EVERY_N_POPS === 0) {
         push({
           description:
             algorithmType === 'astar'
               ? `Which cell is dequeued next - the one with the lowest f(n) = g(n) + h(n)?`
-              : `Which cell is dequeued next - the one with the lowest known distance g(n)?`,
+              : algorithmType === 'dijkstra'
+                ? `Which cell is dequeued next - the one with the lowest known distance g(n)?`
+                : algorithmType === 'bfs'
+                  ? `Which cell is dequeued next - the one that has been waiting longest?`
+                  : `Which cell is explored next - the one discovered most recently?`,
           pseudocodeLine: PSEUDOCODE_LINE.POP,
           isPredictionRequired: true,
           state: baseState({

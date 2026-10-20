@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { MODULES } from './curriculum'
+import { runFor } from '@/engine/runFor'
+import { CODE_CHALLENGES } from '@/config/codeChallenges'
 import {
   BUTTONS_ARE_HANDS_ON,
+  CODE_MODE_ACTIVE,
+  NO_JUNCTIONS,
   HANDS_ON_ACTIVE,
   HANDS_ON_COMING_SOON,
   NO_HANDS_ON,
@@ -106,10 +110,18 @@ describe('pipelineFor', () => {
   describe('Code', () => {
     it('is offered only where a code challenge actually exists', () => {
       // The toggle used to appear on all 66 topics while one engine read
-      // it, so on 65 of them flipping it did nothing at all.
+      // it, so on 65 of them flipping it did nothing at all. The check is
+      // the property rather than a named topic now: a slug with a
+      // challenge offers the stage, one without says so.
       expect(hasCodeMode('bubble-sort')).toBe(true)
-      expect(hasCodeMode('dijkstra')).toBe(false)
-      expect(statusOf(pipelineFor(input({ slug: 'dijkstra', practiceCompleted: true })), 'CODE')).toBe('NOT_OFFERED')
+      expect(statusOf(pipelineFor(input({ slug: 'bubble-sort', practiceCompleted: true })), 'CODE')).toBe('AVAILABLE')
+
+      // The maze generators make random choices, so they have no junction
+      // to grade a line of code against.
+      expect(hasCodeMode('maze-generation')).toBe(false)
+      expect(statusOf(pipelineFor(input({ slug: 'maze-generation', practiceCompleted: true })), 'CODE')).toBe(
+        'NOT_OFFERED',
+      )
     })
   })
 
@@ -160,15 +172,65 @@ describe('pipelineFor', () => {
 
 describe('pipelineProgress', () => {
   it('counts only the stages this topic offers', () => {
-    // binary-search has no Hands-on and no code challenge, so "1 of 5"
-    // would understate a student who has done everything there is.
+    // binary-search has no Hands-on, so "2 of 5" would understate a
+    // student who has done everything there is on it.
     const stages = pipelineFor(input({ slug: 'binary-search', practiceCompleted: true, feynmanAvailable: true }))
-    expect(pipelineProgress(stages)).toEqual({ done: 2, offered: 3 })
+    expect(stages.find((stage) => stage.id === 'HANDS_ON')!.status).toBe('NOT_OFFERED')
+    expect(pipelineProgress(stages)).toEqual({ done: 2, offered: 4 })
   })
 
   it('reaches done equals offered when everything available is finished', () => {
     const stages = pipelineFor(input({ slug: 'binary-search', practiceCompleted: true, feynmanAvailable: true }))
     const { done, offered } = pipelineProgress(stages)
     expect(done).toBeLessThanOrEqual(offered)
+  })
+})
+
+
+// ---------------------------------------------------------------------------
+// The declared sets, checked against what the engines actually produce.
+//
+// Every set in pipeline.ts is a second copy of something the engines
+// already know, and a second copy is what every defect in this codebase has
+// been. These tests are the link back.
+
+describe('NO_JUNCTIONS, against the real runs', () => {
+  const SLUGS = MODULES.flatMap((module) => module.topics)
+
+  it.each(SLUGS)('%s is listed as junction-free only if it really is', (slug) => {
+    const hasJunction = runFor(slug).some((snapshot) => snapshot.isPredictionRequired)
+    // Listed but the engine does ask something: Practice would be hidden on
+    // a topic that works. Not listed but the engine asks nothing: Practice
+    // is offered and never asks anything, which is what Grid BFS did for
+    // 562 steps.
+    expect(hasJunction, `${slug}`).toBe(!NO_JUNCTIONS.has(slug))
+  })
+
+  it('offers Practice on every topic that has junctions', () => {
+    for (const slug of SLUGS.filter((s) => !NO_JUNCTIONS.has(s))) {
+      const practice = pipelineFor(input({ slug })).find((stage) => stage.id === 'PRACTICE')!
+      expect(practice.status, slug).not.toBe('NOT_OFFERED')
+    }
+  })
+
+  it('says why, rather than silently offering an empty Practice', () => {
+    for (const slug of NO_JUNCTIONS) {
+      const practice = pipelineFor(input({ slug })).find((stage) => stage.id === 'PRACTICE')!
+      expect(practice.status).toBe('NOT_OFFERED')
+      expect(practice.reason).toBeTruthy()
+    }
+  })
+})
+
+describe('Code Mode coverage', () => {
+  it('is the set of topics with a challenge written, not a hand-kept list', () => {
+    // The list it replaced held one slug and had to be edited by hand
+    // whenever content was added, so it was wrong the moment it was not.
+    expect([...CODE_MODE_ACTIVE].sort()).toEqual(Object.keys(CODE_CHALLENGES).sort())
+  })
+
+  it.each(Object.keys(CODE_CHALLENGES))('%s offers the Code stage', (slug) => {
+    const code = pipelineFor(input({ slug, practiceCompleted: true })).find((stage) => stage.id === 'CODE')!
+    expect(code.status).toBe('AVAILABLE')
   })
 })

@@ -110,10 +110,15 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const pipeline = usePipeline()
   // Code Mode rewrites a junction's prediction into a line of code to
-  // write, and only one engine builds those junctions. The toggle used to
-  // appear on every topic regardless, so on 65 of 66 flipping it did
-  // nothing at all.
+  // write. The toggle used to appear on every topic while a single engine
+  // was the only one that could honour it, so on 65 of 66 flipping it did
+  // nothing at all; it is driven by whether a challenge exists now.
   const codeModeAvailable = hasCodeMode(algorithmSlug ?? '')
+  // The pipeline already words the reason per topic (none written yet
+  // against never going to be written), so the panel does not word it a
+  // second time and differently.
+  const codeUnavailableReason =
+    pipeline.find((stage) => stage.id === 'CODE')?.reason ?? 'No code challenge written for this topic yet.'
 
   // Code Mode on: fetch the Python runtime now, in the background, so the
   // first code question does not wait on a ~13MB download.
@@ -301,7 +306,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             </button>
             {!codeModeAvailable && (
               <p className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
-                No code challenge written for this topic yet.
+                {codeUnavailableReason}
               </p>
             )}
           </section>

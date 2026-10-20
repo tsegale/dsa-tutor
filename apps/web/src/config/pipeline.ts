@@ -13,6 +13,8 @@
  * open it, including the parts they have not reached.
  */
 
+import { CODE_CHALLENGES, hasCodeChallenge } from '@/config/codeChallenges'
+
 export type PipelineStageId = 'DEMO' | 'PRACTICE' | 'HANDS_ON' | 'CODE' | 'FEYNMAN'
 
 export type StageStatus =
@@ -139,15 +141,34 @@ export const HANDS_ON_ACTIVE = new Set([
 // -------------------------------------------------------------------- code
 //
 // Code Mode rewrites a junction's prediction into a line of code to write.
-// Only one engine builds those junctions today (engine/bubbleSort.ts reads
-// codeEditorMode); on every other topic the toggle changes nothing. Listing
-// the real coverage here is what lets the toggle disable itself with a
-// reason instead of being a control that silently does nothing.
-export const CODE_MODE_ACTIVE = new Set(['bubble-sort'])
-
+// This used to be a hand-written set holding one slug, because one engine
+// read a `codeEditorMode` flag and no other did. It is derived now: a topic
+// has Code Mode when a challenge has been written for it, so the toggle
+// cannot advertise a topic the content does not cover, and cannot stay
+// silent about one it does.
 export function hasCodeMode(slug: string): boolean {
-  return CODE_MODE_ACTIVE.has(slug)
+  return hasCodeChallenge(slug)
 }
+
+export const CODE_MODE_ACTIVE: ReadonlySet<string> = new Set(Object.keys(CODE_CHALLENGES))
+
+// ---------------------------------------------------------------- practice
+//
+// Topics whose run contains no junction at all: nothing to predict, so
+// Practice would be Demo with a different label. A student could step
+// through all 562 steps of Grid BFS in Practice and never be asked
+// anything, which is worse than being told the stage is not offered.
+//
+// Only the three maze generators, and for a reason that will not change:
+// they make random choices, so there is no next step with a right answer
+// to predict. Grid BFS and DFS were here too, and should not have been -
+// what comes off a queue or a stack next is perfectly definite, and they
+// now ask it like the weighted pair always did. pipeline.test.ts checks
+// this set against what the engines actually produce, which is what makes
+// an entry here a claim rather than an assumption.
+export const NO_JUNCTIONS = new Set(['maze-generation', 'maze-prim', 'maze-kruskal'])
+
+const RANDOM_GENERATORS = new Set(['maze-generation', 'maze-prim', 'maze-kruskal'])
 
 // ------------------------------------------------------------------ stages
 
@@ -209,7 +230,7 @@ export function pipelineFor(input: PipelineInput): PipelineStage[] {
 
   return [
     stage('DEMO', demoDone ? 'DONE' : 'AVAILABLE', null),
-    stage('PRACTICE', practiceDone ? 'DONE' : 'AVAILABLE', null),
+    practiceStage(slug, practiceDone),
     handsOnStage(slug, practiceDone),
     codeStage(slug, practiceDone),
     feynmanStage(input),
@@ -218,6 +239,19 @@ export function pipelineFor(input: PipelineInput): PipelineStage[] {
 
 function stage(id: PipelineStageId, status: StageStatus, reason: string | null): PipelineStage {
   return { id, label: LABEL[id], summary: SUMMARY[id], status, reason }
+}
+
+function practiceStage(slug: string, practiceDone: boolean): PipelineStage {
+  if (NO_JUNCTIONS.has(slug)) {
+    return stage(
+      'PRACTICE',
+      'NOT_OFFERED',
+      RANDOM_GENERATORS.has(slug)
+        ? 'This builds a random maze, so there is no next step to predict. Watch it in Demo.'
+        : 'This topic has no prediction junctions. Watch it in Demo.',
+    )
+  }
+  return stage('PRACTICE', practiceDone ? 'DONE' : 'AVAILABLE', null)
 }
 
 function handsOnStage(slug: string, practiceDone: boolean): PipelineStage {
@@ -244,7 +278,15 @@ function handsOnStage(slug: string, practiceDone: boolean): PipelineStage {
 
 function codeStage(slug: string, practiceDone: boolean): PipelineStage {
   if (!hasCodeMode(slug)) {
-    return stage('CODE', 'NOT_OFFERED', 'No code challenge written for this topic yet.')
+    return stage(
+      'CODE',
+      'NOT_OFFERED',
+      NO_JUNCTIONS.has(slug)
+        ? // Nothing to grade a line of code against, and nothing coming:
+          // the step a maze generator takes next is a random choice.
+          'This builds a random maze, so there is no step to write code for.'
+        : 'No code challenge written for this topic yet.',
+    )
   }
   return practiceDone
     ? stage('CODE', 'AVAILABLE', null)

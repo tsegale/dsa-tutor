@@ -137,6 +137,12 @@
   "topological-sort": [
     "TOPOLOGICAL_ORDER"
   ],
+  "grid-bfs": [
+    "GRID_NEXT_CELL"
+  ],
+  "grid-dfs": [
+    "GRID_NEXT_CELL"
+  ],
   "grid-dijkstra": [
     "GRID_NEXT_CELL"
   ],
