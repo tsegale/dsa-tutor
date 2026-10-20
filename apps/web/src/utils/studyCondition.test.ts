@@ -95,6 +95,14 @@ describe('initialMode outside Classic', () => {
     expect(initialMode('HANDS_ON', false, { seenBefore: false })).toBe(AlgorithmMode.HANDS_ON)
   })
 
+  it.each(['DEMO', 'PRACTICE', 'HANDS_ON'])('names %s in the URL', (mode) => {
+    // Every mode must be reachable by link. The old rule was "DEMO, else
+    // PRACTICE", so ?mode=PRACTICE worked by falling through rather than
+    // by being recognised, and silently stopped working the moment DEMO
+    // became the fallback.
+    expect(initialMode(mode, false, { seenBefore: false })).toBe(mode)
+  })
+
   it('ignores a mode it does not recognise rather than failing open', () => {
     expect(initialMode('nonsense', false, { seenBefore: true })).toBe(AlgorithmMode.PRACTICE)
     expect(initialMode('demo', false, { seenBefore: true })).toBe(AlgorithmMode.PRACTICE)

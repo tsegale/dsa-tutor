@@ -114,7 +114,12 @@ export function initialMode(
   context: InitialModeContext = {},
 ): AlgorithmMode {
   if (classic) return AlgorithmMode.DEMO
+  // Every mode is nameable in the URL. Before the Demo-first default
+  // below, the rule was "DEMO, else PRACTICE", so ?mode=PRACTICE worked by
+  // falling through rather than by being recognised - and once DEMO became
+  // the fallback, that link silently stopped working.
   if (modeParam === 'DEMO') return AlgorithmMode.DEMO
+  if (modeParam === 'PRACTICE') return AlgorithmMode.PRACTICE
   if (modeParam === 'HANDS_ON') return AlgorithmMode.HANDS_ON
   if (context.participant) return AlgorithmMode.PRACTICE
   return context.seenBefore ? AlgorithmMode.PRACTICE : AlgorithmMode.DEMO
