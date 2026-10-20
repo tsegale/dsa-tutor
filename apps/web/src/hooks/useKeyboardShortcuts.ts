@@ -55,14 +55,22 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
         case 'KeyT':
           useThemeStore.getState().toggleTheme()
           break
+        // Digits follow the tabs' visual order, not their internal ids:
+        // Theory sits first in the strip but carries id 0.
         case 'Digit1':
-          onTabChange(1)
+          onTabChange(0)
           break
         case 'Digit2':
-          onTabChange(2)
+          onTabChange(1)
           break
         case 'Digit3':
+          onTabChange(2)
+          break
+        case 'Digit4':
           onTabChange(3)
+          break
+        case 'Digit5':
+          onTabChange(4)
           break
         case 'Slash':
           if (event.shiftKey) {

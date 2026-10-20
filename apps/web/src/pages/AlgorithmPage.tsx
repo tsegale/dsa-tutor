@@ -475,7 +475,10 @@ function AlgorithmWorkspace() {
   }
   const { isTooSmall, isCompact } = useLayoutBreakpoint()
   const [compactTab, setCompactTab] = useState<'canvas' | 'controls' | 'tutor'>('canvas')
-  const [activeTab, setActiveTabRaw] = useState(1)
+  // Theory (0) is the opening tab: Demo mode is where a student meets the
+  // algorithm, and an animation with no explanation beside it is just a
+  // moving picture. Practice swaps to the AI Tutor tab below.
+  const [activeTab, setActiveTabRaw] = useState(0)
   // Classic has no AI Tutor tab (1): anything asking for it gets Pseudocode.
   const setActiveTab = useCallback((tab: number) => setActiveTabRaw(isClassic && tab === 1 ? 2 : tab), [isClassic])
   useEffect(() => {

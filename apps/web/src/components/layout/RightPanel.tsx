@@ -7,6 +7,7 @@ import WorkedStepNotice from '@/components/prediction/WorkedStepNotice'
 import { workedStepNarration } from '@/utils/workedSteps'
 import PseudocodePanel from '@/components/canvas/PseudocodePanel'
 import ComplexityPanel from '@/components/canvas/ComplexityPanel'
+import TheoryPanel from '@/components/canvas/TheoryPanel'
 import StepLog from './StepLog'
 import ScaffoldingFader from './ScaffoldingFader'
 import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
@@ -44,6 +45,16 @@ function ExplanationIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  )
+}
+
+function TheoryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M4 5a2 2 0 0 1 2-2h7v18H6a2 2 0 0 1-2-2z" />
+      <path d="M13 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
+      <path d="M8 8h2M8 12h2" />
     </svg>
   )
 }
@@ -177,6 +188,20 @@ export default function RightPanel({
             <TooltipTrigger asChild>
               <button
                 type="button"
+                onClick={() => expandToTab(0)}
+                aria-label="Theory"
+                className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
+              >
+                <TheoryIcon />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Theory</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
                 onClick={() => expandToTab(1)}
                 aria-label="AI Tutor"
                 className="flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-sunk dark:text-dark-text-secondary dark:hover:bg-dark-border"
@@ -250,6 +275,13 @@ export default function RightPanel({
                 scroll the overflow-hidden Tabs root sideways to reveal it,
                 cutting off the whole panel's left edge. */}
             <TabsList id="right-panel-tabs" className="w-full max-w-full shrink-0 justify-start overflow-x-auto">
+              {/* Theory is first and is Demo mode's default: a student who
+                  has never met the algorithm reads the briefing before any
+                  animation plays. Its id is 0 so the existing tab ids, the
+                  keyboard shortcuts and the Classic remap all keep working. */}
+              <TabsTrigger value="0" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+                Theory
+              </TabsTrigger>
               {features.aiTutorTab && (
                 <TabsTrigger value="1" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
                   AI Tutor
@@ -265,6 +297,9 @@ export default function RightPanel({
                 Step log
               </TabsTrigger>
             </TabsList>
+            <TabsContent value="0" className="flex-1 overflow-y-auto">
+              <TheoryPanel />
+            </TabsContent>
             {features.aiTutorTab && (
             <TabsContent value="1" className="flex flex-1 flex-col gap-3 overflow-y-auto">
               <ScaffoldingFader />
