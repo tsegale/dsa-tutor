@@ -26,11 +26,18 @@ function Tooltip({
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
-}
+// forwardRef, like ui/button.tsx and for the same React 18 reason: a plain
+// function component silently drops a ref. It matters here because triggers
+// get composed - ScaffoldingChip puts a PopoverTrigger inside a
+// TooltipTrigger asChild - and the outer Slot then has nothing to anchor
+// to, so the tooltip cannot position itself and React logs "Function
+// components cannot be given refs".
+const TooltipTrigger = React.forwardRef<
+  React.ComponentRef<typeof TooltipPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger>
+>(function TooltipTrigger(props, ref) {
+  return <TooltipPrimitive.Trigger ref={ref} data-slot="tooltip-trigger" {...props} />
+})
 
 function TooltipContent({
   className,

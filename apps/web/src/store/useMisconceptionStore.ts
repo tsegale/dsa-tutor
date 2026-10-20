@@ -101,7 +101,13 @@ export const useMisconceptionStore = create<MisconceptionStoreState>((set, get) 
   async loadActiveEvents(algorithmTopicId) {
     try {
       const events = await fetchEventStatusForTopic(algorithmTopicId)
-      set({ activeEvents: events })
+      // Only an array goes into state. AlgorithmPage calls .find on this
+      // during render, so a response that is not a list (a 200 carrying a
+      // null body, say) used to throw inside the workspace component and
+      // white-screen the whole topic. The catch below cannot help with
+      // that: the write succeeded, the crash came one render later. Keeping
+      // the previous value is what "non-blocking" was meant to mean.
+      if (Array.isArray(events)) set({ activeEvents: events })
     } catch {
       // Non-blocking - the algorithm page's indicator just stays hidden.
     }

@@ -93,7 +93,11 @@ export function MasteryPanel({ mastery, handlers }: { mastery: TopicMastery; han
 
       <p className="flex items-baseline justify-between gap-2 text-micro text-ink-2">
         <span>Hints per step, for your reference</span>
-        <span className="text-mono-sm">{mastery.hintsPerStep === null ? '-' : mastery.hintsPerStep.toFixed(1)}</span>
+        {/* == null, not === null: an API response that omits the field
+            entirely used to throw here, and this panel sits inside the left
+            panel, so one missing number took the whole workspace down with
+            it rather than showing a dash. */}
+        <span className="text-mono-sm">{mastery.hintsPerStep == null ? '-' : mastery.hintsPerStep.toFixed(1)}</span>
       </p>
     </section>
   )

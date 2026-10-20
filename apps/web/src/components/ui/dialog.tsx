@@ -6,36 +6,48 @@ import { cn } from "@/lib/utils"
 import { useRestoreFocus } from "@/hooks/useRestoreFocus"
 import { Button } from "@/components/ui/button"
 
+// Every wrapper that renders a Radix primitive forwards its ref, like
+// ui/button.tsx and for the same React 18 reason: a plain function
+// component silently drops one. Radix hands refs down through Slot and
+// Presence (a Portal clones its child with a ref), so without this React
+// logs "Function components cannot be given refs" and the primitive loses
+// the node it needs - which is how DialogOverlay was warning on every
+// dialog open.
+type Ref<T> = React.ComponentRef<T>
+type Props<T extends React.ElementType> = React.ComponentPropsWithoutRef<T>
+
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
-function DialogTrigger({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+const DialogTrigger = React.forwardRef<
+  Ref<typeof DialogPrimitive.Trigger>,
+  Props<typeof DialogPrimitive.Trigger>
+>(function DialogTrigger(props, ref) {
+  return <DialogPrimitive.Trigger ref={ref} data-slot="dialog-trigger" {...props} />
+})
+
+function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+  // Portal renders no DOM node of its own, so there is no ref to forward.
+  return <DialogPrimitive.Portal {...props} />
 }
 
-function DialogPortal({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
-}
+const DialogClose = React.forwardRef<
+  Ref<typeof DialogPrimitive.Close>,
+  Props<typeof DialogPrimitive.Close>
+>(function DialogClose(props, ref) {
+  return <DialogPrimitive.Close ref={ref} data-slot="dialog-close" {...props} />
+})
 
-function DialogClose({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
-}
-
-function DialogOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+const DialogOverlay = React.forwardRef<
+  Ref<typeof DialogPrimitive.Overlay>,
+  Props<typeof DialogPrimitive.Overlay>
+>(function DialogOverlay({ className, ...props }, ref) {
   return (
     <DialogPrimitive.Overlay
+      ref={ref}
       data-slot="dialog-overlay"
       className={cn(
         "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
@@ -44,7 +56,7 @@ function DialogOverlay({
       {...props}
     />
   )
-}
+})
 
 function DialogContent({
   className,
@@ -132,31 +144,33 @@ function DialogFooter({
   )
 }
 
-function DialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+const DialogTitle = React.forwardRef<
+  Ref<typeof DialogPrimitive.Title>,
+  Props<typeof DialogPrimitive.Title>
+>(function DialogTitle({ className, ...props }, ref) {
   return (
     <DialogPrimitive.Title
+      ref={ref}
       data-slot="dialog-title"
       className={cn("text-h3 text-ink", className)}
       {...props}
     />
   )
-}
+})
 
-function DialogDescription({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+const DialogDescription = React.forwardRef<
+  Ref<typeof DialogPrimitive.Description>,
+  Props<typeof DialogPrimitive.Description>
+>(function DialogDescription({ className, ...props }, ref) {
   return (
     <DialogPrimitive.Description
+      ref={ref}
       data-slot="dialog-description"
       className={cn("text-small text-ink-2", className)}
       {...props}
     />
   )
-}
+})
 
 export {
   Dialog,
