@@ -13,10 +13,14 @@ function formatCategory(key: string): string {
 // resolve rule fired), persistent (bottomed out after three remediation
 // attempts), or abandoned (never retested, excluded from either count).
 export default function MisconceptionResolutionTable() {
-  const { data: rows = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['misconception-events', 'educator-summary'],
     queryFn: fetchEducatorMisconceptionSummary,
   })
+  // Array.isArray, not a `= []` destructuring default: that default only
+  // applies to undefined, so a response carrying null put null straight
+  // through and the .length below took the whole educator dashboard down.
+  const rows = Array.isArray(data) ? data : []
 
   if (isLoading) {
     return <div className="h-48 animate-pulse rounded-md border border-border bg-card" />

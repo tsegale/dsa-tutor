@@ -45,7 +45,10 @@ export function CommandPalette({
   onSelect: (topic: TopicDto) => void
 }) {
   const restoreFocus = useRestoreFocus()
-  const { data: topics = [], isLoading, isError, refetch, isRefetching } = useTopics()
+  const { data, isLoading, isError, refetch, isRefetching } = useTopics()
+  // See MisconceptionResolutionTable: a `= []` default covers undefined
+  // only, and this list is one keystroke away at any moment.
+  const topics = Array.isArray(data) ? data : []
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const listId = useId()

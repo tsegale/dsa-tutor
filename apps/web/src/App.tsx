@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { getToken } from '@/api/auth'
@@ -10,6 +10,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { PreferencesSync } from '@/components/layout/PreferencesSync'
 import { RouteFocus } from '@/components/layout/RouteFocus'
+import RouteErrorBoundary from '@/components/layout/RouteErrorBoundary'
+import NotFound from '@/pages/NotFound'
 import { lazyWithReload } from '@/utils/chunkReload'
 import { useThemeStore } from '@/store/useThemeStore'
 
@@ -113,6 +115,22 @@ function useApplyTheme() {
 // Keyed on the topic: the search palette can move from one topic straight
 // to another inside the workspace, and the same element would otherwise be
 // reused with the previous topic's session state.
+/**
+ * Every route is wrapped so that a render error shows a message with the
+ * navigation intact, rather than blanking the app to white. Keyed on the
+ * location so that navigating away from a broken page clears the fallback.
+ */
+function BoundedRoutes() {
+  const location = useLocation()
+  return (
+    <RouteErrorBoundary resetKey={location.pathname}>
+      <Suspense fallback={<RouteFallback />}>
+        <AppRoutes />
+      </Suspense>
+    </RouteErrorBoundary>
+  )
+}
+
 function AlgorithmRoute() {
   const { algorithmName } = useParams<{ algorithmName: string }>()
   return <AlgorithmPage key={algorithmName} />
@@ -126,7 +144,21 @@ export default function App() {
       <AuthProvider>
         <TooltipProvider>
           <BrowserRouter>
-            <Suspense fallback={<RouteFallback />}>
+            <BoundedRoutes />
+            <GlobalOnboarding />
+            <PreferencesSync />
+            <RouteFocus />
+          </BrowserRouter>
+          {/* One toast region for the whole app, styled to the tokens. */}
+          <Toaster position="bottom-right" />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  )
+}
+
+function AppRoutes() {
+  return (
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
                 <Route
@@ -219,16 +251,8 @@ export default function App() {
                 />
                 <Route path="/showcase" element={<Showcase />} />
                 <Route path="/canvas-test" element={<CanvasTest />} />
+                {/* Any other address: a message rather than a blank page. */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
-            </Suspense>
-            <GlobalOnboarding />
-            <PreferencesSync />
-            <RouteFocus />
-          </BrowserRouter>
-          {/* One toast region for the whole app, styled to the tokens. */}
-          <Toaster position="bottom-right" />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
   )
 }

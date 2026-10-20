@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import NotFound from '@/pages/NotFound'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { startAssessment, submitAssessmentResponse, completeAssessment } from '@/api/assessments'
 import { resumeState } from '@/lib/assessmentResume'
@@ -71,7 +72,10 @@ export default function AssessmentPage() {
   })
 
   if (!code) {
-    return <div className="p-8 text-text-primary">Unknown assessment.</div>
+    // A bare string with no header and no way back is the same dead end
+    // the app had for unknown routes. The address names an assessment
+    // that does not exist, so say so and offer a way out.
+    return <NotFound />
   }
 
   if (attempt?.completedAt) {
@@ -82,7 +86,14 @@ export default function AssessmentPage() {
     )
   }
 
-  if (startMutation.isError) {
+  // A call that settled without producing an attempt leaves the spinner
+  // below running for ever, on a page a participant cannot get past. A
+  // malformed success is a failure from here, so it gets the retry UI
+  // rather than an indefinite wait.
+  const startedButEmpty =
+    startMutation.isSuccess && (!startMutation.data || !Array.isArray(startMutation.data.items))
+
+  if (startMutation.isError || startedButEmpty) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-sunk p-8 text-center">
         <p className="text-text-primary">Could not start this assessment. Check your connection and try again.</p>

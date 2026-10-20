@@ -408,10 +408,12 @@ function AlgorithmWorkspace() {
   const { play } = useSoundEffects()
   const prefersReducedMotion = useReducedMotion()
 
-  const { data: topics = [], isSuccess: topicsLoaded } = useQuery({
+  const { data: topicsData, isSuccess: topicsLoaded } = useQuery({
     queryKey: ['topics'],
     queryFn: () => apiFetch<AlgorithmTopicDTO[]>('/api/v1/topics'),
   })
+  // See MisconceptionResolutionTable: a `= []` default covers undefined only.
+  const topics = Array.isArray(topicsData) ? topicsData : []
   const currentTopic = topics.find((t) => t.name === algorithmNameParam) ?? null
   const openMisconceptionForTopic = currentTopic
     ? activeMisconceptionEvents.find((e) => e.algorithmTopicId === currentTopic.id)
