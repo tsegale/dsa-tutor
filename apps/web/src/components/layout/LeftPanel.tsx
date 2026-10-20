@@ -1,25 +1,12 @@
 import { useEffect, useState } from 'react'
 import { conditionFeatures } from '@/utils/studyCondition'
-import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { useParams } from 'react-router-dom'
 import { preloadPyodide } from '@/utils/pyodideRunner'
 import { motion } from 'framer-motion'
-import { AlgorithmMode, type AlgorithmSnapshot } from '@dsa-tutor/types'
+import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
-import { bubbleSortEngine } from '@/engine/bubbleSort'
-import { linearSearchEngine } from '@/engine/linearSearch'
-import { binarySearchEngine } from '@/engine/binarySearch'
-import { selectionSortEngine } from '@/engine/selectionSort'
-import { insertionSortEngine } from '@/engine/insertionSort'
-import { mergeSortEngine } from '@/engine/mergeSort'
-import { quickSortEngine } from '@/engine/quickSort'
-import { shellSortEngine } from '@/engine/shellSort'
-import { heapSortEngine } from '@/engine/heapSort'
-import { bstInsertEngine } from '@/engine/bst'
-import { topMisconceptionOf } from '@/utils/junctionTargeting'
-import { floydWarshallEngine } from '@/engine/floydWarshall'
-import { MEDIUM_WEIGHTED } from '@/engine/graphPresets'
+import { runFor } from '@/engine/runFor'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
 import ChallengeGenerator, { START_CHALLENGE_EVENT } from '@/components/challenge/ChallengeGenerator'
@@ -37,73 +24,6 @@ import VariableWatcher from '@/components/pipeline/VariableWatcher'
 import { hasCodeMode } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
-// Custom Array / Random must run the SAME algorithm currently loaded on
-// the page, not always Bubble Sort - otherwise applying a custom array
-// while viewing e.g. Binary Search would silently swap the canvas back
-// to Bubble Sort while the rest of the page still says Binary Search.
-//
-// The cases below exist only for the engines that need options this
-// switch knows about and the registry's plain engineFunction does not
-// (complexity-prediction junctions, Code Mode, misconception targeting).
-// Everything else now falls through to the registry entry for the open
-// topic, which is where every engine is already declared.
-//
-// It used to fall through to Bubble Sort instead, and three topics had no
-// case: Apply on Array Access, Array Insertion or Array Deletion replaced
-// the canvas with a 34-step Bubble Sort run while the header still said
-// Array Access. A hand-maintained copy of the registry drifted from it,
-// so the fallback is the registry itself now and a topic added there gets
-// a working Apply without touching this file.
-function engineForSlug(
-  slug: string | undefined,
-  values: number[],
-  codeEditorMode: boolean,
-  topMisconception: string | null,
-): AlgorithmSnapshot[] {
-  const target = getAlgorithmRegistryEntry(slug ?? '')?.defaultTarget ?? 9
-  switch (slug) {
-    case 'selection-sort':
-      return selectionSortEngine(values)
-    case 'insertion-sort':
-      return insertionSortEngine(values)
-    case 'linear-search':
-      return linearSearchEngine(values, target)
-    case 'binary-search':
-      return binarySearchEngine(values, target, { withComplexityPrediction: complexityJunctionEnabled() })
-    case 'merge-sort':
-      return mergeSortEngine(values)
-    case 'quick-sort':
-      return quickSortEngine(values)
-    case 'shell-sort':
-      return shellSortEngine(values)
-    case 'heap-sort':
-      return heapSortEngine(values)
-    case 'bst':
-      return bstInsertEngine(values, { withCompletionCheck: true, withComplexityPrediction: complexityJunctionEnabled() })
-    case 'floyd-warshall':
-      // Floyd-Warshall operates on a fixed small graph, not a numeric
-      // array - it's the only graph-track algorithm without its own
-      // AlgorithmControls section (MATRIX canvas, no spatial
-      // manipulation), so this generic box's Apply/Random still route
-      // here and must reload the default run instead of silently
-      // falling through to Bubble Sort.
-      return floydWarshallEngine(MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id), MEDIUM_WEIGHTED.adjacency)
-    case 'bubble-sort':
-      return bubbleSortEngine(values, {
-        withComplexityPrediction: complexityJunctionEnabled(),
-        codeEditorMode,
-        topMisconception,
-      })
-    default: {
-      const entry = getAlgorithmRegistryEntry(slug ?? '')
-      // Bubble Sort only when the route names a topic the registry does
-      // not know, which should not happen: the page would not have
-      // rendered a canvas for it either.
-      if (!entry) return bubbleSortEngine(values)
-      return entry.engineFunction(values)
-    }
-  }
-}
 
 interface LeftPanelProps {
   collapsed: boolean
@@ -177,7 +97,6 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   const codeEditorMode = useAlgorithmStore((state) => state.codeEditorMode)
   const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
-  const recentMisconceptions = useAlgorithmStore((state) => state.recentMisconceptions)
   // Classic (the study's plain visualiser) has no AI tools or Code Mode.
   const classicMode = useAlgorithmStore((state) => state.classicMode)
   const features = conditionFeatures(classicMode)
@@ -215,7 +134,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
     setAlgorithm(
       displayName,
-      engineForSlug(algorithmSlug, parsed, codeEditorMode, topMisconceptionOf(recentMisconceptions)),
+      runFor(algorithmSlug, parsed),
     )
   }
 
@@ -226,7 +145,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
     setAlgorithm(
       displayName,
-      engineForSlug(algorithmSlug, values, codeEditorMode, topMisconceptionOf(recentMisconceptions)),
+      runFor(algorithmSlug, values),
     )
   }
 
@@ -254,7 +173,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                     setArrayInput(values.join(','))
                     setInputError(null)
                     const displayName = getAlgorithmRegistryEntry(algorithmSlug)?.displayName ?? algorithmName
-                    setAlgorithm(displayName, engineForSlug(algorithmSlug, values, codeEditorMode, topMisconceptionOf(recentMisconceptions)))
+                    setAlgorithm(displayName, runFor(algorithmSlug, values))
                   })
               : 'Pick a different value or preset in the controls above.',
           FEYNMAN:

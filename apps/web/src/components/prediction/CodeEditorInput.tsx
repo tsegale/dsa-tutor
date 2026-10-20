@@ -1,40 +1,50 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { CodeEvalResponse } from '@dsa-tutor/types'
 import { evaluateCode } from '@/api/codeEval'
-import { preloadPyodide, pyodideStatus, runSwapDecisionPython } from '@/utils/pyodideRunner'
+import { preloadPyodide, pyodideStatus, runPythonStep } from '@/utils/pyodideRunner'
+import type { CodeStep } from '@/config/codeChallenges'
+import { cn } from '@/lib/utils'
 
 // CodeMirror is most of the workspace's weight and only Code Mode uses it,
 // so it loads when this input first renders, not with every topic.
 const CodeMirrorEditor = lazy(() => import('./CodeMirrorEditor'))
 
 interface CodeEditorInputProps {
-  prompt: string
   stepDescription: string
-  currentArrayState: number[]
+  /**
+   * This junction's challenge, its sandbox inputs, and the expected
+   * answer - all assembled from the live run by codeStepFor, so nothing
+   * here is authored per topic and nothing can disagree with the canvas.
+   */
+  step: CodeStep
   activeIndices: number[]
-  expectedNextState: number[]
   algorithmName: string
   onSubmit: (result: CodeEvalResponse, submittedCode: string) => void
   onLoadingChange: (loading: boolean) => void
 }
 
-// Pseudocode and Java were dropped: Pyodide (see utils/pyodideRunner.ts)
-// only executes Python, and grading pseudocode or Java would mean going
-// back to asking an LLM to "mentally execute" untrusted code and trust
-// its answer as fact - exactly the defect this real sandbox replaces.
-const STARTER_CODE = 'if arr[j] > arr[j + 1]:\n    arr[j], arr[j + 1] = arr[j + 1], arr[j]'
+// Only Python is executed. Pyodide (see utils/pyodideRunner.ts) runs it in
+// a real WASM sandbox; grading Java or pseudocode would mean going back to
+// asking an LLM to "mentally execute" untrusted code and trusting its
+// answer as fact, which is exactly the defect this sandbox replaces.
+//
+// The Java tab is therefore read-only, and says so rather than offering a
+// Run button that would quietly grade nothing. The brief asks for both
+// languages, and reading the same decision written in a second syntax is
+// worth having next to the one that runs.
+type Language = 'python' | 'java'
 
 export default function CodeEditorInput({
-  prompt,
   stepDescription,
-  currentArrayState,
+  step,
   activeIndices,
-  expectedNextState,
   algorithmName,
   onSubmit,
   onLoadingChange,
 }: CodeEditorInputProps) {
-  const [code, setCode] = useState(STARTER_CODE)
+  const { challenge, spec, expected } = step
+  const [code, setCode] = useState(challenge.starter.python)
+  const [language, setLanguage] = useState<Language>('python')
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingRuntime, setLoadingRuntime] = useState(false)
@@ -51,7 +61,7 @@ export default function CodeEditorInput({
     onLoadingChange(true)
     setSyntaxError(null)
     try {
-      const execution = await runSwapDecisionPython(code, currentArrayState, activeIndices[0])
+      const execution = await runPythonStep(code, spec)
       setLoadingRuntime(false)
       if (execution.runtimeUnavailable) {
         // Nothing ran: not graded, not logged as an answer.
@@ -60,9 +70,9 @@ export default function CodeEditorInput({
       }
       const result = await evaluateCode({
         algorithmName,
-        currentArrayState,
+        currentState: spec.globals,
         activeIndices,
-        expectedNextState,
+        expectedState: expected,
         studentCode: code,
         language: 'python',
         stepDescription,
@@ -81,36 +91,95 @@ export default function CodeEditorInput({
     }
   }
 
+  // Named from the challenge's own globals, so the line can never promise
+  // a variable the sandbox was not given. It used to read "you can use
+  // index j = ..." on every topic, including the ones with no j.
+  const available = Object.keys(spec.globals)
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <p className="shrink-0 font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
-        {prompt}
+        {challenge.prompt}
       </p>
 
-      <div className="flex shrink-0 items-center border-b border-border pb-1.5">
-        <span className="border-b-2 border-primary text-sm font-medium text-primary">Python</span>
+      <div className="flex shrink-0 items-center gap-4 border-b border-border pb-1.5" role="tablist" aria-label="Language">
+        {(['python', 'java'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="tab"
+            aria-selected={language === option}
+            onClick={() => setLanguage(option)}
+            className={cn(
+              'border-b-2 pb-0.5 text-sm font-medium transition-colors duration-quick',
+              language === option
+                ? 'border-primary text-primary'
+                : 'border-transparent text-ink-2 hover:text-ink',
+            )}
+          >
+            {option === 'python' ? 'Python' : 'Java'}
+          </button>
+        ))}
       </div>
 
       {/* Five lines at the editor's 1.7 line height, plus padding. */}
       <div className="flex min-h-[9.5em] flex-1">
-        <Suspense fallback={<div aria-busy="true" aria-label="Loading the code editor" className="flex-1 rounded-sm border border-rule bg-surface-sunk" />}>
-          <CodeMirrorEditor value={code} onChange={setCode} invalid={syntaxError !== null} ariaLabel="Python code for this step" />
-        </Suspense>
+        {language === 'python' ? (
+          <Suspense
+            fallback={
+              <div
+                aria-busy="true"
+                aria-label="Loading the code editor"
+                className="flex-1 rounded-sm border border-rule bg-surface-sunk"
+              />
+            }
+          >
+            <CodeMirrorEditor
+              value={code}
+              onChange={setCode}
+              invalid={syntaxError !== null}
+              ariaLabel="Python code for this step"
+            />
+          </Suspense>
+        ) : (
+          <pre
+            className="flex-1 overflow-auto rounded-sm border border-rule bg-surface-sunk p-2 font-mono text-[13px] text-ink-2"
+            aria-label="The same step in Java, for reading"
+          >
+            {challenge.starter.java}
+          </pre>
+        )}
       </div>
 
-      {syntaxError && <p className="shrink-0 text-[12px] text-error">{syntaxError}</p>}
+      {syntaxError && language === 'python' && <p className="shrink-0 text-[12px] text-error">{syntaxError}</p>}
 
       <p className="shrink-0 text-[12px] text-text-muted dark:text-dark-text-secondary">
-        Write the code for this step. You can use index j = {activeIndices[0]}.
+        {language === 'python' ? (
+          available.length > 0 ? (
+            <>
+              Already defined for you: <span className="font-mono">{available.join(', ')}</span>.
+            </>
+          ) : (
+            'Write the code for this step.'
+          )
+        ) : (
+          'Java is here to read. Only the Python tab runs, in a sandbox in your browser.'
+        )}
       </p>
 
       <button
         type="button"
         onClick={() => void handleSubmit()}
-        disabled={isSubmitting || code.trim().length === 0}
-        className="mt-auto flex w-full shrink-0 items-center justify-center rounded-md bg-primary py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={isSubmitting || language === 'java' || code.trim().length === 0}
+        className="mt-auto flex w-full shrink-0 items-center justify-center rounded-md bg-primary py-2.5 text-sm font-medium text-paper disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {isSubmitting ? (loadingRuntime ? 'Loading Python (first time only)...' : 'Running...') : 'Run my code'}
+        {language === 'java'
+          ? 'Switch to Python to run'
+          : isSubmitting
+            ? loadingRuntime
+              ? 'Loading Python (first time only)...'
+              : 'Running...'
+            : 'Run my code'}
       </button>
     </div>
   )

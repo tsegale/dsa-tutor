@@ -589,16 +589,22 @@ export interface ChallengeResponse {
 
 export interface CodeEvalRequest {
   algorithmName: string
-  currentArrayState: number[]
+  /** The globals the challenge handed the sandbox, by name. Structured
+   * rather than number[], so a tree, a graph or a counter grades the same
+   * way an array does. */
+  currentState: Record<string, unknown>
   activeIndices: number[]
-  expectedNextState: number[]
+  /** What the engine's own next snapshot says the answer is. Computed,
+   * never authored, so it cannot drift from the visualisation. */
+  expectedState: unknown
   studentCode: string
   language: 'python'
   stepDescription: string
   /** Computed by actually running the student's code in Pyodide's WASM
-   * sandbox in the browser (see utils/pyodideRunner.ts) - the AI service
-   * is never asked to determine these itself. null when execution raised. */
-  actualResultingState: number[] | null
+   * sandbox in the browser (see apps/web/src/utils/pyodideRunner.ts) - the
+   * AI service is never asked to determine these itself. null when
+   * execution raised. */
+  actualResultingState: unknown
   hasSyntaxError: boolean
   /** Raw Python error message from Pyodide, when hasSyntaxError is true. */
   executionErrorMessage: string | null
@@ -607,10 +613,19 @@ export interface CodeEvalRequest {
 export interface CodeEvalResponse {
   isLogicallyCorrect: boolean
   hasSyntaxError: boolean
-  resultingState: number[] | null
+  /** Whatever the challenge reads back, echoed. Shape depends on the
+   * topic, so the caller interprets it against its own challenge. */
+  resultingState: unknown
   errorExplanation: string | null
+  /** 'off_by_one' | 'wrong_condition' | 'wrong_operation' | 'missing_step'
+   *  | 'syntax', or null when the answer was right. */
   bugType: string | null
+  /** A Socratic question when wrong; what they got right when correct. */
   correctiveHint: string
+  /** Review of the submitted code beyond this one step: edge cases it
+   * would miss, and whether it is doing more work than it needs to. Null
+   * when there is nothing worth saying. */
+  codeReview: string | null
   executeVisually: boolean
 }
 

@@ -3,21 +3,22 @@ import { MODULES } from '@/config/curriculum'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { CONTEXTUAL_CONTROL_SLUGS } from '@/components/layout/AlgorithmControls'
 import { FIXED_INPUT_SLUGS } from '@/components/layout/LeftPanel'
+import { runFor } from '@/engine/runFor'
 
 /**
  * The left panel's generic "Custom array" box.
  *
  * Topics without contextual controls get this box, and its Apply and Random
- * buttons rebuild the run through LeftPanel's engineForSlug. That function
- * used to be a hand-written switch that fell through to Bubble Sort, and it
- * had drifted: Array Access, Array Insertion and Array Deletion had no case,
- * so pressing Apply on any of them replaced the canvas with a 34-step Bubble
- * Sort run while the header still said Array Access.
+ * buttons rebuild the run through runFor - the same function the page uses
+ * on load, which is the point.
  *
- * engineForSlug now falls through to the registry entry for the open topic.
- * These tests guard the property that fix relies on: every topic that shows
- * the box has a registry entry whose engine really produces that topic's
- * run for an arbitrary input.
+ * There used to be two hand-written switches over the same 66 topics, one
+ * per caller, and they drifted: the panel's had no case for Array Access,
+ * Array Insertion or Array Deletion, so pressing Apply on any of them
+ * replaced the canvas with a 34-step Bubble Sort run while the header still
+ * said Array Access. These tests drive runFor itself rather than the
+ * registry entry behind it, so they cover the code the button actually
+ * runs.
  */
 
 const SLUGS = MODULES.flatMap((module) => module.topics)
@@ -46,7 +47,7 @@ describe('the generic custom-array box', () => {
   })
 
   it.each(GENERIC_BOX)('%s builds a run from a custom input', (slug) => {
-    const snapshots = getAlgorithmRegistryEntry(slug)!.engineFunction(CUSTOM)
+    const snapshots = runFor(slug, CUSTOM)
     expect(snapshots.length).toBeGreaterThan(0)
     expect(snapshots[snapshots.length - 1].isFinalStep).toBe(true)
   })
@@ -55,8 +56,8 @@ describe('the generic custom-array box', () => {
     // The Bubble Sort fallback produced a run over whatever array it was
     // handed, so comparing against the default input is what catches an
     // engine replaying something else entirely.
-    const fromCustom = getAlgorithmRegistryEntry(slug)!.engineFunction(CUSTOM)
-    const fromDefault = getAlgorithmRegistryEntry(slug)!.engineFunction([1, 2, 3, 4, 5, 6])
+    const fromCustom = runFor(slug, CUSTOM)
+    const fromDefault = runFor(slug, [1, 2, 3, 4, 5, 6])
     expect(fromCustom).not.toEqual(fromDefault)
   })
 
@@ -64,10 +65,32 @@ describe('the generic custom-array box', () => {
     // Every pair of topics on this box must differ for the same input. Two
     // that agree step for step means one is running the other's engine,
     // which is the exact shape of the bug this file exists for.
-    const mine = JSON.stringify(getAlgorithmRegistryEntry(slug)!.engineFunction(CUSTOM))
-    const clashes = GENERIC_BOX.filter(
-      (other) => other !== slug && JSON.stringify(getAlgorithmRegistryEntry(other)!.engineFunction(CUSTOM)) === mine,
-    )
+    const mine = JSON.stringify(runFor(slug, CUSTOM))
+    const clashes = GENERIC_BOX.filter((other) => other !== slug && JSON.stringify(runFor(other, CUSTOM)) === mine)
     expect(clashes).toEqual([])
+  })
+})
+
+/**
+ * The merged switch, over every topic in the curriculum rather than only
+ * the ones on the generic box.
+ *
+ * This is the guard the two-switch arrangement never had: a topic added to
+ * the curriculum without a case here falls through to the default, and the
+ * default is Bubble Sort. The page would look right - header, theory,
+ * pseudocode and complexity all come from the topic's own config - and the
+ * canvas would be sorting an array.
+ */
+describe('runFor, for every topic in the curriculum', () => {
+  it.each(SLUGS)('%s builds a complete run', (slug) => {
+    const snapshots = runFor(slug)
+    expect(snapshots.length).toBeGreaterThan(0)
+    expect(snapshots[snapshots.length - 1].isFinalStep).toBe(true)
+  })
+
+  it.each(SLUGS.filter((slug) => slug !== 'bubble-sort'))('%s is not silently Bubble Sort', (slug) => {
+    const entry = getAlgorithmRegistryEntry(slug)
+    const bubble = JSON.stringify(runFor('bubble-sort', entry?.defaultInput))
+    expect(JSON.stringify(runFor(slug))).not.toBe(bubble)
   })
 })

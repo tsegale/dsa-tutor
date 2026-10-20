@@ -2,6 +2,8 @@ import { z } from 'zod'
 import type { RequestSchema } from '../middleware/validate'
 import { INTERACTION_TYPES } from '../config/interactionTypes'
 import {
+  boundedJson,
+  boundedJsonRecord,
   category,
   id,
   junctionDifficulty,
@@ -215,13 +217,17 @@ export const ai = {
   codeEval: {
     body: z.strictObject({
       algorithmName: nonEmpty(200),
-      currentArrayState: z.array(z.number()).max(200),
+      // Was currentArrayState/expectedNextState as z.array(z.number()):
+      // that shape is why Code Mode existed on one topic. A challenge now
+      // declares its own globals and read-back, so these carry whatever
+      // shape it chose - bounded, not unknown (see schemas/common.ts).
+      currentState: boundedJsonRecord,
       activeIndices: z.array(nonNegativeInt).max(200),
-      expectedNextState: z.array(z.number()).max(200),
+      expectedState: boundedJson,
       studentCode: longText,
       language: z.literal('python'),
       stepDescription: longText,
-      actualResultingState: z.array(z.number()).max(200).nullable(),
+      actualResultingState: boundedJson,
       hasSyntaxError: z.boolean(),
       executionErrorMessage: longText.nullable(),
     }),

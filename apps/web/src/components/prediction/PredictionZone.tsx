@@ -36,14 +36,14 @@ import { getHandsOnInstructionText } from '@/utils/handsOnInstructions'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 import { getPseudocodeText } from '@/utils/pseudocode'
 import { getTilesForSnapshot } from '@/utils/tileBuilder'
-import { bubbleSortEngine } from '@/engine/bubbleSort'
-import { topMisconceptionOf } from '@/utils/junctionTargeting'
 import XPToast from '@/components/ui/XPToast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import HintAvatar, { DISMISS_HINT_EVENT } from './HintAvatar'
 import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import CodeEditorInput from './CodeEditorInput'
+import { codeStepFor } from '@/config/codeChallenges'
+import { runFor } from '@/engine/runFor'
 
 /** A feedback stream opened before the verdict is known (see startFeedbackStream). */
 interface FeedbackStream {
@@ -154,16 +154,12 @@ function wait(ms: number) {
 }
 
 
-/** What the array looks like after correctly resolving a SWAP_DECISION junction - the same rule the engine itself applies. */
-function computeExpectedNextState(snapshot: AlgorithmSnapshot): number[] {
-  const arr = [...(snapshot.dataStructureState as number[])]
-  const [i, j] = snapshot.activeIndices
-  if (i === undefined || j === undefined || arr[i] === undefined || arr[j] === undefined) return arr
-  if (arr[i] > arr[j]) {
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
+// There is no computeExpectedNextState here any more. It re-implemented
+// Bubble Sort's swap rule to produce the answer Code Mode graded against,
+// which is a second copy of the algorithm living next to the engine, and
+// only ever correct for Bubble Sort. The expected answer now comes from
+// the engine's own next snapshot (config/codeChallenges.ts), so the
+// question and the canvas cannot disagree.
 
 function CheckIcon() {
   return (
@@ -222,6 +218,14 @@ export default function PredictionZone({
   // exactly the text on the Pseudocode tab and cannot quote other notation.
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
   const pseudocode = getPseudocodeText(algorithmSlug)
+  // This junction's code question, assembled from the live run: what to
+  // hand the sandbox and - from the engine's own next snapshot - what the
+  // answer is. Null when the topic's challenge does not grade this
+  // junction, which is also what makes the CODE_EDITOR branch below fall
+  // back to tiles rather than render an ungradeable editor.
+  const run = useAlgorithmStore((state) => state.snapshotArray)
+  const stepIndexForCode = useAlgorithmStore((state) => state.stepIndex)
+  const codeStep = codeStepFor(algorithmSlug, run, stepIndexForCode)
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const sessionId = useAlgorithmStore((state) => state.sessionId)
   const stepForward = useAlgorithmStore((state) => state.stepForward)
@@ -842,9 +846,17 @@ export default function PredictionZone({
       firstAttempt: true,
       attemptIndex: 1,
       isCodeEval: true,
+      // Only for a challenge whose read-back is the data structure: a
+      // scalar answer (an address, a count, True/False) has nothing to put
+      // on the canvas, and dropping one in as dataStructureState would
+      // render a one-cell array next to a prompt about memory addresses.
       codeEvalBuggyState:
-        !result.isLogicallyCorrect && !result.hasSyntaxError && result.executeVisually && result.resultingState
-          ? { resultingState: result.resultingState, activeIndices: snapshot.activeIndices }
+        !result.isLogicallyCorrect &&
+        !result.hasSyntaxError &&
+        result.executeVisually &&
+        codeStep?.challenge.seedsNextRun &&
+        Array.isArray(result.resultingState)
+          ? { resultingState: result.resultingState as number[], activeIndices: snapshot.activeIndices }
           : null,
     })
 
@@ -864,22 +876,18 @@ export default function PredictionZone({
       setXpVisible(true)
       play('xp')
 
-      if (result.executeVisually && result.resultingState) {
+      // Re-seed the run from what the student's own code produced, so the
+      // canvas carries on from their array rather than the engine's.
+      // Only for a challenge whose read-back IS the data structure: this
+      // used to call bubbleSortEngine unconditionally, which on any other
+      // topic would have replaced the canvas with a Bubble Sort run, and
+      // on a challenge that reads back a number or a boolean would have
+      // sorted a one-element array. runFor keeps it the open topic's own
+      // engine, and Code Mode is reapplied by the same pass as everywhere.
+      if (result.executeVisually && codeStep?.challenge.seedsNextRun && Array.isArray(result.resultingState)) {
         await wait(500)
-        const {
-          codeEditorMode,
-          recentMisconceptions,
-          activeChallengeType,
-          setAlgorithm: setAlg,
-          setActiveChallengeType,
-        } = useAlgorithmStore.getState()
-        setAlg(
-          'Bubble Sort',
-          bubbleSortEngine(result.resultingState, {
-            codeEditorMode,
-            topMisconception: topMisconceptionOf(recentMisconceptions),
-          }),
-        )
+        const { activeChallengeType, setAlgorithm: setAlg, setActiveChallengeType } = useAlgorithmStore.getState()
+        setAlg(algorithmName, runFor(algorithmSlug, result.resultingState as number[]))
         // setAlgorithm always clears activeChallengeType for a fresh load;
         // restore it so an in-progress AI Challenge run's completion bonus
         // (Feature 2) still fires when this run eventually finishes.
@@ -991,7 +999,7 @@ export default function PredictionZone({
                   ))}
               </div>
 
-              {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.CODE_EDITOR ? (
+              {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.CODE_EDITOR && codeStep ? (
                 <div className="flex min-w-0 flex-1 flex-col">
                   {codeEvalPraise && (
                     <div className="mb-2 shrink-0 rounded-md border-l-4 border-success bg-success-light p-2.5">
@@ -1001,11 +1009,9 @@ export default function PredictionZone({
                   )}
                   <CodeEditorInput
                     key={snapshot.stepIndex}
-                    prompt={getPromptForSnapshot(snapshot, algorithmName)}
                     stepDescription={snapshot.description}
-                    currentArrayState={snapshot.dataStructureState as number[]}
+                    step={codeStep}
                     activeIndices={snapshot.activeIndices}
-                    expectedNextState={computeExpectedNextState(snapshot)}
                     algorithmName={algorithmName}
                     onSubmit={(result, code) => void handleCodeEvalResult(result, code)}
                     onLoadingChange={setCodeSubmitting}

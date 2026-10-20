@@ -1,4 +1,5 @@
 import { MisconceptionCategory, type AlgorithmSnapshot } from '@dsa-tutor/types'
+import { withCodeMode } from '@/engine/codeMode'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import { bstDeleteEngine, bstInsertEngine, type BSTNode, type BSTState } from '@/engine/bst'
@@ -362,14 +363,21 @@ export interface ChallengeRunOptions {
   codeEditorMode?: boolean
 }
 
+// codeEditorMode is applied once, at the end, by the same pass every other
+// run goes through (engine/codeMode.ts) - not by the one engine that used
+// to carry a flag for it.
+
 /** The snapshot run for a case, built with the same study options as the topic's normal runs. */
 export function buildChallengeRun(challenge: ChallengeCase, options: ChallengeRunOptions): AlgorithmSnapshot[] {
+  return withCodeMode(buildCases(challenge, options), challenge.topic, options.codeEditorMode ?? false)
+}
+
+function buildCases(challenge: ChallengeCase, options: ChallengeRunOptions): AlgorithmSnapshot[] {
   const { input } = challenge
   switch (input.kind) {
     case 'array':
       return bubbleSortEngine(input.array, {
         withComplexityPrediction: options.withComplexityPrediction,
-        codeEditorMode: options.codeEditorMode ?? false,
         topMisconception: challenge.targets,
       })
     case 'search':

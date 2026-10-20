@@ -252,9 +252,9 @@ export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalR
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       algorithm_name: request.algorithmName,
-      current_array_state: request.currentArrayState,
+      current_state: request.currentState,
       active_indices: request.activeIndices,
-      expected_next_state: request.expectedNextState,
+      expected_state: request.expectedState,
       student_code: request.studentCode,
       language: request.language,
       step_description: request.stepDescription,
@@ -272,6 +272,7 @@ export async function proxyCodeEval(request: CodeEvalRequest): Promise<CodeEvalR
     errorExplanation: data.error_explanation ?? null,
     bugType: data.bug_type ?? null,
     correctiveHint: data.corrective_hint,
+    codeReview: data.code_review ?? null,
     executeVisually: data.execute_visually,
   }
 }

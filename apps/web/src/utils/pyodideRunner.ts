@@ -55,10 +55,26 @@ export function resetPyodideForTests(): void {
   status = 'idle'
 }
 
+/** What a challenge hands the sandbox, and what it reads back out. */
+export interface PythonStepSpec {
+  /** Globals set before the student's code runs, by name. */
+  globals: Record<string, unknown>
+  /** The global read back afterwards; usually the one they mutate. */
+  readBack: string
+  /**
+   * The shape the read-back value must still have. A student who
+   * reassigns `arr` to a string has not solved the step, and saying so
+   * precisely is more useful than letting a shape mismatch surface later
+   * as a confusing grading result.
+   */
+  expect: 'number[]' | 'number[][]' | 'number' | 'boolean' | 'string' | 'json'
+}
+
 export interface PythonExecutionResult {
   hasSyntaxError: boolean
-  /** The array after running the student's code, or null if it raised. */
-  resultingState: number[] | null
+  /** The read-back value after running the student's code, or null if it
+   * raised. Shape depends on the challenge's `expect`. */
+  resultingState: unknown
   /** Raw Python error message (syntax or runtime), or null on success. */
   errorMessage: string | null
   /** The Python runtime itself could not load (network, CDN). Nothing ran,
@@ -66,17 +82,53 @@ export interface PythonExecutionResult {
   runtimeUnavailable?: boolean
 }
 
+function shapeComplaint(value: unknown, expect: PythonStepSpec['expect'], name: string): string | null {
+  const isNumber = (x: unknown) => typeof x === 'number' && Number.isFinite(x)
+  switch (expect) {
+    case 'number[]':
+      return Array.isArray(value) && value.every(isNumber)
+        ? null
+        : `'${name}' is no longer a list of numbers.`
+    case 'number[][]':
+      return Array.isArray(value) && value.every((row) => Array.isArray(row) && row.every(isNumber))
+        ? null
+        : `'${name}' is no longer a list of lists of numbers.`
+    case 'number':
+      return isNumber(value) ? null : `'${name}' is no longer a number.`
+    case 'boolean':
+      return typeof value === 'boolean' ? null : `'${name}' is no longer True or False.`
+    case 'string':
+      return typeof value === 'string' ? null : `'${name}' is no longer a string.`
+    case 'json':
+      return value === undefined ? `'${name}' was not set.` : null
+  }
+}
+
+/** Pyodide hands back PyProxy objects for lists and dicts; convert and free. */
+function toJsDeep(value: unknown): unknown {
+  if (value && typeof value === 'object' && 'toJs' in value) {
+    const proxy = value as { toJs: (opts?: unknown) => unknown; destroy?: () => void }
+    const converted = proxy.toJs({ dict_converter: Object.fromEntries })
+    proxy.destroy?.()
+    return converted
+  }
+  return value
+}
+
 /**
- * Runs student code for a single adjacent-swap decision (the only shape
- * Code Editor Mode currently offers - see bubbleSortEngine's codeEditorMode
- * comment): `arr` is the current array, `j` is the left of the two
- * compared indices. Real execution in Pyodide's WASM sandbox replaces the
- * old approach of asking an LLM to "mentally execute" the code and report
- * a result as fact - this is deterministic, and Pyodide's WASM sandbox
- * has no filesystem or network access, unlike an LLM given the code as
- * ordinary prompt text.
+ * Runs student code for one step of any topic's code challenge.
+ *
+ * This replaced runSwapDecisionPython, which hardcoded Bubble Sort's
+ * shape (`arr` and `j` in, `arr` out) and so was the reason Code Mode
+ * existed on exactly one topic. A challenge now declares what goes in and
+ * what comes back, so a tree, a graph or a counter works the same way.
+ *
+ * Execution is real, in Pyodide's WASM sandbox, which has no filesystem
+ * or network access. The model is never asked to "mentally execute" code
+ * and report a result as fact; it only ever explains a result computed
+ * here.
  */
-export async function runSwapDecisionPython(code: string, arr: number[], j: number): Promise<PythonExecutionResult> {
+export async function runPythonStep(code: string, spec: PythonStepSpec): Promise<PythonExecutionResult> {
   let pyodide: PyodideInterface
   try {
     pyodide = await getPyodide()
@@ -88,26 +140,33 @@ export async function runSwapDecisionPython(code: string, arr: number[], j: numb
       runtimeUnavailable: true,
     }
   }
+
+  const names = Object.keys(spec.globals)
   try {
-    pyodide.globals.set('arr', pyodide.toPy([...arr]))
-    pyodide.globals.set('j', j)
-    await pyodide.runPythonAsync(code)
-    const resultProxy = pyodide.globals.get('arr')
-    const result = resultProxy.toJs() as number[]
-    resultProxy.destroy?.()
-    if (!Array.isArray(result) || result.length !== arr.length || !result.every((x) => typeof x === 'number')) {
-      return {
-        hasSyntaxError: true,
-        resultingState: null,
-        errorMessage: "'arr' was reassigned to something that is no longer a list of the same length.",
-      }
+    for (const [name, value] of Object.entries(spec.globals)) {
+      pyodide.globals.set(name, pyodide.toPy(value))
     }
-    return { hasSyntaxError: false, resultingState: Array.from(result), errorMessage: null }
+    await pyodide.runPythonAsync(code)
+    const raw = toJsDeep(pyodide.globals.get(spec.readBack))
+    const complaint = shapeComplaint(raw, spec.expect, spec.readBack)
+    if (complaint) return { hasSyntaxError: true, resultingState: null, errorMessage: complaint }
+    return { hasSyntaxError: false, resultingState: raw, errorMessage: null }
   } catch (error) {
     return {
       hasSyntaxError: true,
       resultingState: null,
       errorMessage: error instanceof Error ? error.message : String(error),
+    }
+  } finally {
+    // One sandbox is reused across every run, so a name left behind would
+    // leak into the next challenge and could make wrong code appear to
+    // work. Clear what this run set.
+    for (const name of [...names, spec.readBack]) {
+      try {
+        pyodide.globals.delete(name)
+      } catch {
+        // Already gone, which is the state we wanted.
+      }
     }
   }
 }

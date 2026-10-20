@@ -2,10 +2,36 @@ import io
 import logging
 import tokenize
 
+from typing import Any
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from services.claude_service import call_claude_for_feedback
+
+
+def _matches(actual: Any, expected: Any) -> bool:
+    """Structural equality for whatever shape a challenge reads back.
+
+    Lists compare elementwise, dicts by key, and numbers that differ only
+    by float representation (2 against 2.0, which Pyodide can hand back
+    either way) compare equal. Anything else falls through to ==.
+    """
+    if expected is None or actual is None:
+        return actual == expected
+    if isinstance(actual, bool) or isinstance(expected, bool):
+        # Checked before the numeric branch, and by identity of type rather
+        # than ==, because `True == 1` in Python: a student who returned 1
+        # on a challenge whose answer is True would otherwise be marked
+        # correct, and a bool is never the right answer to a count.
+        return isinstance(actual, bool) and isinstance(expected, bool) and actual == expected
+    if isinstance(actual, (int, float)) and isinstance(expected, (int, float)):
+        return float(actual) == float(expected)
+    if isinstance(actual, list) and isinstance(expected, list):
+        return len(actual) == len(expected) and all(_matches(a, e) for a, e in zip(actual, expected))
+    if isinstance(actual, dict) and isinstance(expected, dict):
+        return actual.keys() == expected.keys() and all(_matches(actual[k], expected[k]) for k in actual)
+    return actual == expected
 
 router = APIRouter(prefix="/code-eval", tags=["code-eval"])
 logger = logging.getLogger(__name__)
@@ -13,9 +39,15 @@ logger = logging.getLogger(__name__)
 
 class CodeEvalRequest(BaseModel):
     algorithm_name: str
-    current_array_state: list[int]
+    # The globals the challenge handed the sandbox, by name. Structured
+    # rather than list[int]: Code Mode used to exist on one topic because
+    # this contract could only describe an array.
+    current_state: dict[str, Any]
     active_indices: list[int]
-    expected_next_state: list[int]  # what the correct next step looks like
+    # What the engine's own next snapshot says the answer is. Computed in
+    # the browser from the run the student is watching, never authored, so
+    # it cannot drift from the visualisation beside it.
+    expected_state: Any
     student_code: str
     language: str  # 'python' - the only language Pyodide (and this endpoint) supports
     step_description: str  # plain English description of what should happen at this step
@@ -23,7 +55,7 @@ class CodeEvalRequest(BaseModel):
     # in the browser (see apps/web/src/utils/pyodideRunner.ts) - this
     # endpoint never executes student code itself, and never asks the
     # model to guess what running it would produce.
-    actual_resulting_state: list[int] | None
+    actual_resulting_state: Any
     has_syntax_error: bool
     execution_error_message: str | None
 
@@ -31,10 +63,15 @@ class CodeEvalRequest(BaseModel):
 class CodeEvalResponse(BaseModel):
     is_logically_correct: bool
     has_syntax_error: bool
-    resulting_state: list[int] | None  # the array state after applying the student's code
+    resulting_state: Any = None  # whatever the challenge reads back, echoed
     error_explanation: str | None
-    bug_type: str | None  # 'off_by_one' | 'wrong_condition' | 'missing_swap' | 'syntax' | null
+    bug_type: str | None  # 'off_by_one' | 'wrong_condition' | 'wrong_operation' | 'missing_step' | 'syntax' | null
     corrective_hint: str  # Socratic question if wrong, praise if right
+    # Review of the code beyond this one step: the edge case it would miss
+    # and whether it does more work than it needs to. The brief asks for
+    # functional correctness, edge cases and efficiency; correctness is
+    # decided deterministically above, so this carries the other two.
+    code_review: str | None = None
     execute_visually: bool  # true = run the student's code in the visualiser, false = show error
 
 
@@ -65,10 +102,10 @@ def strip_comments_and_neutralize(code: str) -> str:
 
 CODE_EVAL_PROMPT = """You are giving feedback on a student's code for one step of {algorithm_name}.
 
-Current array state: {current_array_state}
-Elements being compared: indices {active_indices}
+The values their code was given: {current_state}
+Positions in play: indices {active_indices}
 What should happen at this step: {step_description}
-Expected resulting array: {expected_next_state}
+Expected result: {expected_state}
 
 The student's code, already executed in a sandbox - this is the actual,
 verified outcome, not something you need to determine:
@@ -77,12 +114,18 @@ verified outcome, not something you need to determine:
 The code {correctness_phrase}.
 {actual_state_line}
 
+Whether it is correct has already been decided by comparing the real
+execution with the expected result. Do not re-judge it, and do not
+contradict it.
+
 Respond ONLY with valid JSON matching this exact schema:
 {{
   "bug_type": {bug_type_schema},
-  "corrective_hint": <if correct: one sentence of genuine praise. if wrong: one Socratic question guiding the student toward the bug without revealing it>
+  "corrective_hint": <if correct: one sentence naming what they got right, specifically. if wrong: one Socratic question guiding them toward the bug without revealing it>,
+  "code_review": <at most two sentences on what this code would do BEYOND this one step: an input that would break it (empty, one element, duplicates, already sorted, the boundary) or work it repeats needlessly. Name the specific input or the specific wasted work. null if there is genuinely nothing worth saying.>
 }}
 
+Never use an em dash or en dash; use a comma, a period, or "-" instead.
 Return ONLY the JSON. No markdown, no explanation outside the JSON.
 """
 
@@ -100,17 +143,21 @@ async def evaluate_code(request: CodeEvalRequest) -> CodeEvalResponse:
             error_explanation=request.execution_error_message or "Your code could not run. Check for syntax errors.",
             bug_type="syntax",
             corrective_hint="Fix the error shown and try running your code again.",
+            code_review=None,
             execute_visually=False,
         )
 
-    is_logically_correct = request.actual_resulting_state == request.expected_next_state
+    # Deterministic, and the only thing that decides correctness: the real
+    # execution against the engine's own next step. The model explains this
+    # verdict, it never forms one.
+    is_logically_correct = _matches(request.actual_resulting_state, request.expected_state)
 
     prompt = CODE_EVAL_PROMPT.format(
         algorithm_name=request.algorithm_name,
-        current_array_state=request.current_array_state,
+        current_state=request.current_state,
         active_indices=request.active_indices,
         step_description=request.step_description,
-        expected_next_state=request.expected_next_state,
+        expected_state=request.expected_state,
         student_code=strip_comments_and_neutralize(request.student_code),
         correctness_phrase="correctly implements this step" if is_logically_correct else "does NOT correctly implement this step",
         actual_state_line=(
@@ -119,7 +166,7 @@ async def evaluate_code(request: CodeEvalRequest) -> CodeEvalResponse:
         bug_type_schema=(
             "null"
             if is_logically_correct
-            else '<one of: "off_by_one", "wrong_condition", "missing_swap", "wrong_index">'
+            else '<one of: "off_by_one", "wrong_condition", "wrong_operation", "missing_step", "wrong_index">'
         ),
     )
 
@@ -132,6 +179,7 @@ async def evaluate_code(request: CodeEvalRequest) -> CodeEvalResponse:
             error_explanation=None if is_logically_correct else data.get("corrective_hint"),
             bug_type=None if is_logically_correct else data.get("bug_type"),
             corrective_hint=data.get("corrective_hint", ""),
+            code_review=data.get("code_review") or None,
             execute_visually=True,
         )
     except Exception as e:

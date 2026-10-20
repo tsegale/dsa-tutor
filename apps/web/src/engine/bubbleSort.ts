@@ -38,7 +38,6 @@ function computeAmbiguityThreshold(array: number[]): number {
 }
 
 export interface BubbleSortOptions {
-  codeEditorMode?: boolean
   /** The learner's most frequent recent misconception category (see
    * utils/junctionTargeting.ts's topMisconceptionOf). When it targets
    * SWAP_DECISION, every comparison becomes a junction candidate, so the
@@ -72,9 +71,9 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     isPredictionRequired: params.isPredictionRequired,
     // Bubble Sort's entire prediction interaction is tile selection: two
     // bars pulse on the canvas, the learner reads the values, then picks
-    // a tile below. There is no click-to-select-a-bar input path, except
-    // at SWAP_DECISION junctions in Code Editor Mode (see codeEditorMode
-    // param below), which use CODE_EDITOR instead.
+    // a tile below. There is no click-to-select-a-bar input path. Code
+    // Mode rewrites predictionType afterwards, for every topic alike,
+    // in engine/codeMode.ts - no engine knows about it.
     predictionType: params.predictionType ?? PredictionType.TILE_GRID,
     dataStructureState: [...params.dataStructureState],
     activeIndices: [...(params.activeIndices ?? [])],
@@ -93,13 +92,14 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
  * Never mutates `input`; every snapshot's dataStructureState is an
  * independent copy of the array at that instant.
  *
- * codeEditorMode swaps predictionType to CODE_EDITOR on SWAP_DECISION
- * junctions only - the three conceptual junctions (PASS_COMPLETE,
- * EARLY_TERMINATION, ALGORITHM_COMPLETE) always stay TILE_GRID, since
- * Code Editor Mode only applies to the swap execution step.
+ * This engine has no Code Mode option. It used to take `codeEditorMode`
+ * and set PredictionType.CODE_EDITOR on its own SWAP_DECISION junctions,
+ * and since no other engine took that option, Code Mode was a one-topic
+ * feature behind a platform-wide toggle. engine/codeMode.ts now applies
+ * that rewrite to any topic with a challenge written for it.
  */
 export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {}): AlgorithmSnapshot[] {
-  const { codeEditorMode = false, topMisconception = null, withComplexityPrediction = false } = options
+  const { topMisconception = null, withComplexityPrediction = false } = options
   const working = [...input]
   const n = working.length
   const ambiguityThreshold = computeAmbiguityThreshold(working)
@@ -179,7 +179,7 @@ export function bubbleSortEngine(input: number[], options: BubbleSortOptions = {
           highlightIndices: finalized,
           criticalJunctionType: isSwapJunction ? CriticalJunctionType.SWAP_DECISION : null,
           junctionDifficulty: isSwapJunction ? JunctionDifficulty.PROCEDURAL : null,
-          predictionType: isSwapJunction && codeEditorMode ? PredictionType.CODE_EDITOR : PredictionType.TILE_GRID,
+          predictionType: PredictionType.TILE_GRID,
         }),
       )
 
