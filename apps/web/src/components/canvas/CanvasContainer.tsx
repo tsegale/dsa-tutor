@@ -11,6 +11,7 @@ import StackCanvas from './StackCanvas'
 import QueueCanvas from './QueueCanvas'
 import HashTableCanvas from './HashTableCanvas'
 import CallStackCanvas from './CallStackCanvas'
+import RecursionTreeCanvas from './RecursionTreeCanvas'
 import CountingSortCanvas from './CountingSortCanvas'
 import RadixSortCanvas from './RadixSortCanvas'
 import HeapCanvas from './HeapCanvas'
@@ -102,11 +103,14 @@ export default function CanvasContainer({
       case CanvasType.HASH_TABLE:
         return <HashTableCanvas width={size.width} height={size.height} />
       case CanvasType.CALL_STACK:
-      case CanvasType.RECURSION_TREE:
-        // RECURSION_TREE (branching call tree) has no dedicated canvas
-        // yet - a future phase's addition. CallStackCanvas is a safe
-        // fallback since it already renders the same CallStackState.
+        // A straight chain of calls, as in factorial: the stack IS the
+        // shape, and a tree of it would be a vertical line.
         return <CallStackCanvas width={size.width} height={size.height} />
+      case CanvasType.RECURSION_TREE:
+        // Branching recursion, as in fibonacci. Shown as a stack it was a
+        // column growing and shrinking, and the branching and the repeated
+        // subproblems - the entire content of the topic - were invisible.
+        return <RecursionTreeCanvas width={size.width} height={size.height} />
       case CanvasType.TREE:
         return <TreeCanvas width={size.width} height={size.height} />
       case CanvasType.AVL:

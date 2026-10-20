@@ -22,7 +22,10 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
     pseudocodeLine: params.pseudocodeLine,
     isPredictionRequired: params.isPredictionRequired,
     predictionType: PredictionType.TILE_GRID,
-    canvasType: CanvasType.CALL_STACK,
+    // The branching is the point of this topic (see the dashed rings on
+    // repeated subproblems in RecursionTreeCanvas); factorial keeps the
+    // stack view, where the chain of calls is the shape.
+    canvasType: CanvasType.RECURSION_TREE,
     dataStructureState: { ...params.state, frames: params.state.frames.map((f) => ({ ...f })) },
     activeIndices: [],
     highlightIndices: [],
