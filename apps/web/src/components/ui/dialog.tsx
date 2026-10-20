@@ -13,7 +13,10 @@ import { Button } from "@/components/ui/button"
 // logs "Function components cannot be given refs" and the primitive loses
 // the node it needs - which is how DialogOverlay was warning on every
 // dialog open.
-type Ref<T> = React.ComponentRef<T>
+// Both aliases constrain T to ElementType, which is what ComponentRef and
+// ComponentPropsWithoutRef each require. Leaving the constraint off Ref
+// type-checked under `tsc --noEmit` and failed the real `tsc -b` build.
+type Ref<T extends React.ElementType> = React.ComponentRef<T>
 type Props<T extends React.ElementType> = React.ComponentPropsWithoutRef<T>
 
 function Dialog({
