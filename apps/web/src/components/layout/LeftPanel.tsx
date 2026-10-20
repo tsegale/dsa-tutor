@@ -31,6 +31,9 @@ import { CHALLENGES_PER_TOPIC } from '@/config/pacing'
 import { hasChallengeGenerator } from '@/utils/challengeGenerators'
 import { masteryPracticeInput } from '@/utils/mastery'
 import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
+import { usePipeline } from '@/hooks/usePipeline'
+import PipelineTracker from '@/components/pipeline/PipelineTracker'
+import { hasCodeMode } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
 // Custom Array / Random must run the SAME algorithm currently loaded on
@@ -154,6 +157,12 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const feynman = useFeynmanAccess()
   const challengesStarted = useAlgorithmStore((state) => state.challengesStarted)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
+  const pipeline = usePipeline()
+  // Code Mode rewrites a junction's prediction into a line of code to
+  // write, and only one engine builds those junctions. The toggle used to
+  // appear on every topic regardless, so on 65 of 66 flipping it did
+  // nothing at all.
+  const codeModeAvailable = hasCodeMode(algorithmSlug ?? '')
 
   // Code Mode on: fetch the Python runtime now, in the background, so the
   // first code question does not wait on a ~13MB download.
@@ -251,6 +260,9 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
       ) : (
         <div className="flex h-full flex-col overflow-hidden pt-3">
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-1">
+          {/* First in the panel: the route through this topic, before the
+              controls for whichever stage you happen to be in. */}
+          <PipelineTracker stages={pipeline} />
           {algorithmSlug && CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug) ? (
             <AlgorithmControls slug={algorithmSlug} />
           ) : (
@@ -300,13 +312,16 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               id="code-mode-toggle"
               type="button"
               onClick={toggleCodeEditorMode}
+              disabled={!codeModeAvailable}
               aria-pressed={codeEditorMode}
               aria-label="Toggle Code Mode"
               className={cn(
                 'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors',
-                codeEditorMode
-                  ? 'border-primary bg-primary-light text-primary'
-                  : 'border-border text-text-primary hover:bg-surface-sunk dark:text-dark-text-primary dark:hover:bg-dark-border',
+                !codeModeAvailable
+                  ? 'cursor-default border-border text-text-muted opacity-50 dark:text-dark-text-secondary'
+                  : codeEditorMode
+                    ? 'border-primary bg-primary-light text-primary'
+                    : 'border-border text-text-primary hover:bg-surface-sunk dark:text-dark-text-primary dark:hover:bg-dark-border',
               )}
             >
               <span className="flex items-center gap-1.5">
@@ -316,12 +331,17 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               <span
                 className={cn(
                   'flex h-5 w-9 items-center rounded-full px-0.5 transition-colors',
-                  codeEditorMode ? 'justify-end bg-primary' : 'justify-start bg-border',
+                  codeEditorMode && codeModeAvailable ? 'justify-end bg-primary' : 'justify-start bg-border',
                 )}
               >
                 <span className="size-4 rounded-full bg-background shadow-sm" />
               </span>
             </button>
+            {!codeModeAvailable && (
+              <p className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
+                No code challenge written for this topic yet.
+              </p>
+            )}
           </section>
           )}
 

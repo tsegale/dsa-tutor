@@ -2,6 +2,12 @@ import { motion } from 'framer-motion'
 import { useParams } from 'react-router-dom'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import {
+  BUTTONS_ARE_HANDS_ON,
+  HANDS_ON_ACTIVE,
+  HANDS_ON_COMING_SOON,
+  NO_HANDS_ON,
+} from '@/config/pipeline'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const OPTIONS: { label: string; value: AlgorithmMode }[] = [
@@ -10,111 +16,10 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
   { label: 'Hands-On', value: AlgorithmMode.HANDS_ON },
 ]
 
-// Hands-On mode's drag canvas interaction exists for all five sorting
-// algorithms (Bubble, Insertion, Selection, Merge, Quick Sort) via
-// ArrayCanvas's getHandsOnDragTarget. Three distinct situations for
-// every other algorithm, rather than one blanket "disabled" tab:
-//
-// 1. NO_HANDS_ON - no physical drag interaction makes sense (pointer
-//    movement or recursion, not element reordering) - tab isn't shown.
-//    Judgment call: two-pointer and both sliding-window algorithms are
-//    grouped here with the other pointer-based (non-swap) algorithms,
-//    not with the sorting algorithms below - dragging a pointer isn't
-//    the same interaction as dragging a bar to swap it.
-// 2. BUTTONS_ARE_HANDS_ON - the left panel's operation buttons (push,
-//    enqueue, insert, search...) already ARE the hands-on interaction
-//    for these data structures - tab is shown, disabled, with a tooltip
-//    naming that reason rather than just vanishing with no explanation.
-// 3. array-insert/array-delete DO have the same drag-based interaction
-//    model in mind, just not built yet - tab is shown, disabled, with
-//    a "coming soon" tooltip instead of a dead end.
-const NO_HANDS_ON = new Set([
-  'recursion-factorial',
-  'recursion-fibonacci',
-  'binary-search',
-  'linear-search',
-  'jump-search',
-  'interpolation-search',
-  'exponential-search',
-  'array-access',
-  'two-pointer',
-  'sliding-window-fixed',
-  'sliding-window-variable',
-  // Matrix view, no spatial manipulation to hand-on.
-  'floyd-warshall',
-  // Generation is automatic (random carving) - no meaningful drag
-  // interaction, unlike the pathfinding grid algorithms below.
-  'maze-generation',
-  'maze-prim',
-  'maze-kruskal',
-])
-
-const BUTTONS_ARE_HANDS_ON = new Set([
-  'stack',
-  'queue',
-  'circular-queue',
-  'deque',
-  'singly-linked-list',
-  'doubly-linked-list',
-  'circular-linked-list',
-  'hash-table-chaining',
-  'hash-table-probing',
-  'bst',
-  'bst-search',
-  'bst-delete',
-  'avl-insert',
-  'avl-delete',
-  'rb-insert',
-  'rb-delete',
-  'max-heap-insert',
-  'max-heap-delete',
-  'min-heap-insert',
-  'min-heap-delete',
-  'trie-insert',
-  'trie-search',
-  'trie-delete',
-  // Node/edge graph algorithms - dragging nodes to reposition them, and
-  // the graph-controls preset/start/target selection, are the hands-on
-  // interaction; there's no separate per-step drag gesture to make.
-  'bfs',
-  'dfs',
-  'dijkstra',
-  'bellman-ford',
-  'kruskal',
-  'prim',
-  'cycle-detection',
-  'connected-components',
-  'topological-sort',
-])
-
-const HANDS_ON_COMING_SOON = new Set([
-  'array-insert',
-  'array-delete',
-  'counting-sort',
-  'radix-sort',
-  'tree-inorder',
-  'tree-preorder',
-  'tree-postorder',
-  'tree-level-order',
-])
-
-const HANDS_ON_ACTIVE = new Set([
-  'bubble-sort',
-  'insertion-sort',
-  'selection-sort',
-  'merge-sort',
-  'quick-sort',
-  'shell-sort',
-  'heap-sort',
-  // Wall-drawing and start/end-cell dragging directly on the grid is
-  // genuinely implemented (not a placeholder), unlike the sorting
-  // algorithms' shared "coming soon" list above for array-insert/delete.
-  'grid-bfs',
-  'grid-dfs',
-  'grid-dijkstra',
-  'grid-astar',
-])
-
+// The four hands-on situations (no gesture possible / the structure's own
+// buttons already are it / drag not built yet / a real drag canvas) live in
+// config/pipeline.ts, because the left panel's stage tracker needs exactly
+// the same answers and two copies would drift.
 export default function ModeToggle() {
   const mode = useAlgorithmStore((state) => state.mode)
   const setMode = useAlgorithmStore((state) => state.setMode)
