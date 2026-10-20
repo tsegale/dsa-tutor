@@ -177,6 +177,23 @@ export const ai = {
       pseudocode: longText.optional(),
     }),
   },
+  ask: {
+    body: z.strictObject({
+      algorithmName: nonEmpty(200),
+      // Matches the AI service's own MAX_QUESTION_CHARS. A question longer
+      // than this is a text box being used for something else.
+      question: nonEmpty(500),
+      currentState: z.unknown().optional(),
+      stepIndex: nonNegativeInt.optional(),
+      pseudocode: longText.optional(),
+      // The AI service keeps only the last few turns; this cap just stops
+      // a client sending an unbounded transcript.
+      conversation: z
+        .array(z.strictObject({ question: nonEmpty(500), answer: longText }))
+        .max(20)
+        .optional(),
+    }),
+  },
   feynman: {
     body: z.strictObject({
       algorithmName: nonEmpty(200),

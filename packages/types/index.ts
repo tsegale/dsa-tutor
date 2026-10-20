@@ -462,6 +462,40 @@ export interface HintResponse {
 }
 
 /**
+ * Demo mode's free-form assistant: the student asks, it explains. The
+ * deliberate opposite of HintRequest, which asks the student a question
+ * back and is calibrated to a scaffolding level. There is no scaffolding
+ * level here because Demo mode never assesses, so there is nothing to
+ * calibrate, and Classic mode has no AI surface at all.
+ */
+export interface AskTurn {
+  question: string
+  answer: string
+}
+
+export interface AskRequest {
+  algorithmName: string
+  question: string
+  /** Same wrapper shape as PredictionRequest.currentState - lets a question
+   * about what is on screen right now be answered from the actual state
+   * rather than guessed at. */
+  currentState?: unknown
+  stepIndex?: number
+  pseudocode?: string
+  /** Oldest first, so a follow-up like "why?" has something to refer back
+   * to. The AI service keeps only the last few turns. */
+  conversation?: AskTurn[]
+}
+
+export interface AskResponse {
+  answer: string
+  /** False when the model call failed and deterministic fallback text is
+   * being returned, so the client can say so rather than presenting it as
+   * a tutor reply. */
+  aiGenerated: boolean
+}
+
+/**
  * Feynman Technique mode (reverse tutoring): the learner explains the
  * algorithm back to a simulated confused peer, which evaluates the
  * explanation against a concept rubric.

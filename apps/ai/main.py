@@ -36,6 +36,7 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), handlers=[_handler])
 
 from models.response_models import HealthResponse
 from routers import hints, predictions
+from routers.ask import router as ask_router
 from routers.challenges import router as challenges_router
 from routers.code_eval import router as code_eval_router
 from routers.feynman import router as feynman_router
@@ -59,6 +60,7 @@ app.add_middleware(RequestIdMiddleware)
 
 app.include_router(predictions.router, prefix="/api/v1/predictions", tags=["predictions"])
 app.include_router(hints.router, prefix="/api/v1/hints", tags=["hints"])
+app.include_router(ask_router, prefix="/api/v1/ask", tags=["ask"])
 app.include_router(feynman_router, prefix="/api/v1")
 app.include_router(challenges_router, prefix="/api/v1")
 app.include_router(code_eval_router, prefix="/api/v1")

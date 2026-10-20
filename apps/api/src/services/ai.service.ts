@@ -4,6 +4,8 @@ import type {
   PredictionEvaluateResponse,
   HintRequest,
   HintResponse,
+  AskRequest,
+  AskResponse,
   FeynmanRequest,
   FeynmanResponse,
   SelfExplanationRequest,
@@ -363,4 +365,22 @@ export async function proxyHint(request: HintRequest): Promise<HintResponse> {
   if (!response.ok) throw new Error(`AI hint error: ${response.status}`)
   const data = (await response.json()) as any
   return { hint: data.hint, scaffoldingLevel: data.scaffoldingLevel, aiGenerated: data.aiGenerated ?? true }
+}
+
+export async function proxyAsk(request: AskRequest): Promise<AskResponse> {
+  const response = await aiFetch('/api/v1/ask/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      algorithm_name: request.algorithmName,
+      question: request.question,
+      current_state: request.currentState ?? null,
+      step_index: request.stepIndex ?? null,
+      pseudocode: request.pseudocode ?? null,
+      conversation: request.conversation ?? [],
+    }),
+  })
+  if (!response.ok) throw new Error(`AI ask error: ${response.status}`)
+  const data = (await response.json()) as any
+  return { answer: data.answer, aiGenerated: data.aiGenerated ?? true }
 }

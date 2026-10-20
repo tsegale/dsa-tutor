@@ -50,3 +50,12 @@ class HintResponse(CamelModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
+
+
+class AskResponse(CamelModel):
+    """Demo mode's free-form answer. ai_generated is false when the model
+    call failed and the deterministic fallback text is being returned, so
+    the client can say so rather than presenting it as a tutor reply."""
+
+    answer: str
+    ai_generated: bool = True

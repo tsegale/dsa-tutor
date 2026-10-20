@@ -90,3 +90,29 @@ class HintRequest(BaseModel):
     pseudocode: str | None = None
     error_history: list[str] = []
     scaffolding_level: ScaffoldingLevel
+
+
+class AskTurn(BaseModel):
+    """One earlier exchange in a Demo-mode conversation, so a follow-up
+    like "why?" has something to refer back to."""
+
+    question: str
+    answer: str
+
+
+class AskRequest(BaseModel):
+    """A free-form question in Demo mode. Deliberately carries no
+    scaffolding level and no error history: Demo mode's assistant explains
+    on request and never assesses, so there is nothing to calibrate."""
+
+    algorithm_name: str
+    question: str
+    # Same wrapper shape as PredictionRequest.current_state. Lets a question
+    # about what is on screen right now ("why is index 2 highlighted?") be
+    # answered from the actual state rather than guessed at.
+    current_state: Any = None
+    step_index: int | None = None
+    pseudocode: str | None = None
+    # Oldest first. The router keeps only the last few turns; a long Demo
+    # session must not grow the prompt without bound.
+    conversation: list[AskTurn] = []

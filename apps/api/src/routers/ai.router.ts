@@ -5,6 +5,7 @@ import {
   proxyPredictionEvaluate,
   relayPredictionStream,
   proxyHint,
+  proxyAsk,
   proxySelfExplanation,
   proxyFeynman,
   proxyChallenge,
@@ -72,6 +73,18 @@ router.post('/hints', validate(S.ai.hints), async (req: AuthRequest, res: Respon
     res.json({ data: result, error: null })
   } catch (err) {
     console.error('proxyHint failed:', err)
+    res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
+  }
+})
+
+// Demo mode's free-form assistant. Student-facing like /hints, but it
+// explains instead of questioning; see apps/ai/routers/ask.py.
+router.post('/ask', validate(S.ai.ask), async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await proxyAsk(req.body)
+    res.json({ data: result, error: null })
+  } catch (err) {
+    console.error('proxyAsk failed:', err)
     res.status(502).json({ data: null, error: { code: 'AI_SERVICE_ERROR', message: 'AI service unavailable' } })
   }
 })
