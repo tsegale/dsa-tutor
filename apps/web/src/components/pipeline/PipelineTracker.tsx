@@ -141,9 +141,16 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
                 >
                   {stage.label}
                 </span>
-                <span className="text-left text-micro font-normal text-ink-2">
-                  {stage.reason ?? stage.summary}
-                </span>
+                {/* The second line is only worth its height when it says
+                    something the label does not: why a stage is shut, or
+                    what the student is doing in the one they are in. Five
+                    three-line blocks filled the rail and pushed the live
+                    variables below the fold. */}
+                {(stage.reason ?? (current ? stage.summary : null)) && (
+                  <span className="text-left text-micro font-normal text-ink-2">
+                    {stage.reason ?? stage.summary}
+                  </span>
+                )}
               </div>
             </div>
           )

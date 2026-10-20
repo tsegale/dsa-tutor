@@ -33,6 +33,7 @@ import { masteryPracticeInput } from '@/utils/mastery'
 import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
 import { usePipeline } from '@/hooks/usePipeline'
 import PipelineTracker from '@/components/pipeline/PipelineTracker'
+import VariableWatcher from '@/components/pipeline/VariableWatcher'
 import { hasCodeMode } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
@@ -294,6 +295,10 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
           {/* First in the panel: the route through this topic, before the
               controls for whichever stage you happen to be in. */}
           <PipelineTracker stages={pipeline} />
+          {/* Directly under the route, above the controls: this is live
+              state a student reads while stepping, so it has to be visible
+              without scrolling the panel. */}
+          <VariableWatcher />
           {algorithmSlug && CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug) ? (
             <AlgorithmControls slug={algorithmSlug} />
           ) : algorithmSlug && FIXED_INPUT_SLUGS.has(algorithmSlug) ? (
