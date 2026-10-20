@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { TOPIC_THEORY, theoryFor } from './theory'
 import { COMPLEXITY } from './complexity'
+import { MODULES } from './curriculum'
 
 /**
  * The Theory tab is Demo mode's default and the first thing a beginner
@@ -40,5 +41,20 @@ describe('topic theory briefings', () => {
   it('every topic with a briefing also has complexity facts to show', () => {
     const missing = Object.keys(TOPIC_THEORY).filter((slug) => !COMPLEXITY[slug])
     expect(missing).toEqual([])
+  })
+
+  it('every topic in the curriculum has a briefing', () => {
+    // The Theory tab is the default tab, so a curriculum topic without a
+    // briefing shows a panel's empty state as the first thing a student
+    // sees. Adding a topic to a module means writing its briefing too.
+    const slugs = MODULES.flatMap((m) => m.topics)
+    const missing = slugs.filter((slug) => !theoryFor(slug))
+    expect(missing).toEqual([])
+  })
+
+  it('has no briefing for a topic the curriculum does not teach', () => {
+    const slugs = new Set(MODULES.flatMap((m) => m.topics))
+    const orphans = Object.keys(TOPIC_THEORY).filter((slug) => !slugs.has(slug))
+    expect(orphans).toEqual([])
   })
 })
