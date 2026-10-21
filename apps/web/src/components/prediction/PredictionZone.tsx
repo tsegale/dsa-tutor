@@ -786,9 +786,10 @@ export default function PredictionZone({
         correct: true,
         firstAttempt: attempt === 0,
         offeredThisSession: useAlgorithmStore.getState().selfExplanationsOffered,
+        offeredKeys: useAlgorithmStore.getState().selfExplanationKeysOffered,
       })
       if (selfExplanationPrompt && submissionTokenRef.current === submissionToken) {
-        useAlgorithmStore.getState().noteSelfExplanationOffered()
+        useAlgorithmStore.getState().noteSelfExplanationOffered(selfExplanationPrompt.key)
         await askSelfExplanation(selfExplanationPrompt, snapshot)
       }
       await waitForRemediation()

@@ -27,14 +27,42 @@ function proceduralOrdinals(snapshots: readonly AlgorithmSnapshot[]): Map<number
   return ordinals
 }
 
+// The first index at which each conceptual junction type is asked, cached
+// per snapshot array like the procedural ordinals above.
+const conceptualFirstCache = new WeakMap<readonly AlgorithmSnapshot[], Map<string, number>>()
+
+function conceptualFirsts(snapshots: readonly AlgorithmSnapshot[]): Map<string, number> {
+  let firsts = conceptualFirstCache.get(snapshots)
+  if (!firsts) {
+    firsts = new Map()
+    snapshots.forEach((snapshot, index) => {
+      const type = snapshot.criticalJunctionType
+      if (!snapshot.isPredictionRequired || !type) return
+      if (snapshot.junctionDifficulty !== JunctionDifficulty.CONCEPTUAL) return
+      if (!firsts!.has(type)) firsts!.set(type, index)
+    })
+    conceptualFirstCache.set(snapshots, firsts)
+  }
+  return firsts
+}
+
 /**
- * True when the snapshot at `index` is a procedural junction that runs as a
- * worked step at this level. Deterministic - of every PERFORM_ONE_IN[level]
- * procedural junctions in a run the last is performed, so a run opens with
- * demonstrations and two participants at the same level see the same
- * sequence. Conceptual junctions are never worked. Junction types in
- * `focus` (a focused re-run on what the learner missed, Phase 7E) are
- * always performed, never worked.
+ * True when the snapshot at `index` runs as a narrated worked step rather
+ * than something the learner performs.
+ *
+ * Procedural junctions fade by level: of every PERFORM_ONE_IN[level] in a
+ * run the last is performed, so a run opens with demonstrations and two
+ * participants at the same level see the same sequence.
+ *
+ * A conceptual junction is asked the FIRST time its type comes up and
+ * narrated after that. Its question is about the invariant rather than
+ * the values, so every later one repeats it word for word - Bubble Sort
+ * asked "what can we guarantee about the array?" once per pass, three
+ * times on five elements and once more for every element added. Answering
+ * it a fourth time demonstrates nothing the first did not.
+ *
+ * Junction types in `focus` (a focused re-run on what the learner missed,
+ * Phase 7E) are always performed, never worked.
  */
 export function isWorkedStep(
   snapshots: readonly AlgorithmSnapshot[],
@@ -42,10 +70,14 @@ export function isWorkedStep(
   level: ScaffoldingLevel,
   focus: readonly string[] = [],
 ): boolean {
-  const ordinal = proceduralOrdinals(snapshots).get(index)
-  if (ordinal === undefined) return false
   const type = snapshots[index]?.criticalJunctionType
   if (type && focus.includes(type)) return false
+
+  const firstAsked = type ? conceptualFirsts(snapshots).get(type) : undefined
+  if (firstAsked !== undefined) return index !== firstAsked
+
+  const ordinal = proceduralOrdinals(snapshots).get(index)
+  if (ordinal === undefined) return false
   const every = PERFORM_ONE_IN[level]
   return every > 1 && ordinal % every !== every - 1
 }

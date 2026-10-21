@@ -14,10 +14,17 @@ export function offerableSelfExplanation(args: {
   correct: boolean
   firstAttempt: boolean
   offeredThisSession: number
+  /** Prompt keys already asked this session. */
+  offeredKeys?: readonly string[]
 }): SelfExplanationPrompt | null {
   if (!args.correct || !args.firstAttempt) return null
   if (args.offeredThisSession >= SELF_EXPLANATION_MAX_PER_SESSION) return null
-  return selfExplanationPromptFor(args.topicSlug, args.snapshot)
+  const prompt = selfExplanationPromptFor(args.topicSlug, args.snapshot)
+  // The cap was per session, not per question, so a junction that recurs
+  // could put the identical "explain it in your own words" up three times
+  // over. Asking it once is the whole of what it measures.
+  if (prompt && args.offeredKeys?.includes(prompt.key)) return null
+  return prompt
 }
 
 /** Shown in place of the AI's acknowledgement at NONE (no elaborated feedback). */

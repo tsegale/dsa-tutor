@@ -157,3 +157,23 @@ describe('the logged row', () => {
     })
   })
 })
+
+describe('the same question is never asked twice', () => {
+  const passComplete = conceptual(bubbleRuns[0])[0]
+  const base = { topicSlug: 'bubble-sort', snapshot: passComplete, correct: true, firstAttempt: true, offeredThisSession: 1 }
+
+  it('refuses a prompt key already offered this session', () => {
+    // The cap was per session, not per question, so a junction that
+    // recurs - bubble sort's pass-complete fires once per pass - could
+    // put the identical prompt up three times over.
+    const first = offerableSelfExplanation({ ...base, offeredThisSession: 0, offeredKeys: [] })
+    expect(first?.key).toBe('bubble-sort.pass-complete')
+    expect(offerableSelfExplanation({ ...base, offeredKeys: [first!.key] })).toBeNull()
+  })
+
+  it('still offers a different question', () => {
+    expect(offerableSelfExplanation({ ...base, offeredKeys: ['bubble-sort.something-else'] })?.key).toBe(
+      'bubble-sort.pass-complete',
+    )
+  })
+})

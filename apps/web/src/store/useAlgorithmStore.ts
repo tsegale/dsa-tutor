@@ -66,6 +66,9 @@ export interface AlgorithmStoreState {
   // Self-explanation prompts offered this session (Week 2 2B), skipped
   // ones included; capped by SELF_EXPLANATION_MAX_PER_SESSION. Resets with
   // each new session.
+  /** Prompt keys already offered this session. A count alone let the same
+   *  question be asked again on a later identical junction. */
+  selfExplanationKeysOffered: string[]
   selfExplanationsOffered: number
   // AI Challenges started this session; seeds each challenge reproducibly
   // (challengeSeed) so a logged attempt can be regenerated. Resets with
@@ -98,7 +101,7 @@ export interface AlgorithmStoreState {
   toggleCodeEditorMode: () => void
   setFadingEnabled: (enabled: boolean) => void
   setClassicMode: (on: boolean) => void
-  noteSelfExplanationOffered: () => void
+  noteSelfExplanationOffered: (key: string) => void
   noteChallengeStarted: () => void
 }
 
@@ -224,6 +227,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   fadingEnabled: false,
   classicMode: false,
   segmentScaffoldingLevel: ScaffoldingLevel.HIGH,
+  selfExplanationKeysOffered: [],
   selfExplanationsOffered: 0,
   challengesStarted: 0,
 
@@ -332,7 +336,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   setScaffoldingScore: (score) => set({ scaffoldingScore: score }),
 
-  setSessionId: (id) => set({ sessionId: id, selfExplanationsOffered: 0, challengesStarted: 0 }),
+  setSessionId: (id) => set({ sessionId: id, selfExplanationsOffered: 0, selfExplanationKeysOffered: [], challengesStarted: 0 }),
 
   setUserId: (id) => set({ userId: id }),
 
@@ -404,7 +408,13 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   toggleCodeEditorMode: () => set((state) => ({ codeEditorMode: !state.codeEditorMode })),
 
-  noteSelfExplanationOffered: () => set((state) => ({ selfExplanationsOffered: state.selfExplanationsOffered + 1 })),
+  noteSelfExplanationOffered: (key) =>
+    set((state) => ({
+      selfExplanationsOffered: state.selfExplanationsOffered + 1,
+      selfExplanationKeysOffered: state.selfExplanationKeysOffered.includes(key)
+        ? state.selfExplanationKeysOffered
+        : [...state.selfExplanationKeysOffered, key],
+    })),
 
   noteChallengeStarted: () => set((state) => ({ challengesStarted: state.challengesStarted + 1 })),
 

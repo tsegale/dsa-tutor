@@ -43,10 +43,33 @@ describe('isWorkedStep', () => {
     expect(workedShare(ScaffoldingLevel.NONE)).toBe(0)
   })
 
-  it('never works a conceptual junction, at any level', () => {
+  it('asks each conceptual junction type once, at any level', () => {
+    // It used to ask every one of them. A conceptual question is about
+    // the invariant rather than the values, so Bubble Sort put "what can
+    // we guarantee about the array?" once per pass - three times on five
+    // elements, and once more for every element added.
     expect(conceptual(RUN).length).toBeGreaterThan(0)
     for (const level of Object.values(ScaffoldingLevel)) {
-      expect(conceptual(RUN).some(({ index }) => isWorkedStep(RUN, index, level))).toBe(false)
+      const asked = conceptual(RUN).filter(({ index }) => !isWorkedStep(RUN, index, level))
+      const types = asked.map(({ index }) => RUN[index].criticalJunctionType)
+      expect(new Set(types).size, `level ${level}`).toBe(types.length)
+      // The first of each type is the one asked, never a later one.
+      for (const { index } of asked) {
+        const type = RUN[index].criticalJunctionType
+        const first = RUN.findIndex((s) => s.isPredictionRequired && s.criticalJunctionType === type)
+        expect(index).toBe(first)
+      }
+    }
+  })
+
+  it('still performs a repeated conceptual junction in a focused re-run', () => {
+    // A focused re-run exists to drill what the learner missed, so the
+    // repeats are the point there.
+    const repeats = conceptual(RUN).filter(({ index }) => isWorkedStep(RUN, index, ScaffoldingLevel.HIGH))
+    expect(repeats.length).toBeGreaterThan(0)
+    for (const { index } of repeats) {
+      const type = RUN[index].criticalJunctionType!
+      expect(isWorkedStep(RUN, index, ScaffoldingLevel.HIGH, [type])).toBe(false)
     }
   })
 
