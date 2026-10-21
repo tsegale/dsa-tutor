@@ -249,8 +249,16 @@ function AppRoutes() {
                     </RequireAuth>
                   }
                 />
-                <Route path="/showcase" element={<Showcase />} />
-                <Route path="/canvas-test" element={<CanvasTest />} />
+                {/* Development only. CanvasTest renders a bare mode
+                    switcher outside the study scaffolding, so a Classic
+                    participant who wandered in would be shown the very
+                    controls their condition withholds - a confound in the
+                    data rather than an untidy page. In a production build
+                    both addresses fall through to NotFound; their lazy
+                    chunks are still emitted, but nothing can route to
+                    them. */}
+                {import.meta.env.DEV && <Route path="/showcase" element={<Showcase />} />}
+                {import.meta.env.DEV && <Route path="/canvas-test" element={<CanvasTest />} />}
                 {/* Any other address: a message rather than a blank page. */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
