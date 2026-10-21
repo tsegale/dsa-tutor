@@ -62,5 +62,24 @@ describe('exports carry the condition (3B.7)', () => {
     const [row] = parse(await exportInteractionsCsv())
     expect(row.interactionType).toBe('VIEW_STEP')
     expect(row.condition).toBe('CLASSIC')
+    // Classic offers no support level, so reporting the stored default
+    // would read as a real scaffolding value for a condition that has none.
+    expect(row.scaffoldingLevelAtTime).toBe('')
+  })
+
+  it('interactions: the tutor condition still reports its support level', async () => {
+    db.interaction.findMany.mockResolvedValue([
+      {
+        createdAt: after, interactionType: 'PREDICTION', criticalJunctionType: 'BST_DIRECTION', predictionCorrect: true,
+        misconceptionCategory: null, aiMisconceptionCategory: null, hintsRequested: 0, hintIndexAtResolve: 0,
+        bottomedOut: false, scaffoldingLevelAtTime: 'HIGH', masteryScoreAtTime: 0, timeSpentSeconds: 2, aiGenerated: true,
+        aiFailureReason: null, aiLatencyMs: null, promptVersion: null, promptKey: null, rubricScore: null,
+        rubricResults: null, feedbackText: null,
+        session: { user, algorithmTopic: { displayName: 'Binary Search Tree', name: 'bst' } },
+      },
+    ])
+    const [row] = parse(await exportInteractionsCsv())
+    expect(row.condition).toBe('TUTOR')
+    expect(row.scaffoldingLevelAtTime).toBe('HIGH')
   })
 })

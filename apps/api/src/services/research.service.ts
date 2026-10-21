@@ -139,7 +139,12 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     'condition',
   ]
 
-  const rows = interactions.map((interaction) => [
+  const rows = interactions.map((interaction) => {
+    const condition = conditionFor(
+      interaction.session.algorithmTopic.name,
+      interaction.session.user.classicTopicSlug,
+    )
+    return [
     interaction.session.user.participantCode ?? '',
     interaction.session.algorithmTopic.displayName,
     interaction.interactionType,
@@ -150,7 +155,11 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     String(interaction.hintsRequested),
     String(interaction.hintIndexAtResolve),
     String(interaction.bottomedOut),
-    interaction.scaffoldingLevelAtTime,
+    // Classic has no support level - no hints, no adaptation, nothing to
+    // record - so it exports blank rather than the default the column was
+    // storing, which read as a real scaffolding value for a condition that
+    // has none.
+    condition === 'CLASSIC' ? '' : interaction.scaffoldingLevelAtTime,
     String(interaction.masteryScoreAtTime),
     String(interaction.timeSpentSeconds),
     String(interaction.aiGenerated),
@@ -162,8 +171,9 @@ export async function exportInteractionsCsv(includePilot = false): Promise<strin
     interaction.rubricResults !== null ? JSON.stringify(interaction.rubricResults) : '',
     String(hasPreLabelFixFeedback(interaction)),
     interaction.session.user.classicTopicSlug ?? '',
-    conditionFor(interaction.session.algorithmTopic.name, interaction.session.user.classicTopicSlug),
-  ])
+    condition,
+    ]
+  })
 
   return toCsv(header, rows)
 }
