@@ -12,9 +12,9 @@ const SEED = Object.values(
 )[0]
 
 describe('syllabus topics', () => {
-  it('has 14 / 5 / 9 / 3 / 18 / 17 topics, 66 in all', () => {
-    expect(MODULES.map((m) => m.topics.length)).toEqual([14, 5, 9, 3, 18, 17])
-    expect(MODULES.reduce((sum, m) => sum + m.topics.length, 0)).toBe(66)
+  it('has 14 / 5 / 9 / 10 / 18 / 17 topics, 73 in all', () => {
+    expect(MODULES.map((m) => m.topics.length)).toEqual([14, 5, 9, 10, 18, 17])
+    expect(MODULES.reduce((sum, m) => sum + m.topics.length, 0)).toBe(73)
   })
 
   it('lists each topic once', () => {

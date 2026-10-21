@@ -135,7 +135,12 @@ def test_modules_1_to_3_have_a_real_feynman_rubric_with_the_three_complexity_cri
 def test_the_web_offers_feynman_mode_exactly_where_a_real_rubric_exists():
     from routers.feynman import rubric_for
 
-    block = re.search(r"new Set\(\[(.*?)\]\)", FEYNMAN_WEB_PATH.read_text(encoding="utf-8"), re.DOTALL)
+    source = FEYNMAN_WEB_PATH.read_text(encoding="utf-8")
+    # Comments first: a // line explaining the set is not part of it, and an
+    # apostrophe in one ("the stack's inner loop") used to be read as the
+    # start of a quoted entry, which made this test fail on prose.
+    source = re.sub(r"//[^\n]*", "", source)
+    block = re.search(r"new Set\(\[(.*?)\]\)", source, re.DOTALL)
     # Single- or double-quoted entries ("Dijkstra's Algorithm").
     offered = {a or b for a, b in re.findall(r"'([^']+)'|\"([^\"]+)\"", block.group(1) if block else "")}
     for name in offered:
@@ -156,7 +161,7 @@ def test_only_live_families_are_used_for_grading_and_mazes_never_are():
     from prompts.feynman_rubrics_advanced import FAMILIES, GENERIC_BY_DECISION, LIVE_FAMILIES
     from routers.feynman import FEYNMAN_RUBRIC
 
-    assert sum(len(topics) for topics in FAMILIES.values()) == 35
+    assert sum(len(topics) for topics in FAMILIES.values()) == 42
     for family, topics in FAMILIES.items():
         for key in topics:
             assert (key in FEYNMAN_RUBRIC) == (family in LIVE_FAMILIES), f"{key} live state does not match its family"
@@ -176,7 +181,10 @@ MODULES_4_TO_6 = _module_topics({4, 5, 6})
 
 
 def test_modules_4_to_6_are_readable():
-    assert len(MODULES_4_TO_6) == 38
+    # Guards against the regex above silently matching nothing, which would
+    # make every parametrised test below pass vacuously. The number is the
+    # curriculum's, so it moves when the curriculum does.
+    assert len(MODULES_4_TO_6) == 45
 
 
 @pytest.mark.parametrize("slug", MODULES_4_TO_6)

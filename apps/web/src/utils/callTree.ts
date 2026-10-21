@@ -22,6 +22,8 @@ import type { CallFrame, CallStackState } from '@/engine/recursionFactorial'
 export interface CallTreeNode {
   id: string
   argument: number
+  /** The frame's display label, when it set one (see CallFrame.label). */
+  label?: string
   depth: number
   parentId: string | null
   /** The step at which this call was first made. */
@@ -165,6 +167,7 @@ export function buildCallTree(snapshots: readonly AlgorithmSnapshot[], stepIndex
     return {
       id: entry.frame.id,
       argument: entry.frame.argument,
+      label: entry.frame.label,
       depth: entry.frame.depth,
       parentId: entry.parentId,
       bornAt: entry.bornAt,

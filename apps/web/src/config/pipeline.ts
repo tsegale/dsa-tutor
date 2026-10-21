@@ -58,6 +58,18 @@ export const NO_HANDS_ON = new Set([
   'two-pointer',
   'sliding-window-fixed',
   'sliding-window-variable',
+  // The seven paradigms: a prefix table, a stack of indices, a call tree,
+  // a sorted scan and three filled tables. None of them is a structure
+  // being rearranged, so there is no construction gesture to hand over -
+  // these are topics where writing the recurrence IS the hands-on work,
+  // which is what the Code stage is for.
+  'prefix-sum',
+  'monotonic-stack',
+  'divide-and-conquer',
+  'greedy',
+  'dp-1d',
+  'dp-2d',
+  'backtracking',
   // Matrix view, no spatial manipulation to hand on.
   'floyd-warshall',
   // Generation is automatic carving: nothing to drag, unlike the

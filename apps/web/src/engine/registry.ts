@@ -57,6 +57,12 @@ import { factorialEngine } from './recursionFactorial'
 import { fibonacciEngine } from './recursionFibonacci'
 import { twoSumSortedEngine } from './twoPointer'
 import { fixedWindowEngine, variableWindowEngine } from './slidingWindow'
+import { prefixSumEngine } from './prefixSum'
+import { monotonicStackEngine } from './monotonicStack'
+import { divideConquerEngine } from './divideConquer'
+import { greedyEngine } from './greedy'
+import { dp1DEngine, dp2DEngine } from './dynamicProgramming'
+import { backtrackingEngine } from './backtracking'
 
 export interface AlgorithmRegistryEntry {
   algorithmName: string
@@ -834,6 +840,90 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
     estimatedMinutes: 10,
     defaultInput: [2, 3, 1, 2, 4, 3],
     defaultTarget: 7,
+  },
+  {
+    algorithmName: 'prefix-sum',
+    displayName: 'Prefix Sums',
+    engineFunction: (input) => prefixSumEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.BEGINNER,
+    description: 'Precompute once so any range sum costs one subtraction.',
+    estimatedMinutes: 8,
+    defaultInput: [3, 1, 4, 1, 5, 9],
+  },
+  {
+    algorithmName: 'monotonic-stack',
+    displayName: 'Monotonic Stack',
+    engineFunction: (input) => monotonicStackEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Find the next greater element for every position in one pass.',
+    estimatedMinutes: 12,
+    defaultInput: [2, 1, 2, 4, 3, 5],
+  },
+  {
+    algorithmName: 'divide-and-conquer',
+    displayName: 'Divide and Conquer',
+    engineFunction: (input) => divideConquerEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.INTERMEDIATE,
+    // Maximum subarray, the same problem greedy and dp-1d solve: the three
+    // entries name the paradigm rather than the problem so the comparison
+    // is what the curriculum panel shows.
+    description: 'Split a problem in half, solve both, and combine - including the case that straddles the split.',
+    estimatedMinutes: 14,
+    defaultInput: [-2, 1, -3, 4, -1, 2],
+  },
+  {
+    algorithmName: 'greedy',
+    displayName: 'Greedy Choice',
+    engineFunction: (input) => greedyEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Take the best option now and never reconsider - and see where that rule fails.',
+    estimatedMinutes: 12,
+    // Deliberately empty, so the engine's own curated activity set is
+    // used. Numbers here were turned into activities and overrode it,
+    // which lost the property the whole topic rests on - that sorting by
+    // start time gives a WORSE answer on this very input - and left the
+    // canvas showing different activities from the theory sketch.
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'dp-1d',
+    displayName: 'Dynamic Programming (1D)',
+    engineFunction: (input) => dp1DEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.INTERMEDIATE,
+    description: 'Write each subproblem down once, in an order where the answer you need is already written.',
+    estimatedMinutes: 14,
+    defaultInput: [-2, 1, -3, 4, -1, 2, 1, -5, 4],
+  },
+  {
+    algorithmName: 'dp-2d',
+    displayName: 'Dynamic Programming (2D)',
+    engineFunction: (input) => dp2DEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Edit distance: a table whose every cell reads three neighbours.',
+    estimatedMinutes: 16,
+    // Deliberately empty. This engine works on a pair of WORDS, and the
+    // registry's engineFunction signature takes number[]; numbers here
+    // would be turned into letters, which gave "kit" to "ten" rather than
+    // the canonical kitten/sitting that every textbook uses and that the
+    // theory briefing's sketch shows. Applying an array still spells
+    // words from it, so the control keeps its promise.
+    defaultInput: [],
+  },
+  {
+    algorithmName: 'backtracking',
+    displayName: 'Backtracking',
+    engineFunction: (input) => backtrackingEngine(input),
+    track: AlgorithmTrack.TECHNIQUES,
+    difficulty: Difficulty.ADVANCED,
+    description: 'Walk the state space, and abandon a branch the moment it cannot succeed.',
+    estimatedMinutes: 16,
+    defaultInput: [3, 4, 5, 2],
   },
 ]
 

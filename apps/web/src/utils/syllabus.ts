@@ -141,13 +141,21 @@ export function nextInSequence(sequence: readonly SyllabusTopic[]): SyllabusTopi
 
 export function planNext(
   syllabus: readonly SyllabusModule[],
-  latest: { startTime: string; topic: { name: string } } | null | undefined,
+  latest: { startTime: string; topic?: { name: string } | null } | null | undefined,
 ): LearningPlan {
   const sequence = syllabus.flatMap((module) => module.topics)
-  const resumable = latest ? sequence.find((entry) => entry.topic.name === latest.topic.name && entry.openable) : undefined
+  // A session row whose topic did not come back is treated as no session
+  // rather than dereferenced. This read `latest.topic.name` behind a check
+  // that `latest` was merely truthy, so a session without its topic threw
+  // inside the memo that every page of the shell depends on - and the
+  // error boundary replaced the whole app with its error screen. Found by
+  // loading the page, not by a test: every unit test passes a well-formed
+  // session, because a test author knows the shape.
+  const resumeName = latest?.topic?.name ?? null
+  const resumable = resumeName ? sequence.find((entry) => entry.topic.name === resumeName && entry.openable) : undefined
   const furthest = [...sequence].reverse().find((entry) => entry.topic.masteryPercent > 0) ?? null
   const recommended = nextInSequence(sequence)
-  const resume = resumable && latest ? { entry: resumable, startTime: latest.startTime } : null
+  const resume = resumable && latest?.startTime ? { entry: resumable, startTime: latest.startTime } : null
   const focus = resume?.entry ?? recommended
   return {
     continue: resume,

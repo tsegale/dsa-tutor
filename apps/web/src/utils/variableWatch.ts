@@ -35,10 +35,30 @@ export interface WatchedVariable {
 const ID_FIELD = /(?:^|[a-z])Id$|^id$/
 
 /**
+ * Presentation, not state: fields an engine puts on the snapshot to tell
+ * its canvas what to draw. They are the picture the student is already
+ * looking at, and as watch rows they read as a list of empty variables -
+ * "marker label -", "working -" - which is worse than showing nothing.
+ */
+const PRESENTATION_FIELD = new Set([
+  'inputLabels',
+  'rowLabels',
+  'colLabels',
+  'markerLabel',
+  'working',
+  'phase',
+  'shiftDirection',
+])
+
+/**
  * Fixed facts about the run rather than variables: they never change from
  * one step to the next, so they are context the canvas already shows.
  */
 const CONSTANT_FIELD = new Set([
+  // Fixed for the whole run, and named on the canvas where it matters.
+  // As a watch row it read "base case 7" on Backtracking, where the field
+  // carries the target rather than a base case at all.
+  'baseCase',
   'rows',
   'cols',
   'capacity',
@@ -80,8 +100,19 @@ function scalarsOf(state: unknown): Record<string, unknown> | null {
   if (!state || typeof state !== 'object' || Array.isArray(state)) return null
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(state as Record<string, unknown>)) {
-    if (ID_FIELD.test(key) || CONSTANT_FIELD.has(key)) continue
+    if (ID_FIELD.test(key) || CONSTANT_FIELD.has(key) || PRESENTATION_FIELD.has(key)) continue
     if (value === null || ['number', 'string', 'boolean'].includes(typeof value)) out[key] = value
+  }
+  // An engine whose state is a picture rather than a set of variables can
+  // name its working variables explicitly instead. The table topics are
+  // like this: their state is a grid and a cursor, and the things a
+  // student would watch in a debugger - the loop index, the running
+  // total, the two candidates being compared - are not fields of it.
+  const watch = (state as { watch?: unknown }).watch
+  if (watch && typeof watch === 'object' && !Array.isArray(watch)) {
+    for (const [key, value] of Object.entries(watch as Record<string, unknown>)) {
+      if (value === null || ['number', 'string', 'boolean'].includes(typeof value)) out[key] = value
+    }
   }
   return out
 }
@@ -138,6 +169,12 @@ export function watchedVariables(
   }))
 
   const changed = rows.filter((row) => row.changed)
-  const steady = rows.filter((row) => !row.changed)
-  return [...changed, ...steady].slice(0, MAX_WATCHED)
+  // A variable with no value yet says the least of anything on the panel,
+  // so it goes last and is the first thing dropped when the panel is
+  // full: "answer -" sitting above the loop index for the whole run is a
+  // row that never tells the student anything.
+  const empty = (row: WatchedVariable) => row.value === '-'
+  const steady = rows.filter((row) => !row.changed && !empty(row))
+  const blank = rows.filter((row) => !row.changed && empty(row))
+  return [...changed, ...steady, ...blank].slice(0, MAX_WATCHED)
 }

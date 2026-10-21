@@ -42,6 +42,10 @@ _ALIASES = {
     "postorder_traversal": "tree-postorder",
     "preorder_traversal": "tree-preorder",
     "two_pointer_technique": "two-pointer",
+    "prefix_sums": "prefix-sum",
+    "greedy_choice": "greedy",
+    "dynamic_programming_(1d)": "dp-1d",
+    "dynamic_programming_(2d)": "dp-2d",
 }
 
 TIME_LABEL = "Time complexity and what drives it"

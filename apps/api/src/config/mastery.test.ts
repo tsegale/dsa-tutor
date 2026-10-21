@@ -143,7 +143,11 @@ describe('applicable topics match the web', () => {
   )
   const slugFor = (displayName: string) => slugByName.get(displayName)
   // Web list entries are single- or double-quoted ("Dijkstra's Algorithm").
-  const quoted = (text: string) => [...text.matchAll(/'([^']+)'|"([^"]+)"/g)].map((m) => m[1] ?? m[2])
+  // Comments are stripped first: an apostrophe in a // line explaining the
+  // list ("the stack's inner loop") used to be read as the start of an
+  // entry, which made this fail on prose rather than on a mismatch.
+  const quoted = (text: string) =>
+    [...text.replace(/\/\/[^\n]*/g, '').matchAll(/'([^']+)'|"([^"]+)"/g)].map((m) => m[1] ?? m[2])
 
   it('Feynman topics are the ones with a rubric', () => {
     const block = web('feynmanRubrics.ts').match(/new Set\(\[([\s\S]*?)\]\)/)![1]

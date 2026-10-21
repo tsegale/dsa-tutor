@@ -535,6 +535,136 @@ huns: [45 75 90 170]`,
   },
 
   // ---------------------------------------------------------------- Module 4
+  'prefix-sum': {
+    analogy:
+      'A running total written in the margin of a ledger. Once every line has its cumulative figure beside it, the total for any stretch of the ledger is the figure at the end minus the figure before the start, and you never add the lines up again.',
+    mechanism: [
+      'Build a table one cell longer than the array, with 0 in the first cell.',
+      'Each later cell is the cell before it plus the matching element.',
+      'The sum of arr[i..j] is then table[j + 1] - table[i].',
+      'The leading 0 is what removes the special case when i is 0.',
+    ],
+    schematic: `arr   3  1  4  1  5
+p   0  3  4  8  9 14
+sum arr[1..3] = p4 - p1
+              = 9 - 3 = 6
+one subtraction, any length`,
+    whenToUse:
+      'Many range-sum questions over data that is not changing: running totals, 2D image regions, counting with a difference array.',
+  },
+
+  'monotonic-stack': {
+    analogy:
+      'A queue of people of different heights, each waiting to be told who is the first taller person ahead of them. Anyone shorter than the newcomer gets their answer and leaves; the rest keep waiting. Each person joins the queue once and leaves once.',
+    mechanism: [
+      'Walk the array once, holding a stack of indices that are still unanswered.',
+      'While the new element beats the element at the top index, that index has its answer and is popped.',
+      'Push the new index, which now waits for its own answer.',
+      'Anything left on the stack at the end has no answer at all.',
+    ],
+    schematic: `arr  2  1  2  4  3
+i=3 (4) pops 2,1,2
+stack holds indices, not
+values -> so the answer can
+be written into the right cell`,
+    whenToUse:
+      'Next or previous greater and smaller element, largest rectangle in a histogram, stock spans, any "first one that beats me" question.',
+  },
+
+  'divide-and-conquer': {
+    analogy:
+      'Counting a crowd by splitting the room down the middle, having someone count each half, and adding the two numbers - except that some groups straddle the line, so whoever adds up the halves has to count those separately or they are missed entirely.',
+    mechanism: [
+      'Split the problem in half and solve each half the same way.',
+      'A single element is the base case: it cannot be split further.',
+      'Combine the two answers, including any case that belongs to neither half.',
+      'The splitting gives log n levels, and each level does O(n) work.',
+    ],
+    schematic: `      [0..5]
+    /        \
+ [0..2]    [3..5]
+best = max(left, right,
+           crossing)
+forget crossing -> wrong`,
+    whenToUse:
+      'Sorting, maximum subarray, closest pair of points, counting inversions, multiplying large numbers - anything whose answer for a whole is buildable from its halves.',
+  },
+
+  greedy: {
+    analogy:
+      'Booking one meeting room by always accepting the meeting that finishes soonest. It feels like it should fail, and the reason it does not is that finishing early leaves the most room for everything after it. Accepting the shortest meeting first, which feels just as sensible, does fail.',
+    mechanism: [
+      'Sort the options by the quantity the rule cares about.',
+      'Walk the sorted list and take anything still compatible with what is taken.',
+      'Never reconsider a decision, which is what keeps it to one pass.',
+      'The method is only correct when the rule itself is provably safe.',
+    ],
+    schematic: `by finish time:
+take A 1-4, D 5-7, G 8-11
+-> 3 meetings
+by start time instead:
+take C 0-6, F 6-10
+-> only 2`,
+    whenToUse:
+      'Activity selection, Huffman coding, minimum spanning trees, coin systems that are canonical. Never without an argument that the local choice is safe.',
+  },
+
+  'dp-1d': {
+    analogy:
+      'Walking a row of stalls, writing on each one the best total you could have carrying from here backwards. Every stall only needs the note on the stall before it, so one walk down the row answers a question that looks like it needs every possible stretch.',
+    mechanism: [
+      'Define the subproblem so the answer at i depends only on earlier answers.',
+      'Write the base case down: the first cell has nothing to extend.',
+      'Fill each cell from the recurrence, in an order that respects it.',
+      'The answer is in the table, usually the best or the last cell.',
+    ],
+    schematic: `arr -2  1 -3  4 -1  2
+best -2  1 -2  4  3  5
+best[i] = max(arr[i],
+          best[i-1]+arr[i])
+answer = max(best) = 6`,
+    whenToUse:
+      'Maximum subarray, climbing stairs, house robber, coin change, longest increasing subsequence - any problem whose state is one index.',
+  },
+
+  'dp-2d': {
+    analogy:
+      'A grid where each square asks "what did it cost to get this far?", and the answer is always one step better than its neighbour above, to the left, or diagonally back. Fill the grid row by row and the bottom-right corner is the answer to the whole question.',
+    mechanism: [
+      'Index the table by the two things the problem varies: here, how much of each word is used.',
+      'The edges are the base cases: turning a prefix into nothing, or building one from nothing.',
+      'Matching characters cost nothing and read straight from the diagonal.',
+      'Differing characters cost one edit plus the cheapest of three neighbours.',
+    ],
+    schematic: `      ''  s  i  t
+  ''   0  1  2  3
+  k    1  1  2  3
+  i    2  2  1  2
+up=delete left=insert
+diagonal=substitute`,
+    whenToUse:
+      'Edit distance, longest common subsequence, knapsack, grid paths with obstacles - any problem whose state needs two indices.',
+  },
+
+  backtracking: {
+    analogy:
+      'Searching a hedge maze by walking every branch, but turning back the moment you can see the path is walled off rather than following it to the end. The maze is unchanged; what changes is how much of it you ever walk.',
+    mechanism: [
+      'Build a candidate one decision at a time, each decision branching the search.',
+      'At each node, test whether this partial candidate can still succeed.',
+      'If it cannot, abandon the whole subtree below it without building it.',
+      'Undo the last decision and carry on with the next branch.',
+    ],
+    schematic: `target 7, from {3,4,5,2}
+       {}
+   +3      skip 3
+ {3}        {}
+ +4 -> 7 found
+ +5 -> 12 > 7 pruned`,
+    whenToUse:
+      'Subset sum, N-Queens, sudoku, permutations with constraints, graph colouring - problems with no better method than search, where pruning is what makes search finish.',
+  },
+
   'two-pointer': {
     analogy:
       'Two people walking a sorted row of numbers from opposite ends towards each other. Their sum tells each of them which one should take the next step, so neither ever needs to backtrack.',

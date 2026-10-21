@@ -226,5 +226,27 @@ def get_algorithm_context(algorithm_name: str) -> tuple[str, str, dict[str, str]
         )
 
         return TWO_POINTER_WINDOW_CONTEXT, TWO_POINTER_WINDOW_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
+    if name in (
+        "prefix_sum",
+        "prefix_sums",
+        "monotonic_stack",
+        "divide_and_conquer",
+        "greedy",
+        "greedy_choice",
+        "dp_1d",
+        "dynamic_programming_1d",
+        "dynamic_programming_(1d)",
+        "dp_2d",
+        "dynamic_programming_2d",
+        "dynamic_programming_(2d)",
+        "backtracking",
+    ):
+        from prompts.paradigms import (
+            PARADIGMS_CONTEXT,
+            PARADIGMS_PSEUDOCODE,
+            CRITICAL_JUNCTION_GUIDANCE,
+        )
+
+        return PARADIGMS_CONTEXT, PARADIGMS_PSEUDOCODE, CRITICAL_JUNCTION_GUIDANCE
 
     return "Generic algorithm context.", "No pseudocode available.", {}

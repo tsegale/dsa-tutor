@@ -69,3 +69,28 @@ describe('whenPhrase', () => {
     expect(whenPhrase('2026-09-01T08:00:00', NOW)).toMatch(/^on /)
   })
 })
+
+describe('a session row that is not well formed', () => {
+  // The shell builds its plan from the latest incomplete session on every
+  // page. planNext dereferenced latest.topic.name behind a check that
+  // `latest` was merely truthy, so a row without its topic threw inside a
+  // memo the whole shell depends on, and the error boundary replaced the
+  // app with its error screen. Every existing test here passes a
+  // well-formed session, which is why this went unnoticed until the page
+  // was actually loaded.
+  const syllabus = buildSyllabus([topic('bubble-sort', AlgorithmTrack.SORTING, 40, 'Bubble Sort')])
+
+  it('is treated as no session rather than throwing', () => {
+    expect(() => planNext(syllabus, { startTime: '2026-01-01T00:00:00Z' })).not.toThrow()
+    expect(planNext(syllabus, { startTime: '2026-01-01T00:00:00Z' }).continue).toBeNull()
+  })
+
+  it('survives a null topic and a missing start time', () => {
+    expect(planNext(syllabus, { startTime: '2026-01-01T00:00:00Z', topic: null }).continue).toBeNull()
+    expect(planNext(syllabus, {} as { startTime: string }).continue).toBeNull()
+  })
+
+  it('still resumes a well-formed session', () => {
+    expect(planNext(syllabus, session('bubble-sort')).continue?.entry.topic.name).toBe('bubble-sort')
+  })
+})

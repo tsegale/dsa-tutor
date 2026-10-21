@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { COMPLEXITY, feynmanChallenge, scoreOutOfTen } from './complexity'
+import { MODULES } from './curriculum'
 
 describe('feynmanChallenge', () => {
   it('names the specific claims to defend, from the shared complexity facts', () => {
@@ -16,8 +17,14 @@ describe('feynmanChallenge', () => {
 })
 
 describe('complexity facts', () => {
-  it('cover every topic the Complexity tab showed before they moved', () => {
-    expect(Object.keys(COMPLEXITY)).toHaveLength(66)
+  it('cover every topic in the curriculum', () => {
+    // Was a hardcoded 66, which is the same count written in a second
+    // place: adding a topic to a module made this test fail for the wrong
+    // reason and said nothing about which topic was missing. Asserting
+    // against the curriculum itself is both stronger and self-maintaining.
+    const slugs = MODULES.flatMap((module) => module.topics)
+    const missing = slugs.filter((slug) => !COMPLEXITY[slug])
+    expect(missing).toEqual([])
   })
 
   it('give every topic with a challenge its worst-case trigger, auxiliary space and contrast', () => {

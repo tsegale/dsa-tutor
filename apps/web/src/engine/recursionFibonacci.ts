@@ -65,6 +65,9 @@ export function fibonacciEngine(n: number): AlgorithmSnapshot[] {
   const baseState = (overrides: Partial<CallStackState> = {}): CallStackState => ({
     frames,
     baseCase: 1,
+    // Two calls with the same argument ARE the same work here, which
+    // is the whole lesson of this topic (see highlightRepeats).
+    highlightRepeats: true,
     currentFrameId: null,
     computedValues: { ...computedValues },
     totalCalls,

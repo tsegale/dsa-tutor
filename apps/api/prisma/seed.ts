@@ -87,6 +87,13 @@ const TOPICS = [
   { name: 'two-pointer', displayName: 'Two Pointer Technique', track: 'TECHNIQUES', difficulty: 'BEGINNER', description: 'Solve array problems in O(n) using two moving pointers.', estimatedMinutes: 8, isLocked: false, order: 1 },
   { name: 'sliding-window-fixed', displayName: 'Sliding Window (Fixed)', track: 'TECHNIQUES', difficulty: 'BEGINNER', description: 'Maintain a fixed-size window to compute range properties in O(n).', estimatedMinutes: 8, isLocked: false, order: 2 },
   { name: 'sliding-window-variable', displayName: 'Sliding Window (Variable)', track: 'TECHNIQUES', difficulty: 'INTERMEDIATE', description: 'Expand and shrink a window to satisfy a constraint in O(n).', estimatedMinutes: 10, isLocked: false, order: 3 },
+  { name: 'prefix-sum', displayName: 'Prefix Sums', track: 'TECHNIQUES', difficulty: 'BEGINNER', description: 'Precompute once so any range sum costs one subtraction.', estimatedMinutes: 8, isLocked: false, order: 4 },
+  { name: 'monotonic-stack', displayName: 'Monotonic Stack', track: 'TECHNIQUES', difficulty: 'INTERMEDIATE', description: 'Find the next greater element for every position in one pass.', estimatedMinutes: 12, isLocked: false, order: 5 },
+  { name: 'divide-and-conquer', displayName: 'Divide and Conquer', track: 'TECHNIQUES', difficulty: 'INTERMEDIATE', description: 'Split a problem in half, solve both, and combine - including the case that straddles the split.', estimatedMinutes: 14, isLocked: false, order: 6 },
+  { name: 'greedy', displayName: 'Greedy Choice', track: 'TECHNIQUES', difficulty: 'INTERMEDIATE', description: 'Take the best option now and never reconsider - and see where that rule fails.', estimatedMinutes: 12, isLocked: false, order: 7 },
+  { name: 'dp-1d', displayName: 'Dynamic Programming (1D)', track: 'TECHNIQUES', difficulty: 'INTERMEDIATE', description: 'Write each subproblem down once, in an order where the answer you need is already written.', estimatedMinutes: 14, isLocked: false, order: 8 },
+  { name: 'dp-2d', displayName: 'Dynamic Programming (2D)', track: 'TECHNIQUES', difficulty: 'ADVANCED', description: 'Edit distance: a table whose every cell reads three neighbours.', estimatedMinutes: 16, isLocked: false, order: 9 },
+  { name: 'backtracking', displayName: 'Backtracking', track: 'TECHNIQUES', difficulty: 'ADVANCED', description: 'Walk the state space, and abandon a branch the moment it cannot succeed.', estimatedMinutes: 16, isLocked: false, order: 10 },
 ] as const
 
 // Mirrors apps/web/src/data/badges.ts's BADGE_DEFINITIONS - the client's

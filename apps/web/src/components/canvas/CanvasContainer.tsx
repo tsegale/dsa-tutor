@@ -19,6 +19,7 @@ import TrieCanvas from './TrieCanvas'
 import NodeGraphCanvas from './NodeGraphCanvas'
 import GridCanvas from './GridCanvas'
 import MatrixCanvas from './MatrixCanvas'
+import DPTableCanvas from './DPTableCanvas'
 
 interface CanvasContainerProps {
   mistakePath?: AlgorithmSnapshot[] | null
@@ -142,6 +143,8 @@ export default function CanvasContainer({
         return <HeapCanvas width={size.width} height={size.height} />
       case CanvasType.TRIE:
         return <TrieCanvas width={size.width} height={size.height} />
+      case CanvasType.DP_TABLE:
+        return <DPTableCanvas width={size.width} height={size.height} />
       default:
         return (
           <ArrayCanvas

@@ -96,6 +96,13 @@ export const FEYNMAN_TOPICS: readonly string[] = [
   'two-pointer',
   'sliding-window-fixed',
   'sliding-window-variable',
+  'prefix-sum',
+  'monotonic-stack',
+  'divide-and-conquer',
+  'greedy',
+  'dp-1d',
+  'dp-2d',
+  'backtracking',
 ]
 export const CHALLENGE_TOPICS: readonly string[] = ['bubble-sort', 'binary-search', 'bst']
 

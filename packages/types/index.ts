@@ -114,6 +114,22 @@ export const CriticalJunctionType = {
   WINDOW_EXPAND: 'WINDOW_EXPAND',
   WINDOW_SUM: 'WINDOW_SUM',
 
+  // Techniques track — the seven paradigms beyond the two pointer family
+  /** What goes in this cell of the prefix array. */
+  PREFIX_CELL: 'PREFIX_CELL',
+  /** Answering a range query from two prefix values, in O(1). */
+  RANGE_QUERY: 'RANGE_QUERY',
+  /** Whether the element on top of the stack is discharged by this one. */
+  STACK_DISCHARGE: 'STACK_DISCHARGE',
+  /** How the two halves' answers combine into the whole's. */
+  COMBINE_RESULT: 'COMBINE_RESULT',
+  /** Take the locally best option, or leave it. */
+  GREEDY_CHOICE: 'GREEDY_CHOICE',
+  /** What goes in this cell of the table, and which cells it reads. */
+  DP_CELL: 'DP_CELL',
+  /** Whether this partial candidate can still lead to a solution. */
+  PRUNE_BRANCH: 'PRUNE_BRANCH',
+
   // Sorting track — Shell, Heap, Counting, Radix Sort
   GAP_COMPARISON: 'GAP_COMPARISON',
   HEAP_COMPARE: 'HEAP_COMPARE',
@@ -172,6 +188,17 @@ export const CanvasType = {
   NODE_GRAPH: 'NODE_GRAPH',
   GRID: 'GRID',
   MATRIX: 'MATRIX',
+  /**
+   * A table being filled in, with the cells the current one reads from.
+   *
+   * Distinct from MATRIX, which draws Floyd-Warshall's distance matrix and
+   * is written against that engine's state. A dynamic programming table is
+   * a different picture: it fills in an order, each cell depends on named
+   * earlier cells, and that dependency is the recurrence - which is the
+   * whole of what there is to learn. Also used for the 1D tables (a prefix
+   * array, a 1D DP row) since a single row is the same picture.
+   */
+  DP_TABLE: 'DP_TABLE',
 } as const
 export type CanvasType = (typeof CanvasType)[keyof typeof CanvasType]
 

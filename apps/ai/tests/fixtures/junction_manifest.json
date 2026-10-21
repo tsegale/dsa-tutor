@@ -230,5 +230,27 @@
   ],
   "sliding-window-variable": [
     "WINDOW_EXPAND"
+  ],
+  "prefix-sum": [
+    "PREFIX_CELL",
+    "RANGE_QUERY"
+  ],
+  "monotonic-stack": [
+    "STACK_DISCHARGE"
+  ],
+  "divide-and-conquer": [
+    "COMBINE_RESULT"
+  ],
+  "greedy": [
+    "GREEDY_CHOICE"
+  ],
+  "dp-1d": [
+    "DP_CELL"
+  ],
+  "dp-2d": [
+    "DP_CELL"
+  ],
+  "backtracking": [
+    "PRUNE_BRANCH"
   ]
 }

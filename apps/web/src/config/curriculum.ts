@@ -115,14 +115,26 @@ export const MODULES: readonly Module[] = [
     number: 4,
     id: 'algorithmic-techniques',
     title: 'Algorithmic techniques',
-    subtitle: 'Two pointers and sliding windows: patterns that turn nested loops into one pass.',
+    subtitle: 'Nine patterns for turning a nested loop, or an exponential search, into something that finishes.',
     track: AlgorithmTrack.TECHNIQUES,
     prerequisites: ['searching', 'sorting'],
     unlockCount: 2,
     topics: [
+      // Ordered as a route, not alphabetically: each one needs the idea
+      // before it. The three paradigms at the end solve problems the
+      // earlier patterns cannot touch, and divide-and-conquer, greedy and
+      // dp-1d deliberately meet the SAME problem (maximum subarray) so the
+      // difference between the paradigms is visible rather than asserted.
       'two-pointer',
       'sliding-window-fixed',
       'sliding-window-variable',
+      'prefix-sum',
+      'monotonic-stack',
+      'divide-and-conquer',
+      'greedy',
+      'dp-1d',
+      'dp-2d',
+      'backtracking',
     ],
   },
   {

@@ -227,13 +227,32 @@ function buildRun(slug: string, input: number[], target: number): AlgorithmSnaps
     case 'sliding-window-variable':
       return variableWindowEngine(input, target)
 
-    case 'bubble-sort':
-    default: {
+    case 'bubble-sort': {
       const { recentMisconceptions } = useAlgorithmStore.getState()
       return bubbleSortEngine(input, {
         withComplexityPrediction: complexityJunctionEnabled(),
         topMisconception: topMisconceptionOf(recentMisconceptions),
       })
+    }
+    default: {
+      // The cases above exist only for engines needing options this switch
+      // knows about and the registry's plain engineFunction does not
+      // (a search target, a complexity junction, misconception targeting,
+      // a fixture that is not an array). Everything else runs from its
+      // registry entry, so a topic added there works here without being
+      // named twice.
+      //
+      // This fallback used to be `case 'bubble-sort': default:`, which is
+      // how the page's copy of this switch was written: a topic not listed
+      // became a Bubble Sort run under its own header. Adding the seven
+      // techniques topics reproduced it immediately, and
+      // customInputEngine.test.ts caught all seven.
+      const entry = getAlgorithmRegistryEntry(slug)
+      if (entry) return entry.engineFunction(input)
+      // No registry entry at all: not a topic, so there is nothing
+      // sensible to run. The page shows its unknown-topic screen for the
+      // same condition, so this is only reachable from a direct call.
+      return []
     }
   }
 }

@@ -544,6 +544,49 @@ function frontierCells(snapshot: AlgorithmSnapshot): GridCell[] {
   }))
 }
 
+
+// ------------------------------------------------------- table readers
+// The four table topics (prefix sums, the monotonic stack's answer array
+// and both dynamic programming topics) share DPTableState, so reading a
+// cell is one helper rather than four casts.
+
+function tableCell(snapshot: AlgorithmSnapshot | null | undefined, row: number, col: number): number | null {
+  const table = field<(number | null)[][]>(snapshot, 'table', [])
+  const value = table[row]?.[col]
+  return value === undefined ? null : value
+}
+
+/** Divide and conquer's three candidates, from the step's own narration -
+ * the same three numbers the canvas has just shown. */
+function combineCandidates(snapshot: AlgorithmSnapshot): { left: number; right: number; cross: number } {
+  const found = [...snapshot.description.matchAll(/(?:left|right|crossing) (-?\d+)/g)].map((match) => Number(match[1]))
+  return { left: found[0] ?? 0, right: found[1] ?? 0, cross: found[2] ?? 0 }
+}
+
+function greedyGlobals(snapshot: AlgorithmSnapshot): Record<string, unknown> {
+  // The working line reads "X.start 5 >= last finish 4?", which is the
+  // comparison the junction is asking about.
+  const working = field<string | null>(snapshot, 'working', null) ?? ''
+  const numbers = /start (-?\d+) >= last finish (-?\d+|-inf)/.exec(working)
+  return {
+    start: Number(numbers?.[1] ?? 0),
+    // An empty room is "free from the beginning", which Python spells as a
+    // float; the student's comparison works either way.
+    last_finish: numbers?.[2] === '-inf' ? Number.NEGATIVE_INFINITY : Number(numbers?.[2] ?? 0),
+  }
+}
+
+/** Edit distance's three neighbours, named for the operation each is. */
+function editNeighbours(snapshot: AlgorithmSnapshot): Record<string, unknown> {
+  const current = (snapshot.dataStructureState as { current: [number, number] | null }).current
+  const [row, col] = current ?? [0, 0]
+  return {
+    up: tableCell(snapshot, row - 1, col) ?? 0,
+    left: tableCell(snapshot, row, col - 1) ?? 0,
+    diagonal: tableCell(snapshot, row - 1, col - 1) ?? 0,
+  }
+}
+
 export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   // -------------------------------------------------------------- Module 1
   'array-access': {
@@ -1306,6 +1349,133 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   }),
 
   ...gridFrontier(['grid-bfs', 'grid-dfs', 'grid-dijkstra', 'grid-astar']),
+
+  // ----------------------------------------- Module 4, the seven paradigms
+  'prefix-sum': challenge({
+    prompt: 'Fill this cell of the prefix table from the cell before it, not by adding the range up again.',
+    junctionTypes: [CriticalJunctionType.PREFIX_CELL],
+    python: '# previous is the cell before this one; element is the array value.\ncell = ',
+    java: 'prefix[i + 1] = prefix[i] + arr[i];',
+    globals: (context) => {
+      const column = (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0
+      return {
+        previous: tableCell(context.snapshot, 0, column - 1) ?? 0,
+        element: field<number[]>(context.snapshot, 'input', [])[column - 1] ?? 0,
+      }
+    },
+    readBack: 'cell',
+    expect: 'number',
+    expected: (context) => {
+      const column = (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0
+      const settled = nextWhere(context, (s) => tableCell(s, 0, column) !== null)
+      return settled ? tableCell(settled, 0, column) : null
+    },
+  }),
+
+  'monotonic-stack': challenge({
+    prompt: 'Discharge every waiting index this element answers - all of them, not just the one on top.',
+    junctionTypes: [CriticalJunctionType.STACK_DISCHARGE],
+    python: '# arr, stack (a list of indices) and i are given.\n# Pop every index arr[i] answers; collect them in popped.\npopped = []\nwhile stack and ',
+    java: 'while (!stack.isEmpty() && arr[stack.peek()] < arr[i]) {\n    popped.add(stack.pop());\n}',
+    globals: (context) => ({
+      arr: [...field<number[]>(context.snapshot, 'input', [])],
+      stack: [...field<number[]>(context.snapshot, 'marked', [])],
+      i: (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0,
+    }),
+    readBack: 'popped',
+    expect: 'number[]',
+    // Which indices the run actually discharges before it pushes again.
+    expected: (context) => {
+      const before = field<number[]>(context.snapshot, 'marked', [])
+      const column = (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0
+      const after = nextWhere(context, (s) => field<number[]>(s, 'marked', before).length !== before.length)
+      if (!after) return []
+      const remaining = new Set(field<number[]>(after, 'marked', []))
+      return before.filter((index) => !remaining.has(index) && index !== column)
+    },
+  }),
+
+  'divide-and-conquer': challenge({
+    prompt: 'Combine the three candidates into this range\'s answer. One of them is the case neither half could see.',
+    junctionTypes: [CriticalJunctionType.COMBINE_RESULT],
+    python: '# left, right and cross are the three candidate answers.\nbest = ',
+    java: 'int best = Math.max(left, Math.max(right, cross));',
+    globals: (context) => combineCandidates(context.snapshot),
+    readBack: 'best',
+    expect: 'number',
+    expected: (context) => {
+      const { left, right, cross } = combineCandidates(context.snapshot)
+      return Math.max(left, right, cross)
+    },
+  }),
+
+  greedy: challenge({
+    prompt: 'Decide whether this activity fits: the room is free from the last accepted finish time onwards.',
+    junctionTypes: [CriticalJunctionType.GREEDY_CHOICE],
+    python: '# start is this activity\'s start; last_finish is when the room is free.\ntake = ',
+    java: 'boolean take = (activity.start >= lastFinish);',
+    globals: (context) => greedyGlobals(context.snapshot),
+    readBack: 'take',
+    expect: 'boolean',
+    // From the run: the row records 1 when the engine took it.
+    expected: (context) => {
+      const column = (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0
+      const settled = nextWhere(context, (s) => tableCell(s, 0, column) !== null)
+      const taken = settled ? tableCell(settled, 0, column) : null
+      return taken === null ? null : taken === 1
+    },
+  }),
+
+  'dp-1d': challenge({
+    prompt: 'Fill this cell: extend the best run ending at the previous position, or start a new one here.',
+    junctionTypes: [CriticalJunctionType.DP_CELL],
+    python: '# previous is best[i - 1]; element is arr[i].\ncell = ',
+    java: 'best[i] = Math.max(arr[i], best[i - 1] + arr[i]);',
+    globals: (context) => {
+      const column = (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0
+      return {
+        previous: tableCell(context.snapshot, 0, column - 1) ?? 0,
+        element: field<number[]>(context.snapshot, 'input', [])[column] ?? 0,
+      }
+    },
+    readBack: 'cell',
+    expect: 'number',
+    expected: (context) => {
+      const column = (context.snapshot.dataStructureState as { current: [number, number] | null }).current?.[1] ?? 0
+      const settled = nextWhere(context, (s) => tableCell(s, 0, column) !== null)
+      return settled ? tableCell(settled, 0, column) : null
+    },
+  }),
+
+  'dp-2d': challenge({
+    prompt: 'The characters differ, so one edit is unavoidable. Fill the cell from the cheapest of the three neighbours.',
+    junctionTypes: [CriticalJunctionType.DP_CELL],
+    python: '# up is a deletion, left an insertion, diagonal a substitution.\ncell = ',
+    java: 'd[i][j] = 1 + Math.min(up, Math.min(left, diagonal));',
+    globals: (context) => editNeighbours(context.snapshot),
+    readBack: 'cell',
+    expect: 'number',
+    expected: (context) => {
+      const current = (context.snapshot.dataStructureState as { current: [number, number] | null }).current
+      if (!current) return null
+      const settled = nextWhere(context, (s) => tableCell(s, current[0], current[1]) !== null)
+      return settled ? tableCell(settled, current[0], current[1]) : null
+    },
+  }),
+
+  backtracking: challenge({
+    prompt: 'Decide whether this branch can be abandoned. Every element left is positive, which is what makes the test safe.',
+    junctionTypes: [CriticalJunctionType.PRUNE_BRANCH],
+    python: '# total is the running sum; target is what a solution must reach.\nprune = ',
+    java: 'boolean prune = (total > target);',
+    globals: (context) => ({
+      total: field<number>(context.snapshot, 'total', 0),
+      target: field<number>(context.snapshot, 'target', 0),
+    }),
+    readBack: 'prune',
+    expect: 'boolean',
+    expected: (context) => field<number>(context.snapshot, 'total', 0) > field<number>(context.snapshot, 'target', 0),
+  }),
 }
 
 /** Topics that offer a code challenge. */

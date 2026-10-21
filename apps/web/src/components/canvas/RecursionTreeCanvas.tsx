@@ -74,6 +74,10 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
   const radius = Math.min(NODE_RADIUS, Math.max(7, xStep / 2 - 2), Math.max(7, yStep / 2 - 4))
 
   const { distinct, calls } = redundancy(tree)
+  // Only where repeated arguments really are repeated work: see
+  // CallStackState.highlightRepeats.
+  const repeatsMatter =
+    (snapshots[stepIndex]?.dataStructureState as { highlightRepeats?: boolean } | undefined)?.highlightRepeats === true
   const byId = new Map(tree.nodes.map((node) => [node.id, node]))
 
   return (
@@ -81,7 +85,7 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
       <text x={MARGIN.left} y={16} className="fill-text-muted text-[11px] dark:fill-dark-text-secondary">
         {`calls made: ${tree.callsSoFar} of ${calls}`}
       </text>
-      {calls > distinct && (
+      {repeatsMatter && calls > distinct && (
         <text x={MARGIN.left} y={30} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
           {`${calls} calls for ${distinct} distinct answers`}
         </text>
@@ -109,7 +113,7 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
           {/* A dashed ring marks a call whose answer the run already has.
               Drawing it on the node rather than in a legend keeps the
               repetition where the student is looking. */}
-          {node.recomputed && !node.pending && (
+          {repeatsMatter && node.recomputed && !node.pending && (
             <circle
               cx={xOf(node)}
               cy={yOf(node)}
@@ -136,7 +140,7 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
             className="font-mono text-[10px]"
             fill={textFor(node)}
           >
-            {node.argument}
+            {node.label ?? node.argument}
           </text>
           {/* The answer, once there is one, under the node that found it. */}
           {node.returned && node.returnValue !== null && radius >= 10 && (
@@ -190,7 +194,7 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
                   className={cn('font-mono text-[10px]')}
                   fill={frame.status === 'active' ? 'var(--state-current-ink)' : 'var(--ink-2)'}
                 >
-                  {`${frame.functionName}(${frame.argument})`}
+                  {`${frame.functionName}(${frame.label ?? frame.argument})`}
                 </text>
               </g>
             )

@@ -5,6 +5,19 @@ export interface CallFrame {
   id: string
   functionName: string
   argument: number
+  /**
+   * What to write on the node, when the argument is not a number a
+   * student would recognise.
+   *
+   * factorial(5) and fib(5) are called with one number, so the number is
+   * the label. Divide and conquer is called with a RANGE, and squeezing
+   * that into `argument` would put "5" on a node responsible for
+   * [0..5] - a number that means nothing, on the one canvas whose whole
+   * job is showing which call is responsible for what. The canvases
+   * prefer this when it is set; `argument` still carries a value, so
+   * repeated-subproblem detection keeps working.
+   */
+  label?: string
   returnValue: number | null
   status: 'active' | 'waiting' | 'returned'
   depth: number
@@ -14,6 +27,24 @@ export interface CallStackState {
   frames: CallFrame[]
   baseCase: number
   currentFrameId: string | null
+  /**
+   * Whether two calls with the same argument mean REPEATED WORK.
+   *
+   * True for Fibonacci, where fib(3) really is computed from scratch
+   * several times and that ratio is the reason memoisation exists. False
+   * by default, and false for the paradigm topics: two backtracking nodes
+   * with the same partial total are different partial candidates, not the
+   * same subproblem solved twice, so marking them as repeated work and
+   * printing "21 calls for 9 distinct answers" told the student something
+   * that is not true of the algorithm they are watching.
+   */
+  highlightRepeats?: boolean
+  /**
+   * Working variables for the watch panel, named as the pseudocode names
+   * them - for a run whose state is a tree rather than a set of
+   * variables. Same idea as DPTableState's.
+   */
+  watch?: Record<string, number | string | boolean | null>
   /** Fibonacci-specific: values fully resolved so far during traversal, flagging a later call for the same k as a redundant recomputation. */
   computedValues?: Record<number, number>
   /** Fibonacci-specific: running count of total function calls made so far. */
@@ -70,12 +101,26 @@ export function factorialEngine(n: number): AlgorithmSnapshot[] {
   let stepIndex = 0
   let frames: CallFrame[] = []
 
-  const baseState = (overrides: Partial<CallStackState> = {}): CallStackState => ({
-    frames,
-    baseCase: 0,
-    currentFrameId: null,
-    ...overrides,
-  })
+  const baseState = (overrides: Partial<CallStackState> = {}): CallStackState => {
+    // The call the run is in, and how deep it is: a debugger's view of a
+    // recursion. The only scalar this state used to carry was baseCase,
+    // which is a constant of the run rather than a variable, so the watch
+    // panel beside the canvas had nothing real to show.
+    const active = frames.find((frame) => frame.status === 'active') ?? frames[frames.length - 1]
+    const deepestReturned = [...frames].reverse().find((frame) => frame.status === 'returned')
+    return {
+      frames,
+      baseCase: 0,
+      currentFrameId: null,
+      watch: {
+        n: active?.argument ?? null,
+        depth: active?.depth ?? 0,
+        callsOnStack: frames.filter((frame) => frame.status !== 'returned').length,
+        lastReturned: deepestReturned?.returnValue ?? null,
+      },
+      ...overrides,
+    }
+  }
 
   // Push phase: factorial(n), factorial(n-1), ..., factorial(0).
   for (let arg = clamped; arg >= 0; arg--) {

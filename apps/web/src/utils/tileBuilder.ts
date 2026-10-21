@@ -14,6 +14,7 @@ import type { PrimState } from '@/engine/prim'
 import type { CycleDetectionState, ConnectedComponentsState } from '@/engine/graphProperties'
 import type { TileOption } from '@/components/prediction/TileGrid'
 import { complexityPredictionOptions } from '@/engine/runMetrics'
+import type { DPTableState } from '@/engine/dpTable'
 
 /** Fisher-Yates shuffle so the correct tile isn't always in the same position. Tile ids never change, only display order. */
 function shuffleArray<T>(arr: T[]): T[] {
@@ -23,6 +24,42 @@ function shuffleArray<T>(arr: T[]): T[] {
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
+}
+
+/**
+ * One tile per distinct answer, with the correct one always kept.
+ *
+ * Numeric distractors collide: factorial(1) returning 1 makes "n * prev"
+ * and "prev" both read 1, and a prefix cell whose predecessor is 0 makes
+ * "previous + element" and "element" the same number. Two tiles reading
+ * the same thing is an unanswerable question however it is graded - the
+ * student picks one of two identical options and is told they are wrong.
+ *
+ * `topUpFrom`, when given, invents further numeric distractors around that
+ * value so a junction whose distractors all collided still offers a real
+ * choice rather than a single button.
+ */
+function distinctTiles(tiles: TileOption[], topUpFrom?: number): TileOption[] {
+  const seen = new Set<string>()
+  const kept: TileOption[] = []
+  // The correct tile is considered first, so a collision never removes it.
+  for (const tile of [...tiles].sort((a, b) => Number(a.misconception !== null) - Number(b.misconception !== null))) {
+    const label = tile.label.trim()
+    if (seen.has(label)) continue
+    seen.add(label)
+    kept.push(tile)
+  }
+  if (topUpFrom !== undefined) {
+    for (let offset = 1; kept.length < 3 && offset <= 6; offset += 1) {
+      for (const candidate of [topUpFrom + offset, topUpFrom - offset]) {
+        const label = String(candidate)
+        if (kept.length >= 3 || seen.has(label)) continue
+        seen.add(label)
+        kept.push({ id: `near-${candidate}`, label, misconception: MisconceptionCategory.OFF_BY_ONE })
+      }
+    }
+  }
+  return shuffleArray(kept)
 }
 
 /**
@@ -873,13 +910,35 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
         return { r, c, f: isAStar ? g + h : g }
       })
       scored.sort((a, b) => a.f - b.f)
-      const shown = scored.slice(0, 3)
-      const bestF = shown[0]?.f
+      const bestF = scored[0]?.f
+      // One cell per distinct score. Taking the first three by score
+      // marked every tie correct, and on a uniform grid ties are the
+      // normal case: Grid DFS offered three tiles, all three correct, so
+      // any click was right and nothing was being asked.
+      const byScore = new Map<number, { r: number; c: number; f: number }>()
+      for (const cell of scored) if (!byScore.has(cell.f)) byScore.set(cell.f, cell)
+      const shown = [...byScore.values()].slice(0, 4)
+      const label = ({ r, c, f }: { r: number; c: number; f: number }) =>
+        isAStar ? `(${r}, ${c}) - f(n) = ${f}` : `(${r}, ${c}) - g(n) = ${f}`
+      if (shown.length < 2) {
+        // Every frontier cell has the same score, so any of them really is
+        // a correct pop and there is no question to ask. Fall back to the
+        // rule itself, which is what distinguishes the four pathfinders.
+        return shuffleArray([
+          {
+            id: 'rule-correct',
+            label: isAStar ? 'The lowest f(n) = g(n) + h(n)' : 'The lowest g(n) so far',
+            misconception: null,
+          },
+          { id: 'rule-newest', label: 'The most recently discovered cell', misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+          { id: 'rule-closest', label: 'The cell closest to the goal in a straight line', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        ])
+      }
       return shuffleArray(
-        shown.map(({ r, c, f }) => ({
-          id: `${r},${c}`,
-          label: isAStar ? `(${r}, ${c}) - f(n) = ${f}` : `(${r}, ${c}) - g(n) = ${f}`,
-          misconception: f === bestF ? null : MisconceptionCategory.COMPARISON_DIRECTION,
+        shown.map((cell) => ({
+          id: `${cell.r},${cell.c}`,
+          label: label(cell),
+          misconception: cell.f === bestF ? null : MisconceptionCategory.COMPARISON_DIRECTION,
         })),
       )
     }
@@ -1309,12 +1368,15 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
     case CriticalJunctionType.BASE_CASE: {
       const s = snapshot.dataStructureState as { baseCase: number }
       // factorial(0) = 1; fib(1) = 1 - both engines' base cases return 1.
-      return shuffleArray([
+      // The third tile used to read "undefined" whenever baseCase was not
+      // 1, which is factorial - so factorial's base-case question offered
+      // "undefined" twice.
+      return distinctTiles([
         { id: 'zero', label: '0', misconception: MisconceptionCategory.BASE_CASE_OMISSION },
         { id: 'one', label: '1', misconception: null },
         {
-          id: s.baseCase === 1 ? 'two' : 'undefined-alt',
-          label: s.baseCase === 1 ? '2' : 'undefined',
+          id: s.baseCase === 1 ? 'two' : 'n-itself',
+          label: s.baseCase === 1 ? '2' : `${s.baseCase}`,
           misconception: MisconceptionCategory.BASE_CASE_OMISSION,
         },
         { id: 'undefined', label: 'undefined', misconception: MisconceptionCategory.BASE_CASE_OMISSION },
@@ -1329,12 +1391,16 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       const n = Number(snapshot.description.match(/factorial\((\d+)\)/)?.[1])
       const prev = Number(snapshot.description.match(/returned (\d+)/)?.[1])
       if (!Number.isFinite(n) || !Number.isFinite(prev)) return []
-      return shuffleArray([
-        { id: `mult-${n * prev}`, label: `${n * prev}`, misconception: null },
-        { id: `add-${n + prev}`, label: `${n + prev}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
-        { id: `mult-minus-${n * (prev - 1)}`, label: `${n * (prev - 1)}`, misconception: MisconceptionCategory.OFF_BY_ONE },
-        { id: `prev-${prev}`, label: `${prev}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
-      ])
+      // factorial(1) with prev 1 makes n * prev and prev both read 1.
+      return distinctTiles(
+        [
+          { id: `mult-${n * prev}`, label: `${n * prev}`, misconception: null },
+          { id: `add-${n + prev}`, label: `${n + prev}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+          { id: `mult-minus-${n * (prev - 1)}`, label: `${n * (prev - 1)}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+          { id: `prev-${prev}`, label: `${prev}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+        ],
+        n * prev,
+      )
     }
 
     case CriticalJunctionType.RECURSIVE_CALL: {
@@ -1484,8 +1550,31 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
     }
 
     case CriticalJunctionType.HEAP_EXTRACT: {
-      const s = snapshot.dataStructureState as { array: number[] }
-      return [{ id: 'extract', label: `Extract ${s.array[0]} - it's the current maximum`, misconception: null }]
+      // This offered exactly one tile, reading "Extract 9 - it's the
+      // current maximum": the question, its own answer, and the reason,
+      // on the only button available. Nothing was being predicted.
+      const s = snapshot.dataStructureState as { array: number[]; heapSize: number }
+      const size = s.heapSize ?? s.array.length
+      const root = s.array[0]
+      const last = s.array[size - 1]
+      const largestChild = Math.max(s.array[1] ?? Number.NEGATIVE_INFINITY, s.array[2] ?? Number.NEGATIVE_INFINITY)
+      return distinctTiles([
+        { id: 'extract-root', label: `${root} - the root`, misconception: null },
+        // The heap property only orders parents against children, so the
+        // largest value is at the root and the smallest is anywhere in the
+        // last level: scanning for a maximum elsewhere is the error.
+        { id: 'extract-last', label: `${last} - the last element`, misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
+        {
+          id: 'extract-child',
+          label: `${largestChild} - the larger child of the root`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+        {
+          id: 'extract-scan',
+          label: 'Whichever element is largest, found by scanning',
+          misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+        },
+      ])
     }
 
     // Counting Sort
@@ -1537,6 +1626,184 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       return shuffleArray(
         options.map((d) => ({ id: String(d), label: `Bucket ${d}`, misconception: d === correct ? null : MisconceptionCategory.OFF_BY_ONE })),
       )
+    }
+
+    // Techniques - the seven paradigms. Every one of these reads its
+    // correct answer out of the snapshot the canvas is drawing, so a tile
+    // and the picture beside it cannot disagree.
+    case CriticalJunctionType.PREFIX_CELL: {
+      const s = snapshot.dataStructureState as DPTableState
+      const [, col] = s.current ?? [0, 0]
+      const previous = (s.table[0]?.[col - 1] as number) ?? 0
+      const element = s.input[col - 1] ?? 0
+      const correct = previous + element
+      return distinctTiles([
+        { id: `prefix-${correct}`, label: `${correct}`, misconception: null },
+        // The classic error: summing from the element rather than from the
+        // cell before, so the running total restarts.
+        { id: 'prefix-element', label: `${element}`, misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        // Off by one in the array index: adding the next element instead.
+        {
+          id: 'prefix-shifted',
+          label: `${previous + (s.input[col] ?? 0)}`,
+          misconception: MisconceptionCategory.OFF_BY_ONE,
+        },
+        { id: 'prefix-previous', label: `${previous}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+      ], correct)
+    }
+
+    case CriticalJunctionType.RANGE_QUERY: {
+      const s = snapshot.dataStructureState as DPTableState
+      const cells = s.dependsOn.map(([, col]) => col).sort((a, b) => b - a)
+      const [high, low] = [cells[0] ?? 0, cells[1] ?? 0]
+      return shuffleArray([
+        { id: 'range-correct', label: `p${high} - p${low}`, misconception: null },
+        // Forgetting that the table is offset by one, which drops the
+        // first element of the range or includes one too many.
+        { id: 'range-off-by-one', label: `p${high - 1} - p${low}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+        { id: 'range-off-by-one-low', label: `p${high} - p${low + 1}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+        // Not using the table at all.
+        { id: 'range-loop', label: 'Add the elements of the range up', misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION },
+      ])
+    }
+
+    case CriticalJunctionType.STACK_DISCHARGE: {
+      const s = snapshot.dataStructureState as DPTableState
+      const [, col] = s.current ?? [0, 0]
+      const incoming = s.input[col] ?? 0
+      const waiting = s.marked[s.marked.length - 1] ?? 0
+      const top = s.input[waiting] ?? 0
+      const discharges = top < incoming
+      return shuffleArray([
+        discharges
+          ? { id: 'discharge-yes', label: `Yes - ${incoming} answers index ${waiting}, so it pops`, misconception: null }
+          : { id: 'discharge-no', label: `No - ${incoming} does not beat ${top}, so index ${waiting} keeps waiting`, misconception: null },
+        discharges
+          ? { id: 'discharge-no', label: `No - index ${waiting} keeps waiting`, misconception: MisconceptionCategory.COMPARISON_DIRECTION }
+          : { id: 'discharge-yes', label: `Yes - index ${waiting} pops`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        // Popping one and stopping is the error that makes the answer
+        // array wrong for every index further down the stack.
+        { id: 'discharge-one', label: 'Pop exactly one, whatever is underneath', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
+        // Pushing before discharging leaves the stack out of order.
+        { id: 'discharge-push-first', label: `Push index ${col} first, then compare`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+      ])
+    }
+
+    case CriticalJunctionType.COMBINE_RESULT: {
+      // The three candidates are named in the step's own description, and
+      // the correct tile is whichever is largest - read from the run, not
+      // recomputed here.
+      const candidates = [...snapshot.description.matchAll(/(?:left|right|crossing) (-?\d+)/g)].map((match) =>
+        Number(match[1]),
+      )
+      const [left, right, cross] = [candidates[0] ?? 0, candidates[1] ?? 0, candidates[2] ?? 0]
+      const best = Math.max(left, right, cross)
+      const label = (which: string, value: number) => `${which}: ${value}`
+      return shuffleArray([
+        {
+          id: best === cross ? 'combine-cross' : best === left ? 'combine-left' : 'combine-right',
+          label: label(best === cross ? 'the crossing run' : best === left ? 'the left half' : 'the right half', best),
+          misconception: null,
+        },
+        {
+          id: 'combine-max-halves',
+          label: `The better half, ignoring the crossing run: ${Math.max(left, right)}`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+        { id: 'combine-sum', label: `Both halves added: ${left + right}`, misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+        { id: 'combine-left-always', label: label('the left half', left), misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+      ])
+    }
+
+    case CriticalJunctionType.GREEDY_CHOICE: {
+      const s = snapshot.dataStructureState as DPTableState
+      const [, col] = s.current ?? [0, 0]
+      const name = s.colLabels[col] ?? '?'
+      // The run's own working line carries the comparison being made.
+      const fits = /(-?\d+) >= (-?\d+|-inf)/.exec(s.working ?? '')
+      const compatible = fits ? fits[2] === '-inf' || Number(fits[1]) >= Number(fits[2]) : true
+      return shuffleArray([
+        compatible
+          ? { id: 'greedy-take', label: `Take ${name} - it starts after the room is free`, misconception: null }
+          : { id: 'greedy-skip', label: `Skip ${name} - it overlaps what is booked`, misconception: null },
+        compatible
+          ? { id: 'greedy-skip', label: `Skip ${name}`, misconception: MisconceptionCategory.COMPARISON_DIRECTION }
+          : { id: 'greedy-take', label: `Take ${name}`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        // Reconsidering is the one thing greedy never does.
+        {
+          id: 'greedy-swap',
+          label: `Drop an accepted activity to fit ${name} in`,
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+        {
+          id: 'greedy-shortest',
+          label: 'Take whichever remaining activity is shortest',
+          misconception: MisconceptionCategory.ORDER_OF_OPERATIONS,
+        },
+      ])
+    }
+
+    case CriticalJunctionType.DP_CELL: {
+      const s = snapshot.dataStructureState as DPTableState
+      const [row, col] = s.current ?? [0, 0]
+      const reads = s.dependsOn.map(([r, c]) => (s.table[r]?.[c] as number) ?? 0)
+      if (s.dependsOn.length === 1) {
+        // 1D: extend the previous run, or start fresh here.
+        const previous = reads[0]
+        const element = s.input[col] ?? 0
+        const extend = previous + element
+        const correct = Math.max(extend, element)
+        return distinctTiles([
+          { id: `dp1-${correct}`, label: `${correct}`, misconception: null },
+          {
+            id: 'dp1-wrong-branch',
+            label: `${Math.min(extend, element)}`,
+            misconception: MisconceptionCategory.COMPARISON_DIRECTION,
+          },
+          { id: 'dp1-always-extend', label: `${extend}`, misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION },
+          { id: 'dp1-previous', label: `${previous}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+        ], correct)
+      }
+      // 2D: one edit plus the cheapest of three neighbours.
+      const cheapest = Math.min(...reads)
+      const correct = 1 + cheapest
+      return distinctTiles([
+        { id: `dp2-${correct}`, label: `${correct}`, misconception: null },
+        // Taking the cheapest neighbour without paying for the edit.
+        { id: 'dp2-no-cost', label: `${cheapest}`, misconception: MisconceptionCategory.OFF_BY_ONE },
+        // Taking the most expensive route.
+        { id: 'dp2-max', label: `${1 + Math.max(...reads)}`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+        {
+          id: 'dp2-diagonal-only',
+          label: `${1 + ((s.table[row - 1]?.[col - 1] as number) ?? 0)}`,
+          misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+        },
+      ], correct)
+    }
+
+    case CriticalJunctionType.PRUNE_BRANCH: {
+      const s = snapshot.dataStructureState as { total: number; target: number; candidates: number[] }
+      const overshot = s.total > s.target
+      return shuffleArray([
+        overshot
+          ? {
+              id: 'prune-yes',
+              label: `Abandon it - ${s.total} is past ${s.target} and every element left is positive`,
+              misconception: null,
+            }
+          : { id: 'prune-no', label: `Keep going - ${s.total} can still reach ${s.target}`, misconception: null },
+        overshot
+          ? { id: 'prune-no', label: 'Keep going and check the rest anyway', misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION }
+          : { id: 'prune-yes', label: 'Abandon this branch', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
+        // Pruning the wrong scope: this abandons branches that are still
+        // viable, which loses real solutions.
+        { id: 'prune-all', label: 'Abandon every remaining branch, not just this subtree', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
+        {
+          id: 'prune-unsafe',
+          label: 'Abandon it whenever the total merely stops growing',
+          misconception: MisconceptionCategory.INVARIANT_MISAPPLICATION,
+        },
+      ])
     }
 
     default:

@@ -76,6 +76,17 @@ export const FEYNMAN_RUBRIC_ALGORITHMS: ReadonlySet<string> = new Set([
   'Two Pointer Technique',
   'Sliding Window (Fixed)',
   'Sliding Window (Variable)',
+  // The seven paradigms. Their rubrics ask for the thing each paradigm
+  // rests on rather than a description of it: why the prefix table starts
+  // with a zero, why a monotonic stack's inner loop is still linear, the
+  // case divide and conquer forgets, a greedy rule that fails.
+  'Prefix Sums',
+  'Monotonic Stack',
+  'Divide and Conquer',
+  'Greedy Choice',
+  'Dynamic Programming (1D)',
+  'Dynamic Programming (2D)',
+  'Backtracking',
 ])
 
 export function hasFeynmanRubric(algorithmName: string): boolean {

@@ -10,13 +10,102 @@ BST, BFS and DFS already have reviewed rubrics in routers/feynman.py.
 """
 
 # Families whose complexity facts are written and approved (Phase 8.1B).
-LIVE_FAMILIES: frozenset[str] = frozenset({"Tree traversals", "Binary search tree operations", "Heaps", "Tries", "Self-balancing trees", "Shortest paths", "Minimum spanning trees", "Graph properties", "Grid pathfinding", "Two pointers and sliding windows"})
+LIVE_FAMILIES: frozenset[str] = frozenset({"Tree traversals", "Binary search tree operations", "Heaps", "Tries", "Self-balancing trees", "Shortest paths", "Minimum spanning trees", "Graph properties", "Grid pathfinding", "Two pointers and sliding windows", "Algorithmic paradigms"})
 
 # Approved to stay on the generic rubric, by decision (see the Maze
 # generation family below): never promoted, never given complexity criteria.
 GENERIC_BY_DECISION: tuple[str, ...] = ("maze_generation", "maze_prim", "maze_kruskal")
 
 FAMILIES: dict[str, dict[str, list[tuple[str, str]]]] = {
+    "Algorithmic paradigms": {
+        "prefix_sum": [
+            ("explains building a running total once, so each cell holds the sum of everything before it", "A running total, built once"),
+            (
+                "explains that a range sum is then one subtraction between two cells rather than a loop, and that the "
+                "answer costs the same for a long range as a short one",
+                "Any range sum in one subtraction",
+            ),
+            (
+                "explains why the table has one extra cell holding zero: it removes the special case for a range that "
+                "starts at index 0",
+                "Why the table starts with a zero",
+            ),
+        ],
+        "monotonic_stack": [
+            ("explains keeping a stack of positions that are still waiting for an answer", "A stack of unanswered positions"),
+            (
+                "explains that a new element discharges every waiting position it beats, and that the stack holds "
+                "indices rather than values so the answer can be written into the right place",
+                "What the new element discharges, and why indices",
+            ),
+            (
+                "explains why an inner loop still gives one pass overall: each position is pushed once and popped at "
+                "most once, so the total number of operations is bounded even though a single step can pop several",
+                "Why the inner loop is still linear overall",
+            ),
+        ],
+        "divide_and_conquer": [
+            ("explains splitting the problem in half and solving each half the same way", "Splitting in half, recursively"),
+            (
+                "explains the combine step, including the case that straddles the split and so belongs to neither "
+                "half - omitting it gives an answer that is wrong only on the inputs where it matters",
+                "Combining, including the case that straddles the split",
+            ),
+            ("explains that a single element is the base case because it cannot be split further", "Where the recursion stops"),
+        ],
+        "greedy": [
+            ("explains taking the best option available now and never reconsidering it", "Take the best now, never reconsider"),
+            (
+                "explains why this particular rule is safe - choosing the earliest finishing option leaves the most "
+                "room for everything after it - rather than only stating what the rule is",
+                "Why this rule is safe, not just what it is",
+            ),
+            (
+                "names a plausible rule that fails, such as earliest start or shortest duration, and so shows that "
+                "greedy needs an argument rather than an intuition",
+                "A plausible rule that gives the wrong answer",
+            ),
+        ],
+        "dp_1d": [
+            ("explains choosing a subproblem indexed by one position, and writing its answer down once", "One subproblem per position, written down once"),
+            (
+                "explains the recurrence in terms of the previous cell: either extend what came before or start fresh "
+                "here, whichever is better",
+                "Extend, or start fresh: the recurrence",
+            ),
+            (
+                "explains why the table makes it one pass where the same recurrence solved recursively would recompute "
+                "the same subproblems",
+                "Why writing it down removes the repeated work",
+            ),
+        ],
+        "dp_2d": [
+            ("explains that the state needs two indices, so the table is a grid rather than a row", "Two indices, so a grid"),
+            (
+                "explains what each neighbour means: above is one operation, to the left is another, and the diagonal "
+                "is the third, with a match reading the diagonal at no cost",
+                "What each neighbour of a cell means",
+            ),
+            (
+                "explains the base cases along the edges, and why the cells have to be filled in an order that has "
+                "them available",
+                "The edges, and why fill order matters",
+            ),
+        ],
+        "backtracking": [
+            ("explains building a candidate one decision at a time, so the search is a tree of partial candidates", "A tree of partial candidates"),
+            (
+                "explains abandoning a branch as soon as it cannot succeed, so the subtree below it is never built at "
+                "all",
+                "Abandoning a branch before building it",
+            ),
+            (
+                "explains that pruning does not change the worst case - the state space is still exponential - and "
+                "that the test has to be genuinely safe or real solutions are discarded",
+                "What pruning does and does not change",
+            ),
+        ],
+    },
     "Two pointers and sliding windows": {
         "two_pointer": [
             ("explains starting one pointer at each end of a sorted array", "Pointers at both ends of a sorted array"),

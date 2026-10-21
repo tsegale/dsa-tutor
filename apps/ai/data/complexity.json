@@ -1291,6 +1291,160 @@
       "space": "what extra space it keeps"
     }
   },
+  "prefix-sum": {
+    "best": "O(n) build, O(1) query",
+    "bestNote": "one pass, then one subtraction",
+    "average": "O(n) build, O(1) query",
+    "averageNote": "",
+    "worst": "O(n) build, O(1) query",
+    "worstNote": "query cost never depends on the range",
+    "space": "O(n)",
+    "spaceNote": "a table of n + 1 cells",
+    "stable": false,
+    "worstCaseTrigger": "Building the table is one addition per element, n in all, whatever the values: there is no input that makes it slower. A query is prefix[j + 1] - prefix[i], one subtraction, so a range covering the whole array costs exactly what a single-element range costs. That flat query cost is the whole point: the break-even against looping per query arrives at the second query. The cost that is NOT free is space, O(n), and correctness, since the table is only valid while the array does not change.",
+    "auxiliarySpace": "O(n): one cell per element plus the leading zero. Can be done in place when the original array is not needed afterwards, which trades the original data for the space.",
+    "contrast": {
+      "algorithm": "Looping over the range per query",
+      "point": "needs no extra memory and tolerates updates, but costs O(n) per query where a prefix table costs O(1); with q queries the two are O(qn) against O(n + q)"
+    },
+    "defend": {
+      "time": "why a range sum of any length costs one subtraction once the table exists",
+      "alternative": "when paying O(n) to build the table does not pay for itself",
+      "space": "why the table costs O(n), and what updating one element of the array would cost"
+    }
+  },
+  "monotonic-stack": {
+    "best": "O(n)",
+    "bestNote": "one pass",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "amortised: each index pushed once, popped once",
+    "space": "O(n)",
+    "spaceNote": "the stack, in the worst case all n indices",
+    "stable": false,
+    "worstCaseTrigger": "The inner while loop makes this look quadratic, and it is not: an index is pushed exactly once and popped at most once, so across the whole run there are at most n pushes and n pops however the values are arranged. That is an amortised argument, not a claim about any single step - one step really can pop many indices. A strictly decreasing array is the worst case for SPACE, since nothing is ever discharged until the end and the stack holds all n indices; a strictly increasing array empties the stack on every step but costs the same total time.",
+    "auxiliarySpace": "O(n): the stack holds indices still waiting for an answer, which is every index for a decreasing array.",
+    "contrast": {
+      "algorithm": "Scanning right from every element",
+      "point": "needs no extra space and is obvious to write, but costs O(n squared) on a decreasing array where the stack version stays O(n)"
+    },
+    "defend": {
+      "time": "why an inner loop that can pop several indices still adds up to O(n) over the run",
+      "alternative": "what the obvious nested-loop version costs, and on which input",
+      "space": "which input fills the stack with all n indices"
+    }
+  },
+  "divide-and-conquer": {
+    "best": "O(n log n)",
+    "bestNote": "the split is fixed, so no input is faster",
+    "average": "O(n log n)",
+    "averageNote": "",
+    "worst": "O(n log n)",
+    "worstNote": "log n levels, O(n) of combining per level",
+    "space": "O(log n)",
+    "spaceNote": "the recursion stack",
+    "stable": false,
+    "worstCaseTrigger": "The recursion always halves, so the tree is log n deep on every input: there is no best or worst case in time. Each level scans its ranges once to find the best crossing run, O(n) per level, giving T(n) = 2T(n/2) + O(n) = O(n log n). The crossing scan is what the n in that recurrence is; drop it and the recurrence would be T(n) = 2T(n/2) + O(1) = O(n), which is also the answer the greedy single pass gets - and is why that single pass exists.",
+    "auxiliarySpace": "O(log n): the call stack is as deep as the splitting, and nothing is copied. Recursion depth is the only extra memory.",
+    "contrast": {
+      "algorithm": "Kadane's single pass",
+      "point": "answers the same question in O(n) time and O(1) space, because it never needs the crossing case: it carries the best run ending at each position forward instead of splitting"
+    },
+    "defend": {
+      "time": "why halving plus an O(n) combine gives O(n log n)",
+      "alternative": "what the crossing case costs, and why a single pass can avoid needing it",
+      "space": "why the extra space is the recursion depth and nothing else"
+    }
+  },
+  "greedy": {
+    "best": "O(n log n)",
+    "bestNote": "dominated by the sort",
+    "average": "O(n log n)",
+    "averageNote": "",
+    "worst": "O(n log n)",
+    "worstNote": "the scan itself is O(n)",
+    "space": "O(1)",
+    "spaceNote": "beyond the sort, one variable",
+    "stable": false,
+    "worstCaseTrigger": "The scan is one pass with one comparison per activity, O(n), and never varies: no arrangement makes it slower, because nothing is ever reconsidered. The sort by finish time is the whole cost, O(n log n), and it is also the whole correctness argument - pre-sorted input makes this O(n). The real worst case for greedy is not time but correctness: a rule that looks equally reasonable, such as earliest start or shortest duration, gives a non-optimal answer on inputs where the optimum exists, and no amount of running time reveals that.",
+    "auxiliarySpace": "O(1) for the scan: the finish time of the last accepted activity. The sort may need O(n) or O(log n) depending on the implementation.",
+    "contrast": {
+      "algorithm": "Dynamic programming over all subsets",
+      "point": "is correct for any compatibility rule, including ones where greedy fails, but costs O(n squared) or worse where a safe greedy rule costs one sorted pass"
+    },
+    "defend": {
+      "time": "why the scan is one pass and the sort is the cost",
+      "alternative": "which plausible greedy rules give the wrong answer on this input, and why finish time does not",
+      "space": "why a greedy pass needs no table where dynamic programming does"
+    }
+  },
+  "dp-1d": {
+    "best": "O(n)",
+    "bestNote": "one cell per position, computed once",
+    "average": "O(n)",
+    "averageNote": "",
+    "worst": "O(n)",
+    "worstNote": "no input makes a cell get computed twice",
+    "space": "O(n)",
+    "spaceNote": "the table; reducible to O(1)",
+    "stable": false,
+    "worstCaseTrigger": "Each cell is computed once from the cell before it, in one pass, so every input costs the same n steps: the table is what removes the variation. The same recurrence solved recursively without a table recomputes subproblems and costs exponential time, which is the comparison that matters here. Space is O(n) as written, and because each cell reads only its immediate predecessor it can be reduced to O(1) by keeping one running value - the table is kept visible here because the point of the topic is the table.",
+    "auxiliarySpace": "O(n) for the table as drawn. O(1) is achievable for this particular recurrence, since each cell depends only on the cell before it.",
+    "contrast": {
+      "algorithm": "Divide and conquer on the same problem",
+      "point": "also finds the maximum subarray, but at O(n log n) with an O(log n) stack, because it has to handle runs that straddle a split; the table never splits, so it never has that case"
+    },
+    "defend": {
+      "time": "why filling one cell per position is a single pass",
+      "alternative": "what the same recurrence costs without a table, and what the divide-and-conquer version costs",
+      "space": "why this recurrence can run in O(1) space, and what is lost by doing so"
+    }
+  },
+  "dp-2d": {
+    "best": "O(m x n)",
+    "bestNote": "one cell per pair of prefixes",
+    "average": "O(m x n)",
+    "averageNote": "",
+    "worst": "O(m x n)",
+    "worstNote": "every cell is filled whatever the strings",
+    "space": "O(m x n)",
+    "spaceNote": "the table; reducible to O(min(m, n))",
+    "stable": false,
+    "worstCaseTrigger": "Every cell of the table is filled exactly once, so the cost is the size of the table, m x n, for any pair of strings: identical strings cost the same as completely different ones, since the match case still has to be read and written. There is no early exit. Space is the same m x n, but each cell reads only the row above and the cell to its left, so two rows are enough - O(min(m, n)) - at the cost of being unable to reconstruct the actual edit sequence afterwards, which needs the whole table.",
+    "auxiliarySpace": "O(m x n) as drawn. Two rows, O(min(m, n)), suffice for the distance alone; the full table is needed to recover which edits were made.",
+    "contrast": {
+      "algorithm": "Plain recursion on the same recurrence",
+      "point": "needs no table, but recomputes the same prefix pairs over and over and costs exponential time, where the table makes it m x n"
+    },
+    "defend": {
+      "time": "why the cost is the size of the table and does not depend on how similar the strings are",
+      "alternative": "what the same recurrence costs recursively without the table",
+      "space": "why two rows are enough for the distance, and what that loses"
+    }
+  },
+  "backtracking": {
+    "best": "O(n)",
+    "bestNote": "when pruning cuts every branch early",
+    "average": "varies with the input",
+    "averageNote": "pruning is data-dependent",
+    "worst": "O(2^n)",
+    "worstNote": "nothing prunes: the whole state space is walked",
+    "space": "O(n)",
+    "spaceNote": "the recursion stack, one frame per decision",
+    "stable": false,
+    "worstCaseTrigger": "Two decisions per element gives a state space of 2^n candidates, and pruning is the only thing between the method and walking all of them. The worst case is an input where no partial candidate can be ruled out - every element small relative to the target - so no test ever fails and the full tree is built. The best case is an input where the first element already overshoots, cutting half the tree at the root. This is why the measured node count sits beside the theoretical one in the run: the complexity class does not change, but the number of nodes actually visited is the entire practical difference.",
+    "auxiliarySpace": "O(n): one stack frame per decision, so the depth is the number of elements. The partial candidate is the same size.",
+    "contrast": {
+      "algorithm": "Generating every subset and testing each",
+      "point": "is the same 2^n with no pruning at all, and cannot stop early: backtracking has the same worst case but abandons subtrees the moment they cannot succeed"
+    },
+    "defend": {
+      "time": "why the state space is 2^n and what pruning does and does not change about that",
+      "alternative": "which inputs make pruning useless, and which make it cut most of the tree",
+      "space": "why the extra space is the depth of the search and not the size of the state space"
+    }
+  },
   "jump-search": {
     "best": "O(1)",
     "bestNote": "first block",
