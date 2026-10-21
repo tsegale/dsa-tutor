@@ -13,7 +13,7 @@ import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
 import { usePipeline } from '@/hooks/usePipeline'
 import PipelineTracker from '@/components/pipeline/PipelineTracker'
 import { APPLY_INPUT_EVENT } from './applyInput'
-import { hasCodeMode } from '@/config/pipeline'
+import { stageOffer } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
 
@@ -94,15 +94,14 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   const features = conditionFeatures(classicMode)
   const pipeline = usePipeline()
   // Code Mode rewrites a junction's prediction into a line of code to
-  // write. The toggle used to appear on every topic while a single engine
-  // was the only one that could honour it, so on 65 of 66 flipping it did
-  // nothing at all; it is driven by whether a challenge exists now.
-  const codeModeAvailable = hasCodeMode(algorithmSlug ?? '')
-  // The pipeline already words the reason per topic (none written yet
-  // against never going to be written), so the panel does not word it a
-  // second time and differently.
-  const codeUnavailableReason =
-    pipeline.find((stage) => stage.id === 'CODE')?.reason ?? 'No code challenge written for this topic yet.'
+  // write. Whether it can be entered is the stage's answer, not this
+  // panel's: asking hasCodeMode alone said only that a challenge exists,
+  // so the toggle stayed live on a topic whose own tracker, directly
+  // above it, read "Finish a Practice run first" - and the reason below
+  // it never showed, because that only rendered when no challenge existed.
+  const codeOffer = stageOffer(pipeline, 'CODE')
+  const codeModeAvailable = codeOffer.enabled
+  const codeUnavailableReason = codeOffer.reason ?? 'No code challenge written for this topic yet.'
 
   // Code Mode on: fetch the Python runtime now, in the background, so the
   // first code question does not wait on a ~13MB download.
