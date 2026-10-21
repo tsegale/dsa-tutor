@@ -986,9 +986,24 @@ export interface StudyConsentDetails {
   dataRetention: string | null
   /** Ethics approval status as shown to participants. */
   ethicsApproval: string | null
-  /** The approval reference once granted. Null keeps real enrolment locked:
-   * the status text above can say "pending", but nobody is enrolled on it. */
-  ethicsApprovalReference: string | null
+  /**
+   * Who granted approval, named as a participant would recognise it - the
+   * committee, department or school.
+   *
+   * This was a reference number, on the assumption that every institution
+   * issues one. UNAM grants departmental approval without a reference, so
+   * the field could never be filled truthfully and the gate below could
+   * never open except by inventing one. What the gate is actually for is
+   * recording that approval exists, so it now asks for what the process
+   * really produces.
+   *
+   * Null keeps real enrolment locked: the status text above may say
+   * "pending", but nobody is enrolled on it.
+   */
+  ethicsApprovalGrantedBy: string | null
+  /** When approval was granted, as ISO `YYYY-MM-DD`. Null also keeps
+   *  real enrolment locked. */
+  ethicsApprovalDate: string | null
 }
 /** The profile page's figures, from GET /api/v1/profile/analytics (Phase 6C). */
 export interface LearnerAnalyticsDto {

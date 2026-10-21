@@ -23,12 +23,16 @@ describe('consent details', () => {
       researcherEmail: 'a@unam.na',
       dataRetention: 'x',
       ethicsApproval: 'y',
-      ethicsApprovalReference: 'REF-1',
+      ethicsApprovalGrantedBy: 'Department of Computer Science',
+      ethicsApprovalDate: '2026-10-14',
     }
     expect(consentDetailsComplete(full)).toBe(true)
     expect(consentDetailsComplete({ ...full, ethicsApproval: null })).toBe(false)
-    // Approval text saying "pending" is not enough to open real enrolment.
-    expect(consentDetailsComplete({ ...full, ethicsApprovalReference: null })).toBe(false)
+    // Approval text saying "pending" is not enough to open real enrolment:
+    // who granted it and when are both required, because UNAM issues no
+    // reference number this could key on instead.
+    expect(consentDetailsComplete({ ...full, ethicsApprovalGrantedBy: null })).toBe(false)
+    expect(consentDetailsComplete({ ...full, ethicsApprovalDate: null })).toBe(false)
     expect(consentDetailsComplete({ ...full, researcherEmail: '  ' })).toBe(false)
   })
 

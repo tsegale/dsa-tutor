@@ -6,6 +6,26 @@ import { DSATutorLogo } from '@/components/brand'
 import { STUDY_CONSENT, consentDetailsComplete } from '@/utils/studyConsent'
 
 /** A consent detail, or a visible placeholder where it has not been confirmed yet. */
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+/**
+ * `2026-10-14` as `14 October 2026`, spelled out rather than numeric so a
+ * participant cannot read it the American way round. Formatted here rather
+ * than with toLocaleDateString, whose output depends on the reader's
+ * browser - a consent form should say the same thing to everyone.
+ */
+function formatApprovalDate(iso: string | null): string | null {
+  const match = iso?.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return iso?.trim() || null
+  const [, year, month, day] = match
+  const name = MONTHS[Number(month) - 1]
+  if (!name) return iso!.trim()
+  return `${Number(day)} ${name} ${year}`
+}
+
 function Detail({ value, placeholder }: { value: string | null; placeholder: string }) {
   if (value?.trim()) return <>{value}</>
   return <span className="rounded bg-secondary-light px-1 font-medium text-secondary">[{placeholder}]</span>
@@ -156,8 +176,11 @@ export default function ConsentPage() {
             <h2 className="mb-1 font-semibold">Ethics approval</h2>
             <p className="text-text-secondary">
               <Detail value={STUDY_CONSENT.ethicsApproval} placeholder="ethics approval status - to be confirmed by the supervisor" />
-              {' '}Approval reference:{' '}
-              <Detail value={STUDY_CONSENT.ethicsApprovalReference} placeholder="to be added once approval is granted" />
+              {' '}Granted by{' '}
+              <Detail value={STUDY_CONSENT.ethicsApprovalGrantedBy} placeholder="approving department or committee" />
+              {' '}on{' '}
+              <Detail value={formatApprovalDate(STUDY_CONSENT.ethicsApprovalDate)} placeholder="date approval was granted" />
+              .
             </p>
           </div>
           <div>
