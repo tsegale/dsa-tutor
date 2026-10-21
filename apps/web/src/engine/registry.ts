@@ -46,6 +46,7 @@ import {
   gridDijkstraEngine,
   gridAStarEngine,
   buildWalledGrid,
+  buildTerrainGrid,
   PATHFINDER_BOARD as B,
 } from './gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from './mazeGeneration'
@@ -543,7 +544,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-dijkstra',
     displayName: 'Grid Dijkstra',
-    engineFunction: () => gridDijkstraEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
+    engineFunction: () => gridDijkstraEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Dijkstra on a grid with uniform cost. Bridge between BFS and weighted Dijkstra.',
@@ -553,7 +554,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-astar',
     displayName: 'Grid A*',
-    engineFunction: () => gridAStarEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
+    engineFunction: () => gridAStarEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.ADVANCED,
     description: 'A* pathfinding with Manhattan heuristic. Explores far fewer cells than Dijkstra.',

@@ -246,6 +246,13 @@ export interface GridCell {
   hScore?: number
   /** `'row,col'` of the parent cell, for path reconstruction. */
   parent?: string
+  /**
+   * Cost of entering this cell; 1 when absent, so an unweighted board
+   * behaves exactly as before. Only the boards Dijkstra and A* open on
+   * set it - on a uniform board Dijkstra is BFS with extra bookkeeping,
+   * which is why its own lesson needs terrain to be visible.
+   */
+  weight?: number
 }
 
 /** Snapshot state shared by every node-graph algorithm rendered on
@@ -293,7 +300,14 @@ export interface GridAlgorithmState {
   currentCell: [number, number] | null
   frontierCells: [number, number][]
   visitedCount: number
+  /** Steps taken along the path, which on a weighted board is not the
+   *  same thing as what the path cost. */
   pathLength?: number
+  /** Summed weight of the path, set only when the board is weighted:
+   *  the number that separates Dijkstra's answer from BFS's. */
+  pathCost?: number
+  /** Any cell costs more than 1, so the canvas shows terrain and scores. */
+  weighted?: boolean
   algorithmType: GridAlgorithmType
 }
 

@@ -7,6 +7,7 @@ import {
   gridAStarEngine,
   buildEmptyGrid,
   buildWalledGrid,
+  buildTerrainGrid,
   PATHFINDER_BOARD,
 } from './gridAlgorithms'
 import { runFor } from './runFor'
@@ -149,5 +150,53 @@ describe('the board the pathfinders open on', () => {
       const entry = getAlgorithmRegistryEntry(slug)!
       expect(entry.engineFunction([]).length, slug).toBe(runFor(slug).length)
     }
+  })
+})
+
+describe('weighted terrain', () => {
+  const B = PATHFINDER_BOARD
+  const run = (engine: typeof gridBfsEngine, grid: GridCell[][]) =>
+    engine(grid, B.start[0], B.start[1], B.end[0], B.end[1])
+
+  it('makes Dijkstra disagree with BFS, which is the whole reason it exists', () => {
+    // On a uniform board these two produced identical runs down to the
+    // step, because "nearest unvisited" and "longest waiting" are the same
+    // cell when every move costs 1. Dijkstra's subject had nowhere to
+    // happen.
+    const bfs = lastState(run(gridBfsEngine, buildTerrainGrid(B.rows, B.cols)))
+    const dijkstra = lastState(run(gridDijkstraEngine, buildTerrainGrid(B.rows, B.cols)))
+
+    expect(dijkstra.pathCost!).toBeLessThan(bfs.pathCost!)
+    expect(dijkstra.pathLength!).toBeGreaterThan(bfs.pathLength!)
+  })
+
+  it('still agrees with BFS when the board is uniform', () => {
+    // The weights are board data, not engine behaviour: a board that sets
+    // none has to run exactly as it did before any of this.
+    const bfs = run(gridBfsEngine, buildWalledGrid(B.rows, B.cols))
+    const dijkstra = run(gridDijkstraEngine, buildWalledGrid(B.rows, B.cols))
+    expect(dijkstra.length).toBe(bfs.length)
+    expect(lastState(dijkstra).pathLength).toBe(lastState(bfs).pathLength)
+    expect(lastState(bfs).pathCost).toBeUndefined()
+    expect(lastState(bfs).weighted).toBeUndefined()
+  })
+
+  it('has A* reach the same cost as Dijkstra while looking at no more of the board', () => {
+    const dijkstra = lastState(run(gridDijkstraEngine, buildTerrainGrid(B.rows, B.cols)))
+    const astar = lastState(run(gridAStarEngine, buildTerrainGrid(B.rows, B.cols)))
+    expect(astar.pathCost).toBe(dijkstra.pathCost)
+    expect(astar.visitedCount).toBeLessThanOrEqual(dijkstra.visitedCount)
+  })
+
+  it('offers two routes, so the cheaper one can be the longer one', () => {
+    // A single corridor would leave weights changing the arithmetic and
+    // nothing else - same path, bigger numbers.
+    const grid = buildTerrainGrid(B.rows, B.cols)
+    const rough = grid.flat().filter((cell) => (cell.weight ?? 1) > 1)
+    expect(rough.length).toBeGreaterThan(0)
+    expect(rough.every((cell) => cell.state !== 'wall')).toBe(true)
+    // The start and end are standable, not rough.
+    expect(grid[B.start[0]][B.start[1]].weight).toBeUndefined()
+    expect(grid[B.end[0]][B.end[1]].weight).toBeUndefined()
   })
 })

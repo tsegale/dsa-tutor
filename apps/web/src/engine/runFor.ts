@@ -35,6 +35,7 @@ import {
   gridDijkstraEngine,
   gridAStarEngine,
   buildWalledGrid,
+  buildTerrainGrid,
   PATHFINDER_BOARD as B,
 } from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
@@ -165,9 +166,9 @@ function buildRun(slug: string, input: number[], target: number): AlgorithmSnaps
     case 'grid-dfs':
       return gridDfsEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'grid-dijkstra':
-      return gridDijkstraEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
+      return gridDijkstraEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'grid-astar':
-      return gridAStarEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
+      return gridAStarEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'maze-generation':
       return mazeGenerationEngine(20, 35)
     case 'maze-prim':

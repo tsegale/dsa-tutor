@@ -110,6 +110,10 @@ function runGridSearch(
     snapshots.push(makeSnapshot({ ...params, stepIndex: stepIndex++ }))
   }
 
+  // Terrain is a property of the board, so it is read once rather than
+  // carried as a flag the caller could set inconsistently.
+  const weighted = grid.some((row) => row.some((cell) => (cell.weight ?? 1) !== 1))
+
   function baseState(overrides: Partial<GridAlgorithmState>): GridAlgorithmState {
     return {
       grid: workingGrid,
@@ -121,6 +125,7 @@ function runGridSearch(
       frontierCells: [],
       visitedCount: 0,
       algorithmType,
+      ...(weighted ? { weighted } : {}),
       ...overrides,
     }
   }
@@ -233,7 +238,9 @@ function runGridSearch(
     for (const [nr, nc] of neighboursOf(r, c, rows, cols)) {
       const nk = key(nr, nc)
       if (workingGrid[nr][nc].state === 'wall' || visited.has(nk)) continue
-      const newG = (gScore.get(k) ?? 0) + 1
+      // Cost of entering the neighbour, which is 1 on an unweighted board
+      // - so BFS and DFS, whose boards set no weights, are untouched.
+      const newG = (gScore.get(k) ?? 0) + (workingGrid[nr][nc].weight ?? 1)
       if (gScore.has(nk) && newG >= gScore.get(nk)!) continue
 
       gScore.set(nk, newG)
@@ -271,11 +278,28 @@ function runGridSearch(
     workingGrid[r][c] = { ...workingGrid[r][c], state: 'path' }
   }
 
+  // On a weighted board the two numbers come apart, and that gap is the
+  // lesson: BFS reaches the end in fewer steps along a costlier route.
+  const pathCost = pathKeys
+    .filter((pathKey) => pathKey !== startKey)
+    .reduce((total, pathKey) => {
+      const [r, c] = pathKey.split(',').map(Number)
+      return total + (grid[r]?.[c]?.weight ?? 1)
+    }, 0)
+
   push({
-    description: `Path found! Length: ${pathKeys.length - 1} steps. Visited ${visitedCount} of ${rows * cols} cells.`,
+    description: weighted
+      ? `Path found! ${pathKeys.length - 1} steps, cost ${pathCost}. Visited ${visitedCount} of ${rows * cols} cells.`
+      : `Path found! Length: ${pathKeys.length - 1} steps. Visited ${visitedCount} of ${rows * cols} cells.`,
     pseudocodeLine: PSEUDOCODE_LINE.CHECK_END,
     isPredictionRequired: false,
-    state: baseState({ currentCell: [endRow, endCol], frontierCells: [], visitedCount, pathLength: pathKeys.length - 1 }),
+    state: baseState({
+      currentCell: [endRow, endCol],
+      frontierCells: [],
+      visitedCount,
+      pathLength: pathKeys.length - 1,
+      ...(weighted ? { pathCost } : {}),
+    }),
     isFinalStep: true,
   })
 
@@ -298,6 +322,37 @@ export function gridAStarEngine(grid: GridCell[][], startRow: number, startCol: 
   return runGridSearch('astar', grid, startRow, startCol, endRow, endCol)
 }
 
+/**
+ * The board Dijkstra and A* open on: the same barriers, but each with a
+ * second gap, and the short way through laid with rough ground.
+ *
+ * On a uniform board Dijkstra IS breadth-first search - every move costs
+ * the same, so "nearest unvisited" and "longest waiting" are the same
+ * cell, and the two produced identical runs down to the step. Its actual
+ * subject, that a cheaper route can be a longer one, had nowhere to
+ * happen.
+ *
+ * Two routes and a costly short one give it somewhere: the direct line
+ * is fewest steps and dearest, the detour is longer and cheaper. BFS
+ * takes the first, Dijkstra the second, and the difference is on screen
+ * rather than asserted.
+ */
+export function buildTerrainGrid(rows: number, cols: number): GridCell[][] {
+  const grid = buildEmptyGrid(rows, cols)
+  const barriers = [0.3, 0.55, 0.8].map((fraction) => Math.floor(cols * fraction))
+  const direct = Math.floor(rows / 2)
+  const detour = 1
+  for (const col of barriers) {
+    for (let row = 1; row < rows - 1; row++) {
+      if (row !== direct && row !== detour) grid[row][col].state = 'wall'
+    }
+  }
+  // Rough ground over the direct line only, between the start and end
+  // columns so neither of those is itself expensive to stand on.
+  for (let col = 2; col < cols - 2; col++) grid[direct][col].weight = ROUGH_COST
+  return grid
+}
+
 /** Lookup used by GridCanvas to re-run the right engine after the
  * student edits walls, keyed by the same GridAlgorithmType every grid
  * snapshot already carries. */
@@ -317,22 +372,6 @@ export function buildEmptyGrid(rows: number, cols: number): GridCell[][] {
 }
 
 /**
- * The default board the four pathfinders open on: three staggered
- * barriers with a gap at alternating ends, so the only route is a
- * serpentine one.
- *
- * An empty board is the degenerate case for all four at once, in
- * opposite directions. BFS and Dijkstra have nothing to stop them, so
- * they flood every cell; A* and DFS have the target straight ahead, so
- * they walk to it in a handful of steps and ask almost nothing. On a
- * 20x35 empty board that was 139 junctions for BFS against 7 for A*.
- *
- * Barriers fix both ends: the flood is channelled, and the heuristic
- * finally has something to steer around, which is the whole of what A*
- * has to teach. Deterministic, because a demo has to run the same way
- * twice - the learner edits from here, and "Clear walls" still empties it.
- */
-/**
  * The board every pathfinder opens on. One definition because three
  * places need it - the registry entry, runFor's switch, and the canvas
  * when it re-runs after an edit - and three copies of 20x35 is how the
@@ -340,6 +379,25 @@ export function buildEmptyGrid(rows: number, cols: number): GridCell[][] {
  */
 export const PATHFINDER_BOARD = { rows: 10, cols: 16, start: [5, 1], end: [5, 14] } as const
 
+/** What a slow cell costs to enter on the weighted boards. */
+export const ROUGH_COST = 4
+
+/**
+ * Three staggered barriers with a gap at alternating ends, so the only
+ * route is a serpentine one.
+ *
+ * An empty board is the degenerate case for all four pathfinders at
+ * once, in opposite directions. BFS and Dijkstra have nothing to stop
+ * them, so they flood every cell; A* and DFS have the target straight
+ * ahead, so they walk to it in a handful of steps and ask almost
+ * nothing. On a 20x35 empty board that was 139 junctions for BFS
+ * against 7 for A*.
+ *
+ * Barriers fix both ends: the flood is channelled, and the heuristic
+ * finally has something to steer around, which is the whole of what A*
+ * has to teach. Deterministic, because a demo has to run the same way
+ * twice - the learner edits from here, and "Clear walls" still empties it.
+ */
 export function buildWalledGrid(rows: number, cols: number): GridCell[][] {
   const grid = buildEmptyGrid(rows, cols)
   const barriers = [0.3, 0.55, 0.8].map((fraction) => Math.floor(cols * fraction))

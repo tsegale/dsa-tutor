@@ -66,7 +66,16 @@ import { kruskalEngine } from '@/engine/kruskal'
 import { primEngine } from '@/engine/prim'
 import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from '@/engine/graphProperties'
 import { GRAPH_PRESETS, DIRECTED_ACYCLIC, type GraphPresetName, type UnweightedPreset, type WeightedPreset } from '@/engine/graphPresets'
-import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid, buildWalledGrid } from '@/engine/gridAlgorithms'
+import {
+  gridBfsEngine,
+  gridDfsEngine,
+  gridDijkstraEngine,
+  gridAStarEngine,
+  buildEmptyGrid,
+  buildWalledGrid,
+  buildTerrainGrid,
+  PATHFINDER_BOARD,
+} from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
 import type { GridCell, GridAlgorithmState } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -1029,9 +1038,19 @@ function TopologicalSortControls({ slug }: { slug: string }) {
   )
 }
 
-type GridSizeName = 'small' | 'medium' | 'large'
+type GridSizeName = 'default' | 'small' | 'medium' | 'large'
 
+// The first entry is the board the topic actually opened on, built from
+// the one definition of it. The menu used to start on 'medium' whatever
+// was on screen, so it announced 20x35 over a board that was not.
 const GRID_SIZE_OPTIONS: Record<GridSizeName, { label: string; rows: number; cols: number; start: [number, number]; end: [number, number] }> = {
+  default: {
+    label: `Default (${PATHFINDER_BOARD.rows}×${PATHFINDER_BOARD.cols})`,
+    rows: PATHFINDER_BOARD.rows,
+    cols: PATHFINDER_BOARD.cols,
+    start: [...PATHFINDER_BOARD.start] as [number, number],
+    end: [...PATHFINDER_BOARD.end] as [number, number],
+  },
   small: { label: 'Small (15×25)', rows: 15, cols: 25, start: [7, 2], end: [7, 22] },
   medium: { label: 'Medium (20×35)', rows: 20, cols: 35, start: [10, 2], end: [10, 32] },
   large: { label: 'Large (25×45)', rows: 25, cols: 45, start: [12, 2], end: [12, 42] },
@@ -1046,16 +1065,19 @@ const GRID_ENGINE_FOR: Record<string, typeof gridBfsEngine> = {
 
 function GridControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [size, setSize] = useState<GridSizeName>('medium')
+  const [size, setSize] = useState<GridSizeName>('default')
   const engine = GRID_ENGINE_FOR[slug] ?? gridBfsEngine
+
+  // Whichever board this topic opens on, at the chosen size. Rebuilding
+  // every size as a plain walled board would have dropped the terrain the
+  // moment a learner resized Dijkstra - and Dijkstra without weights is
+  // just BFS again, which is the thing the terrain exists to fix.
+  const buildBoard =
+    slug === 'grid-dijkstra' || slug === 'grid-astar' ? buildTerrainGrid : buildWalledGrid
 
   function runOn(sizeName: GridSizeName, grid?: GridCell[][]) {
     const cfg = GRID_SIZE_OPTIONS[sizeName]
-    // Changing size rebuilds the walled board, like the one the topic
-    // opens on: an empty board of any size is the degenerate run, with
-    // nothing to stop the flood and nothing for the heuristic to steer
-    // around. Clearing passes its own empty grid, below.
-    apply(slug, engine(grid ?? buildWalledGrid(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]))
+    apply(slug, engine(grid ?? buildBoard(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]))
   }
 
   function handleClearWalls() {
@@ -1109,6 +1131,8 @@ const MAZE_ENGINE_FOR: Record<string, typeof mazeGenerationEngine> = {
 
 function MazeControls({ slug }: { slug: string }) {
   const apply = useApply()
+  // The maze topics open at 20x35, not on the pathfinders' board, so
+  // this starts where they actually are.
   const [size, setSize] = useState<GridSizeName>('medium')
   const [lastMaze, setLastMaze] = useState<GridAlgorithmState | null>(null)
   const engine = MAZE_ENGINE_FOR[slug] ?? mazeGenerationEngine

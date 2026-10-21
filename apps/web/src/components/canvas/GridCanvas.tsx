@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import type { GridAlgorithmState, GridCell } from '@dsa-tutor/types'
@@ -6,7 +6,7 @@ import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from 
 import { useHandsOnPick } from '@/hooks/useHandsOnPick'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
-import { GRID_ENGINES } from '@/engine/gridAlgorithms'
+import { GRID_ENGINES, ROUGH_COST } from '@/engine/gridAlgorithms'
 
 interface GridCanvasProps {
   width?: number
@@ -29,6 +29,11 @@ const CELL_COLOURS: Record<GridCell['state'], { fill: string; text?: string }> =
   frontier: { fill: '#fde68a' },
   path: { fill: '#facc15' },
 }
+
+// Rough ground is drawn as hatching over the cell rather than as a fill,
+// because terrain and search state are independent: a rough cell still
+// has to read as frontier, visited or path while staying visibly rough.
+const ROUGH_HATCH = '#8a7a52'
 
 const LEGEND: { label: string; colour: string }[] = [
   { label: 'Wall', colour: '#2d3748' },
@@ -53,6 +58,14 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   const paintMode = useRef<'wall' | 'erase'>('wall')
   const [error, setError] = useState<string | null>(null)
   const [showScores, setShowScores] = useState(false)
+
+  // A weighted board shows its scores by default. The junction asks which
+  // cell has the lowest one, and on terrain that cannot be read off the
+  // picture the way it can when every move costs the same. Keyed on the
+  // board rather than every render, so turning them off within a topic
+  // sticks.
+  const weighted = state?.weighted ?? false
+  useEffect(() => setShowScores(weighted), [weighted])
 
   // Only editable before the algorithm has taken any step - once it's
   // running, the wall layout is fixed for that run (matching every other
@@ -147,10 +160,20 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
               <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{item.label}</span>
             </div>
           ))}
+          {weighted && (
+            <div className="flex items-center gap-1">
+              <svg width="8" height="8" aria-hidden="true">
+                <rect width="8" height="8" fill="url(#rough-ground)" opacity={0.55} />
+              </svg>
+              <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">
+                Rough (costs {ROUGH_COST})
+              </span>
+            </div>
+          )}
           {(state.algorithmType === 'astar' || state.algorithmType === 'dijkstra') && (
             <label className="flex items-center gap-1 text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
               <input type="checkbox" checked={showScores} onChange={(e) => setShowScores(e.target.checked)} className="size-3" />
-              Show f/g/h
+              {state.algorithmType === 'astar' ? 'Show f' : 'Show g'}
             </label>
           )}
           {isEditable && (
@@ -176,6 +199,11 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
           onPointerLeave={handlePointerUp}
           onContextMenu={(e) => e.preventDefault()}
         >
+          <defs>
+            <pattern id="rough-ground" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="4" stroke={ROUGH_HATCH} strokeWidth="1.5" />
+            </pattern>
+          </defs>
           {state.grid.map((row, r) =>
             row.map((cell, c) => {
               const colours = CELL_COLOURS[cell.state]
@@ -210,11 +238,33 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
               )
             }),
           )}
+          {/* Terrain, over the state fill and under the scores. */}
+          {state.grid.map((row, r) =>
+            row.map((cell, c) =>
+              (cell.weight ?? 1) > 1 && cell.state !== 'wall' ? (
+                <rect
+                  key={`rough-${r}-${c}`}
+                  x={c * cellSize}
+                  y={r * cellSize}
+                  width={cellSize - 1}
+                  height={cellSize - 1}
+                  fill="url(#rough-ground)"
+                  opacity={0.55}
+                  pointerEvents="none"
+                />
+              ) : null,
+            ),
+          )}
           {showScores &&
             cellSize >= 14 &&
             state.grid.map((row, r) =>
               row.map((cell, c) => {
-                if (cell.fScore === undefined || (cell.state !== 'frontier' && cell.state !== 'visited')) return null
+                // The number each algorithm actually pops by, not always
+                // f: Dijkstra orders on g, and printing g + h beside a
+                // prompt asking for the lowest g invited the student to
+                // check the wrong column.
+                const score = state.algorithmType === 'astar' ? cell.fScore : cell.gScore
+                if (score === undefined || (cell.state !== 'frontier' && cell.state !== 'visited')) return null
                 return (
                   <text
                     key={`score-${r}-${c}`}
@@ -226,7 +276,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
                     fill="#1e293b"
                     pointerEvents="none"
                   >
-                    {cell.fScore}
+                    {score}
                   </text>
                 )
               }),
@@ -239,6 +289,9 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">
           Visited: {state.visitedCount}
           {state.pathLength !== undefined && ` · Path length: ${state.pathLength}`}
+          {/* Steps and cost come apart on terrain, and that gap is the
+              point: the shortest route is not the cheapest one. */}
+          {state.pathCost !== undefined && ` · Path cost: ${state.pathCost}`}
         </p>
       </div>
     </div>
