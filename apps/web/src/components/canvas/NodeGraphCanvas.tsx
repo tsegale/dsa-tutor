@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import type { GraphAlgorithmState, GraphNode } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
+import { useHandsOnPick } from '@/hooks/useHandsOnPick'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
@@ -79,6 +80,8 @@ function neighborsOf(adjacency: GraphAlgorithmState['adjacency'], id: string): {
 
 export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBOX_HEIGHT }: NodeGraphCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  // Hands-on: the nodes this junction lets the learner choose between.
+  const pick = useHandsOnPick(snapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const stepIndex = useAlgorithmStore((s) => s.stepIndex)
@@ -348,6 +351,8 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
               interactive={isInteractive}
               prefersReducedMotion={prefersReducedMotion}
               onPointerDown={() => handlePointerDown(node.id)}
+              canPick={pick.selectable(node.id)}
+              onPick={() => pick.pick(node.id)}
             />
           ))}
         </svg>
@@ -365,6 +370,8 @@ function GraphNodeCircle({
   interactive,
   prefersReducedMotion,
   onPointerDown,
+  canPick,
+  onPick,
 }: {
   node: GraphNode
   pos: { x: number; y: number }
@@ -372,6 +379,9 @@ function GraphNodeCircle({
   isStart: boolean
   interactive: boolean
   prefersReducedMotion: boolean
+  /** Hands-on: this node is one the learner may choose. */
+  canPick: boolean
+  onPick: () => void
   onPointerDown: () => void
 }) {
   const resolveColour = useResolveColour()
@@ -416,11 +426,28 @@ function GraphNodeCircle({
 
   return (
     <motion.g
-      style={{ x: pos.x, y: pos.y, cursor: interactive ? 'grab' : 'default' }}
+      style={{ x: pos.x, y: pos.y, cursor: canPick ? 'pointer' : interactive ? 'grab' : 'default' }}
       onPointerDown={onPointerDown}
+      onClick={canPick ? onPick : undefined}
+      role={canPick ? 'button' : undefined}
+      tabIndex={canPick ? 0 : undefined}
+      aria-label={canPick ? `Choose node ${node.label}` : undefined}
+      onKeyDown={
+        canPick
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onPick()
+              }
+            }
+          : undefined
+      }
       animate={{ x: pos.x, y: pos.y }}
       transition={{ duration: prefersReducedMotion ? 0 : 0.25, ease: 'easeInOut' }}
     >
+      {canPick && (
+        <circle r={NODE_RADIUS + 6} fill="none" stroke="var(--state-compare)" strokeWidth={2} strokeDasharray="4 3" />
+      )}
       {isTarget && (
         <circle r={NODE_RADIUS + 6} fill="none" stroke={TARGET_LABEL} strokeWidth={2} strokeDasharray="4 3" />
       )}

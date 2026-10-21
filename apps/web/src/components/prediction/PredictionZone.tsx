@@ -43,6 +43,7 @@ import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import CodeEditorInput from './CodeEditorInput'
 import { codeStepFor } from '@/config/codeChallenges'
+import { handsOnSelectionFor } from '@/utils/handsOnSelection'
 import { runFor } from '@/engine/runFor'
 
 /** A feedback stream opened before the verdict is known (see startFeedbackStream). */
@@ -283,11 +284,18 @@ export default function PredictionZone({
     (mode === AlgorithmMode.PRACTICE || mode === AlgorithmMode.HANDS_ON) &&
     snapshot !== null &&
     isLiveJunction
-  const isHandsOnSwapDecision =
+  const isHandsOnDrag =
     mode === AlgorithmMode.HANDS_ON &&
     snapshot?.criticalJunctionType !== null &&
     snapshot?.criticalJunctionType !== undefined &&
     HANDS_ON_DRAG_JUNCTIONS.has(snapshot.criticalJunctionType)
+  // The second hands-on gesture: pointing at the thing the algorithm
+  // would take, on a tree, a graph or a grid. Same submission path as the
+  // drag, so the panel treats the two alike - it shows what to do with
+  // the canvas instead of tiles to click.
+  const handsOnSelection =
+    mode === AlgorithmMode.HANDS_ON && isLiveJunction ? handsOnSelectionFor(snapshot) : null
+  const isHandsOnGesture = isHandsOnDrag || handsOnSelection !== null
   const stepIndex = snapshot?.stepIndex ?? null
 
   // Tiles (and their shuffled order) are generated once per prediction
@@ -962,7 +970,9 @@ export default function PredictionZone({
               // to a 60% ceiling: a fixed 35% put BST's last tile 714px
               // down, below the fold on a 1366x768 laptop, reachable only
               // by scrolling this panel (Week 1, 1A.4).
-              snapshot.predictionType === PredictionType.CODE_EDITOR ? 'h-[70%]' : 'min-h-[35%] max-h-[60%]',
+              snapshot.predictionType === PredictionType.CODE_EDITOR && !isHandsOnGesture
+                ? 'h-[70%]'
+                : 'min-h-[35%] max-h-[60%]',
               'transition-colors duration-300',
               submissionState === 'correct' ? 'border-t-success' : 'border-t-[#f59e0b]',
             )}
@@ -999,7 +1009,7 @@ export default function PredictionZone({
                   ))}
               </div>
 
-              {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.CODE_EDITOR && codeStep ? (
+              {!isHandsOnGesture && snapshot.predictionType === PredictionType.CODE_EDITOR && codeStep ? (
                 <div className="flex min-w-0 flex-1 flex-col">
                   {codeEvalPraise && (
                     <div className="mb-2 shrink-0 rounded-md border-l-4 border-success bg-success-light p-2.5">
@@ -1039,12 +1049,12 @@ export default function PredictionZone({
                     </p>
 
                     <div className="flex flex-1 flex-col justify-center">
-                      {isHandsOnSwapDecision && (
+                      {isHandsOnGesture && (
                         <p className="text-xs text-text-muted dark:text-dark-text-secondary">
-                          ↑ {getHandsOnInstructionText(snapshot.criticalJunctionType)}
+                          ↑ {handsOnSelection?.hint ?? getHandsOnInstructionText(snapshot.criticalJunctionType)}
                         </p>
                       )}
-                      {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.VALUE_INPUT && (
+                      {!isHandsOnGesture && snapshot.predictionType === PredictionType.VALUE_INPUT && (
                         <ValueInput
                           prompt=""
                           onValueChange={setCurrentAnswer}
@@ -1053,7 +1063,7 @@ export default function PredictionZone({
                           onSubmit={() => void handleSubmit()}
                         />
                       )}
-                      {!isHandsOnSwapDecision && snapshot.predictionType === PredictionType.TILE_GRID && (
+                      {!isHandsOnGesture && snapshot.predictionType === PredictionType.TILE_GRID && (
                         <TileGrid
                           prompt=""
                           options={currentTiles}
@@ -1068,12 +1078,12 @@ export default function PredictionZone({
                   </motion.div>
 
                   <div className="flex shrink-0 items-center justify-center">
-                    {submissionState === 'idle' && isHandsOnSwapDecision && (
+                    {submissionState === 'idle' && isHandsOnGesture && (
                       <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
-                        Drag to answer
+                        {handsOnSelection ? 'Click on the canvas to answer' : 'Drag to answer'}
                       </span>
                     )}
-                    {submissionState === 'idle' && !isHandsOnSwapDecision && (
+                    {submissionState === 'idle' && !isHandsOnGesture && (
                       <button
                         type="button"
                         onClick={() => void handleSubmit()}

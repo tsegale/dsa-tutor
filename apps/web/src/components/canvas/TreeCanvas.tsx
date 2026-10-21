@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useHandsOnPick } from '@/hooks/useHandsOnPick'
 import { CANVAS_SPRING, canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { useViewBoxZoom } from '@/hooks/useViewBoxZoom'
@@ -141,6 +142,9 @@ export default function TreeCanvas({
   colorByRBColor = false,
 }: TreeCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  // Hands-on: which nodes the learner may point at, and what choosing one
+  // submits. Inert outside Hands-on mode.
+  const pick = useHandsOnPick(snapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
@@ -332,9 +336,29 @@ export default function TreeCanvas({
             const justInserted = state.operation === 'insert' && 'insertedValue' in state && state.insertedValue === node.value && isCurrent
             const origin = (justInserted && parentPosition.get(node.id)) || { x, y }
 
+            const canPick = pick.selectable(node.id)
+
             return (
               <motion.g
                 key={node.id}
+                // Hands-on: this node is one the learner may choose. The
+                // pointer and the ring are the only affordance, and both
+                // vanish outside Hands-on mode (see useHandsOnPick).
+                onClick={canPick ? () => pick.pick(node.id) : undefined}
+                style={canPick ? { cursor: 'pointer' } : undefined}
+                role={canPick ? 'button' : undefined}
+                tabIndex={canPick ? 0 : undefined}
+                aria-label={canPick ? `Choose node ${node.value}` : undefined}
+                onKeyDown={
+                  canPick
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          pick.pick(node.id)
+                        }
+                      }
+                    : undefined
+                }
                 // `initial` only plays on this node's very first mount (a
                 // brand new id appearing) - an already-mounted node
                 // re-renders via `animate` only, springing to its new slot
@@ -347,6 +371,15 @@ export default function TreeCanvas({
                     : { x: CANVAS_SPRING, y: CANVAS_SPRING, scale: CANVAS_SPRING, default: { duration: 0.2, ease: 'easeOut' } }
                 }
               >
+                {canPick && (
+                  <circle
+                    r={nodeRadius + 5}
+                    fill="none"
+                    stroke="var(--state-compare)"
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                  />
+                )}
                 <motion.circle
                   r={nodeRadius}
                   animate={{ fill: resolveColour(fill) }}

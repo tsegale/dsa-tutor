@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import type { GridAlgorithmState, GridCell } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
+import { useHandsOnPick } from '@/hooks/useHandsOnPick'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 import { GRID_ENGINES } from '@/engine/gridAlgorithms'
@@ -38,6 +39,8 @@ const LEGEND: { label: string; colour: string }[] = [
 
 export default function GridCanvas({ width, height }: GridCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  // Hands-on: the frontier cells this junction offers as a choice.
+  const pick = useHandsOnPick(snapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const stepIndex = useAlgorithmStore((s) => s.stepIndex)
@@ -177,6 +180,10 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
             row.map((cell, c) => {
               const colours = CELL_COLOURS[cell.state]
               const isCurrent = state.currentCell?.[0] === r && state.currentCell?.[1] === c
+              // Hands-on: a frontier cell this junction lets the learner
+              // choose. The dashed outline is drawn below, over the fill,
+              // so it reads on any cell state.
+              const canPick = pick.selectable(`${r},${c}`)
               return (
                 <motion.rect
                   key={`${r}-${c}`}
@@ -185,10 +192,14 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
                   width={cellSize - 1}
                   height={cellSize - 1}
                   animate={{ fill: colours.fill }}
-                  stroke={isCurrent ? '#cc8200' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
-                  strokeWidth={isCurrent ? 2 : 0.5}
+                  stroke={canPick ? 'var(--state-compare)' : isCurrent ? '#cc8200' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
+                  strokeWidth={canPick ? 2.5 : isCurrent ? 2 : 0.5}
+                  strokeDasharray={canPick ? '3 2' : undefined}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
-                  style={{ cursor: isEditable ? 'pointer' : 'default' }}
+                  style={{ cursor: canPick || isEditable ? 'pointer' : 'default' }}
+                  role={canPick ? 'button' : undefined}
+                  aria-label={canPick ? `Choose cell row ${r}, column ${c}` : undefined}
+                  onClick={canPick ? () => pick.pick(`${r},${c}`) : undefined}
                   onPointerDown={(e) => handlePointerDown(r, c, e.button === 2)}
                   onPointerEnter={() => handlePointerEnter(r, c)}
                   onContextMenu={(e) => {

@@ -93,13 +93,6 @@ export const BUTTONS_ARE_HANDS_ON = new Set([
   'circular-linked-list',
   'hash-table-chaining',
   'hash-table-probing',
-  'bst',
-  'bst-search',
-  'bst-delete',
-  'avl-insert',
-  'avl-delete',
-  'rb-insert',
-  'rb-delete',
   'max-heap-insert',
   'max-heap-delete',
   'min-heap-insert',
@@ -110,15 +103,12 @@ export const BUTTONS_ARE_HANDS_ON = new Set([
   // Node/edge graphs: dragging nodes and choosing presets, start and
   // target in the graph controls is the hands-on interaction. There is no
   // separate per-step gesture.
-  'bfs',
-  'dfs',
   'dijkstra',
   'bellman-ford',
   'kruskal',
   'prim',
   'cycle-detection',
   'connected-components',
-  'topological-sort',
 ])
 
 /** The same drag interaction is intended, but is not built yet. */
@@ -127,13 +117,27 @@ export const HANDS_ON_COMING_SOON = new Set([
   'array-delete',
   'counting-sort',
   'radix-sort',
-  'tree-inorder',
-  'tree-preorder',
-  'tree-postorder',
-  'tree-level-order',
 ])
 
-/** A real drag interaction on the canvas, built and live. */
+/**
+ * A real gesture on the canvas, built and live.
+ *
+ * Two gestures, not one. The sorts are dragged: a bar is moved toward
+ * another and crossing the midpoint is the answer. Everything added below
+ * is POINTED at - click the child this comparison descends to, the node
+ * that comes off the frontier, the cell the search takes next - which is
+ * the gesture a tree, a graph and a grid all have available and which is
+ * the decision the algorithm is actually making.
+ *
+ * Those fourteen topics used to read "this structure's own operations in
+ * the controls are the hands-on work", which is a fair description of
+ * pressing Insert and a poor description of carrying the step out: the
+ * learner pressed a button and watched the algorithm decide. The four
+ * traversals read "not built yet".
+ *
+ * handsOnCoverage.test.ts derives this set from the engines, so a topic
+ * listed here has a gesture and a topic with a gesture is listed here.
+ */
 export const HANDS_ON_ACTIVE = new Set([
   'bubble-sort',
   'insertion-sort',
@@ -148,6 +152,21 @@ export const HANDS_ON_ACTIVE = new Set([
   'grid-dfs',
   'grid-dijkstra',
   'grid-astar',
+  // Pointing, not dragging (see above).
+  'bst',
+  'bst-search',
+  'bst-delete',
+  'avl-insert',
+  'avl-delete',
+  'rb-insert',
+  'rb-delete',
+  'tree-inorder',
+  'tree-preorder',
+  'tree-postorder',
+  'tree-level-order',
+  'bfs',
+  'dfs',
+  'topological-sort',
 ])
 
 // -------------------------------------------------------------------- code

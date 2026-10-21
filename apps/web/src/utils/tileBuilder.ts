@@ -14,6 +14,7 @@ import type { PrimState } from '@/engine/prim'
 import type { CycleDetectionState, ConnectedComponentsState } from '@/engine/graphProperties'
 import type { TileOption } from '@/components/prediction/TileGrid'
 import { complexityPredictionOptions } from '@/engine/runMetrics'
+import { correctTileIdFor } from '@/utils/correctTile'
 import type { DPTableState } from '@/engine/dpTable'
 
 /** Fisher-Yates shuffle so the correct tile isn't always in the same position. Tile ids never change, only display order. */
@@ -902,45 +903,62 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
 
     case CriticalJunctionType.GRID_NEXT_CELL: {
       const s = snapshot.dataStructureState as GridAlgorithmState
+      const weighted = s.algorithmType === 'astar' || s.algorithmType === 'dijkstra'
       const isAStar = s.algorithmType === 'astar'
-      const scored = s.frontierCells.map(([r, c]) => {
+      const scored = s.frontierCells.map(([r, c], index) => {
         const cell = s.grid[r]?.[c]
         const g = cell?.gScore ?? 0
         const h = cell?.hScore ?? 0
-        return { r, c, f: isAStar ? g + h : g }
+        return { r, c, index, f: isAStar ? g + h : g }
       })
-      scored.sort((a, b) => a.f - b.f)
-      const bestF = scored[0]?.f
-      // One cell per distinct score. Taking the first three by score
-      // marked every tie correct, and on a uniform grid ties are the
-      // normal case: Grid DFS offered three tiles, all three correct, so
-      // any click was right and nothing was being asked.
-      const byScore = new Map<number, { r: number; c: number; f: number }>()
-      for (const cell of scored) if (!byScore.has(cell.f)) byScore.set(cell.f, cell)
-      const shown = [...byScore.values()].slice(0, 4)
-      const label = ({ r, c, f }: { r: number; c: number; f: number }) =>
-        isAStar ? `(${r}, ${c}) - f(n) = ${f}` : `(${r}, ${c}) - g(n) = ${f}`
-      if (shown.length < 2) {
-        // Every frontier cell has the same score, so any of them really is
-        // a correct pop and there is no question to ask. Fall back to the
-        // rule itself, which is what distinguishes the four pathfinders.
+      // Which cell is right is correctTileIdFor's to say, not this
+      // function's. Both used to decide it, and when Grid BFS and DFS
+      // gained this junction only one of them was taught their rule:
+      // the grid marked the lowest-g cell correct while DFS pops the
+      // back of the frontier, so on Grid DFS the grid's "correct" tile
+      // was the one the run does not take.
+      const correct = correctTileIdFor(snapshot)
+      const key = ({ r, c }: { r: number; c: number }) => `${r},${c}`
+      const label = (cell: { r: number; c: number; index: number; f: number }) => {
+        if (isAStar) return `(${cell.r}, ${cell.c}) - f(n) = ${cell.f}`
+        if (weighted) return `(${cell.r}, ${cell.c}) - g(n) = ${cell.f}`
+        // A queue and a stack are ordered by arrival, not by score, so
+        // the position is the thing a learner reasons about.
+        return `(${cell.r}, ${cell.c}) - ${cell.index + 1} of ${scored.length} on the frontier`
+      }
+
+      const right = scored.find((cell) => key(cell) === correct)
+      if (!right) return []
+      // One cell per distinct score for the weighted pair, so ties do not
+      // produce several tiles that are all correct; for the unweighted
+      // pair, the other end of the frontier and a couple of neighbours.
+      const others = weighted
+        ? [...new Map(scored.filter((cell) => cell !== right).map((cell) => [cell.f, cell])).values()].slice(0, 3)
+        : scored.filter((cell) => cell !== right).slice(0, 3)
+      if (others.length === 0) {
         return shuffleArray([
           {
             id: 'rule-correct',
-            label: isAStar ? 'The lowest f(n) = g(n) + h(n)' : 'The lowest g(n) so far',
+            label: isAStar
+              ? 'The lowest f(n) = g(n) + h(n)'
+              : weighted
+                ? 'The lowest g(n) so far'
+                : s.algorithmType === 'dfs'
+                  ? 'The most recently discovered cell'
+                  : 'The cell that has been waiting longest',
             misconception: null,
           },
-          { id: 'rule-newest', label: 'The most recently discovered cell', misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
-          { id: 'rule-closest', label: 'The cell closest to the goal in a straight line', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
+          { id: 'rule-other', label: 'The cell closest to the goal in a straight line', misconception: MisconceptionCategory.COMPARISON_DIRECTION },
         ])
       }
-      return shuffleArray(
-        shown.map((cell) => ({
-          id: `${cell.r},${cell.c}`,
+      return shuffleArray([
+        { id: key(right), label: label(right), misconception: null },
+        ...others.map((cell) => ({
+          id: key(cell),
           label: label(cell),
-          misconception: cell.f === bestF ? null : MisconceptionCategory.COMPARISON_DIRECTION,
+          misconception: MisconceptionCategory.COMPARISON_DIRECTION,
         })),
-      )
+      ])
     }
 
     // Foundations - array operations
