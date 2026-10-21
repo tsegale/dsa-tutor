@@ -4,9 +4,8 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 
 # Recorded on every logged interaction (Interaction.promptVersion) so data
 # gathered under different prompt wording can be told apart. Bump it on ANY
-# change to a study prompt below, and add a line here. Study prompts freeze
-# at the end of Week 4, before the pilot; after that a change means
-# re-piloting (see CLAUDE.md).
+# change to a study prompt below, and add a line here: that field is what
+# keeps rows gathered under different wording from being pooled.
 #   (null)          rows logged before versioning existed - treat as pilot data
 #   2026-09-25.1    HIGH socratic_hint: rule in <=10 words, exactly one
 #                   question, no values from the current step (digits or
@@ -63,6 +62,12 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #   2026-10-14.6    Feynman time criterion states an equal worst and average
 #                   bound once, without asking why the average differs
 #                   (Phase 8.1A).
+#   2026-10-21.1    misconception_category offers all twelve categories.
+#                   The six added to the enum in Phase 4 were never added
+#                   here, so the model could not name them and the AI
+#                   label collapsed onto whichever of the original six was
+#                   nearest - which read as disagreement with the rule
+#                   label rather than an answer it was never offered.
 PROMPT_VERSION = "2026-10-21.1"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
