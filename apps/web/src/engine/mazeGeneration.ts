@@ -1,6 +1,18 @@
 import type { AlgorithmSnapshot, GridAlgorithmState, GridCell } from '@dsa-tutor/types'
 import { CanvasType, PredictionType } from '@dsa-tutor/types'
 
+/**
+ * The board the three maze generators open on.
+ *
+ * They ask nothing - a maze is built from random choices, so there is
+ * no next step to predict - which makes their length pure watching. At
+ * 20x35 the recursive backtracker ran 361 steps of it, more than twice
+ * any other topic in the curriculum. The same maze reads perfectly well
+ * at this size, in 169.
+ */
+export const MAZE_BOARD = { rows: 14, cols: 24 } as const
+
+
 // Indices match PseudocodePanel's 'maze-generation' array exactly:
 //   0: 'generate_maze(rows, cols):'
 //   1: '  every cell starts a wall'

@@ -6,7 +6,8 @@ import { PSEUDOCODE_LINE as BST_LINE } from '@/engine/bst'
  * junction per study topic. Authored, never generated, so every participant
  * gets the same question - the AI only grades the answer against the
  * rubric sent with it. Changing a question or criterion changes what is
- * measured: treat edits like a study prompt change (freeze at end of Week 4).
+ * measured, so an edit bumps the prompt version like any other study
+ * prompt change, keeping rows either side of it apart.
  */
 export interface SelfExplanationPrompt {
   /** Stable id stored on every logged response (Interaction.promptKey). */

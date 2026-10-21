@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { GridAlgorithmState } from '@dsa-tutor/types'
-import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from './mazeGeneration'
+import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from './mazeGeneration'
 
 function lastState(snapshots: ReturnType<typeof mazeGenerationEngine>): GridAlgorithmState {
   return snapshots[snapshots.length - 1].dataStructureState as GridAlgorithmState
@@ -89,5 +89,18 @@ describe('mazeKruskalEngine', () => {
   it('produces a perfect maze', () => {
     const snapshots = mazeKruskalEngine(11, 15)
     assertPerfectMaze(lastState(snapshots))
+  })
+})
+
+describe('the board the mazes open on', () => {
+  it('is short enough to watch, since they ask nothing', () => {
+    // A maze is built from random choices, so there is no step to
+    // predict and the whole run is watching. At 20x35 the recursive
+    // backtracker took 361 steps of it, more than twice any other topic.
+    for (const engine of [mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine]) {
+      const run = engine(MAZE_BOARD.rows, MAZE_BOARD.cols)
+      expect(run.length).toBeLessThanOrEqual(200)
+      expect(run.length).toBeGreaterThan(20)
+    }
   })
 })

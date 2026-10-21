@@ -8,7 +8,9 @@ import {
   buildEmptyGrid,
   buildWalledGrid,
   buildTerrainGrid,
+  buildOpenGrid,
   PATHFINDER_BOARD,
+  ASTAR_BOARD,
 } from './gridAlgorithms'
 import { runFor } from './runFor'
 import { getAlgorithmRegistryEntry } from './registry'
@@ -198,5 +200,32 @@ describe('weighted terrain', () => {
     // The start and end are standable, not rough.
     expect(grid[B.start[0]][B.start[1]].weight).toBeUndefined()
     expect(grid[B.end[0]][B.end[1]].weight).toBeUndefined()
+  })
+})
+
+describe('the board A* opens on', () => {
+  const A = ASTAR_BOARD
+  const run = (engine: typeof gridBfsEngine) =>
+    engine(buildOpenGrid(A.rows, A.cols), A.start[0], A.start[1], A.end[0], A.end[1])
+
+  it('lets the heuristic actually show, unlike the shared board', () => {
+    // A* and Dijkstra give the same answer and differ only in where they
+    // look, so A* has nothing to demonstrate on a board that forces a
+    // full sweep: on the serpentine it was 106 cells against 137, a
+    // footnote. Open ground is where the difference is the lesson.
+    const dijkstra = lastState(run(gridDijkstraEngine))
+    const astar = lastState(run(gridAStarEngine))
+
+    expect(astar.pathCost).toBe(dijkstra.pathCost)
+    expect(astar.visitedCount * 2).toBeLessThan(dijkstra.visitedCount)
+  })
+
+  it('still has terrain, so cost means something here too', () => {
+    const grid = buildOpenGrid(A.rows, A.cols)
+    expect(grid.flat().some((cell) => (cell.weight ?? 1) > 1)).toBe(true)
+    expect(grid.flat().some((cell) => cell.state === 'wall')).toBe(true)
+    // Standing room at both ends.
+    expect(grid[A.start[0]][A.start[1]].state).toBe('empty')
+    expect(grid[A.end[0]][A.end[1]].state).toBe('empty')
   })
 })

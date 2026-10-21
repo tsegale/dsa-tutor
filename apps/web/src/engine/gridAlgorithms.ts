@@ -353,6 +353,48 @@ export function buildTerrainGrid(rows: number, cols: number): GridCell[][] {
   return grid
 }
 
+/**
+ * The board A* opens on: larger, mostly open, with scattered blocks and
+ * a rough patch rather than barriers across the board.
+ *
+ * A* and Dijkstra answer the same question and differ only in where they
+ * look, so A* has nothing to show on a board that forces a full sweep -
+ * on Dijkstra's serpentine it saved 137 cells against 106, which is a
+ * footnote. Open ground is where the heuristic bites: here Dijkstra
+ * expands 303 of the 336 cells and A* 103, for the identical path cost.
+ * Same answer, a third of the work, visible on the canvas.
+ */
+export const ASTAR_BOARD = { rows: 14, cols: 24, start: [7, 1], end: [7, 22] } as const
+
+export function buildOpenGrid(rows: number, cols: number): GridCell[][] {
+  const grid = buildEmptyGrid(rows, cols)
+  // Placed as fractions so the shape survives a resize from the controls.
+  const blocks: [number, number][] = [
+    [0.15, 0.2], [0.25, 0.2], [0.35, 0.2],
+    [0.55, 0.38], [0.65, 0.38], [0.75, 0.38], [0.08, 0.38],
+    [0.15, 0.55], [0.25, 0.55], [0.35, 0.55], [0.82, 0.55],
+    [0.5, 0.68], [0.6, 0.68],
+  ]
+  for (const [fr, fc] of blocks) {
+    const r = Math.round(fr * (rows - 1))
+    const c = Math.round(fc * (cols - 1))
+    if (grid[r]?.[c]) grid[r][c].state = 'wall'
+  }
+  // A rough patch straddling the direct line, so the cheapest route bends
+  // around it and the cost column still means something here.
+  for (let r = Math.round(rows * 0.3); r <= Math.round(rows * 0.55); r++) {
+    for (let c = Math.round(cols * 0.42); c <= Math.round(cols * 0.52); c++) {
+      if (grid[r]?.[c] && grid[r][c].state !== 'wall') grid[r][c].weight = ROUGH_COST
+    }
+  }
+  const [sr, sc] = ASTAR_BOARD.start
+  const [er, ec] = ASTAR_BOARD.end
+  for (const [r, c] of [[sr, sc], [er, ec]] as [number, number][]) {
+    if (grid[r]?.[c]) { grid[r][c].state = 'empty'; delete grid[r][c].weight }
+  }
+  return grid
+}
+
 /** Lookup used by GridCanvas to re-run the right engine after the
  * student edits walls, keyed by the same GridAlgorithmType every grid
  * snapshot already carries. */

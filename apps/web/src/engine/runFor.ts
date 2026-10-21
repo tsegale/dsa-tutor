@@ -36,9 +36,11 @@ import {
   gridAStarEngine,
   buildWalledGrid,
   buildTerrainGrid,
+  buildOpenGrid,
+  ASTAR_BOARD as A,
   PATHFINDER_BOARD as B,
 } from '@/engine/gridAlgorithms'
-import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
+import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from '@/engine/mazeGeneration'
 import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from '@/engine/graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
@@ -168,13 +170,13 @@ function buildRun(slug: string, input: number[], target: number): AlgorithmSnaps
     case 'grid-dijkstra':
       return gridDijkstraEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'grid-astar':
-      return gridAStarEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
+      return gridAStarEngine(buildOpenGrid(A.rows, A.cols), A.start[0], A.start[1], A.end[0], A.end[1])
     case 'maze-generation':
-      return mazeGenerationEngine(20, 35)
+      return mazeGenerationEngine(MAZE_BOARD.rows, MAZE_BOARD.cols)
     case 'maze-prim':
-      return mazePrimEngine(20, 35)
+      return mazePrimEngine(MAZE_BOARD.rows, MAZE_BOARD.cols)
     case 'maze-kruskal':
-      return mazeKruskalEngine(20, 35)
+      return mazeKruskalEngine(MAZE_BOARD.rows, MAZE_BOARD.cols)
 
     case 'array-access':
       return arrayAccessEngine(input, 2)

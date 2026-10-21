@@ -47,9 +47,11 @@ import {
   gridAStarEngine,
   buildWalledGrid,
   buildTerrainGrid,
+  buildOpenGrid,
+  ASTAR_BOARD as A,
   PATHFINDER_BOARD as B,
 } from './gridAlgorithms'
-import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from './mazeGeneration'
+import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from './mazeGeneration'
 import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from './graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
@@ -554,7 +556,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-astar',
     displayName: 'Grid A*',
-    engineFunction: () => gridAStarEngine(buildTerrainGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
+    engineFunction: () => gridAStarEngine(buildOpenGrid(A.rows, A.cols), A.start[0], A.start[1], A.end[0], A.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.ADVANCED,
     description: 'A* pathfinding with Manhattan heuristic. Explores far fewer cells than Dijkstra.',
@@ -564,7 +566,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'maze-generation',
     displayName: 'Maze Generation',
-    engineFunction: () => mazeGenerationEngine(20, 35),
+    engineFunction: () => mazeGenerationEngine(MAZE_BOARD.rows, MAZE_BOARD.cols),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.BEGINNER,
     description: 'Recursive backtracking maze generation. Watch the DFS carve perfect mazes.',
@@ -574,7 +576,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'maze-prim',
     displayName: 'Maze via Prim’s',
-    engineFunction: () => mazePrimEngine(20, 35),
+    engineFunction: () => mazePrimEngine(MAZE_BOARD.rows, MAZE_BOARD.cols),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Prim’s algorithm adapted for maze generation. Produces mazes with longer corridors.',
@@ -584,7 +586,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'maze-kruskal',
     displayName: 'Maze via Kruskal’s',
-    engineFunction: () => mazeKruskalEngine(20, 35),
+    engineFunction: () => mazeKruskalEngine(MAZE_BOARD.rows, MAZE_BOARD.cols),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Kruskal’s algorithm adapted for maze generation. Produces mazes with more texture.',

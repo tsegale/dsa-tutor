@@ -74,9 +74,11 @@ import {
   buildEmptyGrid,
   buildWalledGrid,
   buildTerrainGrid,
+  buildOpenGrid,
   PATHFINDER_BOARD,
+  ASTAR_BOARD,
 } from '@/engine/gridAlgorithms'
-import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
+import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from '@/engine/mazeGeneration'
 import type { GridCell, GridAlgorithmState } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 
@@ -1040,20 +1042,29 @@ function TopologicalSortControls({ slug }: { slug: string }) {
 
 type GridSizeName = 'default' | 'small' | 'medium' | 'large'
 
-// The first entry is the board the topic actually opened on, built from
-// the one definition of it. The menu used to start on 'medium' whatever
-// was on screen, so it announced 20x35 over a board that was not.
-const GRID_SIZE_OPTIONS: Record<GridSizeName, { label: string; rows: number; cols: number; start: [number, number]; end: [number, number] }> = {
-  default: {
-    label: `Default (${PATHFINDER_BOARD.rows}×${PATHFINDER_BOARD.cols})`,
-    rows: PATHFINDER_BOARD.rows,
-    cols: PATHFINDER_BOARD.cols,
-    start: [...PATHFINDER_BOARD.start] as [number, number],
-    end: [...PATHFINDER_BOARD.end] as [number, number],
-  },
-  small: { label: 'Small (15×25)', rows: 15, cols: 25, start: [7, 2], end: [7, 22] },
-  medium: { label: 'Medium (20×35)', rows: 20, cols: 35, start: [10, 2], end: [10, 32] },
-  large: { label: 'Large (25×45)', rows: 25, cols: 45, start: [12, 2], end: [12, 42] },
+type SizeOption = { label: string; rows: number; cols: number; start: [number, number]; end: [number, number] }
+type Board = { readonly rows: number; readonly cols: number; readonly start?: readonly number[]; readonly end?: readonly number[] }
+
+/**
+ * The size menu, whose first entry is the board this topic actually
+ * opened on. It used to start on a fixed 'medium' whatever was on
+ * screen, so it announced 20x35 over a board that was not - and the
+ * pathfinders and the mazes do not open on the same one.
+ */
+function sizeOptionsFor(board: Board): Record<GridSizeName, SizeOption> {
+  const mid = Math.floor(board.rows / 2)
+  return {
+    default: {
+      label: `Default (${board.rows}\u00d7${board.cols})`,
+      rows: board.rows,
+      cols: board.cols,
+      start: [board.start?.[0] ?? mid, board.start?.[1] ?? 1] as [number, number],
+      end: [board.end?.[0] ?? mid, board.end?.[1] ?? board.cols - 2] as [number, number],
+    },
+    small: { label: 'Small (15\u00d725)', rows: 15, cols: 25, start: [7, 2], end: [7, 22] },
+    medium: { label: 'Medium (20\u00d735)', rows: 20, cols: 35, start: [10, 2], end: [10, 32] },
+    large: { label: 'Large (25\u00d745)', rows: 25, cols: 45, start: [12, 2], end: [12, 42] },
+  }
 }
 
 const GRID_ENGINE_FOR: Record<string, typeof gridBfsEngine> = {
@@ -1067,21 +1078,22 @@ function GridControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [size, setSize] = useState<GridSizeName>('default')
   const engine = GRID_ENGINE_FOR[slug] ?? gridBfsEngine
+  const options = sizeOptionsFor(slug === 'grid-astar' ? ASTAR_BOARD : PATHFINDER_BOARD)
 
   // Whichever board this topic opens on, at the chosen size. Rebuilding
   // every size as a plain walled board would have dropped the terrain the
   // moment a learner resized Dijkstra - and Dijkstra without weights is
   // just BFS again, which is the thing the terrain exists to fix.
   const buildBoard =
-    slug === 'grid-dijkstra' || slug === 'grid-astar' ? buildTerrainGrid : buildWalledGrid
+    slug === 'grid-astar' ? buildOpenGrid : slug === 'grid-dijkstra' ? buildTerrainGrid : buildWalledGrid
 
   function runOn(sizeName: GridSizeName, grid?: GridCell[][]) {
-    const cfg = GRID_SIZE_OPTIONS[sizeName]
+    const cfg = options[sizeName]
     apply(slug, engine(grid ?? buildBoard(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]))
   }
 
   function handleClearWalls() {
-    const cfg = GRID_SIZE_OPTIONS[size]
+    const cfg = options[size]
     runOn(size, buildEmptyGrid(cfg.rows, cfg.cols))
   }
 
@@ -1091,7 +1103,7 @@ function GridControls({ slug }: { slug: string }) {
   }
 
   function handleGenerateMaze() {
-    const cfg = GRID_SIZE_OPTIONS[size]
+    const cfg = options[size]
     const mazeSnapshots = mazeGenerationEngine(cfg.rows, cfg.cols)
     const finalGrid = (mazeSnapshots[mazeSnapshots.length - 1].dataStructureState as GridAlgorithmState).grid
     runOn(size, finalGrid)
@@ -1103,9 +1115,9 @@ function GridControls({ slug }: { slug: string }) {
       <div className="flex flex-col gap-1">
         <label className={labelClass}>Grid size</label>
         <select value={size} onChange={(e) => handleSizeChange(e.target.value as GridSizeName)} className={inputClass}>
-          {(Object.keys(GRID_SIZE_OPTIONS) as GridSizeName[]).map((name) => (
+          {(Object.keys(options) as GridSizeName[]).map((name) => (
             <option key={name} value={name}>
-              {GRID_SIZE_OPTIONS[name].label}
+              {options[name].label}
             </option>
           ))}
         </select>
@@ -1131,14 +1143,13 @@ const MAZE_ENGINE_FOR: Record<string, typeof mazeGenerationEngine> = {
 
 function MazeControls({ slug }: { slug: string }) {
   const apply = useApply()
-  // The maze topics open at 20x35, not on the pathfinders' board, so
-  // this starts where they actually are.
-  const [size, setSize] = useState<GridSizeName>('medium')
+  const [size, setSize] = useState<GridSizeName>('default')
+  const options = sizeOptionsFor(MAZE_BOARD)
   const [lastMaze, setLastMaze] = useState<GridAlgorithmState | null>(null)
   const engine = MAZE_ENGINE_FOR[slug] ?? mazeGenerationEngine
 
   function generate(sizeName: GridSizeName) {
-    const cfg = GRID_SIZE_OPTIONS[sizeName]
+    const cfg = options[sizeName]
     const snapshots = engine(cfg.rows, cfg.cols)
     setLastMaze(snapshots[snapshots.length - 1].dataStructureState as GridAlgorithmState)
     apply(slug, snapshots)
@@ -1163,9 +1174,9 @@ function MazeControls({ slug }: { slug: string }) {
           }}
           className={inputClass}
         >
-          {(Object.keys(GRID_SIZE_OPTIONS) as GridSizeName[]).map((name) => (
+          {(Object.keys(options) as GridSizeName[]).map((name) => (
             <option key={name} value={name}>
-              {GRID_SIZE_OPTIONS[name].label}
+              {options[name].label}
             </option>
           ))}
         </select>
