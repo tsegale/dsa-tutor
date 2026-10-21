@@ -63,7 +63,7 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #   2026-10-14.6    Feynman time criterion states an equal worst and average
 #                   bound once, without asking why the average differs
 #                   (Phase 8.1A).
-PROMPT_VERSION = "2026-10-14.6"
+PROMPT_VERSION = "2026-10-21.1"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one
@@ -197,7 +197,10 @@ the student sees it as it is written):
     time sorting is complete?,
   "misconception_category": one of "OFF_BY_ONE", "ORDER_OF_OPERATIONS",
     "STRUCTURAL_PROPERTY_VIOLATION", "POINTER_CONFUSION",
-    "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION", or null if the
+    "BASE_CASE_OMISSION", "COMPLEXITY_MISATTRIBUTION",
+    "COMPARISON_DIRECTION", "INVARIANT_MISAPPLICATION",
+    "PREMATURE_TERMINATION", "STABILITY_CONFUSION",
+    "TRAVERSAL_ORDER_CONFUSION", "BOUNDARY_CONDITION", or null if the
     answer was correct or no misconception is evident
 }
 
