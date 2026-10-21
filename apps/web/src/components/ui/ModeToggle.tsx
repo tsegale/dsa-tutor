@@ -2,12 +2,8 @@ import { motion } from 'framer-motion'
 import { useParams } from 'react-router-dom'
 import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
-import {
-  BUTTONS_ARE_HANDS_ON,
-  HANDS_ON_ACTIVE,
-  HANDS_ON_COMING_SOON,
-  NO_HANDS_ON,
-} from '@/config/pipeline'
+import { usePipeline } from '@/hooks/usePipeline'
+import { NO_HANDS_ON, stageOffer } from '@/config/pipeline'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const OPTIONS: { label: string; value: AlgorithmMode }[] = [
@@ -16,19 +12,25 @@ const OPTIONS: { label: string; value: AlgorithmMode }[] = [
   { label: 'Hands-On', value: AlgorithmMode.HANDS_ON },
 ]
 
-// The four hands-on situations (no gesture possible / the structure's own
-// buttons already are it / drag not built yet / a real drag canvas) live in
-// config/pipeline.ts, because the left panel's stage tracker needs exactly
-// the same answers and two copies would drift.
+/**
+ * Whether a mode may be entered is the stage tracker's question, already
+ * answered, so this asks it rather than deciding again.
+ *
+ * It used to read the four hands-on sets itself. Those say whether a
+ * gesture exists on a topic, not whether the student has reached it, so
+ * Hands-On stayed clickable on a topic whose tracker said "Finish a
+ * Practice run first" - and clicking it entered a mode with nothing to do.
+ *
+ * Visibility is still this component's own call: a topic that will never
+ * have a gesture drops the button rather than showing a dead one.
+ */
 export default function ModeToggle() {
   const mode = useAlgorithmStore((state) => state.mode)
   const setMode = useAlgorithmStore((state) => state.setMode)
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
-  const slug = algorithmSlug ?? ''
-  const handsOnHidden = NO_HANDS_ON.has(slug)
-  const handsOnUsesButtons = BUTTONS_ARE_HANDS_ON.has(slug)
-  const handsOnComingSoon = HANDS_ON_COMING_SOON.has(slug)
-  const handsOnAvailable = HANDS_ON_ACTIVE.has(slug)
+  const stages = usePipeline()
+  const handsOn = stageOffer(stages, 'HANDS_ON')
+  const handsOnHidden = NO_HANDS_ON.has(algorithmSlug ?? '')
 
   const visibleOptions = OPTIONS.filter((option) => option.value !== AlgorithmMode.HANDS_ON || !handsOnHidden)
 
@@ -36,7 +38,7 @@ export default function ModeToggle() {
     <div id="mode-toggle" className="relative inline-flex rounded-md bg-surface-sunk p-0.5 dark:bg-dark-border">
       {visibleOptions.map((option) => {
         const isActive = mode === option.value
-        const isDisabled = option.value === AlgorithmMode.HANDS_ON && !handsOnAvailable
+        const isDisabled = option.value === AlgorithmMode.HANDS_ON && !handsOn.enabled
 
         const button = (
           <button
@@ -69,13 +71,9 @@ export default function ModeToggle() {
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent>
-              {handsOnComingSoon
-                ? 'Drag interaction coming soon'
-                : handsOnUsesButtons
-                  ? "This structure's own buttons (insert, search, delete...) are the hands-on interaction"
-                  : 'Not available for this algorithm'}
-            </TooltipContent>
+            {/* The stage's own wording, so the tooltip and the tracker
+                cannot describe the same lock differently. */}
+            <TooltipContent>{handsOn.reason ?? 'Not available for this algorithm.'}</TooltipContent>
           </Tooltip>
         )
       })}

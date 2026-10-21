@@ -333,6 +333,29 @@ function feynmanStage(input: PipelineInput): PipelineStage {
   return stage('FEYNMAN', permanent ? 'NOT_OFFERED' : 'LOCKED', reason ?? 'Finish a Practice run first.')
 }
 
+/**
+ * Whether the mode switcher may offer a stage, and the reason to show when
+ * it may not.
+ *
+ * The switcher used to answer this from the four hands-on sets directly,
+ * which left it one rule short: those sets say whether a gesture exists on
+ * this topic, not whether the student has got to it yet. So Hands-On stayed
+ * clickable while the stage tracker two inches away said "Finish a Practice
+ * run first", and clicking it selected a mode that then behaved like Demo.
+ *
+ * The stage already carries both halves of that answer, so the switcher
+ * reads it rather than deriving a second one.
+ */
+export function stageOffer(
+  stages: readonly PipelineStage[],
+  id: PipelineStageId,
+): { enabled: boolean; reason: string | null } {
+  const found = stages.find((s) => s.id === id)
+  // Classic returns Demo alone: anything else is not on offer there.
+  if (!found) return { enabled: false, reason: null }
+  return { enabled: found.status === 'AVAILABLE' || found.status === 'DONE', reason: found.reason }
+}
+
 /** How far through the offered stages this topic is, for the heading. */
 export function pipelineProgress(stages: readonly PipelineStage[]): { done: number; offered: number } {
   const offered = stages.filter((s) => s.status !== 'NOT_OFFERED')

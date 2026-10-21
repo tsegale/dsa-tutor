@@ -12,6 +12,7 @@ import {
   hasCodeMode,
   pipelineFor,
   pipelineProgress,
+  stageOffer,
   type PipelineInput,
   type PipelineStageId,
 } from './pipeline'
@@ -232,5 +233,48 @@ describe('Code Mode coverage', () => {
   it.each(Object.keys(CODE_CHALLENGES))('%s offers the Code stage', (slug) => {
     const code = pipelineFor(input({ slug, practiceCompleted: true })).find((stage) => stage.id === 'CODE')!
     expect(code.status).toBe('AVAILABLE')
+  })
+})
+
+describe('stageOffer, the rule the mode switcher follows', () => {
+  const slugs = MODULES.flatMap((module) => module.topics)
+
+  it('refuses Hands-On until a Practice run is done, on every topic that has one', () => {
+    // The regression this exists for: the switcher read HANDS_ON_ACTIVE
+    // directly, which says a gesture exists, not that the student has
+    // reached it. Hands-On stayed clickable beside a tracker reading
+    // "Finish a Practice run first", and entering it did nothing.
+    for (const slug of slugs.filter((s) => HANDS_ON_ACTIVE.has(s))) {
+      const before = stageOffer(pipelineFor(input({ slug, practiceCompleted: false })), 'HANDS_ON')
+      expect(before.enabled, slug).toBe(false)
+      expect(before.reason, slug).toBeTruthy()
+
+      const after = stageOffer(pipelineFor(input({ slug, practiceCompleted: true })), 'HANDS_ON')
+      expect(after.enabled, slug).toBe(true)
+    }
+  })
+
+  it('agrees with the stage tracker for every topic, in both practice states', () => {
+    for (const slug of slugs) {
+      for (const practiceCompleted of [false, true]) {
+        const stages = pipelineFor(input({ slug, practiceCompleted }))
+        for (const id of ['HANDS_ON', 'CODE', 'FEYNMAN'] as PipelineStageId[]) {
+          const stage = stages.find((s) => s.id === id)!
+          const offer = stageOffer(stages, id)
+          expect(offer.enabled, `${slug}/${id}/${practiceCompleted}`).toBe(
+            stage.status === 'AVAILABLE' || stage.status === 'DONE',
+          )
+          // Anything not on offer says why, so the tooltip is never blank.
+          if (!offer.enabled) expect(offer.reason, `${slug}/${id}`).toBeTruthy()
+        }
+      }
+    }
+  })
+
+  it('offers nothing but Demo in classic, which has no later stages', () => {
+    const stages = pipelineFor(input({ classic: true }))
+    for (const id of ['HANDS_ON', 'CODE', 'FEYNMAN'] as PipelineStageId[]) {
+      expect(stageOffer(stages, id).enabled, id).toBe(false)
+    }
   })
 })
