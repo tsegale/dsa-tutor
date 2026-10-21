@@ -3,24 +3,15 @@ import { conditionFeatures } from '@/utils/studyCondition'
 import { useParams } from 'react-router-dom'
 import { preloadPyodide } from '@/utils/pyodideRunner'
 import { motion } from 'framer-motion'
-import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { runFor } from '@/engine/runFor'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
-import ChallengeGenerator, { START_CHALLENGE_EVENT } from '@/components/challenge/ChallengeGenerator'
-import FeynmanModeButton, { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton'
-import { MasteryPanel, type MasteryOfferHandlers } from '@/components/mastery/MasteryPanel'
-import { useTopics } from '@/hooks/useTopics'
-import { useStudyScope } from '@/hooks/useStudyScope'
-import { CHALLENGES_PER_TOPIC } from '@/config/pacing'
-import { hasChallengeGenerator } from '@/utils/challengeGenerators'
-import { masteryPracticeInput } from '@/utils/mastery'
-import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
+import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
+import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
 import { usePipeline } from '@/hooks/usePipeline'
 import PipelineTracker from '@/components/pipeline/PipelineTracker'
-import VariableWatcher from '@/components/pipeline/VariableWatcher'
 import { hasCodeMode } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
@@ -100,14 +91,6 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   // Classic (the study's plain visualiser) has no AI tools or Code Mode.
   const classicMode = useAlgorithmStore((state) => state.classicMode)
   const features = conditionFeatures(classicMode)
-  // Shares the ['topics'] cache; each topic carries its mastery (Phase 7D).
-  // Not shown on a Classic topic, which has no junctions to answer.
-  const { data: topics } = useTopics()
-  const mastery = classicMode ? null : (topics?.find((topic) => topic.name === algorithmSlug)?.mastery ?? null)
-  const { restricted: activeParticipant } = useStudyScope()
-  const feynman = useFeynmanAccess()
-  const challengesStarted = useAlgorithmStore((state) => state.challengesStarted)
-  const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const pipeline = usePipeline()
   // Code Mode rewrites a junction's prediction into a line of code to
   // write. The toggle used to appear on every topic while a single engine
@@ -154,44 +137,6 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     )
   }
 
-  // The mastery panel's one remediation offer (Phase 7E). An active
-  // participant gets none: their mastery is read-only, and nothing on it
-  // may change what the study asks them (Phase 7F).
-  function practise(run: () => void) {
-    const store = useAlgorithmStore.getState()
-    if (store.mode !== AlgorithmMode.PRACTICE) store.setMode(AlgorithmMode.PRACTICE)
-    run()
-  }
-  const offerHandlers: MasteryOfferHandlers | undefined =
-    activeParticipant || !mastery
-      ? undefined
-      : {
-          FOCUSED_RUN: () => practise(() => useAlgorithmStore.getState().startFocusedRun(mastery.missedJunctionTypes)),
-          PRACTISE_AGAIN: () => practise(() => useAlgorithmStore.getState().resetAlgorithm()),
-          NEW_INPUT:
-            algorithmSlug && !CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug)
-              ? () =>
-                  practise(() => {
-                    const breadth = mastery.criteria.find((c) => c.id === 'BREADTH')?.value ?? 0
-                    const length = getAlgorithmRegistryEntry(algorithmSlug)?.defaultInput.length ?? 6
-                    const values = masteryPracticeInput(algorithmSlug, length, breadth)
-                    setArrayInput(values.join(','))
-                    setInputError(null)
-                    const displayName = getAlgorithmRegistryEntry(algorithmSlug)?.displayName ?? algorithmName
-                    setAlgorithm(displayName, runFor(algorithmSlug, values))
-                  })
-              : 'Pick a different value or preset in the controls above.',
-          FEYNMAN:
-            feynman.state === 'AVAILABLE'
-              ? () => window.dispatchEvent(new CustomEvent(OPEN_FEYNMAN_MODAL_EVENT))
-              : (feynman.reason ?? 'Feynman mode is not available here.'),
-          CHALLENGE: !features.aiChallenge || !hasChallengeGenerator(algorithmSlug)
-            ? 'AI Challenge is not available for this topic.'
-            : challengesStarted >= CHALLENGES_PER_TOPIC
-              ? 'Challenge limit reached for this session; open the topic again for another.'
-              : () => practise(() => window.dispatchEvent(new CustomEvent(START_CHALLENGE_EVENT))),
-        }
-
   return (
     <motion.div
       id="left-panel"
@@ -214,15 +159,25 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
           </button>
         </div>
       ) : (
+        /* Three zones, one job each, in the order a student needs them:
+           where am I in this topic, what is it running on, and what do I
+           want the page to be.
+
+           It held six groups of equal weight in one 230px scrolling
+           column - the route, a live variable readout, the input
+           controls, the mastery criteria, the AI tools and the Code Mode
+           switch - with no hierarchy between them. Nothing read as
+           primary, and the panel scrolled while the canvas had room to
+           spare.
+
+           The variable watcher went because the right panel already
+           narrates the step while you work. Mastery went because it is
+           assessment rather than a control. Both belong where they are
+           read, not beside the thing being taught. */
         <div className="flex h-full flex-col overflow-hidden pt-3">
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-1">
-          {/* First in the panel: the route through this topic, before the
-              controls for whichever stage you happen to be in. */}
+          {/* Zone 1: where am I. */}
           <PipelineTracker stages={pipeline} />
-          {/* Directly under the route, above the controls: this is live
-              state a student reads while stepping, so it has to be visible
-              without scrolling the panel. */}
-          <VariableWatcher />
           {algorithmSlug && CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug) ? (
             <AlgorithmControls slug={algorithmSlug} />
           ) : algorithmSlug && FIXED_INPUT_SLUGS.has(algorithmSlug) ? (
@@ -256,18 +211,17 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               </Button>
             </section>
           )}
-          {mastery && <MasteryPanel mastery={mastery} handlers={offerHandlers} />}
         </div>
 
-        {/* Pinned outside the scroll container above so a tall Playback/
-            Controls section (e.g. Dijkstra's contextual controls) can never
-            push AI Tools out of view. */}
+        {/* Zone 3: what do I want the page to be.
+            Pinned outside the scroll container above, so a tall contextual
+            controls section can never push these out of view. Feynman and
+            Code Mode are peers - each changes what the page asks of you -
+            so they sit together, no longer under an "AI tools" heading
+            that described how they are built rather than what they do. */}
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
           {features.aiChallenge && (
           <section id="ai-tools-section" className="flex flex-col gap-2">
-            <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
-              AI tools
-            </h3>
             <ChallengeGenerator difficulty={difficulty} />
             {features.feynman && <FeynmanModeButton />}
           </section>
