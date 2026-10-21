@@ -66,7 +66,7 @@ import { kruskalEngine } from '@/engine/kruskal'
 import { primEngine } from '@/engine/prim'
 import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from '@/engine/graphProperties'
 import { GRAPH_PRESETS, DIRECTED_ACYCLIC, type GraphPresetName, type UnweightedPreset, type WeightedPreset } from '@/engine/graphPresets'
-import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from '@/engine/gridAlgorithms'
+import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid, buildWalledGrid } from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
 import type { GridCell, GridAlgorithmState } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
@@ -1051,7 +1051,16 @@ function GridControls({ slug }: { slug: string }) {
 
   function runOn(sizeName: GridSizeName, grid?: GridCell[][]) {
     const cfg = GRID_SIZE_OPTIONS[sizeName]
-    apply(slug, engine(grid ?? buildEmptyGrid(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]))
+    // Changing size rebuilds the walled board, like the one the topic
+    // opens on: an empty board of any size is the degenerate run, with
+    // nothing to stop the flood and nothing for the heuristic to steer
+    // around. Clearing passes its own empty grid, below.
+    apply(slug, engine(grid ?? buildWalledGrid(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]))
+  }
+
+  function handleClearWalls() {
+    const cfg = GRID_SIZE_OPTIONS[size]
+    runOn(size, buildEmptyGrid(cfg.rows, cfg.cols))
   }
 
   function handleSizeChange(next: GridSizeName) {
@@ -1079,7 +1088,7 @@ function GridControls({ slug }: { slug: string }) {
           ))}
         </select>
       </div>
-      <Button variant="outline" size="sm" onClick={() => runOn(size)}>
+      <Button variant="outline" size="sm" onClick={handleClearWalls}>
         Clear walls
       </Button>
       <Button variant="outline" size="sm" onClick={handleGenerateMaze}>

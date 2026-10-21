@@ -308,10 +308,46 @@ export const GRID_ENGINES: Record<GridAlgorithmType, typeof gridBfsEngine> = {
   astar: gridAStarEngine,
 }
 
-/** Builds an empty (no walls) starting grid - the default input every
- * grid registry entry and AlgorithmControls' "Clear walls" reuse. */
+/** Builds an empty (no walls) starting grid - what AlgorithmControls'
+ * "Clear walls" reuses, and the base the walled default is drawn on. */
 export function buildEmptyGrid(rows: number, cols: number): GridCell[][] {
   return Array.from({ length: rows }, (_, row) =>
     Array.from({ length: cols }, (_, col) => ({ row, col, state: 'empty' as const })),
   )
+}
+
+/**
+ * The default board the four pathfinders open on: three staggered
+ * barriers with a gap at alternating ends, so the only route is a
+ * serpentine one.
+ *
+ * An empty board is the degenerate case for all four at once, in
+ * opposite directions. BFS and Dijkstra have nothing to stop them, so
+ * they flood every cell; A* and DFS have the target straight ahead, so
+ * they walk to it in a handful of steps and ask almost nothing. On a
+ * 20x35 empty board that was 139 junctions for BFS against 7 for A*.
+ *
+ * Barriers fix both ends: the flood is channelled, and the heuristic
+ * finally has something to steer around, which is the whole of what A*
+ * has to teach. Deterministic, because a demo has to run the same way
+ * twice - the learner edits from here, and "Clear walls" still empties it.
+ */
+/**
+ * The board every pathfinder opens on. One definition because three
+ * places need it - the registry entry, runFor's switch, and the canvas
+ * when it re-runs after an edit - and three copies of 20x35 is how the
+ * old size survived a change to any one of them.
+ */
+export const PATHFINDER_BOARD = { rows: 10, cols: 16, start: [5, 1], end: [5, 14] } as const
+
+export function buildWalledGrid(rows: number, cols: number): GridCell[][] {
+  const grid = buildEmptyGrid(rows, cols)
+  const barriers = [0.3, 0.55, 0.8].map((fraction) => Math.floor(cols * fraction))
+  barriers.forEach((col, index) => {
+    const gap = index % 2 === 0 ? rows - 2 : 1
+    for (let row = 1; row < rows - 1; row++) {
+      if (row !== gap) grid[row][col].state = 'wall'
+    }
+  })
+  return grid
 }

@@ -40,7 +40,14 @@ import { floydWarshallEngine } from './floydWarshall'
 import { kruskalEngine } from './kruskal'
 import { primEngine } from './prim'
 import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from './graphProperties'
-import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from './gridAlgorithms'
+import {
+  gridBfsEngine,
+  gridDfsEngine,
+  gridDijkstraEngine,
+  gridAStarEngine,
+  buildWalledGrid,
+  PATHFINDER_BOARD as B,
+} from './gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from './mazeGeneration'
 import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from './graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
@@ -516,7 +523,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-bfs',
     displayName: 'Grid BFS',
-    engineFunction: () => gridBfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    engineFunction: () => gridBfsEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.BEGINNER,
     description: 'BFS pathfinding on a grid. Finds shortest path. Draw walls and watch the wave spread.',
@@ -526,7 +533,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-dfs',
     displayName: 'Grid DFS',
-    engineFunction: () => gridDfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    engineFunction: () => gridDfsEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.BEGINNER,
     description: 'DFS pathfinding on a grid. Not shortest path. Shows how DFS winds through obstacles.',
@@ -536,7 +543,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-dijkstra',
     displayName: 'Grid Dijkstra',
-    engineFunction: () => gridDijkstraEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    engineFunction: () => gridDijkstraEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.INTERMEDIATE,
     description: 'Dijkstra on a grid with uniform cost. Bridge between BFS and weighted Dijkstra.',
@@ -546,7 +553,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'grid-astar',
     displayName: 'Grid A*',
-    engineFunction: () => gridAStarEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32),
+    engineFunction: () => gridAStarEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1]),
     track: AlgorithmTrack.GRAPHS,
     difficulty: Difficulty.ADVANCED,
     description: 'A* pathfinding with Manhattan heuristic. Explores far fewer cells than Dijkstra.',

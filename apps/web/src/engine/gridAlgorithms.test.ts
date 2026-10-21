@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import type { GridAlgorithmState, GridCell } from '@dsa-tutor/types'
-import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from './gridAlgorithms'
+import {
+  gridBfsEngine,
+  gridDfsEngine,
+  gridDijkstraEngine,
+  gridAStarEngine,
+  buildEmptyGrid,
+  buildWalledGrid,
+  PATHFINDER_BOARD,
+} from './gridAlgorithms'
+import { runFor } from './runFor'
+import { getAlgorithmRegistryEntry } from './registry'
 
 function lastState(snapshots: ReturnType<typeof gridBfsEngine>): GridAlgorithmState {
   return snapshots[snapshots.length - 1].dataStructureState as GridAlgorithmState
@@ -100,5 +110,44 @@ describe('gridAStarEngine', () => {
     const astarState = lastState(gridAStarEngine(grid, 10, 2, 10, 32))
     expect(astarState.pathLength).toBe(bfsState.pathLength)
     expect(astarState.visitedCount).toBeLessThan(bfsState.visitedCount)
+  })
+})
+
+describe('the board the pathfinders open on', () => {
+  const SLUGS = ['grid-bfs', 'grid-dfs', 'grid-dijkstra', 'grid-astar'] as const
+
+  it('is walled, and reachable', () => {
+    const grid = buildWalledGrid(PATHFINDER_BOARD.rows, PATHFINDER_BOARD.cols)
+    const walls = grid.flat().filter((cell) => cell.state === 'wall').length
+    expect(walls).toBeGreaterThan(0)
+    const [sr, sc] = PATHFINDER_BOARD.start
+    const [er, ec] = PATHFINDER_BOARD.end
+    expect(grid[sr][sc].state).toBe('empty')
+    expect(grid[er][ec].state).toBe('empty')
+    // A board whose target cannot be reached would make every one of these
+    // topics a silent dead end.
+    expect(lastState(gridBfsEngine(grid, sr, sc, er, ec)).pathLength).toBeGreaterThan(0)
+  })
+
+  it.each(SLUGS)('%s asks a sane number of questions', (slug) => {
+    // The whole reason the board gained walls. An empty board is the
+    // degenerate case for these four in opposite directions at once: it
+    // was 139 junctions for BFS and 7 for A* at 20x35, and shrinking it
+    // alone took A* down to 2. Both ends have to stay in the band the
+    // rest of the curriculum sits in (3-35).
+    const run = runFor(slug)
+    const junctions = run.filter((snapshot) => snapshot.isPredictionRequired).length
+    expect(junctions, `${slug} junctions`).toBeGreaterThanOrEqual(5)
+    expect(junctions, `${slug} junctions`).toBeLessThanOrEqual(40)
+    expect(run.length, `${slug} steps`).toBeLessThanOrEqual(200)
+  })
+
+  it('builds the same run from the registry as from runFor', () => {
+    // Two call sites built this board from their own copy of 20x35, so a
+    // change to one would have left the other behind.
+    for (const slug of SLUGS) {
+      const entry = getAlgorithmRegistryEntry(slug)!
+      expect(entry.engineFunction([]).length, slug).toBe(runFor(slug).length)
+    }
   })
 })

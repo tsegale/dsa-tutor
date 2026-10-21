@@ -29,7 +29,14 @@ import { floydWarshallEngine } from '@/engine/floydWarshall'
 import { kruskalEngine } from '@/engine/kruskal'
 import { primEngine } from '@/engine/prim'
 import { cycleDetectionEngine, connectedComponentsEngine, topologicalSortEngine } from '@/engine/graphProperties'
-import { gridBfsEngine, gridDfsEngine, gridDijkstraEngine, gridAStarEngine, buildEmptyGrid } from '@/engine/gridAlgorithms'
+import {
+  gridBfsEngine,
+  gridDfsEngine,
+  gridDijkstraEngine,
+  gridAStarEngine,
+  buildWalledGrid,
+  PATHFINDER_BOARD as B,
+} from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine } from '@/engine/mazeGeneration'
 import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from '@/engine/graphPresets'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
@@ -154,13 +161,13 @@ function buildRun(slug: string, input: number[], target: number): AlgorithmSnaps
     case 'topological-sort':
       return topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency)
     case 'grid-bfs':
-      return gridBfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+      return gridBfsEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'grid-dfs':
-      return gridDfsEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+      return gridDfsEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'grid-dijkstra':
-      return gridDijkstraEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+      return gridDijkstraEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'grid-astar':
-      return gridAStarEngine(buildEmptyGrid(20, 35), 10, 2, 10, 32)
+      return gridAStarEngine(buildWalledGrid(B.rows, B.cols), B.start[0], B.start[1], B.end[0], B.end[1])
     case 'maze-generation':
       return mazeGenerationEngine(20, 35)
     case 'maze-prim':
