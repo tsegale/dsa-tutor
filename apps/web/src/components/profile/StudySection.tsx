@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import type { StudyStatusDto } from '@dsa-tutor/types'
 import { withdrawFromStudy } from '@/api/study'
 import { studyPhase, type StudyPhaseKey } from '@/utils/studyPhase'
@@ -35,6 +36,7 @@ function StepMark({ state }: { state: 'done' | 'current' | 'upcoming' }) {
 
 export function StudySection({ status }: { status: StudyStatusDto }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
   const withdraw = useMutation({
     mutationFn: withdrawFromStudy,
@@ -44,7 +46,26 @@ export function StudySection({ status }: { status: StudyStatusDto }) {
     },
   })
 
-  if (!status.participantCode) return null
+  // Nobody signs up for a study on a profile page, but it is where they
+  // look for anything about it - and the join box is linked from nowhere
+  // else, so an unenrolled participant found a blank where their study
+  // ought to be.
+  if (!status.participantCode) {
+    if (status.isDemo) return null
+    return (
+      <section aria-labelledby="profile-study" className="rounded-md border border-rule bg-surface p-card">
+        <h2 id="profile-study" className="text-h3 text-ink">
+          Research study
+        </h2>
+        <p className="mt-2 text-small text-ink-2">
+          You are not taking part. If your researcher gave you a participant code, you can enter it to join.
+        </p>
+        <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/study/join')}>
+          Enter your code
+        </Button>
+      </section>
+    )
+  }
 
   const consented = status.consentAt ? new Date(status.consentAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null
   const phase = studyPhase(status)

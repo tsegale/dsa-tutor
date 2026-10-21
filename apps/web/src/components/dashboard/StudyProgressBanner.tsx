@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import type { StudyStatusDto, TopicDto } from '@dsa-tutor/types'
 import { fetchStudyStatus, overridePosttest } from '@/api/study'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { STUDY_TOPIC_SLUGS } from '@/utils/misconceptionProbes'
 
@@ -69,6 +70,8 @@ export function StudyProgressDetail({ status, topics, heading: Heading = 'h2' }:
  */
 export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const { data: status } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus, staleTime: 60 * 1000 })
   const [overrideOpen, setOverrideOpen] = useState(false)
   const [pin, setPin] = useState('')
@@ -81,6 +84,30 @@ export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) 
       setPin('')
     },
   })
+
+  // Not a participant yet: offer the way in. /study/join is linked from
+  // nowhere else in the app, so a participant who was handed a code had
+  // no way to find the box to type it into except a pasted URL.
+  if (status && !status.isParticipant) {
+    // Enrolment refuses a demo account outright (DEMO_ACCOUNT), and an
+    // educator is running the study rather than taking part.
+    if (status.isDemo || user?.role === 'EDUCATOR') return null
+    return (
+      <section className="rounded-lg border border-border bg-card p-4" aria-label="Join the study">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="text-small font-semibold text-ink">Taking part in the research study?</h2>
+            <p className="text-small text-ink-2">
+              Enter the participant code your researcher gave you to get started.
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/study/join')} className="shrink-0">
+            Enter your code
+          </Button>
+        </div>
+      </section>
+    )
+  }
 
   if (!status?.isParticipant || status.withdrawn || status.consentRequired || status.pretestRequired) return null
 
