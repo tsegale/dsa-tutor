@@ -1,4 +1,4 @@
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectIsLiveJunction } from '@/store/useAlgorithmStore'
 import { cn } from '@/lib/utils'
 
 // Playback transport (Week 4, 4A.3): a centred pill under the canvas. It
@@ -61,6 +61,12 @@ const iconButton =
 
 export default function TransportBar() {
   const isPlaying = useAlgorithmStore((state) => state.isPlaying)
+  // A pending narration auto-advance moves the run without playback
+  // driving it. The button used to read "Play" throughout, so a run that
+  // was visibly walking itself offered no way to stop it - pressing the
+  // button started playback instead.
+  const autoAdvancing = useAlgorithmStore((state) => state.autoAdvancing)
+  const atLiveJunction = useAlgorithmStore(selectIsLiveJunction)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   const playbackSpeed = useAlgorithmStore((state) => state.playbackSpeed)
@@ -72,10 +78,14 @@ export default function TransportBar() {
   const setPlaybackSpeed = useAlgorithmStore((state) => state.setPlaybackSpeed)
 
   const isAtFinalStep = totalSteps > 0 && stepIndex >= totalSteps - 1
-  const playLabel = isPlaying ? 'Pause' : isAtFinalStep ? 'Replay' : 'Play'
+  const isMoving = isPlaying || autoAdvancing
+  const playLabel = isMoving ? 'Pause' : isAtFinalStep ? 'Replay' : 'Play'
+  // An unanswered junction is the learner's turn: playback there starts
+  // and stops itself on the first tick, which read as a dead button.
+  const playDisabled = atLiveJunction && !isMoving
 
   function handlePlayPause() {
-    if (isPlaying) stopPlayback()
+    if (isMoving) stopPlayback()
     else if (isAtFinalStep) resetAlgorithm()
     else startPlayback()
   }
@@ -96,11 +106,12 @@ export default function TransportBar() {
         <button
           type="button"
           onClick={handlePlayPause}
+          disabled={playDisabled}
           aria-label={playLabel}
           aria-keyshortcuts="Space"
-          className="ml-1 flex size-9 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-hover"
+          className="ml-1 flex size-9 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {isPlaying ? <PauseIcon /> : <PlayIcon />}
+          {isMoving ? <PauseIcon /> : <PlayIcon />}
         </button>
         <Kbd>Space</Kbd>
 

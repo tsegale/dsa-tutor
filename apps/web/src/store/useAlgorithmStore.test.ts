@@ -171,17 +171,87 @@ describe('Practice mode narration auto-advance', () => {
     vi.useRealTimers()
   })
 
-  it('auto-advances through narration steps until the next Critical Junction', () => {
+  it('stays put when a run is merely opened in Practice', () => {
+    // Entering Practice used to schedule an auto-advance, so a run began
+    // walking itself the moment a topic loaded - while the transport
+    // still read "Play", offering no way to stop what was already moving.
+    const store = useAlgorithmStore.getState()
+    useAlgorithmStore.setState({ stepIndex: 0 })
+    store.setMode(AlgorithmMode.PRACTICE)
+
+    vi.advanceTimersByTime(5000)
+
+    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
+    expect(useAlgorithmStore.getState().autoAdvancing).toBe(false)
+  })
+
+  it('auto-advances through narration steps until the next Critical Junction, once moving', () => {
     const store = useAlgorithmStore.getState()
     const firstJunctionIndex = store.snapshotArray.findIndex((s) => s.isPredictionRequired)
     expect(firstJunctionIndex).toBeGreaterThan(0)
 
     useAlgorithmStore.setState({ stepIndex: 0 })
     store.setMode(AlgorithmMode.PRACTICE)
+    // The learner moves first; narration then chains on from there, which
+    // is the clicking this was built to save.
+    useAlgorithmStore.getState().stepForward()
 
     vi.advanceTimersByTime(350 * (firstJunctionIndex + 1))
 
     expect(useAlgorithmStore.getState().stepIndex).toBe(firstJunctionIndex)
+  })
+
+  it('holds where it is when the learner pauses mid-chain', () => {
+    // stopPlayback scheduled a fresh auto-advance, so Pause in Practice
+    // stopped playback and immediately set the run walking again.
+    const store = useAlgorithmStore.getState()
+    useAlgorithmStore.setState({ stepIndex: 0 })
+    store.setMode(AlgorithmMode.PRACTICE)
+    useAlgorithmStore.getState().stepForward()
+    expect(useAlgorithmStore.getState().autoAdvancing).toBe(true)
+
+    useAlgorithmStore.getState().stopPlayback()
+    const held = useAlgorithmStore.getState().stepIndex
+
+    vi.advanceTimersByTime(5000)
+
+    expect(useAlgorithmStore.getState().stepIndex).toBe(held)
+    expect(useAlgorithmStore.getState().autoAdvancing).toBe(false)
+  })
+
+  it('applies a speed change to a run already playing', () => {
+    // startPlayback fixed the interval period when it started, so the
+    // speed buttons changed the highlight and nothing else until the
+    // learner stopped and started again.
+    const store = useAlgorithmStore.getState()
+    useAlgorithmStore.setState({ stepIndex: 0 })
+    store.setMode(AlgorithmMode.DEMO)
+    useAlgorithmStore.getState().startPlayback()
+
+    vi.advanceTimersByTime(1000)
+    const atOneX = useAlgorithmStore.getState().stepIndex
+    expect(atOneX).toBeGreaterThan(0)
+
+    useAlgorithmStore.getState().setPlaybackSpeed(3)
+    vi.advanceTimersByTime(1000)
+    const movedAtThreeX = useAlgorithmStore.getState().stepIndex - atOneX
+
+    expect(movedAtThreeX).toBeGreaterThan(atOneX)
+    useAlgorithmStore.getState().stopPlayback()
+  })
+
+  it('will not start playback at an unanswered junction', () => {
+    // The interval stopped itself on its first tick there, so the button
+    // looked dead rather than unavailable.
+    const store = useAlgorithmStore.getState()
+    const junction = store.snapshotArray.findIndex((s) => s.isPredictionRequired)
+    useAlgorithmStore.setState({ stepIndex: junction })
+    store.setMode(AlgorithmMode.PRACTICE)
+
+    useAlgorithmStore.getState().startPlayback()
+
+    expect(useAlgorithmStore.getState().isPlaying).toBe(false)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(junction)
   })
 
   it('does not advance past a Critical Junction on its own', () => {

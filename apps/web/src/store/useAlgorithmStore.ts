@@ -17,6 +17,10 @@ export interface AlgorithmStoreState {
   sessionXP: number
   focusModeActive: boolean
   isPlaying: boolean
+  /** A narration auto-advance is pending, so the run IS moving even
+   *  though playback is not driving it. The transport reads this so its
+   *  button can say Pause and actually stop the motion. */
+  autoAdvancing: boolean
   playbackSpeed: number
   sessionId: string | null
   userId: string | null
@@ -140,11 +144,14 @@ function clearPlaybackInterval() {
 let autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null
 const PRACTICE_AUTO_ADVANCE_DELAY_MS = 350
 
-function clearAutoAdvanceTimer() {
+type StoreSet = (partial: Partial<AlgorithmStoreState>) => void
+
+function clearAutoAdvanceTimer(set?: StoreSet) {
   if (autoAdvanceTimer !== null) {
     clearTimeout(autoAdvanceTimer)
     autoAdvanceTimer = null
   }
+  set?.({ autoAdvancing: false })
 }
 
 /** Test-only escape hatch: this module's auto-advance timer is process-
@@ -162,21 +169,31 @@ export function __clearAutoAdvanceTimerForTests() {
  * Junction (isPredictionRequired) or the final step - those need the
  * learner, not a timer. stepForward calls this again for the step it
  * lands on, so a run of narration steps chains forward on its own until
- * the next junction. */
-function scheduleNarrationAutoAdvance(get: () => AlgorithmStoreState) {
-  clearAutoAdvanceTimer()
-  const { mode, isPlaying, stepIndex, snapshotArray } = get()
+ * the next junction.
+ *
+ * It only ever CONTINUES motion the learner started. Opening a topic
+ * used to schedule one, so a Practice run began walking itself the
+ * moment the page loaded, while the transport still read "Play" - the
+ * run moved and nothing on screen admitted it was moving.
+ */
+function scheduleNarrationAutoAdvance(get: () => AlgorithmStoreState, set: StoreSet) {
+  clearAutoAdvanceTimer(set)
+  const { mode, isPlaying, stepIndex, snapshotArray, playbackSpeed } = get()
   if (mode !== AlgorithmMode.PRACTICE || isPlaying) return
   if (stepIndex >= snapshotArray.length - 1) return
   if (isLiveJunctionAt(get(), stepIndex)) return
 
   // A worked step stays up long enough to read its narration; plain
-  // narration moves on almost immediately.
-  const delay = isWorkedStepAt(get(), stepIndex) ? WORKED_STEP_DWELL_MS : PRACTICE_AUTO_ADVANCE_DELAY_MS
+  // narration moves on almost immediately. Both scale with the speed
+  // control, which used to apply to playback only - so at 3x the run
+  // still crawled through narration at the same rate.
+  const base = isWorkedStepAt(get(), stepIndex) ? WORKED_STEP_DWELL_MS : PRACTICE_AUTO_ADVANCE_DELAY_MS
+  set({ autoAdvancing: true })
   autoAdvanceTimer = setTimeout(() => {
     autoAdvanceTimer = null
+    set({ autoAdvancing: false })
     get().stepForward()
-  }, delay)
+  }, base / playbackSpeed)
 }
 
 export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
@@ -190,6 +207,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   sessionXP: 0,
   focusModeActive: false,
   isPlaying: false,
+  autoAdvancing: false,
   playbackSpeed: 1.0,
   sessionId: null,
   userId: null,
@@ -228,7 +246,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
         // made during it takes effect from here.
         segmentScaffoldingLevel: endsSegment(snapshotArray, stepIndex) ? scaffoldingLevel : segmentScaffoldingLevel,
       })
-      scheduleNarrationAutoAdvance(get)
+      scheduleNarrationAutoAdvance(get, set)
     }
   },
 
@@ -237,22 +255,20 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     if (stepIndex <= 0) return
     // Reviewing a past step is a deliberate choice - a pending
     // auto-advance must not immediately undo it by jumping forward again.
-    clearAutoAdvanceTimer()
+    clearAutoAdvanceTimer(set)
     set({ stepIndex: stepIndex - 1 })
   },
 
   resetAlgorithm: () => {
     clearPlaybackInterval()
-    clearAutoAdvanceTimer()
+    clearAutoAdvanceTimer(set)
     set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel }))
-    scheduleNarrationAutoAdvance(get)
   },
 
   startFocusedRun: (junctionTypes) => {
     clearPlaybackInterval()
-    clearAutoAdvanceTimer()
+    clearAutoAdvanceTimer(set)
     set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel, focusJunctionTypes: junctionTypes }))
-    scheduleNarrationAutoAdvance(get)
   },
 
   notePracticeRunCompleted: (topicSlug) =>
@@ -267,9 +283,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     // Demo to Practice) keeps their place instead of silently losing
     // progress back to step 1 with no warning.
     clearPlaybackInterval()
-    clearAutoAdvanceTimer()
+    clearAutoAdvanceTimer(set)
     set({ mode, isPlaying: false })
-    scheduleNarrationAutoAdvance(get)
   },
 
   setAlgorithm: (name, snapshots) => {
@@ -286,7 +301,6 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       activeChallengeType: null,
       focusJunctionTypes: [],
     })
-    scheduleNarrationAutoAdvance(get)
   },
 
   toggleFocusMode: () => set((state) => ({ focusModeActive: !state.focusModeActive })),
@@ -299,6 +313,10 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   setPlaybackSpeed: (speed) => {
     const clamped = Math.min(MAX_PLAYBACK_SPEED, Math.max(MIN_PLAYBACK_SPEED, speed))
     set({ playbackSpeed: clamped })
+    // startPlayback fixes the interval period when it starts, so changing
+    // speed mid-run did nothing until the learner stopped and started
+    // again - the buttons moved, the run did not. Restart it in place.
+    if (get().isPlaying) get().startPlayback()
   },
 
   // Before a run starts (step 0) the segment level follows immediately, so
@@ -320,10 +338,14 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   startPlayback: () => {
     clearPlaybackInterval()
+    // Nothing to play at an unanswered junction: the interval below would
+    // start and stop itself on its first tick, so the button appeared to
+    // do nothing at all. The transport disables it there instead.
+    if (isLiveJunctionAt(get(), get().stepIndex)) return
     // Playback's own interval drives stepping at the chosen speed - a
     // narration auto-advance left pending from manual stepping just
     // before Play was pressed must not also fire and cause a double-step.
-    clearAutoAdvanceTimer()
+    clearAutoAdvanceTimer(set)
     set({ isPlaying: true })
 
     const { playbackSpeed } = get()
@@ -356,8 +378,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   stopPlayback: () => {
     clearPlaybackInterval()
+    clearAutoAdvanceTimer(set)
     set({ isPlaying: false })
-    scheduleNarrationAutoAdvance(get)
   },
 
   addMisconception: (category) => {
@@ -394,7 +416,6 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   setFadingEnabled: (enabled) => {
     set({ fadingEnabled: enabled && !get().classicMode })
-    scheduleNarrationAutoAdvance(get)
   },
 }))
 
