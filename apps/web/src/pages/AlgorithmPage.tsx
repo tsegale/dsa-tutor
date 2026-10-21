@@ -41,6 +41,8 @@ import { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton
 import { FeynmanOffer } from '@/components/feynman/FeynmanOffer'
 import { MasteryOfferNotice } from '@/components/mastery/MasteryOfferNotice'
 import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
+import { usePipeline } from '@/hooks/usePipeline'
+import { stageOffer } from '@/config/pipeline'
 import { FEYNMAN_OFFER_EMPHASIS_MINUTES } from '@/config/pacing'
 import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
 import RemediationModal from '@/components/prediction/RemediationModal'
@@ -222,6 +224,10 @@ function AlgorithmWorkspace() {
   const topicSeenBefore = currentTopic
     ? currentTopic.practiceRunCompleted || currentTopic.masteryPercent > 0
     : undefined
+
+  // The five stages for this topic, so a mode named in the URL is held to
+  // the same gate the switcher applies.
+  const stages = usePipeline()
 
   // A level pinned on the profile applies from the moment a topic opens, not
   // only after the first answer (Phase 6D). Adaptive leaves the level alone.
@@ -856,12 +862,14 @@ function AlgorithmWorkspace() {
     // they have already worked opens in Practice, so returning does not
     // make them watch it again. A study participant always starts in
     // Practice (remediation doc 9.8). See utils/studyCondition.ts.
-    setMode(
-      initialMode(searchParams.get('mode'), false, {
-        participant: isActiveParticipant,
-        seenBefore: topicSeenBefore,
-      }),
-    )
+    const context = { participant: isActiveParticipant, seenBefore: topicSeenBefore }
+    const asked = initialMode(searchParams.get('mode'), false, context)
+    // ?mode=HANDS_ON names a mode the topic may not be offering yet. The
+    // switcher refuses it in that case, so honouring it here would open by
+    // link the same inert mode a click cannot reach - the tab reading
+    // Hands-On while the tracker reads "Finish a Practice run first".
+    const refused = asked === AlgorithmMode.HANDS_ON && !stageOffer(stages, 'HANDS_ON').enabled
+    setMode(refused ? initialMode(null, false, context) : asked)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClassic, isActiveParticipant, topicSeenBefore, algorithmNameParam])
 
