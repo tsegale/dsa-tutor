@@ -176,10 +176,13 @@ export default function ConsentPage() {
             <h2 className="mb-1 font-semibold">Ethics approval</h2>
             <p className="text-text-secondary">
               <Detail value={STUDY_CONSENT.ethicsApproval} placeholder="ethics approval status - to be confirmed by the supervisor" />
-              {' '}Granted by{' '}
+              {' '}Approving authority:{' '}
               <Detail value={STUDY_CONSENT.ethicsApprovalGrantedBy} placeholder="approving department or committee" />
-              {' '}on{' '}
-              <Detail value={formatApprovalDate(STUDY_CONSENT.ethicsApprovalDate)} placeholder="date approval was granted" />
+              {/* The date is optional, so it is appended rather than left
+                  as a placeholder reading "on [date]" forever. */}
+              {formatApprovalDate(STUDY_CONSENT.ethicsApprovalDate ?? null) ? (
+                <> on {formatApprovalDate(STUDY_CONSENT.ethicsApprovalDate ?? null)}</>
+              ) : null}
               .
             </p>
           </div>

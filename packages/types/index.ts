@@ -1001,10 +1001,17 @@ export interface StudyConsentDetails {
    * "pending", but nobody is enrolled on it.
    */
   ethicsApprovalGrantedBy: string | null
-  /** When approval was granted, as ISO `YYYY-MM-DD`. Null also keeps
-   *  real enrolment locked. */
-  ethicsApprovalDate: string | null
+  /** When approval was granted, as ISO `YYYY-MM-DD`, shown only when set.
+   *  Optional: where approval is a supervisor's sign-off rather than a
+   *  committee decision there may be no recorded date, and requiring one
+   *  would just invite a made-up date onto a consent form. */
+  ethicsApprovalDate?: string | null
 }
+
+/** A field of StudyConsentDetails that must be filled in before a real
+ *  participant can enrol; the list itself is studyConsentRequired.json,
+ *  which the web and the api both read at runtime. */
+export type RequiredConsentField = keyof StudyConsentDetails
 /** The profile page's figures, from GET /api/v1/profile/analytics (Phase 6C). */
 export interface LearnerAnalyticsDto {
   summary: {

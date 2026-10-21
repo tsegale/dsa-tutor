@@ -29,10 +29,13 @@ describe('consent details', () => {
     expect(consentDetailsComplete(full)).toBe(true)
     expect(consentDetailsComplete({ ...full, ethicsApproval: null })).toBe(false)
     // Approval text saying "pending" is not enough to open real enrolment:
-    // who granted it and when are both required, because UNAM issues no
+    // it has to be attributed to whoever granted it, since UNAM issues no
     // reference number this could key on instead.
     expect(consentDetailsComplete({ ...full, ethicsApprovalGrantedBy: null })).toBe(false)
-    expect(consentDetailsComplete({ ...full, ethicsApprovalDate: null })).toBe(false)
+    // The date is optional: a supervisor's sign-off may have no recorded
+    // date, and requiring one would only invite a made-up one onto a
+    // consent form.
+    expect(consentDetailsComplete({ ...full, ethicsApprovalDate: null })).toBe(true)
     expect(consentDetailsComplete({ ...full, researcherEmail: '  ' })).toBe(false)
   })
 

@@ -1,0 +1,9 @@
+[
+  "researcherName",
+  "researcherEmail",
+  "supervisorName",
+  "institution",
+  "dataRetention",
+  "ethicsApproval",
+  "ethicsApprovalGrantedBy"
+]

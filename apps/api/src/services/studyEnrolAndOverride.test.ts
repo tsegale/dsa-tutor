@@ -10,6 +10,17 @@ const { db } = vi.hoisted(() => ({
 }))
 vi.mock('../lib/prisma', () => ({ prisma: db }))
 
+// Whether the consent page is finished is config, not behaviour. This
+// suite asserts what enrolment DOES when it is unfinished, so it says so
+// here rather than leaning on the live studyConsent.json - which stopped
+// being unfinished the moment approval was recorded, and silently turned
+// the test below into a no-op that passed for the wrong reason.
+const { consentComplete } = vi.hoisted(() => ({ consentComplete: vi.fn() }))
+vi.mock('../config/studyConsent', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../config/studyConsent')>()),
+  consentDetailsComplete: consentComplete,
+}))
+
 const consentAt = new Date('2026-09-29T08:00:00Z')
 
 beforeEach(() => {
@@ -18,6 +29,7 @@ beforeEach(() => {
   process.env.STUDY_RESEARCHER_PIN = '482913'
   db.assessmentAttempt.findFirst.mockResolvedValue(null)
   db.session.findMany.mockResolvedValue([])
+  consentComplete.mockReturnValue(false)
 })
 
 describe('enrolment while the consent page still has placeholders', () => {
@@ -33,6 +45,21 @@ describe('enrolment while the consent page still has placeholders', () => {
     expect(db.user.update).toHaveBeenCalledWith({
       where: { id: 'u1' },
       data: { participantCode: 'PILOT-2', classicTopicSlug: 'binary-search' },
+    })
+  })
+})
+
+describe('enrolment once the consent page is finished', () => {
+  it('accepts a real participant code', async () => {
+    // The other half of the gate, which nothing covered: every test here
+    // ran against an unfinished page, so "opens when complete" was only
+    // ever true by assumption.
+    consentComplete.mockReturnValue(true)
+    db.user.findUnique.mockResolvedValue(null)
+    await enrolParticipant('u1', 'P01')
+    expect(db.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { participantCode: 'P01', classicTopicSlug: 'bubble-sort' },
     })
   })
 })
