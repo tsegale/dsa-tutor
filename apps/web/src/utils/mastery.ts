@@ -1,4 +1,4 @@
-import type { AlgorithmSnapshot, MasteryCriterion, MasteryCriterionId, MasteryStatus, TopicMastery } from '@dsa-tutor/types'
+import type { AlgorithmSnapshot, MasteryCriterionId, MasteryStatus, TopicMastery } from '@dsa-tutor/types'
 import { rngFrom } from './challengeGenerators'
 
 /** A topic with nothing logged yet: what the api returns before any answer. */
@@ -63,62 +63,6 @@ export const CRITERION_LABEL: Record<MasteryCriterionId, string> = {
   CHALLENGE: 'Edge-case challenge',
 }
 
-export interface CriterionView {
-  id: MasteryCriterionId
-  label: string
-  /** The current value, as data (shown in mono). */
-  value: string
-  /** What meets it, as data. */
-  threshold: string
-  met: boolean
-  /** The one action that would meet it. Null once met: no criterion is shown unmet without one. */
-  action: string | null
-}
-
-/** How one applicable criterion reads on the mastery panel. */
-export function criterionView(criterion: MasteryCriterion): CriterionView {
-  const base = { id: criterion.id, label: CRITERION_LABEL[criterion.id], met: criterion.met }
-  switch (criterion.id) {
-    case 'ACCURACY': {
-      const { value, attempts, threshold } = criterion
-      let action: string | null = null
-      if (!criterion.met) {
-        if (attempts === 0) action = 'Answer junctions in Practice mode (no first attempts yet)'
-        else if (attempts < ACCURACY_MIN_ATTEMPTS)
-          action = `Answer ${ACCURACY_MIN_ATTEMPTS - attempts} more junctions in Practice mode (${attempts} of ${ACCURACY_MIN_ATTEMPTS})`
-        else action = `Practise again to reach ${threshold}% right first time (now ${value}% over your last ${attempts})`
-      }
-      return { ...base, value: value === null ? '-' : `${value}%`, threshold: `${threshold}%`, action }
-    }
-    case 'BREADTH':
-      return {
-        ...base,
-        value: String(criterion.value ?? 0),
-        threshold: String(criterion.threshold),
-        action: criterion.met ? null : `Practise on a different input (${criterion.value ?? 0} of ${criterion.threshold})`,
-      }
-    case 'FEYNMAN': {
-      let action: string | null = null
-      if (!criterion.met) {
-        if (criterion.attempts === 0) action = 'Explain this algorithm in Feynman mode (not yet attempted)'
-        else if (criterion.value === null) action = 'Explain it again in Feynman mode (last one was not graded)'
-        else action = `Explain it again in Feynman mode (best ${criterion.value}, needs ${criterion.threshold})`
-      }
-      return { ...base, value: criterion.value === null ? '-' : String(criterion.value), threshold: String(criterion.threshold), action }
-    }
-    case 'CHALLENGE':
-      return {
-        ...base,
-        value: String(criterion.value ?? 0),
-        threshold: String(criterion.threshold),
-        action: criterion.met
-          ? null
-          : criterion.attempts === 0
-            ? 'Take an AI Challenge on this topic (not yet attempted)'
-            : `Pass an AI Challenge, ${CHALLENGE_PASS_ACCURACY}% right first time (${criterion.attempts} tried)`,
-      }
-  }
-}
 
 export interface MasteryBreakdown {
   mastered: number

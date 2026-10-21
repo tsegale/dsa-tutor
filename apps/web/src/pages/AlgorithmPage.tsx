@@ -39,6 +39,7 @@ import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToa
 import FeynmanModal from '@/components/feynman/FeynmanModal'
 import { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton'
 import { FeynmanOffer } from '@/components/feynman/FeynmanOffer'
+import { MasteryOfferNotice } from '@/components/mastery/MasteryOfferNotice'
 import { useFeynmanAccess } from '@/hooks/useFeynmanAccess'
 import { FEYNMAN_OFFER_EMPHASIS_MINUTES } from '@/config/pacing'
 import ChallengeHintBanner from '@/components/challenge/ChallengeHintBanner'
@@ -1026,6 +1027,13 @@ function AlgorithmWorkspace() {
 
       <TransportBar />
 
+      {/* The end-of-run offers. Feynman's comes first because it is the
+          one the pipeline is built around; the mastery offer is the
+          quieter sibling, and it suppresses itself while Feynman's is up
+          so a finished run never asks two things at once. */}
+      {snapshotArray[stepIndex]?.isFinalStep && !showFeynman && !(feynmanOffer && feynmanOffer.run === snapshotArray) && (
+        <MasteryOfferNotice onOpenFeynman={() => setShowFeynman(true)} />
+      )}
       {feynmanOffer && feynmanOffer.run === snapshotArray && !showFeynman && (
         <FeynmanOffer
           emphasis={feynmanOffer.emphasis}

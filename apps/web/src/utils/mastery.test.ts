@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { binarySearchEngine } from '@/engine/binarySearch'
 import type { MasteryCriterion, TopicMastery } from '@dsa-tutor/types'
-import { EMPTY_MASTERY, criterionView, inputHashOf, masteryBreakdown, masteryPracticeInput, nextMasteryOffer } from './mastery'
+import { EMPTY_MASTERY, inputHashOf, masteryBreakdown, masteryPracticeInput, nextMasteryOffer } from './mastery'
 
 describe('inputHashOf', () => {
   it('is the same for the same input and differs for a different one', () => {
@@ -19,45 +19,6 @@ describe('inputHashOf', () => {
 
   it('is null for an empty run', () => {
     expect(inputHashOf([])).toBeNull()
-  })
-})
-
-describe('criterionView', () => {
-  const crit = (id: MasteryCriterion['id'], over: Partial<MasteryCriterion>): MasteryCriterion => ({
-    id,
-    applicable: true,
-    met: false,
-    value: null,
-    threshold: { ACCURACY: 85, BREADTH: 3, FEYNMAN: 80, CHALLENGE: 1 }[id],
-    attempts: 0,
-    ...over,
-  })
-
-  it('gives every unmet criterion, in every state, the action that clears it', () => {
-    const unmet: MasteryCriterion[] = [
-      crit('ACCURACY', {}),
-      crit('ACCURACY', { value: 100, attempts: 4 }),
-      crit('ACCURACY', { value: 70, attempts: 20 }),
-      crit('BREADTH', { value: 0 }),
-      crit('BREADTH', { value: 2 }),
-      crit('FEYNMAN', {}),
-      crit('FEYNMAN', { value: 72, attempts: 1 }),
-      crit('FEYNMAN', { value: null, attempts: 1 }),
-      crit('CHALLENGE', {}),
-      crit('CHALLENGE', { value: 0, attempts: 2 }),
-    ]
-    for (const criterion of unmet) expect(criterionView(criterion).action, criterion.id).toBeTruthy()
-  })
-
-  it('names the gap in data the learner can act on', () => {
-    expect(criterionView(crit('BREADTH', { value: 2 })).action).toBe('Practise on a different input (2 of 3)')
-    expect(criterionView(crit('FEYNMAN', {})).action).toBe('Explain this algorithm in Feynman mode (not yet attempted)')
-    expect(criterionView(crit('ACCURACY', { value: 100, attempts: 4 })).action).toBe('Answer 6 more junctions in Practice mode (4 of 10)')
-    expect(criterionView(crit('ACCURACY', { value: 70, attempts: 20 }))).toMatchObject({ value: '70%', threshold: '85%' })
-  })
-
-  it('has no action once met', () => {
-    expect(criterionView(crit('CHALLENGE', { met: true, value: 1, attempts: 1 })).action).toBeNull()
   })
 })
 

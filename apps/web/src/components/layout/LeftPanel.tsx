@@ -12,6 +12,7 @@ import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
 import { usePipeline } from '@/hooks/usePipeline'
 import PipelineTracker from '@/components/pipeline/PipelineTracker'
+import { APPLY_INPUT_EVENT } from './applyInput'
 import { hasCodeMode } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
@@ -125,6 +126,22 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
       runFor(algorithmSlug, parsed),
     )
   }
+
+  // Asked from outside the panel (the end-of-run mastery offer). Kept in
+  // step with the box exactly as Random is, so the box never describes a
+  // run that is no longer on screen.
+  useEffect(() => {
+    function handleApplyInput(event: Event) {
+      const values = (event as CustomEvent<number[]>).detail
+      if (!Array.isArray(values) || values.length === 0) return
+      setInputError(null)
+      setArrayInput(values.join(','))
+      const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
+      setAlgorithm(displayName, runFor(algorithmSlug, values))
+    }
+    window.addEventListener(APPLY_INPUT_EVENT, handleApplyInput)
+    return () => window.removeEventListener(APPLY_INPUT_EVENT, handleApplyInput)
+  }, [algorithmSlug, setAlgorithm])
 
   function handleRandom() {
     const values = generateRandomArray()
