@@ -297,7 +297,8 @@ export const docs = {
 // --------------------------------------------------------------- study
 export const study = {
   status: none,
-  enrol: { body: z.strictObject({ code: nonEmpty(50) }) },
+  // No body: joining the study takes one click and the API assigns the code.
+  enrol: none,
   consent: none,
   withdraw: none,
   // Exactly ten 1-5 Likert answers. study.service re-checks this, which is

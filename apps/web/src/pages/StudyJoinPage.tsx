@@ -1,20 +1,26 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { enrolInStudy } from '@/api/study'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
 
-const inputClassName =
-  'w-full rounded-md border-2 border-border px-3 py-2 text-sm outline-none transition-colors focus:border-text-muted'
-
+/**
+ * Joining the study: one button.
+ *
+ * It used to ask for a participant code a researcher had issued by hand.
+ * The code still exists - it identifies the participant in the exported
+ * data and decides which topic is their Classic condition - but the API
+ * assigns it on enrolment, so there is nothing to type and nothing to hand
+ * out. The page is kept rather than making the button on Home enrol
+ * directly, because a participant should read what they are joining before
+ * they join it; consent itself is the next screen.
+ */
 export default function StudyJoinPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [code, setCode] = useState('')
 
   const enrolMutation = useMutation({
-    mutationFn: () => enrolInStudy(code),
+    mutationFn: enrolInStudy,
     // The response is the new status: put it in the cache before navigating,
     // so the consent page never reads the cached pre-enrolment status.
     onSuccess: (status) => {
@@ -22,12 +28,6 @@ export default function StudyJoinPage() {
       navigate('/consent', { replace: true })
     },
   })
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!code.trim()) return
-    enrolMutation.mutate()
-  }
 
   return (
     <div className="min-h-screen bg-surface-sunk">
@@ -37,36 +37,23 @@ export default function StudyJoinPage() {
 
       <main className="mx-auto max-w-md px-6 py-12">
         <h1 className="mb-2 text-xl font-bold text-text-primary">Join the study</h1>
+        <p className="mb-4 text-sm text-text-secondary">
+          This study looks at how students learn algorithms with an interactive tutor. Taking part means working
+          through three topics in the app, with a short test before and after and a questionnaire at the end.
+        </p>
         <p className="mb-6 text-sm text-text-secondary">
-          Enter the code your researcher gave you to take part in the study.
+          You will be asked to give consent on the next screen, and you can withdraw at any time from your profile.
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="study-code" className="text-sm font-medium text-text-primary">
-              Study code
-            </label>
-            <input
-              id="study-code"
-              type="text"
-              required
-              autoComplete="off"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              className={inputClassName}
-            />
-          </div>
+        {enrolMutation.isError && (
+          <p role="alert" className="mb-4 text-sm text-error">
+            {enrolMutation.error instanceof Error ? enrolMutation.error.message : 'Could not join the study.'}
+          </p>
+        )}
 
-          {enrolMutation.isError && (
-            <p className="text-sm text-error">
-              {enrolMutation.error instanceof Error ? enrolMutation.error.message : 'Could not join the study.'}
-            </p>
-          )}
-
-          <Button type="submit" disabled={!code.trim() || enrolMutation.isPending}>
-            {enrolMutation.isPending ? 'Joining...' : 'Join'}
-          </Button>
-        </form>
+        <Button onClick={() => enrolMutation.mutate()} disabled={enrolMutation.isPending}>
+          {enrolMutation.isPending ? 'Joining...' : 'Join the study'}
+        </Button>
       </main>
     </div>
   )

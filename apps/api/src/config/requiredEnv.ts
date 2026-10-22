@@ -1,8 +1,9 @@
 /**
  * Every environment variable the API needs in production. Railway variables
  * are set by hand in its dashboard, so a variable added to .env.example is
- * NOT deployed by pushing code - STUDY_ENROLMENT_CODES went unset in
- * production for a week that way, and every enrolment code was rejected.
+ * NOT deployed by pushing code - STUDY_ENROLMENT_CODES (since removed) went
+ * unset in production for a week that way, and every enrolment code was
+ * rejected.
  *
  * requiredEnv.test.ts fails if the code reads a variable that is not listed
  * here, in .env.example and in DEPLOYMENT.md. At startup the API logs any
@@ -17,7 +18,6 @@ export const REQUIRED_PRODUCTION_ENV = [
   'NODE_ENV',
   'AI_SERVICE_URL',
   'ALLOWED_ORIGINS',
-  'STUDY_ENROLMENT_CODES',
   'STUDY_RESEARCHER_PIN',
 ] as const
 

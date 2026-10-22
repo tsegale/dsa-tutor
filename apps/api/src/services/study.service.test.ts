@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeSusScore, isActiveParticipant, normalizeParticipantCode, parseEnrolmentAllowlist } from './study.service'
+import { computeSusScore, isActiveParticipant, isPilotCode, normalizeParticipantCode } from './study.service'
 
 describe('isActiveParticipant', () => {
   it('is false for a non-participant', () => {
@@ -25,28 +25,17 @@ describe('normalizeParticipantCode', () => {
   })
 })
 
-describe('parseEnrolmentAllowlist', () => {
-  it('splits on commas and uppercases each code', () => {
-    const allowlist = parseEnrolmentAllowlist('p01,P02,Pilot-1')
-    expect(allowlist.has('P01')).toBe(true)
-    expect(allowlist.has('P02')).toBe(true)
-    expect(allowlist.has('PILOT-1')).toBe(true)
+describe('isPilotCode', () => {
+  // Participants no longer type a code, so no new PILOT- code is ever
+  // issued. The rows from before auto-assignment keep theirs, and the
+  // research exports still read this to leave their data out.
+  it('recognises a pilot code whatever its case or padding', () => {
+    expect(isPilotCode('PILOT-1')).toBe(true)
+    expect(isPilotCode(' pilot-2 ')).toBe(true)
   })
 
-  it('trims whitespace around codes', () => {
-    const allowlist = parseEnrolmentAllowlist(' P01 , P02 ')
-    expect(allowlist.has('P01')).toBe(true)
-    expect(allowlist.has('P02')).toBe(true)
-  })
-
-  it('drops empty entries from trailing commas or an empty string', () => {
-    expect(parseEnrolmentAllowlist('P01,,P02,')).toEqual(new Set(['P01', 'P02']))
-    expect(parseEnrolmentAllowlist('')).toEqual(new Set())
-  })
-
-  it('rejects a code not present in the allowlist', () => {
-    const allowlist = parseEnrolmentAllowlist('P01,P02')
-    expect(allowlist.has('P03')).toBe(false)
+  it('does not mistake an assigned participant code for a pilot', () => {
+    for (const code of ['P01', 'P09', 'P12', 'P13']) expect(isPilotCode(code), code).toBe(false)
   })
 })
 

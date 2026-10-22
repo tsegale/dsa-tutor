@@ -7,8 +7,8 @@ import { missingProductionEnv } from './config/requiredEnv'
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 
 if (process.env.NODE_ENV === 'production') {
-  // Railway variables are set by hand; a missing one fails quietly (an
-  // empty enrolment allowlist rejects every code), so say so loudly.
+  // Railway variables are set by hand; a missing one fails quietly, so say
+  // so loudly.
   const missing = missingProductionEnv()
   if (missing.length > 0) {
     console.error(`Missing required environment variables: ${missing.join(', ')} - see DEPLOYMENT.md`)

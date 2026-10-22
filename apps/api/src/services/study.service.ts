@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'crypto'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { STUDY_TOPICS } from '../config/studyTopics'
 import type { StudyStatusDto } from '../dtos/study.dto'
@@ -168,39 +169,59 @@ export function isPilotCode(code: string): boolean {
   return normalizeParticipantCode(code).startsWith('PILOT-')
 }
 
-/** Parses the comma-separated allowlist of codes a researcher has actually
- * issued to participants, e.g. "P01,P02,PILOT-1,PILOT-2". Never generated
- * or derived here - these are handed out outside the app and only checked
- * against here. */
-export function parseEnrolmentAllowlist(raw: string): Set<string> {
-  return new Set(
-    raw
-      .split(',')
-      .map((code) => normalizeParticipantCode(code))
-      .filter((code) => code.length > 0),
-  )
+/** How an assigned participant code is written: P01, P02, ... P13. Two
+ * digits because the study plans twelve participants and a sorted list of
+ * codes should read in order; a thirteenth simply becomes P13. */
+export function formatParticipantCode(ordinal: number): string {
+  return `P${String(ordinal).padStart(2, '0')}`
 }
 
-/** Claims a researcher-issued code as this user's participantCode. The
- * unique index on participantCode is what actually prevents a second
- * person claiming an already-claimed code; this checks first only to
- * return a clean 409 instead of a raw constraint-violation 500. */
-export async function enrolParticipant(userId: string, rawCode: string): Promise<StudyStatusDto> {
-  const code = normalizeParticipantCode(rawCode)
-  if (!code || !parseEnrolmentAllowlist(process.env.STUDY_ENROLMENT_CODES ?? '').has(code)) {
-    throw new Error('INVALID_CODE')
-  }
-  // No real participant is enrolled against a consent page with placeholders
-  // on it (no researcher email, no ethics approval line). Pilot codes are
-  // allowed, so the flow can be tested before the page is final.
-  if (!isPilotCode(code) && !consentDetailsComplete()) {
+/**
+ * The lowest ordinal no participant holds. Participants used to type a code
+ * a researcher had issued by hand, checked against STUDY_ENROLMENT_CODES;
+ * joining the study is now one click and the code is assigned here.
+ *
+ * Sequential rather than random because the code's ordinal is what rotates
+ * the Classic topic (see classicTopicFor): 1, 2, 3 take bubble-sort,
+ * binary-search and bst in turn, so consecutive participants spread evenly
+ * across the three conditions. A random code would leave the within-subject
+ * control unbalanced - eight of twelve could land on the same topic.
+ *
+ * A withdrawn participant keeps their code (withdrawParticipant never
+ * clears it), so no ordinal is ever reissued and no two participants can
+ * share a Classic topic assignment by accident.
+ */
+async function nextParticipantOrdinal(): Promise<number> {
+  const rows = await prisma.user.findMany({
+    where: { participantCode: { not: null } },
+    select: { participantCode: true },
+  })
+  const taken = new Set(rows.map((row) => row.participantCode))
+  let ordinal = 1
+  while (taken.has(formatParticipantCode(ordinal))) ordinal += 1
+  return ordinal
+}
+
+/** How many times to retry when two people join at the same instant and
+ * race for the same ordinal. The unique index on participantCode is what
+ * actually decides it; this just picks the next one and tries again. */
+const ENROL_ATTEMPTS = 8
+
+/**
+ * Joins the study. Takes no code: the participant clicks once and the next
+ * free participant code is assigned to them here.
+ *
+ * The unique index on participantCode is the real guard against two people
+ * holding one code, so a lost race is a retry rather than an error.
+ */
+export async function enrolParticipant(userId: string): Promise<StudyStatusDto> {
+  // No real participant is enrolled against a consent page with
+  // placeholders on it (no researcher email, no ethics approval line).
+  if (!consentDetailsComplete()) {
     throw new Error('ENROLMENT_NOT_OPEN')
   }
 
-  const [self, claimedBy] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true, isDemo: true } }),
-    prisma.user.findUnique({ where: { participantCode: code }, select: { id: true } }),
-  ])
+  const self = await prisma.user.findUnique({ where: { id: userId }, select: { participantCode: true, isDemo: true } })
   // A demo account is throwaway and shared-feeling by design; its activity
   // must never become study data (4D.6).
   if (self?.isDemo) {
@@ -209,13 +230,23 @@ export async function enrolParticipant(userId: string, rawCode: string): Promise
   if (self?.participantCode) {
     throw new Error('ALREADY_ENROLLED')
   }
-  if (claimedBy) {
-    throw new Error('CODE_TAKEN')
-  }
 
-  // The Classic topic is fixed here, once, and never re-rolled.
-  await prisma.user.update({ where: { id: userId }, data: { participantCode: code, classicTopicSlug: classicTopicFor(code) } })
-  return getStudyStatus(userId)
+  for (let attempt = 0; attempt < ENROL_ATTEMPTS; attempt += 1) {
+    const code = formatParticipantCode(await nextParticipantOrdinal())
+    try {
+      // The Classic topic is fixed here, once, and never re-rolled.
+      await prisma.user.update({
+        where: { id: userId },
+        data: { participantCode: code, classicTopicSlug: classicTopicFor(code) },
+      })
+      return getStudyStatus(userId)
+    } catch (err) {
+      // Someone else took this ordinal between the read and the write.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') continue
+      throw err
+    }
+  }
+  throw new Error('ENROLMENT_RACE')
 }
 
 /**

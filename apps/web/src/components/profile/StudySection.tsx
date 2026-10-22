@@ -58,10 +58,10 @@ export function StudySection({ status }: { status: StudyStatusDto }) {
           Research study
         </h2>
         <p className="mt-2 text-small text-ink-2">
-          You are not taking part. If your researcher gave you a participant code, you can enter it to join.
+          You are not taking part. You can join at any time - there is no code to enter.
         </p>
         <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/study/join')}>
-          Enter your code
+          Join our study
         </Button>
       </section>
     )

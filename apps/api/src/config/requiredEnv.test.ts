@@ -43,7 +43,7 @@ describe('required production environment', () => {
   it('reports unset and blank variables by name', () => {
     const env = Object.fromEntries(REQUIRED_PRODUCTION_ENV.map((name) => [name, 'x'])) as NodeJS.ProcessEnv
     expect(missingProductionEnv(env)).toEqual([])
-    expect(missingProductionEnv({ ...env, STUDY_ENROLMENT_CODES: undefined })).toEqual(['STUDY_ENROLMENT_CODES'])
-    expect(missingProductionEnv({ ...env, STUDY_ENROLMENT_CODES: '  ' })).toEqual(['STUDY_ENROLMENT_CODES'])
+    expect(missingProductionEnv({ ...env, STUDY_RESEARCHER_PIN: undefined })).toEqual(['STUDY_RESEARCHER_PIN'])
+    expect(missingProductionEnv({ ...env, STUDY_RESEARCHER_PIN: '  ' })).toEqual(['STUDY_RESEARCHER_PIN'])
   })
 })

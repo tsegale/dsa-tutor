@@ -18,17 +18,12 @@ router.get('/status', validate(S.study.status), async (req: AuthRequest, res: Re
 
 router.post('/enrol', validate(S.study.enrol), async (req: AuthRequest, res: Response) => {
   try {
-    const { code } = req.body as BodyOf<typeof S.study.enrol>
-    const status = await enrolParticipant(req.userId!, code)
+    const status = await enrolParticipant(req.userId!)
     res.json({ data: status, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : ''
     if (message === 'DEMO_ACCOUNT') {
       res.status(403).json({ data: null, error: { code: 'DEMO_ACCOUNT', message: 'Demo accounts cannot join the study. Register an account first.' } })
-      return
-    }
-    if (message === 'INVALID_CODE') {
-      res.status(400).json({ data: null, error: { code: 'INVALID_CODE', message: 'That code is not recognised' } })
       return
     }
     if (message === 'ENROLMENT_NOT_OPEN') {
@@ -38,12 +33,12 @@ router.post('/enrol', validate(S.study.enrol), async (req: AuthRequest, res: Res
       })
       return
     }
-    if (message === 'CODE_TAKEN') {
-      res.status(409).json({ data: null, error: { code: 'CODE_TAKEN', message: 'That code has already been claimed' } })
-      return
-    }
     if (message === 'ALREADY_ENROLLED') {
       res.status(409).json({ data: null, error: { code: 'ALREADY_ENROLLED', message: 'This account is already enrolled' } })
+      return
+    }
+    if (message === 'ENROLMENT_RACE') {
+      res.status(409).json({ data: null, error: { code: 'ENROLMENT_RACE', message: 'Someone else joined at the same moment - please try again' } })
       return
     }
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to enrol in the study' } })

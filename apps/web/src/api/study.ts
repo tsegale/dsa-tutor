@@ -5,11 +5,9 @@ export function fetchStudyStatus() {
   return apiFetch<StudyStatusDto>('/api/v1/study/status')
 }
 
-export function enrolInStudy(code: string) {
-  return apiFetch<StudyStatusDto>('/api/v1/study/enrol', {
-    method: 'POST',
-    body: JSON.stringify({ code }),
-  })
+/** Joining takes no code: the API assigns the next participant code. */
+export function enrolInStudy() {
+  return apiFetch<StudyStatusDto>('/api/v1/study/enrol', { method: 'POST' })
 }
 
 export function recordConsent() {

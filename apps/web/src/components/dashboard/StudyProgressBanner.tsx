@@ -85,9 +85,8 @@ export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) 
     },
   })
 
-  // Not a participant yet: offer the way in. /study/join is linked from
-  // nowhere else in the app, so a participant who was handed a code had
-  // no way to find the box to type it into except a pasted URL.
+  // Not a participant yet: offer the way in. This banner is the visible
+  // route to it - /study/join was once reachable only by a pasted URL.
   if (status && !status.isParticipant) {
     // Enrolment refuses a demo account outright (DEMO_ACCOUNT), and an
     // educator is running the study rather than taking part.
@@ -96,13 +95,13 @@ export default function StudyProgressBanner({ topics }: { topics: TopicDto[] }) 
       <section className="rounded-lg border border-border bg-card p-4" aria-label="Join the study">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="text-small font-semibold text-ink">Taking part in the research study?</h2>
+            <h2 className="text-small font-semibold text-ink">Help with the research behind this tutor</h2>
             <p className="text-small text-ink-2">
-              Enter the participant code your researcher gave you to get started.
+              Three topics, a short test before and after, and a questionnaire. No code needed.
             </p>
           </div>
           <Button variant="secondary" size="sm" onClick={() => navigate('/study/join')} className="shrink-0">
-            Enter your code
+            Join our study
           </Button>
         </div>
       </section>
