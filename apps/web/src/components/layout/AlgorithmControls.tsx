@@ -94,11 +94,24 @@ function parseArrayInput(input: string): number[] | null {
   return values
 }
 
+/**
+ * Runs an operation and shows its result.
+ *
+ * These controls are actions: pressing Push, Enqueue or Insert should
+ * leave the structure holding what was just put into it. They used to load
+ * the new run at step 0, which on a structure that builds itself up from
+ * empty - the deque, the circular queue - is the structure BEFORE even the
+ * seed operations, so all four deque controls looked completely dead.
+ *
+ * Pass 'start' for a control that sets a run up rather than performing an
+ * operation (Apply, Random, a new board): there the learner wants to watch
+ * it from the beginning.
+ */
 function useApply() {
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
-  return (slug: string, snapshots: AlgorithmSnapshot[]) => {
+  return (slug: string, snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') => {
     const displayName = getAlgorithmRegistryEntry(slug)?.displayName ?? slug
-    setAlgorithm(displayName, snapshots)
+    setAlgorithm(displayName, snapshots, landOn)
   }
 }
 
@@ -369,7 +382,7 @@ function RecursionControls({ slug }: { slug: string }) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => apply(slug, engine(Math.min(10, Math.max(1, Number(n) || 1))))}
+        onClick={() => apply(slug, engine(Math.min(10, Math.max(1, Number(n) || 1))), 'start')}
       >
         Run
       </Button>
@@ -390,7 +403,7 @@ function TwoPointerControls({ slug }: { slug: string }) {
       return
     }
     setError(null)
-    apply(slug, twoSumSortedEngine(values, Number(target) || 0))
+    apply(slug, twoSumSortedEngine(values, Number(target) || 0), 'start')
   }
 
   return (
@@ -421,7 +434,7 @@ function SlidingWindowControls({ slug }: { slug: string }) {
 
   function run(values: number[]) {
     const paramNum = Number(param) || 0
-    apply(slug, isFixed ? fixedWindowEngine(values, paramNum) : variableWindowEngine(values, paramNum))
+    apply(slug, isFixed ? fixedWindowEngine(values, paramNum) : variableWindowEngine(values, paramNum), 'start')
   }
 
   function handleApply() {
@@ -480,7 +493,7 @@ function SearchControls({ slug }: { slug: string }) {
       return
     }
     setError(null)
-    apply(slug, engine([...values].sort((a, b) => a - b), Number(target) || 0))
+    apply(slug, engine([...values].sort((a, b) => a - b), Number(target) || 0), 'start')
   }
 
   return (
@@ -702,7 +715,7 @@ function TreeTraversalControls({ slug }: { slug: string }) {
           : inorderEngine
 
   function run(values: number[]) {
-    apply(slug, engine(bstRootFor(values)))
+    apply(slug, engine(bstRootFor(values)), 'start')
   }
 
   function handleApply() {
@@ -753,7 +766,7 @@ function CountingSortControls({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null)
 
   function run(values: number[]) {
-    apply(slug, countingSortEngine(values))
+    apply(slug, countingSortEngine(values), 'start')
   }
 
   function handleApply() {
@@ -806,7 +819,7 @@ function RadixSortControls({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null)
 
   function run(values: number[]) {
-    apply(slug, radixSortEngine(values))
+    apply(slug, radixSortEngine(values), 'start')
   }
 
   function handleApply() {
@@ -1089,7 +1102,8 @@ function GridControls({ slug }: { slug: string }) {
 
   function runOn(sizeName: GridSizeName, grid?: GridCell[][]) {
     const cfg = options[sizeName]
-    apply(slug, engine(grid ?? buildBoard(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]))
+    // Setting up a board, not performing an operation: start at the top.
+    apply(slug, engine(grid ?? buildBoard(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]), 'start')
   }
 
   function handleClearWalls() {

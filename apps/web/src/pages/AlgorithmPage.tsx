@@ -173,6 +173,9 @@ function AlgorithmWorkspace() {
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const snapshotArray = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  // False when the run was loaded already at its end (an operation
+  // control), so the end-of-run offers only greet a real traversal.
+  const tracedToEnd = useAlgorithmStore((state) => state.tracedToEnd)
   const setMode = useAlgorithmStore((state) => state.setMode)
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   const setSessionId = useAlgorithmStore((state) => state.setSessionId)
@@ -809,8 +812,11 @@ function AlgorithmWorkspace() {
   // it for the topic and offers it inline, never as a modal. Demo runs are
   // watched, not done, and Classic never shows Feynman: neither unlocks it.
   useEffect(() => {
-    const { snapshotArray: run, algorithmName: name } = useAlgorithmStore.getState()
-    if (!run[stepIndex]?.isFinalStep || mode !== AlgorithmMode.PRACTICE || isClassic || !algorithmNameParam) return
+    const { snapshotArray: run, algorithmName: name, tracedToEnd } = useAlgorithmStore.getState()
+    // tracedToEnd: an operation control loads its run already at the end,
+    // and pressing Push Front is not tracing an execution. Without this
+    // the offer fired on every press of every structure control.
+    if (!tracedToEnd || !run[stepIndex]?.isFinalStep || mode !== AlgorithmMode.PRACTICE || isClassic || !algorithmNameParam) return
     useAlgorithmStore.getState().notePracticeRunCompleted(algorithmNameParam)
     if (!hasFeynmanRubric(name) || feynmanOfferDismissedRef.current === run) return
     const minutes = (Date.now() - sessionStartedAtRef.current) / 60_000
@@ -1041,7 +1047,7 @@ function AlgorithmWorkspace() {
           one the pipeline is built around; the mastery offer is the
           quieter sibling, and it suppresses itself while Feynman's is up
           so a finished run never asks two things at once. */}
-      {snapshotArray[stepIndex]?.isFinalStep && !showFeynman && !(feynmanOffer && feynmanOffer.run === snapshotArray) && (
+      {tracedToEnd && snapshotArray[stepIndex]?.isFinalStep && !showFeynman && !(feynmanOffer && feynmanOffer.run === snapshotArray) && (
         <MasteryOfferNotice onOpenFeynman={() => setShowFeynman(true)} />
       )}
       {feynmanOffer && feynmanOffer.run === snapshotArray && !showFeynman && (

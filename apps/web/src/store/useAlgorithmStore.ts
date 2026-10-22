@@ -41,6 +41,13 @@ export interface AlgorithmStoreState {
   activeChallengeType: string | null
   /** Junction types a focused re-run always asks (Phase 7E). Cleared by setAlgorithm. */
   focusJunctionTypes: string[]
+  /**
+   * The learner reached the end of this run themselves, by stepping or
+   * playing it. False when the run was loaded already at its end, which is
+   * what an operation control does - pressing Push Front is not tracing an
+   * execution, and the end-of-run offers must not treat it as one.
+   */
+  tracedToEnd: boolean
   /** Topics whose Practice run reached its final step in this visit: unlocks Feynman mode (Phase 8A). */
   practiceRunCompletedTopics: string[]
   /**
@@ -90,7 +97,13 @@ export interface AlgorithmStoreState {
   startFocusedRun: (junctionTypes: string[]) => void
   notePracticeRunCompleted: (topicSlug: string) => void
   setMode: (mode: AlgorithmMode) => void
-  setAlgorithm: (name: string, snapshots: AlgorithmSnapshot[]) => void
+  /**
+   * Loads a run. `landOn` decides which step the learner is shown:
+   * 'start' (the default) for setting a run up, 'result' for carrying an
+   * operation out - pressing Push should show the pushed value, not the
+   * structure as it was before the seed operations ran.
+   */
+  setAlgorithm: (name: string, snapshots: AlgorithmSnapshot[], landOn?: 'start' | 'result') => void
   toggleFocusMode: () => void
   addXP: (amount: number) => void
   setPlaybackSpeed: (speed: number) => void
@@ -236,6 +249,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   challengeHint: null,
   activeChallengeType: null,
   focusJunctionTypes: [],
+  tracedToEnd: false,
   practiceRunCompletedTopics: [],
   codeRungByTopic: {},
   codeCompletedTopics: [],
@@ -263,6 +277,7 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   stepForward: () => {
     const { stepIndex, snapshotArray, scaffoldingLevel, segmentScaffoldingLevel } = get()
     if (stepIndex < snapshotArray.length - 1) {
+      if (stepIndex + 1 >= snapshotArray.length - 1) set({ tracedToEnd: true })
       set({
         stepIndex: stepIndex + 1,
         // Leaving a conceptual junction ends the segment: a level change
@@ -320,13 +335,18 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     set({ mode, isPlaying: false })
   },
 
-  setAlgorithm: (name, snapshots) => {
+  setAlgorithm: (name, snapshots, landOn = 'start') => {
     clearPlaybackInterval()
     clearAutoAdvanceTimer()
     set({
       algorithmName: name,
       snapshotArray: snapshots,
-      stepIndex: 0,
+      // An operation's result is the last step of its own short run. The
+      // deque and circular queue build themselves from an empty structure,
+      // so step 0 of a push is an EMPTY deque: every operation control on
+      // them appeared to do nothing at all.
+      stepIndex: landOn === 'result' ? Math.max(snapshots.length - 1, 0) : 0,
+      tracedToEnd: false,
       isPlaying: false,
       segmentScaffoldingLevel: get().scaffoldingLevel,
       // A freshly loaded array is not an AI challenge unless the caller
