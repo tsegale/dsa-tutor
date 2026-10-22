@@ -68,7 +68,13 @@ from .bubble_sort import BUBBLE_SORT_CONTEXT, BUBBLE_SORT_PSEUDOCODE
 #                   label collapsed onto whichever of the original six was
 #                   nearest - which read as disagreement with the rule
 #                   label rather than an answer it was never offered.
-PROMPT_VERSION = "2026-10-21.1"
+#   2026-10-22.1    consequence_explanation and counterfactual_trace gained
+#                   a correct-answer contract. The call was already made on
+#                   every submission, but both fields were defined only as
+#                   what goes wrong with the student's choice, so on a
+#                   correct answer the model rightly returned nothing and
+#                   the student who answered well was taught least.
+PROMPT_VERSION = "2026-10-22.1"
 
 # Frames a deterministic AI Challenge for the student (Week 2 2D). The model
 # sees only the case's authored explanation, never the data, and writes one
@@ -155,19 +161,38 @@ the correct value - including any measured count in the comparison
 context, which is there for your reasoning only. Explain what goes wrong
 with the option the student chose and point them at what to check, never
 at what to pick.
+When the answer is correct the student has already moved past the choice,
+so nothing is withheld: name the property their choice established or
+preserved, in terms of the values now in the state. Never praise and
+never label the answer - no "correct", "well done", "exactly", "good",
+"nice" or "that's right" - and never restate the rule back as a rule.
+Say something the student could not have read off the screen, or say
+less. "This answer was: correct" in the user message is what selects
+this case.
 
 Respond with ONLY valid JSON, no markdown code fences, matching exactly this
 schema, with the keys in exactly this order (consequence_explanation first -
 the student sees it as it is written):
 {
   "consequence_explanation": Two sentences maximum, written directly to
-    the student in second person. Explain what would go wrong with their
-    choice using the actual array values. Start with what their answer
-    would cause, not with a label. Example style: You chose to skip the
-    swap here, but notice that the value at index 1 (which is 7) is
-    still larger than the value at index 2 (which is 3). If we leave
-    them in this order, the 7 will stay in the wrong position and the
-    next pass will have to deal with it again.,
+    the student in second person, using the actual values in the state.
+    Never empty, whether the answer was correct or incorrect.
+    If the answer was incorrect: explain what would go wrong with their
+    choice. Start with what their answer would cause, not with a label.
+    Example style: You chose to skip the swap here, but notice that the
+    value at index 1 (which is 7) is still larger than the value at
+    index 2 (which is 3). If we leave them in this order, the 7 will
+    stay in the wrong position and the next pass will have to deal with
+    it again.
+    If the answer was correct: explain what their choice bought the
+    algorithm - the property it established or preserved, and why that
+    property holds now. Start with the action, not with a verdict. For a
+    junction about an invariant or about the whole structure rather than
+    one comparison, say what is now settled and what is still unknown.
+    Example style: Swapping here puts 3 before 7, so every pair you have
+    checked so far in this pass is in order. That is the property each
+    pass builds one comparison at a time, which is why the largest value
+    ends up at the end.,
   "counterfactual_trace": A two-sentence trace of what would happen to
     the algorithm state if the student's wrong answer were applied. Be
     specific: name the array values, indices, and what the array would
@@ -178,7 +203,10 @@ the student sees it as it is written):
     actually, hmm, or let me, and do not re-derive a value you already
     stated. If a value does not change because no swap happened, simply
     state that it stays the same; do not narrate the act of checking it.
-    If the answer is correct, return empty string. Example style: If we
+    If the answer is correct, trace the road not taken instead: what
+    would have happened had the student chosen a plausible alternative,
+    named explicitly ("had you left them"). Return empty string only if
+    this junction has no alternative worth tracing. Example style: If we
     skip this swap, the array becomes [..., 7, 3, ...] and the 7 remains
     at index 2. On the next inner loop iteration, the algorithm will
     compare 7 with the element at index 4, meaning this unsorted 7 will

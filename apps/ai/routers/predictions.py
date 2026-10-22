@@ -1274,11 +1274,16 @@ def _feedback_field_failures(
     the student has already read when only a later field fails.
 
     consequence_explanation and counterfactual_trace are capped at two
-    sentences and may be empty only when the answer was correct - the
-    prompt defines the explanation as what would go wrong with the
-    student's choice, so on a correct answer the model rightly leaves it
-    empty (requiring it there made 15 of 15 correct answers at
-    HIGH/MEDIUM/LOW retry and fall back in the A2.2 measurement).
+    sentences. consequence_explanation is never empty: the prompt gives it
+    a contract for each case (what goes wrong with the choice when wrong,
+    what the choice established when right), so there is always something
+    to write. An earlier version allowed it to be empty when correct,
+    which was right while the field was defined only against a wrong
+    answer - requiring it then made 15 of 15 correct answers at
+    HIGH/MEDIUM/LOW retry and fall back in the A2.2 measurement.
+    counterfactual_trace may still be empty when correct, where it traces
+    the road not taken and some junctions have no alternative worth
+    tracing; an empty one is simply not displayed.
     socratic_hint has a level-dependent word cap, and at HIGH must not plug
     in this step's actual comparison values - the point is for the student
     to apply the rule themselves. No field may use array notation the
@@ -1296,7 +1301,9 @@ def _feedback_field_failures(
             if why is None and scaffolding_level == ScaffoldingLevel.HIGH and not correct and isinstance(text, str):
                 why = "leaks_value" if _hint_leaks_comparison_value(text, current_state) else None
         else:
-            why = field_failure(text, max_sentences=2, allow_empty=correct)
+            why = field_failure(
+                text, max_sentences=2, allow_empty=correct and field == "counterfactual_trace"
+            )
         if why is None and leaks_answer is not None and isinstance(text, str) and leaks_answer(text):
             why = "answer_leak"
         if why is not None:

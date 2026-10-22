@@ -144,12 +144,21 @@ def test_feedback_failure_names_parse_and_notation_failures():
     assert _feedback_failure(notation, False, ScaffoldingLevel.LOW, None, "if arr[j] > arr[j+1]") == "socratic_hint.notation"
 
 
-def test_an_empty_explanation_is_valid_only_for_a_correct_answer():
-    # A2.2 measurement: 15 of 15 retries were correct answers whose
-    # explanation the model (rightly) left empty.
-    empty = {**VALID, "consequence_explanation": "", "counterfactual_trace": ""}
-    assert _feedback_failure(empty, True, ScaffoldingLevel.HIGH) is None
+def test_an_explanation_is_required_whether_the_answer_was_right_or_wrong():
+    # Was once "valid only for a correct answer", which was right while the
+    # field was defined only against a wrong answer: the A2.2 measurement
+    # found 15 of 15 retries were correct answers whose explanation the
+    # model rightly left empty. The field now has a contract for each case
+    # (see test_correct_answer_feedback.py), so empty is never usable.
+    empty = {**VALID, "consequence_explanation": ""}
+    assert _feedback_failure(empty, True, ScaffoldingLevel.HIGH) == "consequence_explanation.empty"
     assert _feedback_failure(empty, False, ScaffoldingLevel.HIGH) == "consequence_explanation.empty"
+
+
+def test_a_correct_answer_may_still_have_no_road_not_taken():
+    no_trace = {**VALID, "counterfactual_trace": ""}
+    assert _feedback_failure(no_trace, True, ScaffoldingLevel.HIGH) is None
+    assert _feedback_failure(no_trace, False, ScaffoldingLevel.HIGH) == "counterfactual_trace.empty"
 
 def test_a_response_cut_off_at_the_token_limit_is_retried_as_truncated():
     truncated = CallMetadata(latency_ms=1, input_tokens=1, output_tokens=400, stop_reason="max_tokens")
