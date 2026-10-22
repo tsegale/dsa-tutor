@@ -10,7 +10,7 @@ import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
 import { getHandsOnDragTarget } from '@/utils/handsOnDrag'
-import { extractMemoryView, extractSearchRange, extractShiftView, hex } from '@/utils/arrayOverlays'
+import { extractMemoryView, extractOperationLabel, extractSearchRange, extractShiftView, hex } from '@/utils/arrayOverlays'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 import { useResolveColour } from './useResolveColour'
 
@@ -70,6 +70,8 @@ const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 // whichever badge is taller - 32 put the max-value bar's label directly
 // under both (remediation doc 12C.3).
 const PADDING = 60
+/** Vertical room the operation banner needs above the chart. */
+const OPERATION_LABEL_SPACE = 34
 
 type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted' | 'eliminated'
 
@@ -332,6 +334,10 @@ export default function ArrayCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // What the run is doing, in words. Without it an inserted value simply
+  // appeared among the bars with nothing saying it was being inserted.
+  const operationLabel = useMemo(() => extractOperationLabel(snapshot?.dataStructureState), [snapshot])
+
   const bars = useMemo(() => {
     const values = extractDisplayValues(snapshot?.dataStructureState)
     if (values.length === 0) return []
@@ -347,7 +353,10 @@ export default function ArrayCanvas({
     const yScale = d3
       .scaleLinear()
       .domain([0, d3.max(heightValues) ?? 0])
-      .range([height - PADDING, PADDING])
+      // The chart starts lower when the operation banner is above it: the
+      // tallest bar's value label would otherwise be drawn straight
+      // through the banner's second line.
+      .range([height - PADDING, PADDING + (operationLabel ? OPERATION_LABEL_SPACE : 0)])
 
     const bandwidth = xScale.bandwidth()
 
@@ -365,7 +374,7 @@ export default function ArrayCanvas({
         height: barHeight,
       }
     })
-  }, [snapshot, width, height])
+  }, [snapshot, width, height, operationLabel])
 
   const twoPointer = useMemo(
     () => (canvasType === CanvasType.TWO_POINTER ? extractTwoPointer(snapshot?.dataStructureState) : { left: null, right: null }),
@@ -486,7 +495,8 @@ export default function ArrayCanvas({
 
   return (
     <>
-    <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between">
+    <div className="absolute top-2 right-3 left-3 z-10 flex flex-col gap-1">
+    <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
         <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
@@ -508,6 +518,16 @@ export default function ArrayCanvas({
           </div>
         ))}
       </div>
+    </div>
+    {operationLabel && (
+      // In the header's own column, so it cannot land on the progress row
+      // above it or on the tallest bar's value label below (the chart
+      // makes room for it - see OPERATION_LABEL_SPACE).
+      <div className="max-w-[72%]">
+        <p className="text-small font-semibold text-ink">{operationLabel.headline}</p>
+        <p className="text-micro text-ink-2">{operationLabel.detail}</p>
+      </div>
+    )}
     </div>
     <svg width={width} height={height} role="img" aria-label={canvasLabel}>
       <style>{`

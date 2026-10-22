@@ -134,3 +134,51 @@ export function extractShiftView(state: unknown, length: number): ShiftView | nu
   const targetIndex = num(raw, 'targetIndex')
   return { operation, direction, from, to, targetIndex: targetIndex ?? from }
 }
+
+/**
+ * What this run is doing to the array, in words.
+ *
+ * The array operation canvases drew bars and a shift arrow and never said
+ * what the operation was. A student watching Array Insertion saw the bars
+ * slide and a 99 appear at index 2, with nothing anywhere stating that 99
+ * was being inserted there - so the value arrived from nowhere, and Array
+ * Access highlighted a bar without saying what was being accessed or why
+ * that index. The engines have carried the operation, the index and the
+ * value the whole time; nothing was reading them.
+ *
+ * Null for every other topic: a sort is not an operation on one index.
+ */
+export interface ArrayOperationLabel {
+  /** "Inserting 99 at index 2" */
+  headline: string
+  /** Why this operation costs what it costs. */
+  detail: string
+}
+
+export function extractOperationLabel(state: unknown): ArrayOperationLabel | null {
+  const raw = asState(state)
+  if (!raw) return null
+  const index = num(raw, 'targetIndex')
+  if (index === null) return null
+  const value = num(raw, 'operationValue')
+
+  switch (raw.operation) {
+    case 'access':
+      return {
+        headline: `Reading the element at index ${index}`,
+        detail: 'One address calculation, no searching: that is what makes access O(1).',
+      }
+    case 'insert':
+      return {
+        headline: value === null ? `Inserting a value at index ${index}` : `Inserting ${value} at index ${index}`,
+        detail: `Every element from index ${index} onwards shifts one place right to make room.`,
+      }
+    case 'delete':
+      return {
+        headline: value === null ? `Deleting the element at index ${index}` : `Deleting ${value} from index ${index}`,
+        detail: `Every element after index ${index} shifts one place left to close the gap.`,
+      }
+    default:
+      return null
+  }
+}
