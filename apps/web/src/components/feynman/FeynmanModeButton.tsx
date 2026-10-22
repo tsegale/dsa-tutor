@@ -17,9 +17,10 @@ export function BrainIcon() {
 }
 
 /**
- * Feynman mode on demand (Phase 8A): locked until a Practice run of the
- * topic is complete, then always available, here and from the rail. A
- * locked or unavailable button always says why in its tooltip.
+ * Feynman mode on demand (Phase 8A): available from the start, here and
+ * from the rail. It used to wait on a completed Practice run; the only
+ * remaining reason it is not offered is a topic with no reviewed rubric,
+ * and the disabled button says so in its tooltip.
  */
 export default function FeynmanModeButton() {
   const { state, reason } = useFeynmanAccess()

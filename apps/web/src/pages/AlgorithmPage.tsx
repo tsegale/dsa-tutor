@@ -19,7 +19,6 @@ import { REQUEST_SESSION_EXIT_EVENT, requestSessionExit, type SessionExitDetail 
 import { ShellNavigation } from '@/components/layout/shellNavigation'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
 import { MotionPreference } from '@/components/layout/MotionPreference'
-import { SoftLockNotice } from '@/components/curriculum/SoftLockNotice'
 import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
@@ -1149,7 +1148,6 @@ function AlgorithmWorkspace() {
     return (
       <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
         <TopBar />
-        <SoftLockNotice topicName={algorithmNameParam} />
         <div className="relative flex-1 overflow-hidden">
           {compactTab === 'canvas' && (
             <div className="relative h-full w-full overflow-hidden" data-canvas-area>
@@ -1220,7 +1218,6 @@ function AlgorithmWorkspace() {
       <div className="shrink-0">
         <TopBar />
       </div>
-      <SoftLockNotice topicName={algorithmNameParam} />
 
       <div className="flex min-h-0 flex-1">
       {/* The curriculum rail sits outside the resizable group, so it never

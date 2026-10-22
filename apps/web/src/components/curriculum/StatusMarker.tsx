@@ -6,7 +6,6 @@ import type { TopicState } from '@/utils/moduleStatus'
 //   complete     check in the success colour (the success-with-checkmark rule)
 //   in progress  filled brand dot; the focus topic adds a slow pulse ring
 //   available    hollow ring
-//   locked       padlock
 // Success, not --state-sorted: the state palette is reserved for canvases.
 
 export function StatusMarker({ state, pulse = false, className }: { state: TopicState; pulse?: boolean; className?: string }) {
@@ -33,12 +32,6 @@ export function StatusMarker({ state, pulse = false, className }: { state: Topic
             <circle cx="7" cy="7" r="5" fill="var(--surface)" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </>
-      )}
-      {state === 'locked' && (
-        <svg viewBox="0 0 14 14" className="size-3.5 text-ink-3">
-          <rect x="2.75" y="6.25" width="8.5" height="6" rx="1.25" fill="none" stroke="currentColor" strokeWidth="1.4" />
-          <path d="M4.75 6.25V4.6a2.25 2.25 0 0 1 4.5 0v1.65" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        </svg>
       )}
     </span>
   )

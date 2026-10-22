@@ -67,13 +67,15 @@ describe('pipelineFor', () => {
     expect(statusOf(stages, 'PRACTICE')).toBe('AVAILABLE')
   })
 
-  it('locks Hands-on and Code behind a completed Practice run', () => {
+  it('opens Hands-on and Code without a completed Practice run', () => {
+    // Both used to be LOCKED behind "Finish a Practice run first." Nothing
+    // in the app gates a stage on another stage any more.
     const stages = pipelineFor(input({ slug: 'bubble-sort' }))
-    expect(statusOf(stages, 'HANDS_ON')).toBe('LOCKED')
-    expect(statusOf(stages, 'CODE')).toBe('LOCKED')
+    expect(statusOf(stages, 'HANDS_ON')).toBe('AVAILABLE')
+    expect(statusOf(stages, 'CODE')).toBe('AVAILABLE')
   })
 
-  it('opens them once Practice is done', () => {
+  it('leaves them open once Practice is done', () => {
     const stages = pipelineFor(input({ slug: 'bubble-sort', practiceCompleted: true }))
     expect(statusOf(stages, 'HANDS_ON')).toBe('AVAILABLE')
     expect(statusOf(stages, 'CODE')).toBe('AVAILABLE')
@@ -136,9 +138,12 @@ describe('pipelineFor', () => {
       expect(statusOf(stages, 'HANDS_ON')).toBe('NOT_OFFERED')
     })
 
-    it('locks, rather than hides, when a run is still needed', () => {
-      const stages = pipelineFor(input({ feynmanReason: 'Finish a Practice run first.' }))
-      expect(statusOf(stages, 'FEYNMAN')).toBe('LOCKED')
+    it('is not offered, with a reason, when it is unavailable at all', () => {
+      // There is no longer a run to wait for, so the only unavailable case
+      // is permanent and says so rather than inviting the student to earn it.
+      const stages = pipelineFor(input({ feynmanReason: null }))
+      expect(statusOf(stages, 'FEYNMAN')).toBe('NOT_OFFERED')
+      expect(stages.find((s) => s.id === 'FEYNMAN')?.reason).toBeTruthy()
     })
 
     it('is not offered when the topic has no rubric', () => {
@@ -160,7 +165,7 @@ describe('pipelineFor', () => {
     for (const slug of MODULES.flatMap((module) => module.topics)) {
       for (const stages of [pipelineFor(input({ slug })), pipelineFor(input({ slug, practiceCompleted: true }))]) {
         for (const stage of stages) {
-          if (stage.status === 'LOCKED' || stage.status === 'NOT_OFFERED') {
+          if (stage.status === 'NOT_OFFERED') {
             expect(stage.reason, `${slug} ${stage.id}`).toBeTruthy()
           } else {
             expect(stage.reason, `${slug} ${stage.id}`).toBeNull()
@@ -239,18 +244,17 @@ describe('Code Mode coverage', () => {
 describe('stageOffer, the rule the mode switcher follows', () => {
   const slugs = MODULES.flatMap((module) => module.topics)
 
-  it('refuses Hands-On until a Practice run is done, on every topic that has one', () => {
-    // The regression this exists for: the switcher read HANDS_ON_ACTIVE
-    // directly, which says a gesture exists, not that the student has
-    // reached it. Hands-On stayed clickable beside a tracker reading
-    // "Finish a Practice run first", and entering it did nothing.
+  it('offers Hands-On straight away on every topic that has one', () => {
+    // It used to be refused until a Practice run was done. The switcher and
+    // the tracker still have to agree - the regression this came from was
+    // Hands-On staying clickable beside a tracker that said it was locked -
+    // but now they agree on "open".
     for (const slug of slugs.filter((s) => HANDS_ON_ACTIVE.has(s))) {
-      const before = stageOffer(pipelineFor(input({ slug, practiceCompleted: false })), 'HANDS_ON')
-      expect(before.enabled, slug).toBe(false)
-      expect(before.reason, slug).toBeTruthy()
-
-      const after = stageOffer(pipelineFor(input({ slug, practiceCompleted: true })), 'HANDS_ON')
-      expect(after.enabled, slug).toBe(true)
+      for (const practiceCompleted of [false, true]) {
+        const offer = stageOffer(pipelineFor(input({ slug, practiceCompleted })), 'HANDS_ON')
+        expect(offer.enabled, `${slug}/${practiceCompleted}`).toBe(true)
+        expect(offer.reason, `${slug}/${practiceCompleted}`).toBeNull()
+      }
     }
   })
 

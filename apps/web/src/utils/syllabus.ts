@@ -1,6 +1,6 @@
 import type { TopicDto } from '@dsa-tutor/types'
 import { MODULES, type Module } from '@/config/curriculum'
-import { canOpen, isPreview, lockReason, moduleStatus, topicNumber, topicState, type ModuleStatus, type TopicState } from './moduleStatus'
+import { moduleStatus, topicNumber, topicState, type ModuleStatus, type TopicState } from './moduleStatus'
 
 // The curriculum as the rail and the module pages show it: modules in
 // order, each with its numbered topics and their states. Pure, so the panel
@@ -11,12 +11,6 @@ export interface SyllabusTopic {
   /** "3.4" */
   number: string
   state: TopicState
-  /** False only under a hard lock (the API's, or hardLocks). */
-  openable: boolean
-  /** A locked module's first topic: open, and labelled as a preview. */
-  preview: boolean
-  /** Plain-language reason when locked, else null. */
-  reason: string | null
 }
 
 export interface SyllabusModule {
@@ -42,17 +36,11 @@ export function buildSyllabus(topics: readonly TopicDto[]): SyllabusModule[] {
     return {
       module,
       status,
-      topics: own.map(({ topic, index }) => {
-        const state = topicState(topic, status, module)
-        return {
-          topic,
-          number: topicNumber(module, index),
-          state,
-          openable: canOpen(topic, status, module),
-          preview: isPreview(topic, status, module),
-          reason: state === 'locked' ? lockReason(topic, status) : null,
-        }
-      }),
+      topics: own.map(({ topic, index }) => ({
+        topic,
+        number: topicNumber(module, index),
+        state: topicState(topic),
+      })),
     }
   }).filter((entry) => entry.topics.length > 0)
 }
@@ -124,10 +112,9 @@ export interface LearningPlan {
 
 /**
  * The first incomplete topic at or after the furthest one reached, never
- * earlier: recommending 1.1 after work on 1.7 would point backwards. Topics
- * whose module is still locked are passed over while an open one exists
- * further on; with no progress at all the search starts from the beginning.
- * Returns null when nothing incomplete lies at or after that point.
+ * earlier: recommending 1.1 after work on 1.7 would point backwards. With no
+ * progress at all the search starts from the beginning. Returns null when
+ * nothing incomplete lies at or after that point.
  */
 export function nextInSequence(sequence: readonly SyllabusTopic[]): SyllabusTopic | null {
   let furthest = -1
@@ -135,8 +122,7 @@ export function nextInSequence(sequence: readonly SyllabusTopic[]): SyllabusTopi
     if (entry.topic.masteryPercent > 0) furthest = index
   })
   const ahead = sequence.slice(Math.max(furthest, 0))
-  const incomplete = ahead.filter((entry) => entry.state !== 'complete' && entry.openable)
-  return incomplete.find((entry) => entry.state !== 'locked') ?? incomplete[0] ?? null
+  return ahead.find((entry) => entry.state !== 'complete') ?? null
 }
 
 export function planNext(
@@ -152,7 +138,7 @@ export function planNext(
   // loading the page, not by a test: every unit test passes a well-formed
   // session, because a test author knows the shape.
   const resumeName = latest?.topic?.name ?? null
-  const resumable = resumeName ? sequence.find((entry) => entry.topic.name === resumeName && entry.openable) : undefined
+  const resumable = resumeName ? sequence.find((entry) => entry.topic.name === resumeName) : undefined
   const furthest = [...sequence].reverse().find((entry) => entry.topic.masteryPercent > 0) ?? null
   const recommended = nextInSequence(sequence)
   const resume = resumable && latest?.startTime ? { entry: resumable, startTime: latest.startTime } : null

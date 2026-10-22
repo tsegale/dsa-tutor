@@ -14,6 +14,7 @@
  */
 
 import { CODE_CHALLENGES, hasCodeChallenge } from '@/config/codeChallenges'
+import { FEYNMAN_NO_RUBRIC_REASON } from '@/utils/feynmanAccess'
 
 export type PipelineStageId = 'DEMO' | 'PRACTICE' | 'HANDS_ON' | 'CODE' | 'FEYNMAN'
 
@@ -22,8 +23,6 @@ export type StageStatus =
   | 'DONE'
   /** Open now. */
   | 'AVAILABLE'
-  /** Real on this topic, but something has to happen first. */
-  | 'LOCKED'
   /** Not offered on this topic at all, and never will be. */
   | 'NOT_OFFERED'
 
@@ -33,7 +32,7 @@ export interface PipelineStage {
   /** One line: what the student does in this stage. */
   summary: string
   status: StageStatus
-  /** Why it is locked or not offered. Null when it is open. */
+  /** Why it is not offered. Null when it is open. */
   reason: string | null
 }
 
@@ -262,8 +261,8 @@ export function pipelineFor(input: PipelineInput): PipelineStage[] {
   return [
     stage('DEMO', demoDone ? 'DONE' : 'AVAILABLE', null),
     practiceStage(slug, practiceDone),
-    handsOnStage(slug, practiceDone),
-    codeStage(slug, practiceDone),
+    handsOnStage(slug),
+    codeStage(slug),
     feynmanStage(input),
   ]
 }
@@ -285,7 +284,7 @@ function practiceStage(slug: string, practiceDone: boolean): PipelineStage {
   return stage('PRACTICE', practiceDone ? 'DONE' : 'AVAILABLE', null)
 }
 
-function handsOnStage(slug: string, practiceDone: boolean): PipelineStage {
+function handsOnStage(slug: string): PipelineStage {
   if (NO_HANDS_ON.has(slug)) {
     return stage('HANDS_ON', 'NOT_OFFERED', 'This algorithm has no step to carry out by hand. Write it in Code instead.')
   }
@@ -302,12 +301,10 @@ function handsOnStage(slug: string, practiceDone: boolean): PipelineStage {
   if (!HANDS_ON_ACTIVE.has(slug)) {
     return stage('HANDS_ON', 'NOT_OFFERED', 'Not available for this algorithm.')
   }
-  return practiceDone
-    ? stage('HANDS_ON', 'AVAILABLE', null)
-    : stage('HANDS_ON', 'LOCKED', 'Finish a Practice run first.')
+  return stage('HANDS_ON', 'AVAILABLE', null)
 }
 
-function codeStage(slug: string, practiceDone: boolean): PipelineStage {
+function codeStage(slug: string): PipelineStage {
   if (!hasCodeMode(slug)) {
     return stage(
       'CODE',
@@ -319,18 +316,16 @@ function codeStage(slug: string, practiceDone: boolean): PipelineStage {
         : 'No code challenge written for this topic yet.',
     )
   }
-  return practiceDone
-    ? stage('CODE', 'AVAILABLE', null)
-    : stage('CODE', 'LOCKED', 'Finish a Practice run first.')
+  return stage('CODE', 'AVAILABLE', null)
 }
 
 function feynmanStage(input: PipelineInput): PipelineStage {
   if (input.feynmanAvailable) return stage('FEYNMAN', 'AVAILABLE', null)
-  // No rubric is permanent for this topic; anything else is a lock that
-  // will lift once the student does the thing the reason names.
-  const reason = input.feynmanReason
-  const permanent = reason !== null && /not (?:available|written)/i.test(reason)
-  return stage('FEYNMAN', permanent ? 'NOT_OFFERED' : 'LOCKED', reason ?? 'Finish a Practice run first.')
+  // The only remaining reason is that this topic has no reviewed rubric,
+  // which is permanent: there is nothing the student could do to lift it.
+  // Never null - a stage that is not on offer always says why, or the mode
+  // switcher's tooltip is blank (see the agreement test in pipeline.test.ts).
+  return stage('FEYNMAN', 'NOT_OFFERED', input.feynmanReason ?? FEYNMAN_NO_RUBRIC_REASON)
 }
 
 /**

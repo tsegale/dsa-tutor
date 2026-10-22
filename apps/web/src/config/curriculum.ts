@@ -1,10 +1,9 @@
 import { AlgorithmTrack } from '@dsa-tutor/types'
 
 // The curriculum as a syllabus: six numbered modules, each drawing on one
-// existing track, with prerequisites between them. The single source of
-// truth for module order, numbering, titles and gating. No database change:
-// this is ordering, grouping and prerequisites over the topics the API
-// already returns.
+// existing track. The single source of truth for module order, numbering
+// and titles. No database change, and no gating: this is ordering and
+// grouping over the topics the API already returns.
 
 export interface Module {
   /** 1-6, displayed. */
@@ -16,14 +15,6 @@ export interface Module {
   subtitle: string
   /** The existing track this module draws its topics from. */
   track: AlgorithmTrack
-  /** Module ids that must be met before this one opens. */
-  prerequisites: string[]
-  /**
-   * How many of this module's topics must be complete for it to count as met
-   * when another module lists it as a prerequisite. A count of specific
-   * work, as a real syllabus states it, not a mean over the whole module.
-   */
-  unlockCount: number
   /**
    * The module's topics (API topic names) in syllabus order. Numbering comes
    * from here (index 0 is N.1), so a study participant who sees one topic of
@@ -35,19 +26,15 @@ export interface Module {
 
 /**
  * A topic is complete at this mastery (%). One line, so these always agree:
- * the check marker, "N/M complete", Review, a green mastery ring, a module
- * being complete (every topic), and a prerequisite being met (unlockCount of
- * its topics complete).
+ * the check marker, "N/M complete", Review, a green mastery ring, and a
+ * module being complete (every topic).
  */
 export const TOPIC_COMPLETE = 60
 
-/**
- * Soft locks by default: a locked topic is shown as locked, with its
- * prerequisite named, but still opens (the workspace shows a one-line
- * notice). Set true to gate for real. A topic the API marks isLocked is
- * always hard-locked, whatever this says.
- */
-export const hardLocks = false
+// Modules are ordering and grouping only. They used to carry prerequisites
+// and an unlockCount, which gated later modules until enough earlier topics
+// were complete; every topic now opens from the start, so the module list is
+// a suggested path and nothing more.
 
 export const MODULES: readonly Module[] = [
   {
@@ -56,8 +43,6 @@ export const MODULES: readonly Module[] = [
     title: 'Linear structures',
     subtitle: 'Arrays, linked lists, stacks, queues, hash tables and recursion.',
     track: AlgorithmTrack.FOUNDATIONS,
-    prerequisites: [],
-    unlockCount: 3,
     topics: [
       'array-access',
       'array-insert',
@@ -81,8 +66,6 @@ export const MODULES: readonly Module[] = [
     title: 'Searching',
     subtitle: 'Finding a value faster by exploiting order: halving, jumping and estimating.',
     track: AlgorithmTrack.SEARCHING,
-    prerequisites: ['linear-structures'],
-    unlockCount: 2,
     topics: [
       'linear-search',
       'binary-search',
@@ -97,8 +80,6 @@ export const MODULES: readonly Module[] = [
     title: 'Sorting',
     subtitle: 'From adjacent swaps to divide and conquer to sorting without comparisons.',
     track: AlgorithmTrack.SORTING,
-    prerequisites: ['linear-structures'],
-    unlockCount: 2,
     topics: [
       'bubble-sort',
       'selection-sort',
@@ -117,8 +98,6 @@ export const MODULES: readonly Module[] = [
     title: 'Algorithmic techniques',
     subtitle: 'Nine patterns for turning a nested loop, or an exponential search, into something that finishes.',
     track: AlgorithmTrack.TECHNIQUES,
-    prerequisites: ['searching', 'sorting'],
-    unlockCount: 2,
     topics: [
       // Ordered as a route, not alphabetically: each one needs the idea
       // before it. The three paradigms at the end solve problems the
@@ -143,8 +122,6 @@ export const MODULES: readonly Module[] = [
     title: 'Hierarchical structures',
     subtitle: 'Search trees, traversals, self-balancing trees, heaps and tries.',
     track: AlgorithmTrack.TREES,
-    prerequisites: ['linear-structures'],
-    unlockCount: 2,
     topics: [
       'bst',
       'bst-search',
@@ -172,8 +149,6 @@ export const MODULES: readonly Module[] = [
     title: 'Graphs and networks',
     subtitle: 'Traversal, shortest paths, spanning trees and path-finding on grids and mazes.',
     track: AlgorithmTrack.GRAPHS,
-    prerequisites: ['hierarchical-structures'],
-    unlockCount: 2,
     topics: [
       'bfs',
       'dfs',

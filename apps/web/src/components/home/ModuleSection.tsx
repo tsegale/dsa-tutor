@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { cn } from '@/lib/utils'
 import { moduleLabel } from '@/config/curriculum'
-import { unmetLabel } from '@/utils/moduleStatus'
 import type { SyllabusModule, SyllabusTopic } from '@/utils/syllabus'
 import { Progress } from '@/components/ui/progress'
-import { ChevronIcon, LockIcon } from '@/components/curriculum/icons'
+import { ChevronIcon } from '@/components/curriculum/icons'
 
 /** Topics an expanded section shows before "Show all N" (Phase 5B). */
 export const INITIAL_TOPICS = 9
@@ -39,7 +37,6 @@ export function ModuleSection({
   const { module, status, topics } = entry
   const headingId = `module-${module.number}-heading`
   const bodyId = `module-${module.number}-topics`
-  const locked = status.state === 'locked' && status.unmet
   const [showAll, setShowAll] = useState(showAllTopics)
   const [revealed, setRevealed] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -56,24 +53,15 @@ export function ModuleSection({
 
   const summary = (
     <span className="flex shrink-0 items-center gap-3">
-      {locked ? (
-        <span className="flex items-center gap-1.5 text-small text-ink-2">
-          <LockIcon />
-          {unmetLabel(status.unmet!)}
-        </span>
-      ) : (
-        <>
-          <Progress
-            value={status.total ? (status.complete / status.total) * 100 : 0}
-            tone={status.state === 'complete' ? 'success' : 'brand'}
-            className="hidden h-1.5 w-32 sm:block"
-            aria-hidden="true"
-          />
-          <span className="text-mono-sm whitespace-nowrap text-ink-2">
-            {status.complete}/{status.total} · {status.mean}%
-          </span>
-        </>
-      )}
+      <Progress
+        value={status.total ? (status.complete / status.total) * 100 : 0}
+        tone={status.state === 'complete' ? 'success' : 'brand'}
+        className="hidden h-1.5 w-32 sm:block"
+        aria-hidden="true"
+      />
+      <span className="text-mono-sm whitespace-nowrap text-ink-2">
+        {status.complete}/{status.total} · {status.mean}%
+      </span>
     </span>
   )
 
@@ -83,7 +71,7 @@ export function ModuleSection({
       <span aria-hidden="true" className="text-ink-3">
         ·
       </span>
-      <span className={cn('min-w-0 text-h2', locked ? 'text-ink-2' : 'text-ink')}>{module.title}</span>
+      <span className="min-w-0 text-h2 text-ink">{module.title}</span>
     </span>
   )
 

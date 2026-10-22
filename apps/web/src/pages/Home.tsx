@@ -156,7 +156,7 @@ function Modules({ syllabus, plan, userId }: { syllabus: SyllabusModule[]; plan:
               expanded={expanded.has(entry.module.id)}
               onToggle={() => toggle(entry.module.id)}
               renderTopics={(topics, firstRevealed) => (
-                <TopicGrid topics={topics} next={next} buildsOn={entry.status.state === 'locked' ? (entry.status.unmet?.module ?? null) : null} firstRevealed={firstRevealed} />
+                <TopicGrid topics={topics} next={next} firstRevealed={firstRevealed} />
               )}
             />
           )
@@ -183,7 +183,7 @@ function StudyTopics({ syllabus, plan }: { syllabus: SyllabusModule[]; plan: Lea
         <p className="mt-1 text-small text-ink-2">These are the topics in your study. Each one opens the same way as in the full curriculum.</p>
       </div>
       <div id="curriculum-tracks">
-        <TopicGrid topics={rows} next={next} buildsOn={null} />
+        <TopicGrid topics={rows} next={next} />
       </div>
     </section>
   )

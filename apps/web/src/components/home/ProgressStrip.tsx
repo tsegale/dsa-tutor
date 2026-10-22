@@ -7,7 +7,7 @@ import { masteryIndex, overallSupport } from '@/utils/supportBand'
 // The four stats the old dashboard showed as large coloured tiles, folded
 // into one quiet row: context for the Continue card, never the headline.
 // Same sources and rules as before (StatsBanner): mastery is the mean over
-// unlocked topics, and "resolved" counts misconception events the
+// topics, and "resolved" counts misconception events the
 // deterministic resolve rule closed, not merely wrong answers.
 export function ProgressStrip({ user, topics }: { user: UserProfile; topics: TopicDto[] }) {
   const { data: misconceptionSummary } = useQuery({

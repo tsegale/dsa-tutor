@@ -48,27 +48,22 @@ describe('buildSyllabus', () => {
     const study = [topic('bubble-sort', AlgorithmTrack.SORTING), topic('binary-search', AlgorithmTrack.SEARCHING), topic('bst', AlgorithmTrack.TREES)]
     const syllabus = buildSyllabus(study)
     expect(syllabus.map((m) => `${m.module.number} ${m.status.total}`)).toEqual(['2 1', '3 1', '5 1'])
-    expect(syllabus.every((m) => m.status.state !== 'locked')).toBe(true)
+    expect(syllabus.every((m) => m.status.state === 'available')).toBe(true)
   })
 
-  it('opens a locked module only at its first topic, as a preview; the rest are locked but still openable', () => {
-    // Three Module 1 topics visible, one complete, three needed: Searching is locked.
+  it('opens every topic of a later module with no earlier work done', () => {
+    // Module 2 used to be locked here (1 of 3 Module 1 topics complete), with
+    // only its first topic open as a preview. There is no prerequisite rule
+    // any more, so every topic of it opens from the start.
     const topics = [...FULL, topic('queue', AlgorithmTrack.FOUNDATIONS), topic('binary-search', AlgorithmTrack.SEARCHING)]
     const searching = buildSyllabus(topics).find((m) => m.module.id === 'searching')!
-    expect(searching.status.state).toBe('locked')
-    expect(searching.topics[0]).toMatchObject({ number: '2.1', state: 'available', preview: true, openable: true, reason: null })
-    expect(searching.topics[1]).toMatchObject({
-      number: '2.2',
-      state: 'locked',
-      preview: false,
-      openable: true,
-      reason: 'Complete 3 topics in Module 1 to unlock (1 done).',
-    })
+    expect(searching.status.state).toBe('available')
+    expect(searching.topics[0]).toMatchObject({ number: '2.1', state: 'available' })
   })
 
-  it('never opens a topic the API locked', () => {
+  it('opens a topic the API still flags as locked, since the flag gates nothing', () => {
     const syllabus = buildSyllabus([topic('array-access', AlgorithmTrack.FOUNDATIONS, 0, true)])
-    expect(syllabus[0].topics[0]).toMatchObject({ state: 'locked', openable: false })
+    expect(syllabus[0].topics[0]).toMatchObject({ state: 'available' })
   })
 })
 
@@ -155,14 +150,15 @@ describe('planNext', () => {
     expect(plan.recommended?.topic.name).toBe('stack')
   })
 
-  it('steps into a locked module only through its open preview', () => {
-    // 1.8 Queue complete; Module 2 is locked (1 of 3), so 2.1 is its preview.
-    expect(planNext(curriculum({ queue: 100 }), null).recommended).toMatchObject({ number: '2.1', preview: true })
+  it('moves on to the next module once the work so far is complete', () => {
+    // 1.8 Queue complete, so the next incomplete topic in sequence is 2.1 -
+    // recommended because it comes next, not because a module unlocked.
+    expect(planNext(curriculum({ queue: 100 }), null).recommended).toMatchObject({ number: '2.1' })
   })
 
-  it('skips a topic the API hard-locked', () => {
+  it('recommends a topic the API flags as locked rather than skipping it', () => {
     const syllabus = buildSyllabus([topic('array-access', AlgorithmTrack.FOUNDATIONS, 0, true), topic('array-insert', AlgorithmTrack.FOUNDATIONS)])
-    expect(planNext(syllabus, null).recommended?.topic.name).toBe('array-insert')
+    expect(planNext(syllabus, null).recommended?.topic.name).toBe('array-access')
   })
 
   it('gives each module its own next topic by the same rule', () => {

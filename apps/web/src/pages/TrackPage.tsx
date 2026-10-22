@@ -154,7 +154,7 @@ export default function TrackPage() {
           headingLevel="h1"
           showAllTopics
           renderTopics={(topics) => (
-            <TopicGrid topics={topics} next={next} buildsOn={entry.status.state === 'locked' ? (entry.status.unmet?.module ?? null) : null} />
+            <TopicGrid topics={topics} next={next} />
           )}
         />
       )}

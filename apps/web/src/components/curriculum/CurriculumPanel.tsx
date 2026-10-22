@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useLearningPlan } from '@/hooks/useLearningPlan'
 import { topicPath } from '@/data/tracks'
 import { moduleLabel } from '@/config/curriculum'
-import { TOPIC_STATE_LABEL, unmetLabel } from '@/utils/moduleStatus'
+import { TOPIC_STATE_LABEL } from '@/utils/moduleStatus'
 import { defaultExpandedModule, expandedStorageKey, readExpanded, writeExpanded, type SyllabusModule } from '@/utils/syllabus'
 import { useShellNavigate } from '@/components/layout/shellNavigation'
 import { Progress, ProgressRing } from '@/components/ui/progress'
@@ -16,7 +16,7 @@ import { MasteryMark } from '@/components/mastery/MasteryMark'
 import { BrainIcon } from '@/components/feynman/FeynmanModeButton'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
-import { ChevronIcon, LockIcon } from './icons'
+import { ChevronIcon } from './icons'
 
 // The curriculum as a syllabus, in a persistent left rail: one accordion
 // section per module, numbered topics joined by a connector, a status marker
@@ -138,14 +138,14 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', cla
                   setPanelCollapsed(false)
                   if (!expanded.has(module.id)) toggleModule(module.id)
                 }}
-                aria-label={`${moduleLabel(module)}, ${status.complete} of ${status.total} complete${status.state === 'locked' ? ', locked' : ''}`}
+                aria-label={`${moduleLabel(module)}, ${status.complete} of ${status.total} complete`}
                 className="relative flex size-9 items-center justify-center rounded-full"
               >
                 {/* The button's label already states the progress. */}
                 <span aria-hidden="true" className="pointer-events-none">
                   <ProgressRing value={status.total ? (status.complete / status.total) * 100 : 0} size={32} strokeWidth={3} showValue={false} tone={status.state === 'complete' ? 'success' : 'brand'} />
                 </span>
-                <span aria-hidden="true" className={cn('absolute text-mono-sm', status.state === 'locked' ? 'text-ink-3' : 'text-ink')}>
+                <span aria-hidden="true" className="absolute text-mono-sm text-ink">
                   {module.number}
                 </span>
               </button>
@@ -230,7 +230,6 @@ function ModuleSection({
 }) {
   const { module, status, topics } = entry
   const bodyId = useId()
-  const locked = status.state === 'locked'
 
   return (
     <section aria-labelledby={`${bodyId}-heading`}>
@@ -246,57 +245,42 @@ function ModuleSection({
             {/* The title wraps rather than truncating: it is the module's name. */}
             <span className="flex items-baseline gap-2">
               <span className="shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
-              <span className={cn('min-w-0 text-small font-semibold', locked ? 'text-ink-2' : 'text-ink')}>{module.title}</span>
-              {locked && <LockIcon />}
+              <span className="min-w-0 text-small font-semibold text-ink">{module.title}</span>
             </span>
-            {/* The requirement shows once per module: on the header while the
-                module is collapsed, above its topic list once it is open. */}
-            {locked && status.unmet && !open ? (
-              <span className="text-micro text-ink-2">{unmetLabel(status.unmet)}</span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Progress
-                  value={status.total ? (status.complete / status.total) * 100 : 0}
-                  tone={status.state === 'complete' ? 'success' : 'brand'}
-                  aria-label={`${moduleLabel(module)} progress`}
-                  className="h-1 flex-1"
-                />
-                <span className="shrink-0 text-mono-sm text-ink-2">
-                  {status.complete}/{status.total} · {status.mean}%
-                </span>
+            <span className="flex items-center gap-2">
+              <Progress
+                value={status.total ? (status.complete / status.total) * 100 : 0}
+                tone={status.state === 'complete' ? 'success' : 'brand'}
+                aria-label={`${moduleLabel(module)} progress`}
+                className="h-1 flex-1"
+              />
+              <span className="shrink-0 text-mono-sm text-ink-2">
+                {status.complete}/{status.total} · {status.mean}%
               </span>
-            )}
+            </span>
           </span>
           <ChevronIcon open={open} />
         </button>
       </h3>
 
-      {open && locked && status.unmet && <p className="mx-4 mb-2 text-micro text-ink-2">{unmetLabel(status.unmet)}</p>}
       {open && (
         <ol id={bodyId} aria-label={`${moduleLabel(module)} topics`} className="pb-2">
-          {topics.map(({ topic, number, state, openable, preview, reason }) => {
+          {topics.map(({ topic, number, state }) => {
             const isCurrent = topic.name === currentTopicName
             const content = (
               <>
-                <StatusMarker state={state} pulse={topic.name === focusTopicName && state !== 'complete' && state !== 'locked'} />
-                <span className={cn('w-8 shrink-0 text-mono-sm', state === 'locked' ? 'text-ink-3' : 'text-ink-2')}>{number}</span>
-                <span title={topic.displayName} className={cn('min-w-0 flex-1 truncate text-small', state === 'locked' ? 'text-ink-2' : 'text-ink', isCurrent && 'font-semibold')}>
+                <StatusMarker state={state} pulse={topic.name === focusTopicName && state !== 'complete'} />
+                <span className="w-8 shrink-0 text-mono-sm text-ink-2">{number}</span>
+                <span title={topic.displayName} className={cn('min-w-0 flex-1 truncate text-small text-ink', isCurrent && 'font-semibold')}>
                   {topic.displayName}
                 </span>
                 <MasteryMark status={topic.mastery.status} className="size-3.5" />
-                {preview ? (
-                  <span className="shrink-0 rounded-full bg-surface-sunk px-1.5 text-micro text-ink-2">Preview</span>
-                ) : (
-                  <span className="shrink-0 text-mono-sm text-ink-2">{topic.masteryPercent}%</span>
-                )}
-                <span className="sr-only">
-                  , {preview ? 'preview, open before the module unlocks' : TOPIC_STATE_LABEL[state]}
-                  {reason ? `. ${reason}` : ''}
-                </span>
+                <span className="shrink-0 text-mono-sm text-ink-2">{topic.masteryPercent}%</span>
+                <span className="sr-only">, {TOPIC_STATE_LABEL[state]}</span>
               </>
             )
             // Once a Practice run is complete, Feynman mode stays one click away.
-            const explainable = feynmanOnDemand && openable && topic.practiceRunCompleted && hasFeynmanRubric(topic.displayName)
+            const explainable = feynmanOnDemand && topic.practiceRunCompleted && hasFeynmanRubric(topic.displayName)
             const rowClass = cn(
               'flex h-8 min-w-0 flex-1 items-center gap-2.5 rounded-sm pr-3 pl-3',
               isCurrent ? 'bg-brand-soft' : 'hover:bg-surface-sunk'
@@ -309,26 +293,19 @@ function ModuleSection({
                 // drawn on the item itself so it reflows and collapses with it.
                 className="relative mx-2 flex items-center [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:top-[25px] [&:not(:last-child)]:after:left-[18.5px] [&:not(:last-child)]:after:h-3.5 [&:not(:last-child)]:after:w-px [&:not(:last-child)]:after:bg-rule [&:not(:last-child)]:after:content-['']"
               >
-                {openable ? (
-                  <Link
-                    to={topicPath(topic.name)}
-                    aria-current={isCurrent ? 'page' : undefined}
-                    title={reason ?? undefined}
-                    onClick={(event) => {
-                      // Route through the shell, so leaving a workspace
-                      // session asks for the session-end survey first.
-                      event.preventDefault()
-                      go(topicPath(topic.name))
-                    }}
-                    className={rowClass}
-                  >
-                    {content}
-                  </Link>
-                ) : (
-                  <span aria-disabled="true" title={reason ?? undefined} className={cn(rowClass, 'cursor-not-allowed')}>
-                    {content}
-                  </span>
-                )}
+                <Link
+                  to={topicPath(topic.name)}
+                  aria-current={isCurrent ? 'page' : undefined}
+                  onClick={(event) => {
+                    // Route through the shell, so leaving a workspace
+                    // session asks for the session-end survey first.
+                    event.preventDefault()
+                    go(topicPath(topic.name))
+                  }}
+                  className={rowClass}
+                >
+                  {content}
+                </Link>
                 {explainable && (
                   <Link
                     to={`/algorithm/${topic.name}?mode=PRACTICE&feynman=1`}

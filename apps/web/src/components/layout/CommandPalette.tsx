@@ -14,23 +14,14 @@ import { Button } from '@/components/ui/button'
 
 // Ctrl/Cmd+K over every topic the user can see (all of the curriculum, or a
 // participant's study topics). A combobox: focus stays in the input, the
-// arrow keys move the active option, Enter opens it. Locked topics are
-// listed with their reason but cannot be chosen.
+// arrow keys move the active option, Enter opens it. Every topic listed can
+// be chosen: nothing in the curriculum is withheld.
 
 function SearchIcon() {
   return (
     <svg className="size-4 shrink-0 text-ink-2" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="7" cy="7" r="4.75" stroke="currentColor" strokeWidth="1.5" />
       <path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg className="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   )
 }
@@ -61,18 +52,13 @@ export function CommandPalette({
     for (const { module, topics: rows } of buildSyllabus(topics)) for (const entry of rows) map.set(entry.topic.name, { entry, module })
     return map
   }, [topics])
-  // Soft-locked topics open (with a notice in the workspace); only a hard
-  // lock makes a result unselectable.
-  const isOpenable = (name: string) => syllabusByName.get(name)?.entry.openable ?? true
-  const selectable = useMemo(
-    () => results.map((r, i) => (syllabusByName.get(r.topic.name)?.entry.openable ?? true ? i : -1)).filter((i) => i >= 0),
-    [results, syllabusByName]
-  )
+  // Every result is selectable: nothing in the curriculum is withheld, so
+  // the palette never offers a topic it will not open.
 
   // A new query starts from the best match.
   useEffect(() => {
-    setActive(selectable[0] ?? -1)
-  }, [selectable])
+    setActive(results.length ? 0 : -1)
+  }, [results])
 
   // Each open starts fresh.
   useEffect(() => {
@@ -84,15 +70,14 @@ export function CommandPalette({
   }, [active])
 
   function move(step: number) {
-    if (selectable.length === 0) return
-    const position = selectable.indexOf(active)
-    const next = position === -1 ? 0 : (position + step + selectable.length) % selectable.length
-    setActive(selectable[next])
+    if (results.length === 0) return
+    const from = active === -1 ? 0 : active
+    setActive((from + step + results.length) % results.length)
   }
 
   function choose(index: number) {
     const match = results[index]
-    if (!match || !isOpenable(match.topic.name)) return
+    if (!match) return
     onOpenChange(false)
     onSelect(match.topic)
   }
@@ -104,12 +89,12 @@ export function CommandPalette({
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
       move(-1)
-    } else if (event.key === 'Home' && selectable.length) {
+    } else if (event.key === 'Home' && results.length) {
       event.preventDefault()
-      setActive(selectable[0])
-    } else if (event.key === 'End' && selectable.length) {
+      setActive(0)
+    } else if (event.key === 'End' && results.length) {
       event.preventDefault()
-      setActive(selectable[selectable.length - 1])
+      setActive(results.length - 1)
     } else if (event.key === 'Enter') {
       event.preventDefault()
       choose(active)
@@ -173,8 +158,6 @@ export function CommandPalette({
                 {results.map(({ topic }, index) => {
                   const isActive = index === active
                   const info = syllabusByName.get(topic.name)
-                  const locked = info?.entry.state === 'locked'
-                  const openable = info?.entry.openable ?? true
                   return (
                     <li
                       key={topic.id ?? topic.name}
@@ -182,24 +165,15 @@ export function CommandPalette({
                       data-index={index}
                       role="option"
                       aria-selected={isActive}
-                      aria-disabled={!openable || undefined}
-                      onMouseMove={() => openable && setActive(index)}
+                      onMouseMove={() => setActive(index)}
                       onClick={() => choose(index)}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2',
-                        isActive && 'bg-brand-soft',
-                        !openable && 'cursor-not-allowed opacity-60'
-                      )}
+                      className={cn('flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2', isActive && 'bg-brand-soft')}
                     >
                       <span className="w-9 shrink-0 text-mono-sm text-ink-2">{info?.entry.number}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-small font-medium text-ink">
-                          {topic.displayName}
-                          {locked && <span className="sr-only">, locked</span>}
-                        </p>
-                        <p className="truncate text-micro text-ink-2">{locked && info?.entry.reason ? info.entry.reason : topic.description}</p>
+                        <p className="truncate text-small font-medium text-ink">{topic.displayName}</p>
+                        <p className="truncate text-micro text-ink-2">{topic.description}</p>
                       </div>
-                      {locked && <LockIcon />}
                       <span className="shrink-0 text-micro text-ink-2">{info ? `Module ${info.module.number}` : ''}</span>
                     </li>
                   )
