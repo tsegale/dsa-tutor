@@ -196,7 +196,9 @@ describe('Practice mode narration auto-advance', () => {
     // is the clicking this was built to save.
     useAlgorithmStore.getState().stepForward()
 
-    vi.advanceTimersByTime(350 * (firstJunctionIndex + 1))
+    // Generous enough to cover the narration delay whatever it is set to;
+    // the assertion is where it stops, not how fast it got there.
+    vi.advanceTimersByTime(10_000 * (firstJunctionIndex + 1))
 
     expect(useAlgorithmStore.getState().stepIndex).toBe(firstJunctionIndex)
   })

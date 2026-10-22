@@ -22,12 +22,12 @@ export default function WorkedStepNotice({ narration, className }: { narration: 
       aria-live="polite"
       className={cn('rounded-md border-l-4 border-primary bg-primary-light p-2.5', className)}
     >
-      <p className="flex items-center gap-1.5 text-xs font-bold text-primary">
+      <p className="flex items-center gap-1.5 text-micro font-bold text-primary">
         <EyeIcon />
         Watch this one
       </p>
-      <p className="mt-0.5 text-[11px] text-text-muted">A worked example - nothing to answer. It moves on by itself.</p>
-      <p className="mt-1.5 text-xs text-text-primary">{narration}</p>
+      <p className="mt-0.5 text-micro text-text-muted">A worked example - nothing to answer. It moves on by itself.</p>
+      <p className="mt-1.5 text-body text-text-primary">{narration}</p>
     </div>
   )
 }

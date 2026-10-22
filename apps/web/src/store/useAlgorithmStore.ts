@@ -145,7 +145,12 @@ function clearPlaybackInterval() {
 // narration-only steps advance on their own, landing the learner on the
 // next junction instead of making them click there one step at a time.
 let autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null
-const PRACTICE_AUTO_ADVANCE_DELAY_MS = 350
+// Long enough to read the step's narration, which is the whole point of
+// showing it: at 350ms a sentence like "Comparing index 0 (value 5) and
+// index 1 (value 3)" was gone before it could be read, so the guidance
+// panel flickered rather than taught. Scaled by playbackSpeed, so a
+// confident learner can still move at 3x.
+const PRACTICE_AUTO_ADVANCE_DELAY_MS = 1400
 
 type StoreSet = (partial: Partial<AlgorithmStoreState>) => void
 

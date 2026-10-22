@@ -54,23 +54,23 @@ export default function MistakeAnalysisToast({
           <div className="flex gap-3 pr-4">
             <MisconceptionShield count={1} size={36} className="shrink-0" />
             <div>
-              <p className="text-xs font-bold text-error">What went wrong</p>
-              <p className="mt-1 text-[13px] text-text-primary">{message}</p>
+              <p className="text-micro font-bold text-error">What went wrong</p>
+              <p className="mt-1 text-body text-text-primary">{message}</p>
             </div>
           </div>
           {hint && (
-            <p className="mt-2 pr-4 text-[13px] text-ai-foreground italic">
+            <p className="mt-2 pr-4 text-body text-ai-foreground">
               <span className="font-bold not-italic">Hint: </span>
               {hint}
             </p>
           )}
           {counterfactualTrace && (
             <div className="mt-2 border-l-2 border-ai py-0.5 pr-4 pl-2">
-              <p className="flex items-center gap-1.5 text-xs font-bold text-text-primary">
+              <p className="flex items-center gap-1.5 text-micro font-bold text-text-primary">
                 <BranchIcon />
                 What would have happened:
               </p>
-              <p className="mt-1 text-[13px] text-ai-foreground italic">{counterfactualTrace}</p>
+              <p className="mt-1 text-body text-ai-foreground">{counterfactualTrace}</p>
             </div>
           )}
           {pseudocodeLine !== null && (

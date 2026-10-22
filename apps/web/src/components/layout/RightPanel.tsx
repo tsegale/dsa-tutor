@@ -126,11 +126,11 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
 
   return (
     <div className="rounded-md border border-border bg-card p-3">
-      <p className="text-xs font-bold text-primary">Socratic guidance</p>
+      <p className="text-micro font-bold text-primary">Socratic guidance</p>
       {workedNarration ? (
         <WorkedStepNotice narration={workedNarration} className="mt-1.5" />
       ) : (
-        <p className="mt-1.5 text-xs text-text-primary italic dark:text-dark-text-primary">{guidanceText}</p>
+        <p className="mt-1.5 text-body text-text-primary dark:text-dark-text-primary">{guidanceText}</p>
       )}
 
       <div className="mt-3 flex items-center gap-2">
@@ -144,7 +144,7 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
 
       {hint && (
         <div className="mt-3 rounded-md border-l-4 border-ai bg-ai-light p-2.5">
-          <p className="text-[13px] text-ai-foreground italic">{hint}</p>
+          <p className="text-body text-ai-foreground">{hint}</p>
         </div>
       )}
     </div>
