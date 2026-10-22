@@ -59,6 +59,28 @@ export function getPromptForSnapshot(snapshot: AlgorithmSnapshot, algorithmName:
     case CriticalJunctionType.EARLY_TERMINATION:
       return 'The algorithm stopped before completing all passes. Why?'
 
+    // These three used to fall through to the snapshot's description,
+    // which narrates the step that has just happened - and in doing so
+    // states the very value the tiles ask the learner to pick. "Placed 99
+    // at index 2" above four tiles, one of them 99, is not a question.
+    case CriticalJunctionType.INSERT_POSITION: {
+      const state = snapshot.dataStructureState as { targetIndex?: number }
+      const pos = typeof state?.targetIndex === 'number' ? state.targetIndex : 0
+      return `Everything from index ${pos} onwards shifted one place right to make room. Which value sits at index ${pos + 2} now?`
+    }
+
+    case CriticalJunctionType.DELETE_SHIFT: {
+      const state = snapshot.dataStructureState as { targetIndex?: number; array?: number[] }
+      const pos = typeof state?.targetIndex === 'number' ? state.targetIndex : 0
+      if (Array.isArray(state?.array) && pos >= state.array.length) {
+        return `The last element was removed and the array is shorter. What is at index ${pos} now?`
+      }
+      return `The element at index ${pos} was removed and the tail shifted left to close the gap. Which value sits at index ${pos} now?`
+    }
+
+    case CriticalJunctionType.HEAP_EXTRACT:
+      return 'Which element does an extraction take out of the heap, and why that one?'
+
     // The engine wrote an answer-safe question (it states n, never the count).
     case CriticalJunctionType.COMPLEXITY_PREDICTION:
       return snapshot.description
