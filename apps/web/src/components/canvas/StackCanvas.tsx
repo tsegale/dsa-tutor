@@ -15,11 +15,6 @@ const ITEM_WIDTH = 160
 const ITEM_HEIGHT = 36
 const ITEM_GAP = 4
 const BASE_Y_OFFSET = 40
-// PredictionZone renders as an absolutely-positioned overlay at the
-// bottom of the canvas area, not a flex sibling that shrinks this
-// canvas's own measured height - so the floor has to move up on its own
-// to stay clear of it while a prediction is pending.
-const PREDICTION_ZONE_OFFSET = 180
 
 const TOP_FILL = 'var(--state-compare)'
 const TOP_TEXT = 'var(--state-compare-ink)'
@@ -64,7 +59,12 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
   }
 
   const centerX = width / 2
-  const baseY = height - BASE_Y_OFFSET - (snapshot?.isPredictionRequired ? PREDICTION_ZONE_OFFSET : 0)
+  // No prediction-zone offset here. PredictionZone used to be an absolute
+  // overlay, so this floor moved up 180px to stay clear of it; it is a
+  // real flex sibling now (see AlgorithmPage) and already reserves its own
+  // space, so subtracting it again cost the stack 180px of height it had
+  // and pushed the top items out of view on a full stack.
+  const baseY = height - BASE_Y_OFFSET
   const items = state.items
   const topValue = state.topIndex >= 0 && items[state.topIndex] ? items[state.topIndex].value : null
   const remainingCapacity = state.capacity !== null ? Math.max(0, state.capacity - items.length) : 0
