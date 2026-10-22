@@ -100,6 +100,14 @@ def strip_comments_and_neutralize(code: str) -> str:
     )
 
 
+# Bumped whenever the schema or the field contracts above change, so a
+# response can be traced to the prompt that produced it.
+#   2026-10-22.1  what_happened split out of corrective_hint, which used to
+#                 be one string serving as both the mistake explanation and
+#                 the hint; correct answers gained a contract of their own
+#                 instead of one line of praise.
+CODE_EVAL_PROMPT_VERSION = "2026-10-22.1"
+
 CODE_EVAL_PROMPT = """You are giving feedback on a student's code for one step of {algorithm_name}.
 
 The values their code was given: {current_state}
@@ -118,10 +126,25 @@ Whether it is correct has already been decided by comparing the real
 execution with the expected result. Do not re-judge it, and do not
 contradict it.
 
-Respond ONLY with valid JSON matching this exact schema:
+Respond ONLY with valid JSON matching this exact schema, in this order:
 {{
   "bug_type": {bug_type_schema},
-  "corrective_hint": <if correct: one sentence naming what they got right, specifically. if wrong: one Socratic question guiding them toward the bug without revealing it>,
+  "what_happened": <two sentences maximum, written to the student in second
+    person, naming the actual values above rather than talking in general
+    terms. Never empty.
+    If the code is WRONG: what their code did to those values, and what the
+    step needed instead. Describe the behaviour, never the fix - they are
+    about to try again, so no sentence may state or paraphrase the correct
+    line, the correct operator, or the correct index.
+    If the code is CORRECT: what their code established - the property the
+    values now have because of it, and why that is what this step of the
+    algorithm is for. Never praise, never grade it: no "correct", "well
+    done", "nice", "exactly" or "good job". Say something they could not
+    have read off the screen, or say less.>,
+  "corrective_hint": <if correct: "". if wrong: ONE question, maximum 25
+    words, pointing at what to check. It must not contain the answer, an
+    index, or an operator from the correct line, and must not be answerable
+    yes/no in a way that states the fix. Never repeat what_happened.>,
   "code_review": <at most two sentences on what this code would do BEYOND this one step: an input that would break it (empty, one element, duplicates, already sorted, the boundary) or work it repeats needlessly. Name the specific input or the specific wasted work. null if there is genuinely nothing worth saying.>
 }}
 
@@ -176,9 +199,15 @@ async def evaluate_code(request: CodeEvalRequest) -> CodeEvalResponse:
             is_logically_correct=is_logically_correct,
             has_syntax_error=False,
             resulting_state=request.actual_resulting_state,
-            error_explanation=None if is_logically_correct else data.get("corrective_hint"),
+            # what_happened and corrective_hint are two different things
+            # now. They used to be one string shown twice - the mistake card
+            # and the hint beneath it said the same sentence, which is most
+            # of why the feedback read as thin. On a correct answer there is
+            # no hint to give (nothing left to nudge towards), so the
+            # explanation of what the code established takes that slot.
+            error_explanation=None if is_logically_correct else data.get("what_happened"),
             bug_type=None if is_logically_correct else data.get("bug_type"),
-            corrective_hint=data.get("corrective_hint", ""),
+            corrective_hint=(data.get("what_happened") if is_logically_correct else data.get("corrective_hint")) or "",
             code_review=data.get("code_review") or None,
             execute_visually=True,
         )

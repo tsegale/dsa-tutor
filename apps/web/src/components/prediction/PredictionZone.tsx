@@ -50,6 +50,7 @@ import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import CodeEditorInput from './CodeEditorInput'
 import { codeStepFor } from '@/config/codeChallenges'
+import { codeTaskForRung, codeTaskFromStep, hasCodeLadder } from '@/config/codeLadders'
 import { codeModeAdvance } from '@/utils/codeModeAdvance'
 import { handsOnSelectionFor } from '@/utils/handsOnSelection'
 import { handsOnStayAnswer } from '@/utils/handsOnDrag'
@@ -276,7 +277,16 @@ export default function PredictionZone({
   // back to tiles rather than render an ungradeable editor.
   const run = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndexForCode = useAlgorithmStore((state) => state.stepIndex)
-  const codeStep = codeStepFor(algorithmSlug, run, stepIndexForCode)
+  // Three topics have a ladder of code challenges that builds to the whole
+  // algorithm; the rest have one junction-anchored challenge. Both arrive
+  // as a CodeTask, so nothing below has to know which this topic is.
+  const codeRung = useAlgorithmStore((state) => state.codeRungByTopic[algorithmSlug ?? ''] ?? 0)
+  const legacyCodeStep = codeStepFor(algorithmSlug, run, stepIndexForCode)
+  const codeTask = hasCodeLadder(algorithmSlug)
+    ? codeTaskForRung(algorithmSlug, run, codeRung)
+    : legacyCodeStep
+      ? codeTaskFromStep(legacyCodeStep)
+      : null
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
   const sessionId = useAlgorithmStore((state) => state.sessionId)
   const stepForward = useAlgorithmStore((state) => state.stepForward)
@@ -965,7 +975,7 @@ export default function PredictionZone({
         !result.isLogicallyCorrect &&
         !result.hasSyntaxError &&
         result.executeVisually &&
-        codeStep?.challenge.seedsNextRun &&
+        codeTask?.seedsNextRun &&
         Array.isArray(result.resultingState)
           ? { resultingState: result.resultingState as number[], activeIndices: snapshot.activeIndices }
           : null,
@@ -979,7 +989,7 @@ export default function PredictionZone({
 
     // One rule for both routes out of a solved step, shared with the test
     // that sweeps every challenge: re-seed the run, or offer Continue.
-    const advance = codeStep ? codeModeAdvance(result, codeStep.challenge) : 'stay'
+    const advance = codeTask ? codeModeAdvance(result, { seedsNextRun: codeTask.seedsNextRun }) : 'stay'
 
     if (result.isLogicallyCorrect) {
       play('correct')
@@ -1120,7 +1130,7 @@ export default function PredictionZone({
                   ))}
               </div>
 
-              {!isHandsOnGesture && snapshot.predictionType === PredictionType.CODE_EDITOR && codeStep ? (
+              {!isHandsOnGesture && snapshot.predictionType === PredictionType.CODE_EDITOR && codeTask ? (
                 <div className="flex min-w-0 flex-1 flex-col">
                   {codeEvalPraise && (
                     <div className="mb-2 shrink-0 rounded-md border-l-4 border-success bg-success-light p-2.5">
@@ -1131,7 +1141,7 @@ export default function PredictionZone({
                   <CodeEditorInput
                     key={snapshot.stepIndex}
                     stepDescription={snapshot.description}
-                    step={codeStep}
+                    task={codeTask}
                     activeIndices={snapshot.activeIndices}
                     algorithmName={algorithmName}
                     onSubmit={(result, code) => void handleCodeEvalResult(result, code)}
@@ -1142,6 +1152,11 @@ export default function PredictionZone({
                       // now so the card and the button do not flash stale.
                       setCodeSolved(false)
                       setCodeEvalPraise(null)
+                      if (algorithmSlug && codeTask.rungCount > 1) {
+                        const store = useAlgorithmStore.getState()
+                        if (codeTask.isLast) store.noteCodeLadderCompleted(algorithmSlug)
+                        else store.setCodeRung(algorithmSlug, codeTask.rung)
+                      }
                       stepForward()
                     }}
                   />

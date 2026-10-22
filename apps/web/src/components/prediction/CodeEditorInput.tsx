@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import type { CodeEvalResponse } from '@dsa-tutor/types'
 import { evaluateCode } from '@/api/codeEval'
 import { preloadPyodide, pyodideStatus, runPythonStep } from '@/utils/pyodideRunner'
-import type { CodeStep } from '@/config/codeChallenges'
+import type { CodeTask } from '@/config/codeLadders'
 import { cn } from '@/lib/utils'
 
 // CodeMirror is most of the workspace's weight and only Code Mode uses it,
@@ -12,11 +12,12 @@ const CodeMirrorEditor = lazy(() => import('./CodeMirrorEditor'))
 interface CodeEditorInputProps {
   stepDescription: string
   /**
-   * This junction's challenge, its sandbox inputs, and the expected
-   * answer - all assembled from the live run by codeStepFor, so nothing
-   * here is authored per topic and nothing can disagree with the canvas.
+   * This question, its sandbox inputs and the expected answer, all
+   * assembled from the live run - so nothing can disagree with the canvas.
+   * Either one rung of the topic's ladder or its single challenge; this
+   * component does not care which.
    */
-  step: CodeStep
+  task: CodeTask
   activeIndices: number[]
   algorithmName: string
   onSubmit: (result: CodeEvalResponse, submittedCode: string) => void
@@ -42,7 +43,7 @@ type Language = 'python' | 'java'
 
 export default function CodeEditorInput({
   stepDescription,
-  step,
+  task,
   activeIndices,
   algorithmName,
   onSubmit,
@@ -50,8 +51,8 @@ export default function CodeEditorInput({
   solved,
   onContinue,
 }: CodeEditorInputProps) {
-  const { challenge, spec, expected } = step
-  const [code, setCode] = useState(challenge.starter.python)
+  const { spec, expected } = task
+  const [code, setCode] = useState(task.starter.python)
   const [language, setLanguage] = useState<Language>('python')
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -113,9 +114,28 @@ export default function CodeEditorInput({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <p className="shrink-0 font-sans text-[15px] font-medium text-text-primary dark:text-dark-text-primary">
-        {challenge.prompt}
-      </p>
+      <div className="shrink-0">
+        {task.rungCount > 1 && (
+          // The ladder's shape, stated: a learner who can see four rungs
+          // knows this builds to the whole algorithm rather than stopping
+          // at one expression.
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="text-micro font-bold tracking-wide text-ai uppercase">
+              Step {task.rung} of {task.rungCount}
+            </span>
+            <span className="flex flex-1 gap-1" aria-hidden="true">
+              {Array.from({ length: task.rungCount }, (_, index) => (
+                <span
+                  key={index}
+                  className={`h-1 flex-1 rounded-full ${index < task.rung ? 'bg-ai' : 'bg-rule'}`}
+                />
+              ))}
+            </span>
+          </div>
+        )}
+        {task.title && <p className="text-small font-semibold text-ink">{task.title}</p>}
+        <p className="font-sans text-[15px] text-text-primary dark:text-dark-text-primary">{task.prompt}</p>
+      </div>
 
       <div className="flex shrink-0 items-center gap-4 border-b border-border pb-1.5" role="tablist" aria-label="Language">
         {(['python', 'java'] as const).map((option) => (
@@ -164,7 +184,7 @@ export default function CodeEditorInput({
             className="flex-1 overflow-auto rounded-sm border border-rule bg-surface-sunk p-2 font-mono text-[13px] text-ink-2"
             aria-label="The same step in Java, for reading"
           >
-            {challenge.starter.java}
+            {task.starter.java}
           </pre>
         )}
       </div>

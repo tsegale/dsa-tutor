@@ -22,6 +22,9 @@ export function usePipeline(): PipelineStage[] {
   const completedHere = useAlgorithmStore(
     (state) => slug !== undefined && state.practiceRunCompletedTopics.includes(slug),
   )
+  const codeCompleted = useAlgorithmStore(
+    (state) => slug !== undefined && state.codeCompletedTopics.includes(slug),
+  )
 
   return pipelineFor({
     slug: slug ?? '',
@@ -30,5 +33,6 @@ export function usePipeline(): PipelineStage[] {
     feynmanAvailable: feynman.state === 'AVAILABLE',
     feynmanReason: feynman.reason ?? null,
     classic,
+    codeCompleted,
   })
 }

@@ -114,6 +114,7 @@ describe('no stage of a topic waits on another', () => {
         feynmanAvailable: feynmanAccess({ classic: false, hasRubric: true }).state === 'AVAILABLE',
         feynmanReason: null,
         classic: false,
+        codeCompleted: false,
       })
       for (const stage of stages) {
         expect(['DONE', 'AVAILABLE', 'NOT_OFFERED'], `${topic.name} / ${stage.id}`).toContain(stage.status)
@@ -130,6 +131,7 @@ describe('no stage of a topic waits on another', () => {
         feynmanAvailable: true,
         feynmanReason: null,
         classic: false,
+        codeCompleted: false,
       }).map((stage) => [stage.id, stage.status === 'DONE' ? 'AVAILABLE' : stage.status])
     expect(forTopic(false)).toEqual(forTopic(true))
   })

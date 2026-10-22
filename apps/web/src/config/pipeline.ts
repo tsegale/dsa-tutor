@@ -232,6 +232,10 @@ export interface PipelineInput {
   /** Classic is the study's control condition: a plain visualiser with no
    *  tutor stages at all. */
   classic: boolean
+  /** The topic's code ladder has been finished to its last rung. Nothing
+   *  used to be able to mark Code done - only DEMO and PRACTICE could ever
+   *  return DONE - so the stage stayed open however much code was written. */
+  codeCompleted: boolean
 }
 
 /**
@@ -262,7 +266,7 @@ export function pipelineFor(input: PipelineInput): PipelineStage[] {
     stage('DEMO', demoDone ? 'DONE' : 'AVAILABLE', null),
     practiceStage(slug, practiceDone),
     handsOnStage(slug),
-    codeStage(slug),
+    codeStage(slug, input.codeCompleted),
     feynmanStage(input),
   ]
 }
@@ -304,7 +308,7 @@ function handsOnStage(slug: string): PipelineStage {
   return stage('HANDS_ON', 'AVAILABLE', null)
 }
 
-function codeStage(slug: string): PipelineStage {
+function codeStage(slug: string, completed: boolean): PipelineStage {
   if (!hasCodeMode(slug)) {
     return stage(
       'CODE',
@@ -316,7 +320,7 @@ function codeStage(slug: string): PipelineStage {
         : 'No code challenge written for this topic yet.',
     )
   }
-  return stage('CODE', 'AVAILABLE', null)
+  return stage('CODE', completed ? 'DONE' : 'AVAILABLE', null)
 }
 
 function feynmanStage(input: PipelineInput): PipelineStage {

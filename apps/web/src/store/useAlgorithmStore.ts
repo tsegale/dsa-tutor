@@ -43,6 +43,14 @@ export interface AlgorithmStoreState {
   focusJunctionTypes: string[]
   /** Topics whose Practice run reached its final step in this visit: unlocks Feynman mode (Phase 8A). */
   practiceRunCompletedTopics: string[]
+  /**
+   * How far up each topic's code ladder the learner has climbed, by slug:
+   * the index of the rung they are on now. Absent means rung 0.
+   */
+  codeRungByTopic: Record<string, number>
+  /** Topics whose code ladder has been finished to the last rung. This is
+   *  what ticks the Code stage, which nothing used to be able to do. */
+  codeCompletedTopics: string[]
   sessionCorrectPredictions: number
   sessionTotalPredictions: number
   sessionHintsRequested: number
@@ -103,6 +111,10 @@ export interface AlgorithmStoreState {
   setClassicMode: (on: boolean) => void
   noteSelfExplanationOffered: (key: string) => void
   noteChallengeStarted: () => void
+  /** Move to a rung of a topic's code ladder. */
+  setCodeRung: (topicSlug: string, rung: number) => void
+  /** The last rung is solved: the topic's Code stage is complete. */
+  noteCodeLadderCompleted: (topicSlug: string) => void
 }
 
 /** A junction the learner must answer now - not one that runs as a worked
@@ -225,6 +237,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   activeChallengeType: null,
   focusJunctionTypes: [],
   practiceRunCompletedTopics: [],
+  codeRungByTopic: {},
+  codeCompletedTopics: [],
   sessionCorrectPredictions: 0,
   sessionTotalPredictions: 0,
   sessionHintsRequested: 0,
@@ -279,6 +293,16 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     clearAutoAdvanceTimer(set)
     set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel, focusJunctionTypes: junctionTypes }))
   },
+
+  setCodeRung: (topicSlug, rung) =>
+    set((state) => ({ codeRungByTopic: { ...state.codeRungByTopic, [topicSlug]: Math.max(0, rung) } })),
+
+  noteCodeLadderCompleted: (topicSlug) =>
+    set((state) =>
+      state.codeCompletedTopics.includes(topicSlug)
+        ? state
+        : { codeCompletedTopics: [...state.codeCompletedTopics, topicSlug] },
+    ),
 
   notePracticeRunCompleted: (topicSlug) =>
     set((state) =>

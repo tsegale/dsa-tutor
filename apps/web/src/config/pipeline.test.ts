@@ -24,6 +24,7 @@ function input(overrides: Partial<PipelineInput> = {}): PipelineInput {
     practiceCompleted: false,
     feynmanAvailable: false,
     feynmanReason: null,
+    codeCompleted: false,
     classic: false,
     ...overrides,
   }
@@ -280,5 +281,30 @@ describe('stageOffer, the rule the mode switcher follows', () => {
     for (const id of ['HANDS_ON', 'CODE', 'FEYNMAN'] as PipelineStageId[]) {
       expect(stageOffer(stages, id).enabled, id).toBe(false)
     }
+  })
+})
+
+describe('the Code stage can be finished', () => {
+  it('is DONE once the topic’s code ladder is complete', () => {
+    // The defect this exists for: only DEMO and PRACTICE could ever return
+    // DONE, so however much code a learner wrote, the stage stayed open.
+    const stages = pipelineFor(input({ slug: 'bubble-sort', codeCompleted: true }))
+    expect(statusOf(stages, 'CODE')).toBe('DONE')
+  })
+
+  it('is still open before then', () => {
+    expect(statusOf(pipelineFor(input({ slug: 'bubble-sort' })), 'CODE')).toBe('AVAILABLE')
+  })
+
+  it('counts towards the topic’s progress once done', () => {
+    const before = pipelineProgress(pipelineFor(input({ slug: 'bubble-sort' })))
+    const after = pipelineProgress(pipelineFor(input({ slug: 'bubble-sort', codeCompleted: true })))
+    expect(after.done).toBe(before.done + 1)
+    expect(after.offered).toBe(before.offered)
+  })
+
+  it('never reports a topic that offers no code challenge as having done one', () => {
+    const stages = pipelineFor(input({ slug: 'maze-recursive-backtracker', codeCompleted: true }))
+    expect(statusOf(stages, 'CODE')).toBe('NOT_OFFERED')
   })
 })
