@@ -27,7 +27,14 @@ import {
   requestHint,
   type StreamedPrediction,
 } from '@/api/predictions'
-import { resolveDisplayedFeedback, disconnectedFeedback, type DisplayedFeedback } from '@/utils/displayedFeedback'
+import {
+  resolveDisplayedFeedback,
+  disconnectedFeedback,
+  type DisplayedFeedback,
+  type FeedbackCard,
+  type FeedbackTone,
+} from '@/utils/displayedFeedback'
+import { readingHoldMs } from '@/utils/readingTime'
 import { cn } from '@/lib/utils'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -107,13 +114,13 @@ interface PredictionZoneProps {
   onSubmit: (answer: string) => void
   onHintRequested?: () => void
   onPredictionResult?: (detail: PredictionOutcomeDetail) => void
-  // Mistake state is owned by the page level now, so the AI Tutor tab
-  // (RightPanel) can render the same MisconceptionToast without floating
-  // it over the canvas a second time - PredictionZone only ever writes
-  // it here, RightPanel is what reads it for display.
-  setMistakeAnalysis: (value: string | null) => void
-  setMistakeHint: (value: string | null) => void
-  setMistakeCounterfactual: (value: string | null) => void
+  // Feedback state is owned by the page level now, so the AI Tutor tab
+  // (RightPanel) can render the same card without floating it over the
+  // canvas a second time - PredictionZone only ever writes it here,
+  // RightPanel is what reads it for display. One card rather than three
+  // setters because its parts were only ever written together, and the
+  // tone has to travel with the text it describes.
+  setFeedbackCard: (card: FeedbackCard | null) => void
   // Hint text is also lifted so the Socratic guidance box in RightPanel
   // can show it, but PredictionZone still reads it too (HintAvatar).
   hint: string | null
@@ -146,10 +153,53 @@ const HANDS_ON_DRAG_JUNCTIONS: Set<CriticalJunctionType> = new Set([
 const AUTO_RESET_DELAY_MS = 1200
 const BOTTOM_OUT_ADVANCE_DELAY_MS = 1500
 
+/**
+ * What a correct answer's feedback ended up showing, and when it first
+ * appeared. Returned so the advance can wait out the rest of the reading
+ * time instead of charging for seconds the student already spent reading
+ * while the model was still writing. Null on every wrong-answer path -
+ * those hold the run through the hint ladder instead.
+ */
+interface ShownFeedback {
+  analysis: string | null
+  shownAt: number | null
+}
+
+// How long a correct answer's advance waits for the explanation of why it
+// was right. The model streams its first sentence in about a second, so
+// this is a ceiling for a slow call, not the expected wait - past it the
+// run advances with whatever is on screen rather than stalling on the AI.
+const CONFIRM_FEEDBACK_WAIT_MS = 6000
+
 // How long an advance waits for this junction's earlier answers to finish
 // reporting (their feedback stream, then the interaction write that starts
 // misconception detection). Bounded so a stalled stream never holds the run.
 const OUTCOME_REPORT_WAIT_MS = 12000
+
+/**
+ * Waits out a reading hold, but gives it up the moment the learner advances
+ * the run themselves. Without that, clicking Step forward while reading
+ * would advance once immediately and once again when the hold expired -
+ * skipping a step - and the card would sit stale over the new one. With it
+ * the hold reads as "moves on when you have read it, or sooner if you say
+ * so", which is the transport behaving the way it does everywhere else.
+ */
+function holdForReading(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve()
+  return new Promise((resolve) => {
+    const startedAt = useAlgorithmStore.getState().stepIndex
+    let unsubscribe = () => {}
+    const finish = () => {
+      clearTimeout(timer)
+      unsubscribe()
+      resolve()
+    }
+    const timer = setTimeout(finish, ms)
+    unsubscribe = useAlgorithmStore.subscribe((state) => {
+      if (state.stepIndex !== startedAt) finish()
+    })
+  })
+}
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -206,9 +256,7 @@ export default function PredictionZone({
   onSubmit,
   onHintRequested,
   onPredictionResult,
-  setMistakeAnalysis,
-  setMistakeHint,
-  setMistakeCounterfactual,
+  setFeedbackCard,
   hint,
   setHint,
   setPredictionResolved,
@@ -232,6 +280,9 @@ export default function PredictionZone({
   const sessionId = useAlgorithmStore((state) => state.sessionId)
   const stepForward = useAlgorithmStore((state) => state.stepForward)
   const addXP = useAlgorithmStore((state) => state.addXP)
+  // Scales the reading hold below: a learner who has set 2x has asked for
+  // less waiting, the same way the practice auto-advance is scaled.
+  const playbackSpeed = useAlgorithmStore((state) => state.playbackSpeed)
   const { play } = useSoundEffects()
   const prefersReducedMotion = useReducedMotion()
 
@@ -315,9 +366,7 @@ export default function PredictionZone({
     setSubmissionState('idle')
     setRevealAnswer(false)
     setPredictionResolved(false)
-    setMistakeAnalysis(null)
-    setMistakeHint(null)
-    setMistakeCounterfactual(null)
+    setFeedbackCard(null)
     setHint(null)
     setHintLoading(false)
     setWasRequestedManually(false)
@@ -481,9 +530,7 @@ export default function PredictionZone({
     submissionTokenRef.current += 1
     setSubmissionState('idle')
     setCurrentAnswer(null)
-    setMistakeAnalysis(null)
-    setMistakeHint(null)
-    setMistakeCounterfactual(null)
+    setFeedbackCard(null)
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
   }
 
@@ -518,9 +565,7 @@ export default function PredictionZone({
     if (submissionTokenRef.current !== submissionToken) return
     setSubmissionState('idle')
     setCurrentAnswer(null)
-    setMistakeAnalysis(null)
-    setMistakeHint(null)
-    setMistakeCounterfactual(null)
+    setFeedbackCard(null)
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
     stepForward()
   }
@@ -563,7 +608,7 @@ export default function PredictionZone({
     junctionDifficulty: JunctionDifficulty,
     verdictCorrect: boolean,
     onReported: () => void,
-  ) {
+  ): Promise<ShownFeedback | null> {
     // Streams the explanation into the feedback card (Week 1 addendum
     // A2.4): the verdict is already shown, so text appearing about a second
     // in replaces a ~5s wait. Each streamed piece is one sentence the AI
@@ -572,20 +617,37 @@ export default function PredictionZone({
     // exactly the sentences previewed. If the stream drops mid-response the
     // partial is discarded and a neutral fallback shown instead; only a
     // stream that never opened falls back to the JSON endpoint.
-    const showPreview = !verdictCorrect && scaffoldingLevel !== ScaffoldingLevel.NONE
+    // Previewed on a correct answer too: it is the same call and the same
+    // validated sentences, and the reading hold below is measured from the
+    // moment the first of them appears.
+    const showPreview = scaffoldingLevel !== ScaffoldingLevel.NONE
+    const tone: FeedbackTone = verdictCorrect ? 'confirm' : 'mistake'
+    let shownAt: number | null = null
     let response: PredictionResponse | null = null
     let displayed: DisplayedFeedback
     try {
       if (showPreview) {
         feedbackStream.preview.show = (explanationSoFar) => {
           if (submissionTokenRef.current !== submissionToken) return
-          setMistakeAnalysis(scaffoldingLevel === ScaffoldingLevel.LOW ? firstSentence(explanationSoFar) : explanationSoFar)
+          shownAt ??= Date.now()
+          setFeedbackCard({
+            analysis: scaffoldingLevel === ScaffoldingLevel.LOW ? firstSentence(explanationSoFar) : explanationSoFar,
+            hint: null,
+            counterfactual: null,
+            tone,
+          })
         }
         if (feedbackStream.preview.latest) feedbackStream.preview.show(feedbackStream.preview.latest)
       }
       const streamed = await feedbackStream.result
       response = streamed.response
-      displayed = resolveDisplayedFeedback(scaffoldingLevel, response, streamed.fallbackFields, streamed.failureReason)
+      displayed = resolveDisplayedFeedback(
+        scaffoldingLevel,
+        response,
+        streamed.fallbackFields,
+        streamed.failureReason,
+        verdictCorrect,
+      )
     } catch (err) {
       if (err instanceof StreamDisconnectedError) {
         displayed = disconnectedFeedback(scaffoldingLevel, verdictCorrect, err.reason)
@@ -598,6 +660,7 @@ export default function PredictionZone({
           response,
           response.aiGenerated ? [] : ['consequence_explanation', 'socratic_hint', 'counterfactual_trace'],
           response.aiGenerated ? null : 'json_fallback',
+          verdictCorrect,
         )
       }
     }
@@ -627,15 +690,20 @@ export default function PredictionZone({
     })
     onReported()
 
-    if (correct || submissionTokenRef.current !== submissionToken) return
+    if (submissionTokenRef.current !== submissionToken) return null
 
-    // NONE's mistake text is a static sentence set instantly in
-    // handleSubmit - it never needed Claude, so displayed.card is empty.
+    // NONE's text is a static sentence set instantly in handleSubmit - it
+    // never needed Claude, so displayed.card is empty.
     if (displayed.card) {
-      setMistakeAnalysis(displayed.card.analysis)
-      setMistakeHint(displayed.card.hint)
-      setMistakeCounterfactual(displayed.card.counterfactual)
+      shownAt ??= Date.now()
+      setFeedbackCard(displayed.card)
     }
+
+    // A correct answer has no ladder to escalate and no retry to wait for,
+    // so everything below is the wrong-answer path. What it does need is
+    // for the advance to wait until the explanation has been read, which
+    // is what handleSubmit uses this return value for.
+    if (correct) return { analysis: displayed.card?.analysis ?? null, shownAt }
 
     if (isBottomedOut) {
       // Graduated ladder bottomed out: the answer is now shown (via
@@ -646,15 +714,13 @@ export default function PredictionZone({
       window.dispatchEvent(new CustomEvent(SHOW_EXPLANATION_LINK_EVENT))
       await wait(BOTTOM_OUT_ADVANCE_DELAY_MS)
       await waitForRemediation()
-      if (submissionTokenRef.current !== submissionToken) return
+      if (submissionTokenRef.current !== submissionToken) return null
       setSubmissionState('idle')
       setCurrentAnswer(null)
-      setMistakeAnalysis(null)
-      setMistakeHint(null)
-      setMistakeCounterfactual(null)
+      setFeedbackCard(null)
       window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
       stepForward()
-      return
+      return null
     }
 
     // Still below the cap: escalate to the next rung of the hint ladder
@@ -670,14 +736,15 @@ export default function PredictionZone({
     if (scaffoldingLevel === ScaffoldingLevel.HIGH) {
       // Wait for the learner to click "Try again" rather than resetting
       // automatically, so they see what went wrong before retrying.
-      return
+      return null
     }
 
     await wait(AUTO_RESET_DELAY_MS)
-    if (submissionTokenRef.current !== submissionToken) return
+    if (submissionTokenRef.current !== submissionToken) return null
     setSubmissionState('idle')
     setCurrentAnswer(null)
     window.dispatchEvent(new CustomEvent(CLEAR_CANVAS_SELECTION_EVENT))
+    return null
   }
 
   async function handleSubmit(explicitAnswer?: string) {
@@ -760,7 +827,7 @@ export default function PredictionZone({
     if (!evaluation.correct) outcomeReportsRef.current.push(new Promise<void>((resolve) => (markReported = resolve)))
     // Settles the report even if feedback fails before reaching
     // onPredictionResult, so an advance never waits on it for nothing.
-    void resolveRichFeedback(
+    const richFeedback = resolveRichFeedback(
       feedbackStream,
       request,
       answer,
@@ -799,6 +866,27 @@ export default function PredictionZone({
       }
       await waitForRemediation()
       if (submissionTokenRef.current !== submissionToken) return
+
+      // Hold the advance until the explanation of why this was right has
+      // actually been read. A correct answer advances on its own, so
+      // without this the text Claude wrote appears and is gone - which is
+      // what made the tutor feel rushed and its teaching feel thin. The
+      // race bounds the wait on a slow model; the text streams in while it
+      // runs, so shownAt is usually already some seconds in the past and
+      // readingHoldMs only charges for what is left.
+      const shown = await Promise.race([richFeedback, wait(CONFIRM_FEEDBACK_WAIT_MS).then(() => null)])
+      if (submissionTokenRef.current !== submissionToken) return
+      if (shown?.analysis) {
+        const stepBeforeReading = useAlgorithmStore.getState().stepIndex
+        await holdForReading(readingHoldMs(shown.analysis, Date.now() - (shown.shownAt ?? Date.now()), playbackSpeed))
+        if (submissionTokenRef.current !== submissionToken) return
+        if (useAlgorithmStore.getState().stepIndex !== stepBeforeReading) {
+          // They advanced it themselves while reading. That was the advance.
+          setFeedbackCard(null)
+          return
+        }
+      }
+      setFeedbackCard(null)
       stepForward()
       return
     }
@@ -816,9 +904,12 @@ export default function PredictionZone({
       // No elaboration from Claude at all, per the NONE scaffolding
       // contract - this never needed the rich response, so it's set here
       // instantly rather than in resolveRichFeedback.
-      setMistakeAnalysis('Incorrect. Consider the algorithm state and try again.')
-      setMistakeHint(null)
-      setMistakeCounterfactual(null)
+      setFeedbackCard({
+        analysis: 'Incorrect. Consider the algorithm state and try again.',
+        hint: null,
+        counterfactual: null,
+        tone: 'mistake',
+      })
     }
   }
 
@@ -913,9 +1004,12 @@ export default function PredictionZone({
     play('incorrect')
     setSubmissionState('incorrect')
     setShakeToken((token) => token + 1)
-    setMistakeAnalysis(result.errorExplanation ?? 'Your code does not correctly implement this step.')
-    setMistakeHint(null)
-    setMistakeCounterfactual(null)
+    setFeedbackCard({
+      analysis: result.errorExplanation ?? 'Your code does not correctly implement this step.',
+      hint: null,
+      counterfactual: null,
+      tone: 'mistake',
+    })
     // Direct feedback on a submission the learner just made, not the idle
     // timer, so it's eligible for the floating bubble like a manual hint.
     setWasRequestedManually(true)

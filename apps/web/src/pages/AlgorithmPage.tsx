@@ -33,6 +33,7 @@ import PredictionZone, {
   type PredictionOutcomeDetail,
 } from '@/components/prediction/PredictionZone'
 import { SWITCH_TAB_PSEUDOCODE_EVENT } from '@/components/prediction/MistakeAnalysisToast'
+import type { FeedbackCard } from '@/utils/displayedFeedback'
 import BadgeAwardModal from '@/components/ui/BadgeAwardModal'
 import StreakToast from '@/components/ui/StreakToast'
 import ScaffoldingTransitionToast from '@/components/ui/ScaffoldingTransitionToast'
@@ -317,9 +318,9 @@ function AlgorithmWorkspace() {
   // Owned here (not inside PredictionZone) so the AI Tutor tab in
   // RightPanel can render the same MisconceptionToast and hint content
   // without a second floating copy over the canvas.
-  const [mistakeAnalysis, setMistakeAnalysis] = useState<string | null>(null)
-  const [mistakeHint, setMistakeHint] = useState<string | null>(null)
-  const [mistakeCounterfactual, setMistakeCounterfactual] = useState<string | null>(null)
+  // One card rather than three strings: its parts were only ever set
+  // together, and the tone has to travel with the text it describes.
+  const [feedbackCard, setFeedbackCard] = useState<FeedbackCard | null>(null)
   const [hint, setHint] = useState<string | null>(null)
   const [predictionResolved, setPredictionResolved] = useState(false)
 
@@ -887,9 +888,7 @@ function AlgorithmWorkspace() {
     setMasteryMetrics(INITIAL_MASTERY_METRICS)
     setMistakePath(null)
     setMistakeLabel(undefined)
-    setMistakeAnalysis(null)
-    setMistakeHint(null)
-    setMistakeCounterfactual(null)
+    setFeedbackCard(null)
     setHint(null)
     setFeynmanOffer(null)
     feynmanOfferDismissedRef.current = null
@@ -1060,9 +1059,7 @@ function AlgorithmWorkspace() {
         onSubmit={handlePredictionSubmit}
         onHintRequested={handleHintRequested}
         onPredictionResult={handlePredictionResult}
-        setMistakeAnalysis={setMistakeAnalysis}
-        setMistakeHint={setMistakeHint}
-        setMistakeCounterfactual={setMistakeCounterfactual}
+        setFeedbackCard={setFeedbackCard}
         hint={hint}
         setHint={setHint}
         setPredictionResolved={handleSetPredictionResolved}
@@ -1176,13 +1173,9 @@ function AlgorithmWorkspace() {
                 onToggle={() => {}}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                mistakeAnalysis={mistakeAnalysis}
-                mistakeHint={mistakeHint}
-                mistakeCounterfactual={mistakeCounterfactual}
-                onDismissMistake={() => {
-                  setMistakeAnalysis(null)
-                  setMistakeHint(null)
-                  setMistakeCounterfactual(null)
+                feedbackCard={feedbackCard}
+                onDismissFeedback={() => {
+                  setFeedbackCard(null)
                 }}
                 hint={hint}
                 predictionResolved={predictionResolved}
@@ -1300,13 +1293,9 @@ function AlgorithmWorkspace() {
               onToggle={() => togglePanel(rightPanelRef)}
               activeTab={activeTab}
               onTabChange={setActiveTab}
-              mistakeAnalysis={mistakeAnalysis}
-              mistakeHint={mistakeHint}
-              mistakeCounterfactual={mistakeCounterfactual}
-              onDismissMistake={() => {
-                setMistakeAnalysis(null)
-                setMistakeHint(null)
-                setMistakeCounterfactual(null)
+              feedbackCard={feedbackCard}
+              onDismissFeedback={() => {
+                setFeedbackCard(null)
               }}
               hint={hint}
               predictionResolved={predictionResolved}

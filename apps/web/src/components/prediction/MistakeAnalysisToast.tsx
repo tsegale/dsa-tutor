@@ -1,13 +1,38 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { MisconceptionShield } from '@/components/brand'
+import { AITutorAvatar, MisconceptionShield } from '@/components/brand'
+import type { FeedbackTone } from '@/utils/displayedFeedback'
 
 interface MistakeAnalysisToastProps {
   message: string | null
   hint?: string | null
   counterfactualTrace?: string | null
+  /** 'mistake' explains what went wrong; 'confirm' explains what the
+   * student's correct choice established. Both are the same model fields
+   * under the same card, so only the framing differs. */
+  tone?: FeedbackTone
   pseudocodeLine: number | null
   onDismiss: () => void
 }
+
+/**
+ * Everything that depends on which case is being explained, in one place:
+ * nothing else in the card branches on tone, so a confirmation can never
+ * end up wearing the mistake styling.
+ */
+const TONES = {
+  mistake: {
+    frame: 'border-error bg-error-light',
+    heading: 'What went wrong',
+    headingClass: 'text-error',
+    counterfactualLabel: 'What would have happened:',
+  },
+  confirm: {
+    frame: 'border-success bg-success-light',
+    heading: 'Why that works',
+    headingClass: 'text-success',
+    counterfactualLabel: 'Had you chosen otherwise:',
+  },
+} as const satisfies Record<FeedbackTone, unknown>
 
 export const SWITCH_TAB_PSEUDOCODE_EVENT = 'switch-tab-pseudocode'
 
@@ -29,9 +54,11 @@ export default function MistakeAnalysisToast({
   message,
   hint,
   counterfactualTrace,
+  tone = 'mistake',
   pseudocodeLine,
   onDismiss,
 }: MistakeAnalysisToastProps) {
+  const style = TONES[tone]
   return (
     <AnimatePresence>
       {message !== null && (
@@ -40,7 +67,7 @@ export default function MistakeAnalysisToast({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="relative w-full shrink-0 rounded-md border-l-4 border-error bg-error-light p-4"
+          className={`relative w-full shrink-0 rounded-md border-l-4 p-4 ${style.frame}`}
           aria-live="polite"
         >
           <button
@@ -52,9 +79,13 @@ export default function MistakeAnalysisToast({
             x
           </button>
           <div className="flex gap-3 pr-4">
-            <MisconceptionShield count={1} size={36} className="shrink-0" />
+            {tone === 'confirm' ? (
+              <AITutorAvatar size={36} className="shrink-0 rounded-lg" />
+            ) : (
+              <MisconceptionShield count={1} size={36} className="shrink-0" />
+            )}
             <div>
-              <p className="text-micro font-bold text-error">What went wrong</p>
+              <p className={`text-micro font-bold ${style.headingClass}`}>{style.heading}</p>
               <p className="mt-1 text-body text-text-primary">{message}</p>
             </div>
           </div>
@@ -68,7 +99,7 @@ export default function MistakeAnalysisToast({
             <div className="mt-2 border-l-2 border-ai py-0.5 pr-4 pl-2">
               <p className="flex items-center gap-1.5 text-micro font-bold text-text-primary">
                 <BranchIcon />
-                What would have happened:
+                {style.counterfactualLabel}
               </p>
               <p className="mt-1 text-body text-ai-foreground">{counterfactualTrace}</p>
             </div>

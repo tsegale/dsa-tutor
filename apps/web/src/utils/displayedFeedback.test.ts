@@ -37,7 +37,12 @@ describe('resolveDisplayedFeedback', () => {
   it('leaves a fallen-back hint out beside an AI explanation, so the card is one voice', () => {
     const hintFellBack = { ...wrong, socraticHint: 'Canned hint.', aiGenerated: false }
     const high = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, hintFellBack, ['socratic_hint'], 'socratic_hint.words')
-    expect(high.card).toEqual({ analysis: wrong.consequenceExplanation, hint: null, counterfactual: wrong.counterfactualTrace })
+    expect(high.card).toEqual({
+      analysis: wrong.consequenceExplanation,
+      hint: null,
+      counterfactual: wrong.counterfactualTrace,
+      tone: 'mistake',
+    })
     // Nothing canned was shown, so nothing is logged as a fallback.
     expect(high.log).toMatchObject({ hintText: null, aiGenerated: true, aiFailureReason: null })
 
@@ -54,21 +59,55 @@ describe('resolveDisplayedFeedback', () => {
     expect(high.log).toMatchObject({ aiGenerated: false, aiFailureReason: 'consequence_explanation.notation' })
   })
 
-  it('shows nothing and logs no text for a correct answer or NONE', () => {
+  it('explains a correct answer too, and marks the card as a confirmation', () => {
+    // It used to show only the verdict here, which taught the student who
+    // answered well the least - and the model call had already been made.
     const correct = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, { ...wrong, correct: true }, [], null)
-    expect(correct.card).toBeUndefined()
-    expect(correct.log).toMatchObject({ feedbackText: null, hintText: null, counterfactualText: null })
+    expect(correct.card?.tone).toBe('confirm')
+    expect(correct.card?.analysis).toBe(wrong.consequenceExplanation)
+    expect(correct.card?.counterfactual).toBe(wrong.counterfactualTrace)
+    expect(correct.log).toMatchObject({
+      feedbackText: wrong.consequenceExplanation,
+      counterfactualText: wrong.counterfactualTrace,
+      aiGenerated: true,
+    })
+  })
 
-    const none = resolveDisplayedFeedback(ScaffoldingLevel.NONE, wrong, [], null)
-    expect(none.card).toBeUndefined()
-    expect(none.log.feedbackText).toBeNull()
+  it('never hints at an answer the student has already given', () => {
+    const correct = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, { ...wrong, correct: true }, [], null)
+    expect(correct.card?.hint).toBeNull()
+    expect(correct.log.hintText).toBeNull()
+  })
+
+  it('shows one sentence on a correct answer at LOW, as it does on a wrong one', () => {
+    const low = resolveDisplayedFeedback(ScaffoldingLevel.LOW, { ...wrong, correct: true }, [], null)
+    expect(low.card?.analysis).toBe('Skipping the swap leaves 7 before 3.')
+    expect(low.card?.counterfactual).toBeNull()
+  })
+
+  it('shows nothing and logs no text at NONE, right or wrong', () => {
+    for (const correct of [true, false]) {
+      const none = resolveDisplayedFeedback(ScaffoldingLevel.NONE, { ...wrong, correct }, [], null)
+      expect(none.card).toBeUndefined()
+      expect(none.log.feedbackText).toBeNull()
+    }
+  })
+
+  it('leaves an empty road-not-taken out rather than showing a blank block', () => {
+    const noTrace = { ...wrong, correct: true, counterfactualTrace: '' }
+    expect(resolveDisplayedFeedback(ScaffoldingLevel.MEDIUM, noTrace, [], null).card?.counterfactual).toBeNull()
   })
 })
 
 describe('disconnectedFeedback', () => {
   it('discards the partial and logs a distinct fallback reason', () => {
     const dropped = disconnectedFeedback(ScaffoldingLevel.HIGH, false)
-    expect(dropped.card).toEqual({ analysis: DISCONNECTED_FALLBACK_TEXT, hint: null, counterfactual: null })
+    expect(dropped.card).toEqual({
+      analysis: DISCONNECTED_FALLBACK_TEXT,
+      hint: null,
+      counterfactual: null,
+      tone: 'mistake',
+    })
     expect(dropped.log).toEqual({
       feedbackText: DISCONNECTED_FALLBACK_TEXT,
       hintText: null,
@@ -88,5 +127,25 @@ describe('disconnectedFeedback', () => {
 describe('disconnectedFeedback reasons', () => {
   it('records a stream that hit the client ceiling separately from a dropped one', () => {
     expect(disconnectedFeedback(ScaffoldingLevel.HIGH, false, 'stream_timeout').log.aiFailureReason).toBe('stream_timeout')
+  })
+})
+
+describe('the verdict the card is styled for', () => {
+  it('follows the verdict the student was shown, not the feedback response', () => {
+    // The two endpoints run the same rule-based check, so they agree in
+    // production. If they ever did not, the card must not turn green over a
+    // tile the student just saw marked wrong, or red over a correct one.
+    const saysCorrect = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, { ...wrong, correct: true }, [], null, false)
+    expect(saysCorrect.card?.tone).toBe('mistake')
+    expect(saysCorrect.card?.hint).toBe(wrong.socraticHint)
+
+    const saysWrong = resolveDisplayedFeedback(ScaffoldingLevel.HIGH, wrong, [], null, true)
+    expect(saysWrong.card?.tone).toBe('confirm')
+    expect(saysWrong.card?.hint).toBeNull()
+  })
+
+  it('defaults to the response when no verdict is passed', () => {
+    expect(resolveDisplayedFeedback(ScaffoldingLevel.HIGH, wrong, [], null).card?.tone).toBe('mistake')
+    expect(resolveDisplayedFeedback(ScaffoldingLevel.HIGH, { ...wrong, correct: true }, [], null).card?.tone).toBe('confirm')
   })
 })

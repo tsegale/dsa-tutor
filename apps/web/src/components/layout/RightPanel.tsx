@@ -13,18 +13,19 @@ import DemoAssistant from '@/components/tutor/DemoAssistant'
 import StepLog from './StepLog'
 import ScaffoldingFader from './ScaffoldingFader'
 import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
+import type { FeedbackCard } from '@/utils/displayedFeedback'
 import { cn } from '@/lib/utils'
-import { getPromptForSnapshot } from '@/utils/junctionPrompt'
+import { guidanceFor } from '@/utils/guidanceBox'
 
 interface RightPanelProps {
   collapsed: boolean
   onToggle: () => void
   activeTab: number
   onTabChange: (tab: number) => void
-  mistakeAnalysis: string | null
-  mistakeHint: string | null
-  mistakeCounterfactual: string | null
-  onDismissMistake: () => void
+  /** What the feedback card is showing, or null for none. One object so a
+   * confirmation can never be rendered with the mistake styling. */
+  feedbackCard: FeedbackCard | null
+  onDismissFeedback: () => void
   hint: string | null
   /** False while the current step's prediction is still pending (or has
    * been answered wrong but not yet revealed) - the Socratic guidance box
@@ -114,23 +115,19 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
     isWorkedStep ? workedStepNarration(state.snapshotArray, state.stepIndex) : null,
   )
 
-  // Never show the snapshot's own narration description while a prediction
-  // is pending - several engines' descriptions state the outcome of the
-  // junction, which would hand the student the answer to the question
-  // they're being asked. getPromptForSnapshot is answer-safe.
-  const guidanceText = !snapshot
-    ? 'Load an algorithm to begin.'
-    : isLiveJunction && !predictionResolved
-      ? getPromptForSnapshot(snapshot, algorithmName)
-      : snapshot.description
+  // Heading and body both come from here, so the label always describes
+  // what is under it - this box shows a question, a worked example, the
+  // engine's narration or the empty state, and only the first of those is
+  // Socratic guidance.
+  const guidance = guidanceFor({ snapshot, algorithmName, isLiveJunction, predictionResolved, workedNarration })
 
   return (
     <div className="rounded-md border border-border bg-card p-3">
-      <p className="text-micro font-bold text-primary">Socratic guidance</p>
-      {workedNarration ? (
-        <WorkedStepNotice narration={workedNarration} className="mt-1.5" />
+      <p className="text-micro font-bold text-primary">{guidance.heading}</p>
+      {guidance.kind === 'worked' ? (
+        <WorkedStepNotice narration={guidance.text} className="mt-1.5" />
       ) : (
-        <p className="mt-1.5 text-body text-text-primary dark:text-dark-text-primary">{guidanceText}</p>
+        <p className="mt-1.5 text-body text-text-primary dark:text-dark-text-primary">{guidance.text}</p>
       )}
 
       <div className="mt-3 flex items-center gap-2">
@@ -156,10 +153,8 @@ export default function RightPanel({
   onToggle,
   activeTab,
   onTabChange,
-  mistakeAnalysis,
-  mistakeHint,
-  mistakeCounterfactual,
-  onDismissMistake,
+  feedbackCard,
+  onDismissFeedback,
   hint,
   predictionResolved,
   fullWidth = false,
@@ -318,11 +313,12 @@ export default function RightPanel({
                 <>
                   <ScaffoldingFader />
                   <MistakeAnalysisToast
-                    message={mistakeAnalysis}
-                    hint={mistakeHint}
-                    counterfactualTrace={mistakeCounterfactual}
+                    message={feedbackCard?.analysis ?? null}
+                    hint={feedbackCard?.hint}
+                    counterfactualTrace={feedbackCard?.counterfactual}
+                    tone={feedbackCard?.tone}
                     pseudocodeLine={pseudocodeLine}
-                    onDismiss={onDismissMistake}
+                    onDismiss={onDismissFeedback}
                   />
                   <SocraticGuidanceBox hint={hint} predictionResolved={predictionResolved} />
                 </>
