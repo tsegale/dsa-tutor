@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import * as d3 from 'd3'
 import { motion, useMotionValue, type PanInfo } from 'framer-motion'
-import { AlgorithmMode, CriticalJunctionType, CanvasType } from '@dsa-tutor/types'
+import { AlgorithmMode, CanvasType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
+import { getHandsOnDragTarget } from '@/utils/handsOnDrag'
 import { extractMemoryView, extractSearchRange, extractShiftView, hex } from '@/utils/arrayOverlays'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 import { useResolveColour } from './useResolveColour'
@@ -179,85 +180,6 @@ function barHeightValue(value: number | string): number {
   if (typeof value === 'number') return value
   const code = value.toLowerCase().charCodeAt(0) - 96
   return code >= 1 && code <= 26 ? code : value.charCodeAt(0)
-}
-
-/**
- * Hands-On drag targets for every sorting junction that has one. Two
- * interaction shapes:
- * - 'threshold': one bar is dragged toward the other; crossing the
- *   midpoint between them fires answerA, staying put fires answerB.
- *   Both bars are draggable (dragging either one toward the other
- *   works, matching Bubble Sort's existing feel).
- * - 'pick-one': the two bars are peers, not a "should this cross"
- *   comparison - Merge Sort's front-of-left-run vs front-of-right-run.
- *   Dragging either bar any perceptible distance answers for that bar,
- *   regardless of direction.
- *
- * Returns null when the current snapshot has no drag interaction (every
- * junction type this doesn't recognise, and the two purely conceptual
- * junctions PASS_COMPLETE/ALGORITHM_COMPLETE/EARLY_TERMINATION which
- * still use the tile grid even in Hands-On mode).
- */
-interface HandsOnDragTarget {
-  indexA: number
-  indexB: number
-  kind: 'threshold' | 'pick-one'
-  answerA: string
-  answerB: string
-}
-
-function getHandsOnDragTarget(snapshot: AlgorithmSnapshot | null): HandsOnDragTarget | null {
-  if (!snapshot || !snapshot.isPredictionRequired) return null
-  const state = snapshot.dataStructureState
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.SWAP_DECISION) {
-    if (state && typeof state === 'object' && 'currentKey' in state) {
-      const s = state as unknown as { keyIndex: number; compareIndex: number }
-      return { indexA: s.keyIndex, indexB: s.compareIndex, kind: 'threshold', answerA: 'shift', answerB: 'stop' }
-    }
-    if (snapshot.activeIndices.length === 2) {
-      const [a, b] = snapshot.activeIndices
-      return { indexA: a, indexB: b, kind: 'threshold', answerA: 'swap', answerB: 'no-swap' }
-    }
-    return null
-  }
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.NEW_MINIMUM) {
-    const s = state as { currentMin: number; scanIndex: number }
-    return { indexA: s.scanIndex, indexB: s.currentMin, kind: 'threshold', answerA: 'update', answerB: 'keep' }
-  }
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.PARTITION_DECISION) {
-    // Unlike the other three, leftPointer (indexA) always starts strictly
-    // to the LEFT of the pivot (indexB) - the Lomuto scheme never lets it
-    // reach the pivot's own slot. So "crossing" here means dragging it
-    // rightward PAST the pivot, which represents "this belongs on the
-    // pivot's side, not the smaller-elements side" - the opposite polarity
-    // from Bubble/Insertion/Selection, where the compared element starts
-    // on the side that "crossing" moves it away from.
-    const s = state as { leftPointer: number; pivotIndex: number }
-    return { indexA: s.leftPointer, indexB: s.pivotIndex, kind: 'threshold', answerA: 'skip', answerB: 'swap' }
-  }
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.MERGE_DECISION) {
-    const s = state as { leftRegion: [number, number]; rightRegion: [number, number] }
-    return { indexA: s.leftRegion[0], indexB: s.rightRegion[0], kind: 'pick-one', answerA: 'take-left', answerB: 'take-right' }
-  }
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.GAP_COMPARISON) {
-    const s = state as { keyIndex: number; compareIndex: number }
-    return { indexA: s.keyIndex, indexB: s.compareIndex, kind: 'threshold', answerA: 'shift', answerB: 'no-shift' }
-  }
-
-  if (snapshot.criticalJunctionType === CriticalJunctionType.HEAP_COMPARE) {
-    if (snapshot.activeIndices.length === 2) {
-      const [parent, child] = snapshot.activeIndices
-      return { indexA: child, indexB: parent, kind: 'threshold', answerA: 'sift', answerB: 'stay' }
-    }
-    return null
-  }
-
-  return null
 }
 
 export default function ArrayCanvas({
@@ -500,6 +422,11 @@ export default function ArrayCanvas({
     }
 
     if (slotDistance === 0) return
+    // Any drag-end at all used to commit an answer and lock the junction,
+    // so brushing a bar silently answered "leave them" on the learner's
+    // behalf. A deliberate movement is required now; "leave them" has its
+    // own control in the prediction zone.
+    if (Math.abs(offsetX) < PICK_ONE_THRESHOLD_PX) return
     const { indexA, indexB, answerA, answerB } = handsOnDragTarget
     // "Crossed" means indexA's bar ended up on the opposite side of
     // indexB's original position from where it started - purely a

@@ -44,6 +44,7 @@ import TileGrid, { type TileOption } from './TileGrid'
 import CodeEditorInput from './CodeEditorInput'
 import { codeStepFor } from '@/config/codeChallenges'
 import { handsOnSelectionFor } from '@/utils/handsOnSelection'
+import { handsOnStayAnswer } from '@/utils/handsOnDrag'
 import { runFor } from '@/engine/runFor'
 
 /** A feedback stream opened before the verdict is known (see startFeedbackStream). */
@@ -296,6 +297,10 @@ export default function PredictionZone({
   const handsOnSelection =
     mode === AlgorithmMode.HANDS_ON && isLiveJunction ? handsOnSelectionFor(snapshot) : null
   const isHandsOnGesture = isHandsOnDrag || handsOnSelection !== null
+  // The "leave them where they are" half of a threshold drag, labelled
+  // from the tile the grid would have offered for it.
+  const stayAnswerId = isHandsOnDrag && isLiveJunction ? handsOnStayAnswer(snapshot) : null
+  const stayAnswer = stayAnswerId ? (currentTiles.find((tile) => tile.id === stayAnswerId) ?? null) : null
   const stepIndex = snapshot?.stepIndex ?? null
 
   // Tiles (and their shuffled order) are generated once per prediction
@@ -1080,9 +1085,31 @@ export default function PredictionZone({
 
                   <div className="flex shrink-0 items-center justify-center">
                     {submissionState === 'idle' && isHandsOnGesture && (
-                      <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
-                        {handsOnSelection ? 'Click on the canvas to answer' : 'Drag to answer'}
-                      </span>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-center text-xs text-text-muted dark:text-dark-text-secondary">
+                          {handsOnSelection
+                            ? 'Click on the canvas to answer'
+                            : stayAnswer
+                              ? 'Drag one past the other, or:'
+                              : 'Drag to answer'}
+                        </span>
+                        {/* The other half of a threshold drag. It was only
+                            expressible by picking a bar up and putting it
+                            back, which nothing said - so on an already
+                            ordered pair there appeared to be no answer
+                            available at all. Worded from the same tile the
+                            grid would have shown, so both modes say the
+                            same thing. */}
+                        {stayAnswer && (
+                          <button
+                            type="button"
+                            onClick={() => window.dispatchEvent(new CustomEvent(HANDS_ON_ANSWER_EVENT, { detail: stayAnswer.id }))}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-sunk dark:text-dark-text-primary dark:hover:bg-dark-border"
+                          >
+                            {stayAnswer.label}
+                          </button>
+                        )}
+                      </div>
                     )}
                     {submissionState === 'idle' && !isHandsOnGesture && (
                       <button
