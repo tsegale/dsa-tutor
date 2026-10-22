@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { askTutor } from '@/api/ask'
 import { askStateFrom, sendableHistory, type Exchange } from '@/utils/askPayload'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
-import { Button } from '@/components/ui/button'
+import { AITutorAvatar } from '@/components/brand'
 
 /**
  * Demo mode's AI Tutor tab.
@@ -21,6 +21,13 @@ import { Button } from '@/components/ui/button'
  * The opening state is three suggested questions rather than a bare text
  * box, because a blank prompt in a 280px panel tells a beginner nothing
  * about what the thing is for.
+ *
+ * It reads as a conversation: the question in the learner's own bubble,
+ * the answer in the tutor's, at --text-body rather than the 12px it used
+ * to be. The two used to be undifferentiated paragraphs one above the
+ * other, so a wall of prose arrived with nothing saying who was speaking -
+ * and the answer, which is the whole reason the tab exists, was set in the
+ * smallest size in the system.
  */
 
 const SUGGESTIONS = [
@@ -43,6 +50,25 @@ function SpinnerIcon() {
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth={2} opacity={0.25} />
       <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
     </svg>
+  )
+}
+
+/** The tutor's side of the conversation: one shape for the answer, the
+ *  waiting state and the error, so nothing jumps as a reply arrives. */
+function TutorBubble({ children, tone = 'ai' }: { children: React.ReactNode; tone?: 'ai' | 'error' }) {
+  return (
+    <div className="flex items-start gap-2">
+      <AITutorAvatar size={26} className="mt-0.5 shrink-0 rounded-md" />
+      <div
+        className={
+          tone === 'error'
+            ? 'min-w-0 flex-1 rounded-md rounded-tl-sm border-l-4 border-error bg-error-light px-3 py-2'
+            : 'min-w-0 flex-1 rounded-md rounded-tl-sm border-l-4 border-ai bg-ai-light px-3 py-2'
+        }
+      >
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -110,67 +136,78 @@ export default function DemoAssistant() {
 
   return (
     <div className="flex h-full flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">
-          Ask about this algorithm
-        </h3>
-        <p className="text-xs text-text-muted dark:text-dark-text-secondary">
-          Demo mode. Ask anything and I will explain it. Switch to Practice when you want to be
-          asked questions instead.
-        </p>
+      <div className="flex shrink-0 items-start gap-2.5 rounded-md border border-rule bg-surface-sunk p-2.5">
+        <AITutorAvatar size={30} className="shrink-0 rounded-md" />
+        <div className="min-w-0">
+          <h3 className="text-small font-semibold text-ink">Ask about this algorithm</h3>
+          <p className="mt-0.5 text-micro text-ink-2">
+            Demo mode: ask anything and I will explain it. Practice mode asks you the questions instead.
+          </p>
+        </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
         {exchanges.length === 0 ? (
-          <div className="flex flex-col gap-1.5">
-            <p className="text-micro text-text-muted dark:text-dark-text-secondary">Try one of these</p>
+          <div className="flex flex-col gap-2">
+            <p className="text-micro font-bold tracking-wide text-ink-2 uppercase">Try one of these</p>
             {SUGGESTIONS.map((suggestion) => (
               <button
                 key={suggestion}
                 type="button"
                 onClick={() => send(suggestion)}
-                className="rounded-md border border-border px-2.5 py-1.5 text-left text-xs text-text-primary transition-colors hover:bg-surface-sunk dark:text-dark-text-primary dark:hover:bg-dark-border"
+                className="group flex items-center justify-between gap-2 rounded-md border border-rule bg-surface px-3 py-2 text-left text-small text-ink transition-colors duration-quick hover:border-ai hover:bg-ai-light"
               >
-                {suggestion}
+                <span className="min-w-0">{suggestion}</span>
+                <span className="shrink-0 text-ink-2 transition-colors group-hover:text-ai">
+                  <SendIcon />
+                </span>
               </button>
             ))}
           </div>
         ) : (
           exchanges.map((exchange, index) => (
-            <article key={`${index}-${exchange.question}`} className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium text-text-primary dark:text-dark-text-primary">
-                {exchange.question}
-              </p>
+            <article key={`${index}-${exchange.question}`} className="flex flex-col gap-2">
+              {/* The learner's own words, set apart from the reply so a long
+                  answer never reads as a continuation of the question. */}
+              <div className="flex justify-end">
+                <p className="max-w-[85%] rounded-md rounded-tr-sm bg-surface-sunk px-3 py-1.5 text-small text-ink">
+                  <span className="sr-only">You asked: </span>
+                  {exchange.question}
+                </p>
+              </div>
+
               {exchange.error ? (
-                <div className="flex flex-col items-start gap-1.5">
-                  <p className="text-xs text-error">{exchange.error}</p>
+                <TutorBubble tone="error">
+                  <p className="text-small text-ink">{exchange.error}</p>
                   <button
                     type="button"
                     onClick={() => {
                       setExchanges((previous) => previous.slice(0, index))
                       send(exchange.question)
                     }}
-                    className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                    className="mt-1 text-small font-medium text-primary underline-offset-2 hover:underline"
                   >
                     Try again
                   </button>
-                </div>
+                </TutorBubble>
               ) : exchange.answer === null ? (
-                <p className="flex items-center gap-1.5 text-xs text-text-muted dark:text-dark-text-secondary">
-                  <SpinnerIcon />
-                  Thinking
-                </p>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-text-secondary dark:text-dark-text-secondary">
-                    {exchange.answer}
+                <TutorBubble>
+                  <p className="flex items-center gap-1.5 text-small text-ai-foreground">
+                    <SpinnerIcon />
+                    Thinking
                   </p>
+                </TutorBubble>
+              ) : (
+                <TutorBubble>
+                  {/* --text-body, not the 12px this used to be: it is the
+                      explanation the tab exists to deliver. */}
+                  <p className="whitespace-pre-wrap text-body text-ai-foreground">{exchange.answer}</p>
                   {exchange.fallback && (
-                    <p className="text-micro text-text-muted dark:text-dark-text-secondary">
+                    <p className="mt-1.5 border-t border-ai/20 pt-1.5 text-micro text-ink-2">
                       Written answer, not a tutor reply: the service could not be reached.
                     </p>
                   )}
-                </div>
+                </TutorBubble>
               )}
             </article>
           ))
@@ -179,7 +216,7 @@ export default function DemoAssistant() {
       </div>
 
       <form
-        className="flex shrink-0 flex-col gap-2 border-t-[0.5px] border-border pt-2.5"
+        className="flex shrink-0 items-center gap-2 border-t border-rule pt-2.5"
         onSubmit={(event) => {
           event.preventDefault()
           send(draft)
@@ -195,18 +232,16 @@ export default function DemoAssistant() {
           maxLength={500}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Ask a question"
-          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
+          className="min-w-0 flex-1 rounded-md border border-rule bg-surface px-3 py-2 text-small text-ink outline-none transition-colors placeholder:text-ink-2 focus:border-ai"
         />
-        <Button
+        <button
           type="submit"
-          variant="outline"
-          size="sm"
           disabled={pending || draft.trim().length === 0}
-          className="justify-center gap-1.5"
+          className="flex shrink-0 items-center gap-1.5 rounded-md bg-ai px-3 py-2 text-small font-medium text-ai-contrast transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
         >
           {pending ? <SpinnerIcon /> : <SendIcon />}
           {pending ? 'Asking' : 'Ask'}
-        </Button>
+        </button>
       </form>
     </div>
   )
