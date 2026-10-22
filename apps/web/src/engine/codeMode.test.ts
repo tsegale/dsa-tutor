@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CriticalJunctionType, PredictionType } from '@dsa-tutor/types'
+import { CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 import { CODE_CHALLENGES, codeStepFor } from '@/config/codeChallenges'
+import { hasCodeLadder } from '@/config/codeLadders'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { withCodeMode } from '@/engine/codeMode'
 import { runFor } from '@/engine/runFor'
@@ -86,9 +87,16 @@ describe('the Code Mode pass', () => {
         expect(snapshot).toBe(plain[index])
         return
       }
-      // Only a real junction, and only one this challenge claims.
+      // Only a real junction, and only one this topic actually claims.
       expect(snapshot.isPredictionRequired).toBe(true)
-      expect(challenge.junctionTypes).toContain(snapshot.criticalJunctionType)
+      if (hasCodeLadder(slug)) {
+        // A ladder claims every PROCEDURAL junction: its rungs are
+        // questions about the algorithm, not about one junction. The
+        // conceptual ones stay tile predictions - see withCodeMode.
+        expect(snapshot.junctionDifficulty, snapshot.criticalJunctionType ?? '').toBe(JunctionDifficulty.PROCEDURAL)
+      } else {
+        expect(challenge.junctionTypes).toContain(snapshot.criticalJunctionType)
+      }
     })
   })
 

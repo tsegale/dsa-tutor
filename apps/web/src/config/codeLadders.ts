@@ -452,10 +452,590 @@ export function buildBst(values: readonly number[]): PlainNode | null {
   return root
 }
 
+// ======================================================= Module 1 ladders
+//
+// Linear structures. The state each engine keeps differs - a bare array
+// with an operation index, a stack of {id, value} items, a list of linked
+// nodes - so each ladder reads its own, and every rung's answer is derived
+// from the run rather than authored beside it.
+
+/** The operation the array engines are performing, from the run's own state. */
+const arrayOp = (run: AlgorithmSnapshot[]) => {
+  const state = objectState(first(run))
+  return {
+    arr: arrayState(first(run)),
+    index: typeof state.targetIndex === 'number' ? state.targetIndex : 0,
+    value: typeof state.operationValue === 'number' ? state.operationValue : 0,
+    final: arrayState(last(run)),
+  }
+}
+
+const ARRAY_ACCESS: CodeRung[] = [
+  {
+    title: 'Read one element',
+    prompt: 'Set value to the element stored at index i. One index expression, no loop - that is what makes this O(1).',
+    starter: {
+      python: ['# arr and i are given.', '# Indexing goes straight to the element. No searching, no loop.', 'value = '].join('\n'),
+      java: 'int value = arr[i];',
+    },
+    globalsFor: (run) => ({ arr: arrayOp(run).arr, i: arrayOp(run).index }),
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      return arr[index] ?? null
+    },
+  },
+  {
+    title: 'Work out the address',
+    prompt: 'This is why indexing is O(1): the address is arithmetic. Set address to where element i actually sits in memory.',
+    starter: {
+      python: [
+        '# base, size and i are given.',
+        '# Every element takes the same number of bytes, so the address of',
+        '# element i is the start of the array plus i whole elements.',
+        'address = ',
+      ].join('\n'),
+      java: 'int address = base + i * size;',
+    },
+    globalsFor: (run) => ({ base: 64, size: 4, i: arrayOp(run).index }),
+    readBack: 'address',
+    expect: 'number',
+    expectedFor: (run) => 64 + arrayOp(run).index * 4,
+  },
+  {
+    title: 'Reach the last element',
+    prompt: 'Set value to the last element, without knowing in advance how long the array is.',
+    starter: {
+      python: [
+        '# arr is given.',
+        '# The last index is one less than the length - that off-by-one is',
+        '# where most index bugs come from.',
+        'value = ',
+      ].join('\n'),
+      java: 'int value = arr[arr.length - 1];',
+    },
+    globalsFor: (run) => ({ arr: arrayOp(run).arr }),
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const { arr } = arrayOp(run)
+      return arr.length > 0 ? arr[arr.length - 1] : null
+    },
+  },
+  {
+    title: 'The whole lookup',
+    prompt: 'A real lookup checks first. Set values to the element at each index in probes, using None where the index is outside the array.',
+    starter: {
+      python: [
+        '# arr and probes are given. probes holds indices to look up.',
+        '# An index is valid when it is 0 or more AND less than len(arr).',
+        '# Reading outside that range is the bug this check exists to stop.',
+        'values = []',
+        'for k in probes:',
+        '    ',
+      ].join('\n'),
+      java: 'for (int k : probes) {\n    values.add(k >= 0 && k < arr.length ? arr[k] : null);\n}',
+    },
+    globalsFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      return { arr, probes: [index, arr.length, -1] }
+    },
+    readBack: 'values',
+    expect: 'json',
+    expectedFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      if (arr.length === 0) return null
+      return [arr[index] ?? null, null, null]
+    },
+  },
+]
+
+const ARRAY_INSERT: CodeRung[] = [
+  {
+    title: 'Move one element',
+    prompt: 'Copy the element at k - 1 into k. That single move is what the whole shift is made of.',
+    starter: {
+      python: [
+        '# arr and k are given. arr already has a spare slot at the end.',
+        '# Copy the value one place to the LEFT of k into k itself.',
+        'arr[k] = ',
+      ].join('\n'),
+      java: 'arr[k] = arr[k - 1];',
+    },
+    globalsFor: (run) => {
+      const { arr } = arrayOp(run)
+      return { arr: [...arr, 0], k: arr.length }
+    },
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const { arr } = arrayOp(run)
+      if (arr.length === 0) return null
+      const out = [...arr, 0]
+      out[arr.length] = arr[arr.length - 1]
+      return out
+    },
+  },
+  {
+    title: 'Open the gap',
+    prompt: 'Repeat that move from the end down to pos + 1, so every element after pos slides one place right and pos is free to overwrite.',
+    starter: {
+      python: [
+        '# arr, pos and value are given. arr already has a spare slot at the end.',
+        '# Walk DOWNWARDS from the last index to pos + 1. Going upwards',
+        '# instead would copy the same value over the whole tail.',
+        'for k in range(len(arr) - 1, pos, -1):',
+        '    ',
+      ].join('\n'),
+      java: 'for (int k = arr.length - 1; k > pos; k--) {\n    arr[k] = arr[k - 1];\n}',
+    },
+    globalsFor: (run) => {
+      const { arr, index, value } = arrayOp(run)
+      return { arr: [...arr, 0], pos: index, value }
+    },
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      if (arr.length === 0) return null
+      return [...arr.slice(0, index + 1), ...arr.slice(index)]
+    },
+  },
+  {
+    title: 'Write it in',
+    prompt: 'The gap is open. Put value into pos.',
+    starter: {
+      python: ['# arr, pos and value are given. The gap at pos is already open.', 'arr[pos] = '].join('\n'),
+      java: 'arr[pos] = value;',
+    },
+    globalsFor: (run) => {
+      const { arr, index, value } = arrayOp(run)
+      return { arr: [...arr.slice(0, index + 1), ...arr.slice(index)], pos: index, value }
+    },
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => (arrayOp(run).arr.length > 0 ? arrayOp(run).final : null),
+  },
+  {
+    title: 'The whole insert',
+    prompt: 'Insert value at pos in one go: make room at the end, slide the tail right, then write it in. The result must match the array on the canvas.',
+    starter: {
+      python: [
+        '# arr, pos and value are given.',
+        '# Three moves, in this order: grow the array by one, shift the tail',
+        '# right from the end down to pos + 1, then write value at pos.',
+        'arr.append(0)',
+        '',
+      ].join('\n'),
+      java: 'int[] grown = Arrays.copyOf(arr, arr.length + 1);\nfor (int k = grown.length - 1; k > pos; k--) { grown[k] = grown[k - 1]; }\ngrown[pos] = value;',
+    },
+    globalsFor: (run) => {
+      const { arr, index, value } = arrayOp(run)
+      return { arr, pos: index, value }
+    },
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => (arrayOp(run).arr.length > 0 ? arrayOp(run).final : null),
+  },
+]
+
+const ARRAY_DELETE: CodeRung[] = [
+  {
+    title: 'Move one element',
+    prompt: 'Copy the element at k + 1 into k. Deleting shifts the other way: every later element moves left.',
+    starter: {
+      python: ['# arr and k are given.', '# Copy the value one place to the RIGHT of k into k itself.', 'arr[k] = '].join('\n'),
+      java: 'arr[k] = arr[k + 1];',
+    },
+    globalsFor: (run) => ({ arr: arrayOp(run).arr, k: arrayOp(run).index }),
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      if (index + 1 >= arr.length) return null
+      const out = [...arr]
+      out[index] = arr[index + 1]
+      return out
+    },
+  },
+  {
+    title: 'Close the gap',
+    prompt: 'Repeat that from pos up to the second-to-last index, so everything after pos slides left over the deleted value.',
+    starter: {
+      python: [
+        '# arr and pos are given.',
+        '# Walk UPWARDS from pos. Stop one short of the end: there is no',
+        '# element to the right of the last one to copy from.',
+        'for k in range(pos, len(arr) - 1):',
+        '    ',
+      ].join('\n'),
+      java: 'for (int k = pos; k < arr.length - 1; k++) {\n    arr[k] = arr[k + 1];\n}',
+    },
+    globalsFor: (run) => ({ arr: arrayOp(run).arr, pos: arrayOp(run).index }),
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      if (arr.length === 0) return null
+      return [...arr.slice(0, index), ...arr.slice(index + 1), arr[arr.length - 1]]
+    },
+  },
+  {
+    title: 'Drop the spare',
+    prompt: 'The tail has shifted, so the last slot is now a duplicate. Remove it.',
+    starter: {
+      python: ['# arr is given. Its last slot is a leftover copy.', '# A list has one method that removes the final element.', ''].join('\n'),
+      java: 'int[] shrunk = Arrays.copyOf(arr, arr.length - 1);',
+    },
+    globalsFor: (run) => {
+      const { arr, index } = arrayOp(run)
+      return { arr: [...arr.slice(0, index), ...arr.slice(index + 1), arr[arr.length - 1]] }
+    },
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => (arrayOp(run).arr.length > 0 ? arrayOp(run).final : null),
+  },
+  {
+    title: 'The whole delete',
+    prompt: 'Delete the element at pos in one go: slide the tail left, then drop the spare slot. The result must match the array on the canvas.',
+    starter: {
+      python: [
+        '# arr and pos are given.',
+        '# Two moves, in this order: shift everything after pos one place',
+        '# left, then remove the duplicate left behind at the end.',
+        'for k in range(pos, len(arr) - 1):',
+        '    ',
+      ].join('\n'),
+      java: 'for (int k = pos; k < arr.length - 1; k++) { arr[k] = arr[k + 1]; }\nint[] shrunk = Arrays.copyOf(arr, arr.length - 1);',
+    },
+    globalsFor: (run) => ({ arr: arrayOp(run).arr, pos: arrayOp(run).index }),
+    readBack: 'arr',
+    expect: 'number[]',
+    expectedFor: (run) => (arrayOp(run).arr.length > 0 ? arrayOp(run).final : null),
+  },
+]
+
+/** The values held by a stack or queue engine, in order, ids stripped. */
+const itemValues = (snapshot: AlgorithmSnapshot | undefined): number[] => {
+  const items = objectState(snapshot).items
+  if (!Array.isArray(items)) return []
+  return items
+    .map((item) => (item && typeof item === 'object' ? (item as { value?: unknown }).value : item))
+    .filter((value): value is number => typeof value === 'number')
+}
+
+const STACK: CodeRung[] = [
+  {
+    title: 'Push one value',
+    prompt: 'A stack grows at one end only. Put value on top of the stack.',
+    starter: {
+      python: [
+        '# stack and value are given. stack is a plain list; the TOP is its end.',
+        '# One list method adds to the end.',
+        '',
+      ].join('\n'),
+      java: 'stack.push(value);',
+    },
+    globalsFor: (run) => {
+      const values = itemValues(last(run))
+      return { stack: values.slice(0, -1), value: values[values.length - 1] ?? 0 }
+    },
+    readBack: 'stack',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values : null
+    },
+  },
+  {
+    title: 'Look at the top',
+    prompt: 'Set top to the value on top of the stack, without removing it.',
+    starter: {
+      python: [
+        '# stack is given.',
+        '# The top is the LAST element. Python indexes backwards with -1,',
+        '# which is the same as len(stack) - 1.',
+        'top = ',
+      ].join('\n'),
+      java: 'int top = stack.peek();',
+    },
+    globalsFor: (run) => ({ stack: itemValues(last(run)) }),
+    readBack: 'top',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values[values.length - 1] : null
+    },
+  },
+  {
+    title: 'Pop one value',
+    prompt: 'Take the top value off the stack and put it in popped. The stack must shrink.',
+    starter: {
+      python: [
+        '# stack is given.',
+        '# One list method removes the last element AND hands it back, so',
+        '# this is a single line rather than a read and a delete.',
+        'popped = ',
+      ].join('\n'),
+      java: 'int popped = stack.pop();',
+    },
+    globalsFor: (run) => ({ stack: itemValues(last(run)) }),
+    readBack: 'popped',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values[values.length - 1] : null
+    },
+  },
+  {
+    title: 'The whole stack',
+    prompt: 'Push every value in order onto an empty stack, then pop two. Set popped to the two values that come off, in the order they come off.',
+    starter: {
+      python: [
+        '# values is given: the values to push, in order.',
+        '# Last in, first out - so the two that come off are the two that',
+        '# went on most recently, in reverse order.',
+        'stack = []',
+        'popped = []',
+        '',
+      ].join('\n'),
+      java: 'Deque<Integer> stack = new ArrayDeque<>();\nfor (int v : values) stack.push(v);\nList<Integer> popped = List.of(stack.pop(), stack.pop());',
+    },
+    globalsFor: (run) => ({ values: itemValues(last(run)) }),
+    readBack: 'popped',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      if (values.length < 2) return null
+      return [values[values.length - 1], values[values.length - 2]]
+    },
+  },
+]
+
+const QUEUE: CodeRung[] = [
+  {
+    title: 'Enqueue one value',
+    prompt: 'A queue grows at the rear. Add value to the back of the queue.',
+    starter: {
+      python: [
+        '# queue and value are given. queue is a plain list; the REAR is its end.',
+        '# The same list method that pushes onto a stack adds at the rear here.',
+        '',
+      ].join('\n'),
+      java: 'queue.addLast(value);',
+    },
+    globalsFor: (run) => {
+      const values = itemValues(last(run))
+      return { queue: values.slice(0, -1), value: values[values.length - 1] ?? 0 }
+    },
+    readBack: 'queue',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values : null
+    },
+  },
+  {
+    title: 'Look at the front',
+    prompt: 'Set front to the value at the front of the queue, without removing it. This is where a queue differs from a stack.',
+    starter: {
+      python: [
+        '# queue is given.',
+        '# A stack reads its last element; a queue reads its FIRST.',
+        'front = ',
+      ].join('\n'),
+      java: 'int front = queue.peekFirst();',
+    },
+    globalsFor: (run) => ({ queue: itemValues(last(run)) }),
+    readBack: 'front',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values[0] : null
+    },
+  },
+  {
+    title: 'Dequeue one value',
+    prompt: 'Remove the value at the front and put it in removed.',
+    starter: {
+      python: [
+        '# queue is given.',
+        '# pop() with no argument takes from the end. Give it the index of',
+        '# the front instead.',
+        'removed = ',
+      ].join('\n'),
+      java: 'int removed = queue.removeFirst();',
+    },
+    globalsFor: (run) => ({ queue: itemValues(last(run)) }),
+    readBack: 'removed',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values[0] : null
+    },
+  },
+  {
+    title: 'The whole queue',
+    prompt: 'Enqueue every value in order, then dequeue two. Set removed to the two values that come off, in the order they come off.',
+    starter: {
+      python: [
+        '# values is given: the values to enqueue, in order.',
+        '# First in, first out - the opposite of the stack. The two that',
+        '# come off are the two that went on FIRST, in that same order.',
+        'queue = []',
+        'removed = []',
+        '',
+      ].join('\n'),
+      java: 'Deque<Integer> queue = new ArrayDeque<>();\nfor (int v : values) queue.addLast(v);\nList<Integer> removed = List.of(queue.removeFirst(), queue.removeFirst());',
+    },
+    globalsFor: (run) => ({ values: itemValues(last(run)) }),
+    readBack: 'removed',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length >= 2 ? [values[0], values[1]] : null
+    },
+  },
+]
+
+/** The list's values in order, by following next from the head. */
+const linkedValues = (run: AlgorithmSnapshot[]): number[] => {
+  const state = objectState(last(run))
+  const nodes = state.nodes
+  if (!Array.isArray(nodes)) return []
+  const byId = new Map<string, { value: number; next: string | null }>()
+  for (const node of nodes) {
+    const n = node as { id?: unknown; value?: unknown; next?: unknown }
+    if (typeof n.id === 'string' && typeof n.value === 'number') {
+      byId.set(n.id, { value: n.value, next: typeof n.next === 'string' ? n.next : null })
+    }
+  }
+  const out: number[] = []
+  let id = typeof state.headId === 'string' ? state.headId : null
+  while (id && byId.has(id) && out.length <= byId.size) {
+    const node = byId.get(id)!
+    out.push(node.value)
+    id = node.next
+  }
+  return out
+}
+
+/** A chain of {value, next} dictionaries, which is what a student writes. */
+export interface Link {
+  value: number
+  next: Link | null
+}
+
+export function buildChain(values: readonly number[]): Link | null {
+  let head: Link | null = null
+  for (let i = values.length - 1; i >= 0; i -= 1) head = { value: values[i], next: head }
+  return head
+}
+
+const SINGLY_LINKED_LIST: CodeRung[] = [
+  {
+    title: 'Follow one link',
+    prompt: 'A node knows only the next one. Set value to the value of the node AFTER head.',
+    starter: {
+      python: [
+        '# head is given: a node, which is a dict with a value and a next.',
+        "# node['next'] is the next node itself, so its value is one more",
+        '# step along.',
+        'value = ',
+      ].join('\n'),
+      java: 'int value = head.next.value;',
+    },
+    globalsFor: (run) => ({ head: buildChain(linkedValues(run)) }),
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      return values.length >= 2 ? values[1] : null
+    },
+  },
+  {
+    title: 'Walk to the end',
+    prompt: 'There is no length to read: you have to walk. Set count to the number of nodes in the list.',
+    starter: {
+      python: [
+        '# head is given.',
+        '# Start a cursor at head and step it along until it falls off the',
+        "# end - that is, until it is None. This walk is why a linked list",
+        '# is O(n) to reach anything, where an array was O(1).',
+        'count = 0',
+        'node = head',
+        'while node is not None:',
+        '    ',
+      ].join('\n'),
+      java: 'int count = 0;\nfor (Node node = head; node != null; node = node.next) count++;',
+    },
+    globalsFor: (run) => ({ head: buildChain(linkedValues(run)) }),
+    readBack: 'count',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      return values.length > 0 ? values.length : null
+    },
+  },
+  {
+    title: 'Insert at the head',
+    prompt: 'Put value at the front of the list. Set head to the new first node. This is the one insert a linked list does in O(1).',
+    starter: {
+      python: [
+        '# head and value are given.',
+        '# Make a new node whose next is the OLD head, then let head be it.',
+        '# Do it the other way round and the rest of the list is lost.',
+        'head = ',
+      ].join('\n'),
+      java: 'head = new Node(value, head);',
+    },
+    globalsFor: (run) => {
+      const values = linkedValues(run)
+      return { head: buildChain(values.slice(1)), value: values[0] ?? 0 }
+    },
+    readBack: 'head',
+    expect: 'json',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      return values.length > 0 ? buildChain(values) : null
+    },
+  },
+  {
+    title: 'Build the whole list',
+    prompt: 'Build the list from values, in order, starting from nothing. Set head to its first node. The result must match the list on the canvas.',
+    starter: {
+      python: [
+        '# values is given: the values in list order.',
+        '# Each node points at the one after it, and the last points at None.',
+        '# Building from the END backwards means the next node always exists',
+        '# already - the alternative is walking to the tail every time.',
+        'head = None',
+        'for value in reversed(values):',
+        '    ',
+      ].join('\n'),
+      java: 'Node head = null;\nfor (int i = values.length - 1; i >= 0; i--) head = new Node(values[i], head);',
+    },
+    globalsFor: (run) => ({ values: linkedValues(run) }),
+    readBack: 'head',
+    expect: 'json',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      return values.length > 0 ? buildChain(values) : null
+    },
+  },
+]
+
 export const CODE_LADDERS: Record<string, CodeRung[]> = {
   'bubble-sort': BUBBLE_SORT,
   'binary-search': BINARY_SEARCH,
   bst: BST,
+  'array-access': ARRAY_ACCESS,
+  'array-insert': ARRAY_INSERT,
+  'array-delete': ARRAY_DELETE,
+  stack: STACK,
+  queue: QUEUE,
+  'singly-linked-list': SINGLY_LINKED_LIST,
 }
 
 export function codeLadderFor(slug: string | undefined): CodeRung[] | null {

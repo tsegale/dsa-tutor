@@ -110,13 +110,23 @@ describe('every rung of every ladder', () => {
 
 describe('topics without a ladder', () => {
   it('report one, so the caller falls back to their single challenge', () => {
-    expect(hasCodeLadder('array-access')).toBe(false)
-    expect(codeLadderFor('array-access')).toBeNull()
+    expect(hasCodeLadder('insertion-sort')).toBe(false)
+    expect(codeLadderFor('insertion-sort')).toBeNull()
     expect(codeLadderFor(undefined)).toBeNull()
   })
 
-  it('leaves the three study topics with one', () => {
-    for (const slug of ['bubble-sort', 'binary-search', 'bst']) {
+  it('covers the study topics and Module 1', () => {
+    for (const slug of [
+      'bubble-sort',
+      'binary-search',
+      'bst',
+      'array-access',
+      'array-insert',
+      'array-delete',
+      'stack',
+      'queue',
+      'singly-linked-list',
+    ]) {
       expect(hasCodeLadder(slug), slug).toBe(true)
     }
   })

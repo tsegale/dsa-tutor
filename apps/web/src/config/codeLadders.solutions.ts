@@ -11,6 +11,65 @@
  * student is being asked to write would be found by the student.
  */
 export const LADDER_SOLUTIONS: Record<string, string[]> = {
+  'array-access': [
+    'value = arr[i]',
+    'address = base + i * size',
+    'value = arr[len(arr) - 1]',
+    ['values = []', 'for k in probes:', '    if 0 <= k < len(arr):', '        values.append(arr[k])', '    else:', '        values.append(None)'].join('\n'),
+  ],
+  'array-insert': [
+    'arr[k] = arr[k - 1]',
+    ['for k in range(len(arr) - 1, pos, -1):', '    arr[k] = arr[k - 1]'].join('\n'),
+    'arr[pos] = value',
+    [
+      'arr.append(0)',
+      'for k in range(len(arr) - 1, pos, -1):',
+      '    arr[k] = arr[k - 1]',
+      'arr[pos] = value',
+    ].join('\n'),
+  ],
+  'array-delete': [
+    'arr[k] = arr[k + 1]',
+    ['for k in range(pos, len(arr) - 1):', '    arr[k] = arr[k + 1]'].join('\n'),
+    'arr.pop()',
+    ['for k in range(pos, len(arr) - 1):', '    arr[k] = arr[k + 1]', 'arr.pop()'].join('\n'),
+  ],
+  stack: [
+    'stack.append(value)',
+    'top = stack[-1]',
+    'popped = stack.pop()',
+    [
+      'stack = []',
+      'popped = []',
+      'for value in values:',
+      '    stack.append(value)',
+      'popped.append(stack.pop())',
+      'popped.append(stack.pop())',
+    ].join('\n'),
+  ],
+  queue: [
+    'queue.append(value)',
+    'front = queue[0]',
+    'removed = queue.pop(0)',
+    [
+      'queue = []',
+      'removed = []',
+      'for value in values:',
+      '    queue.append(value)',
+      'removed.append(queue.pop(0))',
+      'removed.append(queue.pop(0))',
+    ].join('\n'),
+  ],
+  'singly-linked-list': [
+    "value = head['next']['value']",
+    ['count = 0', 'node = head', 'while node is not None:', '    count = count + 1', "    node = node['next']"].join('\n'),
+    "head = {'value': value, 'next': head}",
+    [
+      'head = None',
+      'for value in reversed(values):',
+      "    head = {'value': value, 'next': head}",
+    ].join('\n'),
+  ],
   'bubble-sort': [
     'should_swap = arr[j] > arr[j + 1]',
     'arr[j], arr[j + 1] = arr[j + 1], arr[j]',

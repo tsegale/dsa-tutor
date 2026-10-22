@@ -1,6 +1,7 @@
-import { PredictionType } from '@dsa-tutor/types'
+import { JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { codeStepFor } from '@/config/codeChallenges'
+import { hasCodeLadder } from '@/config/codeLadders'
 
 /**
  * Turns the junctions a topic's code challenge can grade into code
@@ -27,6 +28,18 @@ import { codeStepFor } from '@/config/codeChallenges'
  * authored answer key anywhere in Code Mode. The answer is the next
  * snapshot of the run the student is watching, so the question and the
  * canvas cannot disagree.
+ *
+ * A topic with a ladder (config/codeLadders.ts) takes its PROCEDURAL
+ * junctions, because a rung is a question about the algorithm rather than
+ * about one junction and its answer comes from the whole run. Without
+ * that, a ladder on a topic with no single junction-anchored challenge -
+ * stack and queue have none - would never be reachable at all.
+ *
+ * Only procedural ones. A conceptual junction asks what the run has
+ * established ("what can we guarantee about the array now?") or how many
+ * comparisons it made; neither has a line of code to write, and turning
+ * them into editors would replace the questions that carry the reasoning
+ * with an editor that has nothing to read back.
  */
 export function withCodeMode(
   snapshots: AlgorithmSnapshot[],
@@ -35,9 +48,11 @@ export function withCodeMode(
 ): AlgorithmSnapshot[] {
   if (!enabled) return snapshots
   let changed = false
+  const ladder = hasCodeLadder(slug)
   const next = snapshots.map((snapshot, index) => {
     if (!snapshot.isPredictionRequired) return snapshot
-    if (!codeStepFor(slug, snapshots, index)) return snapshot
+    const ladderTakesIt = ladder && snapshot.junctionDifficulty === JunctionDifficulty.PROCEDURAL
+    if (!ladderTakesIt && !codeStepFor(slug, snapshots, index)) return snapshot
     changed = true
     return { ...snapshot, predictionType: PredictionType.CODE_EDITOR }
   })
