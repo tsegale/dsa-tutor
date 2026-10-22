@@ -21,6 +21,12 @@ interface CodeEditorInputProps {
   algorithmName: string
   onSubmit: (result: CodeEvalResponse, submittedCode: string) => void
   onLoadingChange: (loading: boolean) => void
+  /** This step's challenge is solved and the run is waiting on the learner.
+   * False where the correct answer re-seeded the run, which moves it on by
+   * itself. */
+  solved: boolean
+  /** Move the run on from a solved step. */
+  onContinue: () => void
 }
 
 // Only Python is executed. Pyodide (see utils/pyodideRunner.ts) runs it in
@@ -41,6 +47,8 @@ export default function CodeEditorInput({
   algorithmName,
   onSubmit,
   onLoadingChange,
+  solved,
+  onContinue,
 }: CodeEditorInputProps) {
   const { challenge, spec, expected } = step
   const [code, setCode] = useState(challenge.starter.python)
@@ -48,6 +56,13 @@ export default function CodeEditorInput({
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingRuntime, setLoadingRuntime] = useState(false)
+  // Editing after solving puts the Run button back, so a learner who wants
+  // to try a second implementation is not stranded behind Continue.
+  const [editedSinceSolved, setEditedSinceSolved] = useState(false)
+  useEffect(() => {
+    if (solved) setEditedSinceSolved(false)
+  }, [solved])
+  const showContinue = solved && !editedSinceSolved
 
   // Backstop for the Code Mode toggle's preload (a page opened with Code
   // Mode already on reaches here first).
@@ -136,7 +151,10 @@ export default function CodeEditorInput({
           >
             <CodeMirrorEditor
               value={code}
-              onChange={setCode}
+              onChange={(next) => {
+                setCode(next)
+                setEditedSinceSolved(true)
+              }}
               invalid={syntaxError !== null}
               ariaLabel="Python code for this step"
             />
@@ -167,19 +185,24 @@ export default function CodeEditorInput({
         )}
       </p>
 
+      {/* One primary action, and after a correct answer it is the way out.
+          It used to stay "Run my code" forever, so a solved step offered
+          nothing but running the same code again. */}
       <button
         type="button"
-        onClick={() => void handleSubmit()}
-        disabled={isSubmitting || language === 'java' || code.trim().length === 0}
+        onClick={showContinue ? onContinue : () => void handleSubmit()}
+        disabled={!showContinue && (isSubmitting || language === 'java' || code.trim().length === 0)}
         className="mt-auto flex w-full shrink-0 items-center justify-center rounded-md bg-primary py-2.5 text-sm font-medium text-paper disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {language === 'java'
-          ? 'Switch to Python to run'
-          : isSubmitting
-            ? loadingRuntime
-              ? 'Loading Python (first time only)...'
-              : 'Running...'
-            : 'Run my code'}
+        {showContinue
+          ? 'Continue'
+          : language === 'java'
+            ? 'Switch to Python to run'
+            : isSubmitting
+              ? loadingRuntime
+                ? 'Loading Python (first time only)...'
+                : 'Running...'
+              : 'Run my code'}
       </button>
     </div>
   )

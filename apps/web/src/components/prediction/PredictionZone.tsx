@@ -50,6 +50,7 @@ import ValueInput from './ValueInput'
 import TileGrid, { type TileOption } from './TileGrid'
 import CodeEditorInput from './CodeEditorInput'
 import { codeStepFor } from '@/config/codeChallenges'
+import { codeModeAdvance } from '@/utils/codeModeAdvance'
 import { handsOnSelectionFor } from '@/utils/handsOnSelection'
 import { handsOnStayAnswer } from '@/utils/handsOnDrag'
 import { runFor } from '@/engine/runFor'
@@ -305,6 +306,10 @@ export default function PredictionZone({
   const [hintsRequestedCount, setHintsRequestedCount] = useState(0)
   const [stepStartTime, setStepStartTime] = useState(() => Date.now())
   const [codeEvalPraise, setCodeEvalPraise] = useState<string | null>(null)
+  // This step's code challenge is solved and the run is waiting on the
+  // learner to move it on. Not set where the correct answer re-seeds the
+  // run, because that moves it on by itself.
+  const [codeSolved, setCodeSolved] = useState(false)
   const [codeSubmitting, setCodeSubmitting] = useState(false)
 
   const attemptCountRef = useRef(0)
@@ -373,6 +378,7 @@ export default function PredictionZone({
     setHintsRequestedCount(0)
     setStepStartTime(Date.now())
     setCodeEvalPraise(null)
+    setCodeSolved(false)
     setCodeSubmitting(false)
     attemptCountRef.current = 0
     outcomeReportsRef.current = []
@@ -971,10 +977,15 @@ export default function PredictionZone({
       return
     }
 
+    // One rule for both routes out of a solved step, shared with the test
+    // that sweeps every challenge: re-seed the run, or offer Continue.
+    const advance = codeStep ? codeModeAdvance(result, codeStep.challenge) : 'stay'
+
     if (result.isLogicallyCorrect) {
       play('correct')
       setSubmissionState('correct')
       setPredictionResolved(true)
+      setCodeSolved(advance === 'continue')
       setCodeEvalPraise(result.correctiveHint)
       addXP(CODE_EVAL_XP)
       setXpAmount(CODE_EVAL_XP)
@@ -989,7 +1000,7 @@ export default function PredictionZone({
       // on a challenge that reads back a number or a boolean would have
       // sorted a one-element array. runFor keeps it the open topic's own
       // engine, and Code Mode is reapplied by the same pass as everywhere.
-      if (result.executeVisually && codeStep?.challenge.seedsNextRun && Array.isArray(result.resultingState)) {
+      if (advance === 'reseed') {
         await wait(500)
         const { activeChallengeType, setAlgorithm: setAlg, setActiveChallengeType } = useAlgorithmStore.getState()
         setAlg(algorithmName, runFor(algorithmSlug, result.resultingState as number[]))
@@ -1125,6 +1136,14 @@ export default function PredictionZone({
                     algorithmName={algorithmName}
                     onSubmit={(result, code) => void handleCodeEvalResult(result, code)}
                     onLoadingChange={setCodeSubmitting}
+                    solved={codeSolved}
+                    onContinue={() => {
+                      // The step-change effect clears the rest; these two go
+                      // now so the card and the button do not flash stale.
+                      setCodeSolved(false)
+                      setCodeEvalPraise(null)
+                      stepForward()
+                    }}
                   />
                 </div>
               ) : (
