@@ -92,7 +92,21 @@ export default function CanvasContainer({
           />
         )
       case CanvasType.LINKED_LIST:
-        return <LinkedListCanvas width={size.width} height={size.height} />
+        // The variant has to be passed: LinkedListCanvas draws the prev
+        // compartment and its backward arrows only when told it is a
+        // doubly linked list, and the tail-to-head wraparound only when
+        // told it is circular. Neither was ever passed, so a doubly
+        // linked list rendered as a singly one - identical picture, same
+        // single arrows - and a circular list ended in a null terminator,
+        // which is the one thing a circular list does not have.
+        return (
+          <LinkedListCanvas
+            width={size.width}
+            height={size.height}
+            isDLL={algorithmSlug === 'doubly-linked-list'}
+            isCircular={algorithmSlug === 'circular-linked-list'}
+          />
+        )
       case CanvasType.STACK:
         return <StackCanvas width={size.width} height={size.height} />
       case CanvasType.QUEUE:
