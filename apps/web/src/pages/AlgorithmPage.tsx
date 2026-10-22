@@ -991,7 +991,11 @@ function AlgorithmWorkspace() {
           (e.g. bar value labels). Making it a real flex sibling instead
           reserves it real space, so the canvas above shrinks to fit and
           nothing ends up occluded. */}
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      {/* A floor, not just flex-1: the panel below can grow (Code Mode's
+          editor most of all), and without a minimum the canvas was the
+          thing that gave way - bars collapsing to stubs with their value
+          labels stacked onto the index labels. */}
+      <div className="relative min-h-[180px] flex-1 overflow-hidden">
         <motion.div
           animate={{ scale: focusModeActive ? 1.02 : 1 }}
           transition={{ duration: 0.25, ease: 'easeInOut' }}

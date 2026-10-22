@@ -52,6 +52,7 @@ import CodeEditorInput from './CodeEditorInput'
 import { codeStepFor } from '@/config/codeChallenges'
 import { codeTaskForRung, codeTaskFromStep, hasCodeLadder } from '@/config/codeLadders'
 import { codeModeAdvance } from '@/utils/codeModeAdvance'
+import { predictionPanelSize } from '@/utils/predictionPanelSize'
 import { handsOnSelectionFor } from '@/utils/handsOnSelection'
 import { handsOnStayAnswer } from '@/utils/handsOnDrag'
 import { runFor } from '@/engine/runFor'
@@ -1084,16 +1085,16 @@ export default function PredictionZone({
               // and unreachable rather than visible below a scrollbar
               // (remediation doc 12C.3).
               'relative z-20 flex w-full shrink-0 items-start gap-3 overflow-y-auto rounded-t-lg border-t-2 bg-card px-[14px] py-[10px] shadow-lg',
-              // Code Editor Mode needs real room for a multi-line textarea,
-              // language tabs and its own submit button - the 35% budget
-              // that fits a single tile prompt comfortably clips it.
-              // Every other type sizes to its content, from a 35% floor up
-              // to a 60% ceiling: a fixed 35% put BST's last tile 714px
-              // down, below the fold on a 1366x768 laptop, reachable only
-              // by scrolling this panel (Week 1, 1A.4).
-              snapshot.predictionType === PredictionType.CODE_EDITOR && !isHandsOnGesture
-                ? 'h-[70%]'
-                : 'min-h-[35%] max-h-[60%]',
+              // Both types size to their content within a range, rather
+              // than filling a fixed block. Code Editor Mode needs more
+              // room than a tile prompt (editor, language tabs, its own
+              // button) but it used to take a flat 70%, which left the
+              // canvas too little to draw a chart in - see
+              // utils/predictionPanelSize.ts, which owns these numbers and
+              // the reasoning. The panel scrolls, so a ceiling costs
+              // nothing: what does not fit is reachable, not clipped
+              // (remediation doc 12C.3, Week 1 1A.4).
+              predictionPanelSize(snapshot.predictionType === PredictionType.CODE_EDITOR && !isHandsOnGesture).className,
               'transition-colors duration-300',
               submissionState === 'correct' ? 'border-t-success' : 'border-t-[#f59e0b]',
             )}
