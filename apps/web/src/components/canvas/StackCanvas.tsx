@@ -4,6 +4,9 @@ import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from 
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
+import OperationBanner from './OperationBanner'
+import { operationLabelFor } from '@/utils/operationLabel'
+import { useElementHeight } from '@/hooks/useElementHeight'
 import type { StackState } from '@/engine/stack'
 
 interface StackCanvasProps {
@@ -25,11 +28,19 @@ function fillForDepth(depthFromTop: number): string {
   return `color-mix(in srgb, var(--state-current) ${opacity * 100}%, transparent)`
 }
 
-export default function StackCanvas({ width = 400, height = 400 }: StackCanvasProps) {
+export default function StackCanvas({ width = 400, height: boxHeight = 400 }: StackCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as StackState | undefined
+  const operationLabel = operationLabelFor(snapshot?.dataStructureState)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const headerHeight = useElementHeight(headerRef)
+  // The header sits above the drawing and takes real height now, so the
+  // drawing gets what is left rather than the whole box - otherwise the
+  // bottom of it is cut off by the container, which is what "the
+  // visualisations go out of view" was.
+  const height = Math.max(boxHeight - headerHeight, 180)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
@@ -71,17 +82,21 @@ export default function StackCanvas({ width = 400, height = 400 }: StackCanvasPr
 
   return (
     <div className="flex h-full flex-col">
-      <div className="absolute top-2 right-3 left-3 z-10 flex items-center gap-2">
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-        <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-          <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+      <div ref={headerRef} className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
+          <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
+            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+            {progressPercent}%
+          </span>
         </div>
-        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-          {progressPercent}%
-        </span>
+        <OperationBanner label={operationLabel} />
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-auto pt-10">
+
+      <div ref={scrollRef} className="flex-1 overflow-auto pt-2">
         <svg width={width} height={height} role="img" aria-label={`Stack, ${snapshot?.description ?? ''}`}>
           <line x1={centerX - 90} y1={baseY} x2={centerX + 90} y2={baseY} stroke="var(--ink)" strokeWidth={3} />
 

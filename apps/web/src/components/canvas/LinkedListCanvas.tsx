@@ -1,9 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { CANVAS_SPRING } from '@/utils/motion'
 import { cn } from '@/lib/utils'
+import OperationBanner from './OperationBanner'
+import { operationLabelFor } from '@/utils/operationLabel'
+import { useElementHeight } from '@/hooks/useElementHeight'
 import type { LinkedListNode, LinkedListState } from '@/engine/singlyLinkedList'
 
 interface LinkedListCanvasProps {
@@ -87,7 +90,7 @@ function layoutNodes(nodes: LinkedListNode[], headId: string | null): LayoutNode
 
 export default function LinkedListCanvas({
   width = 700,
-  height = 320,
+  height: boxHeight = 320,
   isDLL = false,
   isCircular = false,
 }: LinkedListCanvasProps) {
@@ -96,6 +99,14 @@ export default function LinkedListCanvas({
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as LinkedListState | undefined
+  const operationLabel = operationLabelFor(snapshot?.dataStructureState)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const headerHeight = useElementHeight(headerRef)
+  // The header sits above the drawing and takes real height now, so the
+  // drawing gets what is left rather than the whole box - otherwise the
+  // bottom of it is cut off by the container, which is what "the
+  // visualisations go out of view" was.
+  const height = Math.max(boxHeight - headerHeight, 180)
 
   const layout = useMemo(() => layoutNodes(state?.nodes ?? [], state?.headId ?? null), [state])
   const rowCount = layout.reduce((max, l) => Math.max(max, l.row + 1), 1)
@@ -129,27 +140,31 @@ export default function LinkedListCanvas({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-          <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
-          </div>
-          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-            {progressPercent}%
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {LEGEND.map((item) => (
-            <div key={item.label} className="flex items-center gap-1">
-              <span className="size-2 rounded-sm" style={{ backgroundColor: item.colour }} aria-hidden="true" />
-              <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{item.label}</span>
+      <div ref={headerRef} className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
+            <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
+              <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
             </div>
-          ))}
+            <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+              {progressPercent}%
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {LEGEND.map((item) => (
+              <div key={item.label} className="flex items-center gap-1">
+                <span className="size-2 rounded-sm" style={{ backgroundColor: item.colour }} aria-hidden="true" />
+                <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
+        <OperationBanner label={operationLabel} />
       </div>
 
-      <div className="flex-1 overflow-auto pt-10">
+
+      <div className="flex-1 overflow-auto pt-2">
         <svg width={svgWidth} height={svgHeight} role="img" aria-label={canvasLabel}>
           <defs>
             <marker id="ll-arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">

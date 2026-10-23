@@ -10,7 +10,9 @@ import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
 import { CLEAR_CANVAS_SELECTION_EVENT, HANDS_ON_ANSWER_EVENT } from '@/components/prediction/PredictionZone'
 import { getHandsOnDragTarget } from '@/utils/handsOnDrag'
-import { extractMemoryView, extractOperationLabel, extractSearchRange, extractShiftView, hex } from '@/utils/arrayOverlays'
+import { extractMemoryView, extractSearchRange, extractShiftView, hex } from '@/utils/arrayOverlays'
+import { operationLabelFor } from '@/utils/operationLabel'
+import OperationBanner from './OperationBanner'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 import { useResolveColour } from './useResolveColour'
 
@@ -70,7 +72,16 @@ const DEFAULT_MISTAKE_LABEL = 'What your answer would cause...'
 // whichever badge is taller - 32 put the max-value bar's label directly
 // under both (remediation doc 12C.3).
 const PADDING = 60
-/** Vertical room the operation banner needs above the chart. */
+// The index axis hangs off the bars' own baseline rather than off the
+// bottom edge of the svg. Pinned to the edge it had nothing between it
+// and the end of the box, and the pulsing highlight on a target bar
+// scales its group just enough to push the digit out of view.
+const INDEX_LABEL_DROP = 40
+// The band the header occupies used to be this constant, guessed at the
+// height of one headline and one line of detail. A detail that wrapped to
+// two lines - the circular queue's does - ran straight back over the
+// drawing. It is measured from the header itself now, so the two cannot
+// disagree; this is only the floor for the first paint.
 const OPERATION_LABEL_SPACE = 34
 
 type BarState = 'neutral' | 'comparing' | 'swapping' | 'sorted' | 'eliminated'
@@ -336,7 +347,24 @@ export default function ArrayCanvas({
 
   // What the run is doing, in words. Without it an inserted value simply
   // appeared among the bars with nothing saying it was being inserted.
-  const operationLabel = useMemo(() => extractOperationLabel(snapshot?.dataStructureState), [snapshot])
+  const operationLabel = useMemo(() => operationLabelFor(snapshot?.dataStructureState), [snapshot])
+
+  // ...and how much room it actually takes, read off the header rather
+  // than assumed, so a longer label pushes the chart down instead of
+  // being drawn over.
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(OPERATION_LABEL_SPACE)
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => setHeaderHeight(el.getBoundingClientRect().height))
+    observer.observe(el)
+    setHeaderHeight(el.getBoundingClientRect().height)
+    return () => observer.disconnect()
+  }, [])
+
+  /** Everything drawn at the top of the svg clears the header by this. */
+  const labelOffset = operationLabel ? Math.max(headerHeight - 18, OPERATION_LABEL_SPACE) : 0
 
   const bars = useMemo(() => {
     const values = extractDisplayValues(snapshot?.dataStructureState)
@@ -356,7 +384,7 @@ export default function ArrayCanvas({
       // The chart starts lower when the operation banner is above it: the
       // tallest bar's value label would otherwise be drawn straight
       // through the banner's second line.
-      .range([height - PADDING, PADDING + (operationLabel ? OPERATION_LABEL_SPACE : 0)])
+      .range([height - PADDING, PADDING + labelOffset])
 
     const bandwidth = xScale.bandwidth()
 
@@ -374,7 +402,7 @@ export default function ArrayCanvas({
         height: barHeight,
       }
     })
-  }, [snapshot, width, height, operationLabel])
+  }, [snapshot, width, height, labelOffset])
 
   const twoPointer = useMemo(
     () => (canvasType === CanvasType.TWO_POINTER ? extractTwoPointer(snapshot?.dataStructureState) : { left: null, right: null }),
@@ -495,7 +523,7 @@ export default function ArrayCanvas({
 
   return (
     <>
-    <div className="absolute top-2 right-3 left-3 z-10 flex flex-col gap-1">
+    <div ref={headerRef} className="absolute top-2 right-3 left-3 z-10 flex flex-col gap-1">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
@@ -519,15 +547,10 @@ export default function ArrayCanvas({
         ))}
       </div>
     </div>
-    {operationLabel && (
-      // In the header's own column, so it cannot land on the progress row
-      // above it or on the tallest bar's value label below (the chart
-      // makes room for it - see OPERATION_LABEL_SPACE).
-      <div className="max-w-[72%]">
-        <p className="text-small font-semibold text-ink">{operationLabel.headline}</p>
-        <p className="text-micro text-ink-2">{operationLabel.detail}</p>
-      </div>
-    )}
+    {/* In the header's own column, so it cannot land on the progress row
+        above it or on the tallest bar's value label below - the chart
+        makes room for it, see OPERATION_LABEL_SPACE. */}
+    <OperationBanner label={operationLabel} />
     </div>
     <svg width={width} height={height} role="img" aria-label={canvasLabel}>
       <style>{`
@@ -727,7 +750,7 @@ export default function ArrayCanvas({
             </motion.text>
             <text
               x={displayX + bar.width / 2}
-              y={height - 12}
+              y={height - PADDING + INDEX_LABEL_DROP}
               textAnchor="middle"
               className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
             >
@@ -795,7 +818,7 @@ export default function ArrayCanvas({
           <motion.text
             layout
             x={bars[searchRange.low].x - 4}
-            y={PADDING - 16}
+            y={PADDING - 16 + labelOffset}
             className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
             transition={barMove}
           >
@@ -834,7 +857,7 @@ export default function ArrayCanvas({
               down there and the two ran into each other. */}
           <text
             x={PADDING}
-            y={PADDING - 16}
+            y={PADDING - 16 + labelOffset}
             className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary"
           >
             {`base ${hex(memoryView.base)} + ${memoryView.index} x ${memoryView.cellBytes} = ${hex(memoryView.address)}`}
@@ -871,7 +894,7 @@ export default function ArrayCanvas({
           })}
           <text
             x={PADDING}
-            y={PADDING - 16}
+            y={PADDING - 16 + labelOffset}
             className="fill-text-muted text-[10px] dark:fill-dark-text-secondary"
           >
             {`${shiftView.to - shiftView.from + 1} ${shiftView.to === shiftView.from ? 'cell shifts' : 'cells shift'} ${shiftView.direction}`}

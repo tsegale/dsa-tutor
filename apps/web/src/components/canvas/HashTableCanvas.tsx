@@ -3,6 +3,8 @@ import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from 
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
+import OperationBanner from './OperationBanner'
+import { operationLabelFor } from '@/utils/operationLabel'
 import type { HashTableState } from '@/engine/hashTable'
 
 interface HashTableCanvasProps {
@@ -163,6 +165,7 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as HashTableState | undefined
+  const operationLabel = operationLabelFor(snapshot?.dataStructureState)
 
   const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
@@ -179,26 +182,30 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-          <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+      <div className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
+            <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
+              <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+            </div>
           </div>
+          <span
+            className={cn(
+              'rounded-md px-2 py-0.5 text-[10px] font-semibold',
+              loadFactor > 0.7 ? 'bg-error-light text-error' : 'bg-surface-sunk text-text-muted',
+            )}
+          >
+            load factor α = {loadFactor.toFixed(2)}
+            {loadFactor > 0.7 ? ' — consider resizing' : ''}
+          </span>
         </div>
-        <span
-          className={cn(
-            'rounded-md px-2 py-0.5 text-[10px] font-semibold',
-            loadFactor > 0.7 ? 'bg-error-light text-error' : 'bg-surface-sunk text-text-muted',
-          )}
-        >
-          load factor α = {loadFactor.toFixed(2)}
-          {loadFactor > 0.7 ? ' — consider resizing' : ''}
-        </span>
+        <OperationBanner label={operationLabel} />
       </div>
 
+
       {state.activeKey !== null && (
-        <div className="mt-9 px-3">
+        <div className="mt-2 px-3">
           <div className="rounded-md border border-border bg-surface-sunk px-3 py-1.5 text-center font-mono text-[12px] text-text-primary dark:border-dark-border dark:bg-dark-border dark:text-dark-text-primary">
             hash({state.activeKey}) = {state.activeKey} % {state.capacity} ={' '}
             {isHashBucketPending ? '?' : (state.hashResult ?? '?')}

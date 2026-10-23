@@ -1,8 +1,12 @@
+import { useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { canvasMove } from '@/utils/motion'
 import { cn } from '@/lib/utils'
+import OperationBanner from './OperationBanner'
+import { operationLabelFor } from '@/utils/operationLabel'
+import { useElementHeight } from '@/hooks/useElementHeight'
 import type { QueueState } from '@/engine/queue'
 
 interface QueueCanvasProps {
@@ -190,11 +194,19 @@ function CircularQueue({
   )
 }
 
-export default function QueueCanvas({ width = 600, height = 320, variant }: QueueCanvasProps) {
+export default function QueueCanvas({ width = 600, height: boxHeight = 320, variant }: QueueCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const prefersReducedMotion = useReducedMotion()
   const state = snapshot?.dataStructureState as QueueState | undefined
+  const operationLabel = operationLabelFor(snapshot?.dataStructureState)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const headerHeight = useElementHeight(headerRef)
+  // The header sits above the drawing and takes real height now, so the
+  // drawing gets what is left rather than the whole box - otherwise the
+  // bottom of it is cut off by the container, which is what "the
+  // visualisations go out of view" was.
+  const height = Math.max(boxHeight - headerHeight, 180)
 
   const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
@@ -214,17 +226,21 @@ export default function QueueCanvas({ width = 600, height = 320, variant }: Queu
 
   return (
     <div className="flex h-full flex-col">
-      <div className="absolute top-2 right-3 left-3 z-10 flex items-center gap-2">
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-        <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
-          <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+      <div ref={headerRef} className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
+          <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
+            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+            {progressPercent}%
+          </span>
         </div>
-        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-          {progressPercent}%
-        </span>
+        <OperationBanner label={operationLabel} />
       </div>
 
-      <div className="flex flex-1 items-center justify-center overflow-auto pt-10">
+
+      <div className="flex flex-1 items-center justify-center overflow-auto pt-2">
         <AnimatePresence mode="wait">
           {effectiveVariant === 'circular' ? (
             <CircularQueue state={state} width={width} height={height} prefersReducedMotion={prefersReducedMotion} />
