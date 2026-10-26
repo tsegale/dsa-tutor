@@ -220,13 +220,6 @@ function AlgorithmWorkspace() {
   // visualiser, never labelled as such. The status is already cached by
   // StudyGate, so this is known before the first paint.
   const isClassic = isClassicTopic(studyStatus, algorithmNameParam)
-  // Has this learner worked this topic before? A completed Practice run in
-  // any session, or any mastery recorded against it. Decides whether the
-  // topic opens in Demo (meet it) or Practice (continue it); undefined
-  // while the topic list is still loading, which the mode effect waits on.
-  const topicSeenBefore = currentTopic
-    ? currentTopic.practiceRunCompleted || currentTopic.masteryPercent > 0
-    : undefined
 
   // The five stages for this topic, so a mode named in the URL is held to
   // the same gate the switcher applies.
@@ -852,32 +845,27 @@ function AlgorithmWorkspace() {
     setClassicMode(isClassic)
   }, [isClassic, setClassicMode])
 
-  // Seeded once per topic, and only once the topic list has arrived, so a
-  // later refetch can never stomp a mode the student chose by hand.
+  // Seeded once per topic, so a later refetch can never stomp a mode the
+  // student chose by hand.
   const seededModeFor = useRef<string | null>(null)
   useLayoutEffect(() => {
     if (isClassic) return
-    // Waiting on the topic list: which mode is right depends on whether
-    // this learner has worked the topic, and guessing before it lands
-    // would visibly flip the mode under them a moment later.
-    if (topicSeenBefore === undefined) return
     if (seededModeFor.current === algorithmNameParam) return
     seededModeFor.current = algorithmNameParam ?? null
-    // A topic the learner has not worked yet opens in Demo, the first step
-    // of the pipeline, where the Theory briefing is the opening tab. One
-    // they have already worked opens in Practice, so returning does not
-    // make them watch it again. A study participant always starts in
-    // Practice (remediation doc 9.8). See utils/studyCondition.ts.
-    const context = { participant: isActiveParticipant, seenBefore: topicSeenBefore }
-    const asked = initialMode(searchParams.get('mode'), false, context)
+    // Every topic opens in Demo, every time, whether or not the learner
+    // has worked it before and whether or not they are a study
+    // participant - see utils/studyCondition.ts. Nothing here waits on
+    // the topic list any more, because that wait only existed to learn
+    // whether the topic had been seen before, which no longer matters.
+    const asked = initialMode(searchParams.get('mode'), false)
     // ?mode=HANDS_ON names a mode the topic may not be offering yet. The
     // switcher refuses it in that case, so honouring it here would open by
     // link the same inert mode a click cannot reach - the tab reading
     // Hands-On while the tracker reads "Finish a Practice run first".
     const refused = asked === AlgorithmMode.HANDS_ON && !stageOffer(stages, 'HANDS_ON').enabled
-    setMode(refused ? initialMode(null, false, context) : asked)
+    setMode(refused ? AlgorithmMode.DEMO : asked)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClassic, isActiveParticipant, topicSeenBefore, algorithmNameParam])
+  }, [isClassic, algorithmNameParam])
 
   // Leaving the page must not leave the store locked in Classic.
   useEffect(() => () => setClassicMode(false), [setClassicMode])

@@ -14,8 +14,13 @@ import { cn } from '@/lib/utils'
  * another. A stage the topic genuinely does not offer says so, with the
  * reason, rather than appearing as something to unlock that never will.
  *
- * Clicking an available stage goes there. The three that are modes switch
- * the mode; Feynman opens its modal; Code flips the Code Mode toggle.
+ * Demo, Practice and Hands-On are status only here, not a second way to
+ * switch - the mode toggle above the canvas already does that, always
+ * visible, and a click here doing the identical thing was two controls for
+ * one action with no way to tell them apart. Code and Feynman stay
+ * clickable: flipping the Code Mode toggle or opening the Feynman modal is
+ * a step down into the stage, not a duplicate of something already on
+ * screen.
  */
 
 interface PipelineTrackerProps {
@@ -64,11 +69,8 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
       if (!store.codeEditorMode) store.toggleCodeEditorMode()
       return
     }
-    const stageMode = STAGE_MODE[stage.id]
-    if (stageMode !== undefined) {
-      if (store.codeEditorMode) store.toggleCodeEditorMode()
-      store.setMode(stageMode)
-    }
+    // DEMO, PRACTICE and HANDS_ON have no action here - see the mode
+    // toggle above the canvas.
   }
 
   return (
@@ -82,7 +84,12 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
 
       <ol className="flex flex-col">
         {stages.map((stage, index) => {
-          const clickable = stage.status === 'AVAILABLE' || stage.status === 'DONE'
+          const isModeStage = STAGE_MODE[stage.id] !== undefined
+          const clickable = !isModeStage && (stage.status === 'AVAILABLE' || stage.status === 'DONE')
+          // A mode stage still gets a tooltip once it is reachable, so a
+          // click that used to work says where the control moved to
+          // instead of just silently stopping.
+          const hint = stage.reason ?? (isModeStage && stage.status !== 'NOT_OFFERED' ? 'Switch modes with the Demo / Practice / Hands-On toggle above the canvas.' : null)
           const current = isCurrent(stage)
           const last = index === stages.length - 1
 
@@ -144,16 +151,20 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
                 >
                   {row}
                 </button>
-              ) : (
-                // Not-offered stages carry their reason in the
-                // row itself, so there is nothing hidden behind a hover.
-                // The tooltip only repeats it for a truncated line.
+              ) : hint ? (
+                // Not-offered stages carry their reason in the row itself,
+                // so there is nothing hidden behind a hover; the tooltip
+                // only repeats it for a truncated line. A mode stage has no
+                // reason to show in the row, so the tooltip is the only
+                // place it says where its control actually is.
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="w-full cursor-default">{row}</div>
                   </TooltipTrigger>
-                  <TooltipContent side="right">{stage.reason}</TooltipContent>
+                  <TooltipContent side="right">{hint}</TooltipContent>
                 </Tooltip>
+              ) : (
+                <div className="w-full cursor-default">{row}</div>
               )}
             </li>
           )

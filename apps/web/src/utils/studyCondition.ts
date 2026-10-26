@@ -83,36 +83,22 @@ export function conditionFeatures(classic: boolean): ConditionFeatures {
   }
 }
 
-export interface InitialModeContext {
-  /** An active, consented, non-withdrawn study participant. */
-  participant?: boolean
-  /** This learner has already worked this topic: a completed Practice run,
-   * or any mastery recorded against it. */
-  seenBefore?: boolean
-}
-
 /**
- * The page's starting mode.
+ * The page's starting mode: always Demo, on every topic, every time it is
+ * opened, whether or not the learner has worked it before and whether or
+ * not they are a study participant.
  *
- * Classic ignores ?mode= entirely, so no link reaches a tutor mode, and an
- * explicit ?mode=DEMO always wins elsewhere.
+ * This used to also open a previously-worked topic in Practice, and always
+ * opened a study participant in Practice regardless (remediation doc 9.8's
+ * argument that Demo must never be a participant's silent default). Both
+ * rules are gone: Demo is the one and only default now, for everybody.
+ * Practice and Hands-On stay reachable - by the mode toggle above the
+ * canvas, or by ?mode= in the URL - just never the thing a topic opens to
+ * on its own.
  *
- * Otherwise this is the first step of the learning pipeline: Demo is where
- * a learner meets an algorithm, which is why the Theory briefing is the
- * opening tab there. A topic they have already worked opens in Practice
- * instead, so coming back does not make them watch the animation again.
- *
- * A study participant always starts in Practice. Remediation doc 9.8
- * argues Demo must never be the silent fallback for them, because the
- * study is about predicting rather than watching, and that argument is
- * about participants specifically; it should not decide what an ordinary
- * student meets on their first encounter with a topic.
+ * Classic ignores ?mode= entirely, so no link reaches a tutor mode.
  */
-export function initialMode(
-  modeParam: string | null,
-  classic: boolean,
-  context: InitialModeContext = {},
-): AlgorithmMode {
+export function initialMode(modeParam: string | null, classic: boolean): AlgorithmMode {
   if (classic) return AlgorithmMode.DEMO
   // Every mode is nameable in the URL. Before the Demo-first default
   // below, the rule was "DEMO, else PRACTICE", so ?mode=PRACTICE worked by
@@ -121,8 +107,7 @@ export function initialMode(
   if (modeParam === 'DEMO') return AlgorithmMode.DEMO
   if (modeParam === 'PRACTICE') return AlgorithmMode.PRACTICE
   if (modeParam === 'HANDS_ON') return AlgorithmMode.HANDS_ON
-  if (context.participant) return AlgorithmMode.PRACTICE
-  return context.seenBefore ? AlgorithmMode.PRACTICE : AlgorithmMode.DEMO
+  return AlgorithmMode.DEMO
 }
 
 /** Whether runs built now get the complexity-prediction junction: never in Classic. */
