@@ -643,6 +643,14 @@ def _evaluate_base_case(student_answer: str | None) -> bool:
 
 
 def _evaluate_return_value(student_answer: str | None, description: str) -> bool:
+    # Fibonacci's RETURN_VALUE phrasing ("returned {left} and {right}")
+    # names two numbers, unlike factorial's single predecessor - checked
+    # first so it isn't swallowed by factorial's looser "returned (\d+)".
+    fib_match = re.search(r"returned (\d+) and (\d+)", description)
+    if fib_match:
+        left, right = int(fib_match.group(1)), int(fib_match.group(2))
+        return student_answer == f"sum-{left + right}"
+
     n_match = re.search(r"factorial\((\d+)\)", description)
     prev_match = re.search(r"returned (\d+)", description)
     if not n_match or not prev_match:

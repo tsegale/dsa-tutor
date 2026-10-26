@@ -1402,6 +1402,26 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
     }
 
     case CriticalJunctionType.RETURN_VALUE: {
+      // fibonacciEngine's RETURN_VALUE description reads "fib({k}) called
+      // fib({k-1}) and fib({k-2}), which returned {left} and {right}." -
+      // two numbers, not factorial's one - so it is checked first and
+      // handled separately before falling through to factorial's parsing.
+      const fibMatch = snapshot.description.match(/returned (\d+) and (\d+)/)
+      if (fibMatch) {
+        const left = Number(fibMatch[1])
+        const right = Number(fibMatch[2])
+        const sum = left + right
+        return distinctTiles(
+          [
+            { id: `sum-${sum}`, label: `${sum}`, misconception: null },
+            { id: `mult-${left * right}`, label: `${left * right}`, misconception: MisconceptionCategory.ORDER_OF_OPERATIONS },
+            { id: `left-only-${left}`, label: `${left}`, misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
+            { id: `right-only-${right}`, label: `${right}`, misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION },
+          ],
+          sum,
+        )
+      }
+
       // factorialEngine's RETURN_VALUE description always reads "factorial({n})
       // called factorial({n-1}) which returned {prev}." - parsed instead of
       // re-deriving from frames, since the frame that called n-1 has already

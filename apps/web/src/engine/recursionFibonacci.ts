@@ -51,6 +51,13 @@ let idCounter = 0
  * tracks which values have already been fully computed once, so a
  * later call for the same k can be flagged as redundant work without
  * actually skipping it (naive recursion never does memoize).
+ *
+ * Every recursive-case return (k > 1) is a RETURN_VALUE/PROCEDURAL
+ * junction - "fib(k-1) and fib(k-2) returned X and Y, what does fib(k)
+ * return?" - mirroring factorialEngine's own pop-phase question. This
+ * is also what makes the recursion-fibonacci code ladder reachable:
+ * withCodeMode only promotes PROCEDURAL junctions to CODE_EDITOR, and
+ * without this one the ladder would be configured but never surfaced.
  */
 export function fibonacciEngine(n: number): AlgorithmSnapshot[] {
   const clamped = Math.max(1, Math.min(8, Math.round(n)))
@@ -129,6 +136,19 @@ export function fibonacciEngine(n: number): AlgorithmSnapshot[] {
     } else {
       const left = fib(k - 1)
       const right = fib(k - 2)
+
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `fib(${k}) called fib(${k - 1}) and fib(${k - 2}), which returned ${left} and ${right}. What does fib(${k}) return?`,
+          pseudocodeLine: LINE.RECURSIVE_RETURN,
+          isPredictionRequired: true,
+          state: baseState({ currentFrameId: id }),
+          criticalJunctionType: CriticalJunctionType.RETURN_VALUE,
+          junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+        }),
+      )
+
       value = left + right
     }
 

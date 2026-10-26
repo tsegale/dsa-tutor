@@ -196,7 +196,8 @@
   ],
   "recursion-fibonacci": [
     "BASE_CASE",
-    "RECURSIVE_CALL"
+    "RECURSIVE_CALL",
+    "RETURN_VALUE"
   ],
   "linear-search": [
     "ALGORITHM_COMPLETE",
