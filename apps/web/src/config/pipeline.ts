@@ -213,7 +213,7 @@ const SUMMARY: Record<PipelineStageId, string> = {
 const LABEL: Record<PipelineStageId, string> = {
   DEMO: 'Demo',
   PRACTICE: 'Practice',
-  HANDS_ON: 'Hands-on',
+  HANDS_ON: 'Hands-On',
   CODE: 'Code',
   FEYNMAN: 'Feynman',
 }

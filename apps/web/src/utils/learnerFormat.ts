@@ -17,7 +17,7 @@ export function sessionModeLabel(mode: string): string {
     case 'DEMO':
       return 'Demo'
     case 'HANDS_ON':
-      return 'Hands-on'
+      return 'Hands-On'
     case 'PRACTICE':
     case 'CLASSIC':
       return 'Practice'

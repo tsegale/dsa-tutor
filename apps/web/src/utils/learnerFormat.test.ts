@@ -12,7 +12,7 @@ describe('learnerFormat', () => {
   it('never names the Classic condition', () => {
     expect(sessionModeLabel('CLASSIC')).toBe('Practice')
     expect(sessionModeLabel('PRACTICE')).toBe('Practice')
-    expect(sessionModeLabel('HANDS_ON')).toBe('Hands-on')
+    expect(sessionModeLabel('HANDS_ON')).toBe('Hands-On')
   })
 
   it('names misconceptions in plain language, never as enum names', () => {

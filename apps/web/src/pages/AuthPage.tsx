@@ -26,7 +26,7 @@ const TOPIC_COUNT = MODULES.reduce((total, module) => total + module.topics.leng
 
 // Each topic moves through these in order. Named here because the number is
 // part of what the figures below are claiming.
-const STAGES = ['Demo', 'Practice', 'Hands-on', 'Code', 'Feynman'] as const
+const STAGES = ['Demo', 'Practice', 'Hands-On', 'Code', 'Feynman'] as const
 
 const FIGURES = [
   { value: String(MODULES.length), label: 'modules' },
