@@ -284,8 +284,13 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
         </svg>
       </div>
 
+      {/* The step's own narration used to repeat here, word for word, under
+          the exact same sentence already shown in the right panel's
+          "What's happening" box - the same text on screen twice with
+          nothing to tell them apart. It stays in canvasLabel (the svg's
+          aria-label) for a screen reader, and this footer keeps only the
+          numbers the right panel does not carry. */}
       <div className="shrink-0 border-t border-border px-3 py-2 dark:border-dark-border">
-        <p className="text-[12px] text-text-muted dark:text-dark-text-secondary">{snapshot?.description}</p>
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">
           Visited: {state.visitedCount}
           {state.pathLength !== undefined && ` · Path length: ${state.pathLength}`}

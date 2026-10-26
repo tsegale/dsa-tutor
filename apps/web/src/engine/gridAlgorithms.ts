@@ -84,6 +84,49 @@ const ALGO_LABEL: Record<GridAlgorithmType, string> = {
 }
 
 /**
+ * "Visited (8, 3)." said nothing a student could use: not why that cell
+ * and not what happens because of it. Each of the four engines proves a
+ * different fact at the moment a cell comes off the frontier - BFS's
+ * distance is already final because it explores in rings, DFS's is not
+ * because it commits to one branch, Dijkstra's is final because it always
+ * takes the closest unvisited cell next, A*'s is a guess weighed by the
+ * heuristic rather than a certainty - and that fact is what belongs here,
+ * driven from the same g/h the engine already tracked rather than adding
+ * new state to read it from.
+ */
+function visitedDescription(
+  r: number,
+  c: number,
+  algorithmType: GridAlgorithmType,
+  g: number,
+  h: number,
+  isEnd: boolean,
+  visitedCount: number,
+): string {
+  const pos = `(${r}, ${c})`
+  const steps = (n: number) => `${n} step${n === 1 ? '' : 's'}`
+
+  if (isEnd) {
+    return algorithmType === 'dijkstra' || algorithmType === 'astar'
+      ? `Reached the end cell ${pos} at cost ${g} - no cheaper route is possible, so the run stops here and walks the path back.`
+      : `Reached the end cell ${pos} after ${steps(visitedCount)} - the run stops here and walks the path back.`
+  }
+
+  switch (algorithmType) {
+    case 'bfs':
+      return `Dequeued ${pos}, ${steps(g)} from the start - BFS explores one ring at a time, so this distance is already final.`
+    case 'dfs':
+      return `Visited ${pos}, ${steps(g)} down this branch - DFS commits to one path and only backtracks once every neighbour here is a wall or already visited.`
+    case 'dijkstra':
+      return `Visited ${pos} at distance ${g} - the lowest possible, since Dijkstra always finalises the closest unvisited cell next.`
+    case 'astar':
+      return `Visited ${pos}: g=${g} travelled so far, h=${h} estimated to go (f=${g + h}) - the lowest f(n) in the frontier, so this is the best guess toward the end right now.`
+    default:
+      return `Visited ${pos}.`
+  }
+}
+
+/**
  * Shared core for all four grid pathfinding engines - they're identical
  * except for how the next cell is chosen from the frontier (FIFO for
  * BFS, LIFO for DFS, minimum g(n) for Dijkstra, minimum f(n) = g(n) +
@@ -224,7 +267,7 @@ function runGridSearch(
     if (k !== startKey && k !== endKey) workingGrid[r][c] = { ...workingGrid[r][c], state: 'visited' }
 
     push({
-      description: `Visited (${r}, ${c}).`,
+      description: visitedDescription(r, c, algorithmType, gScore.get(k) ?? 0, manhattan(r, c, endRow, endCol), k === endKey, visitedCount),
       pseudocodeLine: PSEUDOCODE_LINE.LOOP,
       isPredictionRequired: false,
       state: baseState({ currentCell: [r, c], frontierCells: [...frontier], visitedCount }),

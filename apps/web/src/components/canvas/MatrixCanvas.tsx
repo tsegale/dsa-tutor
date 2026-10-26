@@ -119,8 +119,21 @@ export default function MatrixCanvas({ width = 600, height = 400 }: MatrixCanvas
         </svg>
       </div>
 
+      {/* The step's own narration used to repeat here, word for word, under
+          the exact same sentence already shown in the right panel's
+          "What's happening" box. It stays in canvasLabel (the svg's
+          aria-label) for a screen reader; this footer now gives the one
+          thing the right panel does not - which cell is being compared,
+          and whether this pass found a shorter route through k. */}
       <div className="shrink-0 border-t border-border px-3 py-2 dark:border-dark-border">
-        <p className="text-[12px] text-text-muted dark:text-dark-text-secondary">{snapshot?.description}</p>
+        <p className="text-[12px] text-text-muted dark:text-dark-text-secondary">
+          {state.i !== null && state.j !== null
+            ? `Comparing dist[${state.nodeIds[state.i]}][${state.nodeIds[state.j]}]${
+                updatedSet.has(`${state.i},${state.j}`) ? ' - shorter route found' : ' - current route stays shortest'
+              }`
+            : 'Matrix initialised from the graph’s direct edges.'}
+          {state.k !== null && ` · pass ${state.k + 1} of ${n}`}
+        </p>
       </div>
     </div>
   )
