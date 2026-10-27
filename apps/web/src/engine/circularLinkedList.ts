@@ -201,6 +201,18 @@ export function cllInsertEngine(values: number[]): AlgorithmSnapshot[] {
     }),
   )
 
+  snapshots.push(
+    makeSnapshot({
+      stepIndex: stepRef.current++,
+      description: `${newValue} slots in right after the old tail. What does the OLD tail's .next pointer now point to?`,
+      pseudocodeLine: LINE.CLOSE_CIRCLE,
+      isPredictionRequired: true,
+      state: baseState(nodes, { currentId: tailId }),
+      criticalJunctionType: CriticalJunctionType.INSERT_BETWEEN,
+      junctionDifficulty: JunctionDifficulty.PROCEDURAL,
+    }),
+  )
+
   const finalNodes = nodes
     .map((n) => (n.id === tailId ? { ...n, next: newId } : n))
     .concat({ id: newId, value: newValue, next: headId })

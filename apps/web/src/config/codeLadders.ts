@@ -1,3 +1,4 @@
+import { CriticalJunctionType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import type { PythonStepSpec } from '@/utils/pyodideRunner'
 
@@ -1026,6 +1027,968 @@ const SINGLY_LINKED_LIST: CodeRung[] = [
   },
 ]
 
+/** The first snapshot asking this junction type, or undefined if the run
+ *  never asks it - shared by every ladder below that anchors a rung to a
+ *  specific moment in the run rather than to its final state. */
+function firstJunction(run: AlgorithmSnapshot[], type: CriticalJunctionType): AlgorithmSnapshot | undefined {
+  return run.find((s) => s.criticalJunctionType === type)
+}
+
+// --------------------------------------------------------------- deque
+
+const DEQUE: CodeRung[] = [
+  {
+    title: 'Push to the front',
+    prompt: 'A deque grows at either end. Add value to the FRONT of the deque.',
+    starter: {
+      python: [
+        '# deque and value are given. deque is a plain list; the FRONT is index 0.',
+        '# One list method inserts at a position, not only at the end.',
+        '',
+      ].join('\n'),
+      java: 'deque.addFirst(value);',
+    },
+    globalsFor: (run) => {
+      const values = itemValues(last(run))
+      return { deque: values.slice(1), value: values[0] ?? 0 }
+    },
+    readBack: 'deque',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values : null
+    },
+  },
+  {
+    title: 'Push to the back',
+    prompt: 'Now the other end: add value to the BACK of the deque.',
+    starter: {
+      python: ['# deque and value are given.', '# The familiar list method that only ever adds at the end.', ''].join('\n'),
+      java: 'deque.addLast(value);',
+    },
+    globalsFor: (run) => {
+      const values = itemValues(last(run))
+      return { deque: values.slice(0, -1), value: values[values.length - 1] ?? 0 }
+    },
+    readBack: 'deque',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values : null
+    },
+  },
+  {
+    title: 'Pop from the front',
+    prompt: 'Remove the value at the FRONT and put it in removed.',
+    starter: {
+      python: ['# deque is given.', '# pop() with no argument takes from the end; give it index 0 for the front.', 'removed = '].join('\n'),
+      java: 'int removed = deque.removeFirst();',
+    },
+    globalsFor: (run) => ({ deque: itemValues(last(run)) }),
+    readBack: 'removed',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values[0] : null
+    },
+  },
+  {
+    title: 'The whole deque',
+    prompt: "Push every value in values onto the BACK of an empty deque, in order. Then pop one value off the FRONT. Set deque to what's left.",
+    starter: {
+      python: [
+        '# values is given: the values to push, in order.',
+        '# Push each onto the back, then remove one from the front.',
+        'deque = []',
+        '',
+      ].join('\n'),
+      java: 'Deque<Integer> deque = new ArrayDeque<>();\nfor (int v : values) deque.addLast(v);\ndeque.removeFirst();',
+    },
+    globalsFor: (run) => ({ values: itemValues(last(run)) }),
+    readBack: 'deque',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length > 0 ? values.slice(1) : null
+    },
+  },
+]
+
+// ---------------------------------------------------------- circular queue
+
+/**
+ * The real front-advance a circular dequeue makes: the OLD front, read
+ * from the snapshot just before the dequeue junction, alongside the
+ * engine's own already-computed new front at the junction itself - never
+ * re-derived, exactly the ladder's own rule for a final rung, applied
+ * here to a middle one because the engine happens to store the answer
+ * one step early.
+ */
+function circularDequeueSnapshot(
+  run: AlgorithmSnapshot[],
+): { prevFront: number; size: number; capacity: number; nextFront: number } | null {
+  const idx = run.findIndex((s) => s.criticalJunctionType === CriticalJunctionType.QUEUE_FRONT)
+  if (idx <= 0) return null
+  const prev = objectState(run[idx - 1])
+  const curr = objectState(run[idx])
+  if (
+    typeof prev.frontIndex !== 'number' ||
+    typeof curr.frontIndex !== 'number' ||
+    typeof curr.size !== 'number' ||
+    typeof curr.capacity !== 'number'
+  ) {
+    return null
+  }
+  return { prevFront: prev.frontIndex, size: curr.size, capacity: curr.capacity, nextFront: curr.frontIndex }
+}
+
+const CIRCULAR_QUEUE: CodeRung[] = [
+  {
+    title: 'Find the next slot',
+    prompt: 'The rear pointer wraps with modulo instead of growing the array. Set next_rear to the slot the next enqueue will use.',
+    starter: {
+      python: [
+        '# rear and capacity are given.',
+        '# Wrapping arithmetic: once rear is the last index, it comes back to 0.',
+        'next_rear = ',
+      ].join('\n'),
+      java: 'int nextRear = (rear + 1) % capacity;',
+    },
+    globalsFor: (run) => {
+      const state = objectState(last(run))
+      return {
+        rear: typeof state.rearIndex === 'number' ? state.rearIndex : -1,
+        capacity: typeof state.capacity === 'number' ? state.capacity : 5,
+      }
+    },
+    readBack: 'next_rear',
+    expect: 'number',
+    expectedFor: (run) => {
+      const state = objectState(last(run))
+      const { rearIndex: rear, capacity } = state
+      if (typeof rear !== 'number' || typeof capacity !== 'number') return null
+      return (rear + 1) % capacity
+    },
+  },
+  {
+    title: 'Is it full?',
+    prompt: "A circular queue is full when size reaches capacity - not when rear wraps to front's index, which is the classic bug. Set is_full to whether another enqueue fits.",
+    starter: {
+      python: ['# size and capacity are given.', 'is_full = '].join('\n'),
+      java: 'boolean isFull = size >= capacity;',
+    },
+    globalsFor: (run) => {
+      const state = objectState(last(run))
+      return {
+        size: typeof state.size === 'number' ? state.size : 0,
+        capacity: typeof state.capacity === 'number' ? state.capacity : 5,
+      }
+    },
+    readBack: 'is_full',
+    expect: 'boolean',
+    expectedFor: (run) => {
+      const state = objectState(last(run))
+      const { size, capacity } = state
+      return typeof size === 'number' && typeof capacity === 'number' ? size >= capacity : null
+    },
+  },
+  {
+    title: 'Advance front after a dequeue',
+    prompt: 'Dequeuing removes the front item, then front itself must advance - unless the queue is now empty, in which case front has nothing left to point at.',
+    starter: {
+      python: [
+        '# front, size, and capacity are given. size already reflects the',
+        '# dequeue that just happened.',
+        '# If anything remains, front wraps forward with modulo. If nothing',
+        '# remains, front resets to -1.',
+        'next_front = ',
+      ].join('\n'),
+      java: 'int nextFront = size > 0 ? (front + 1) % capacity : -1;',
+    },
+    globalsFor: (run) => {
+      const d = circularDequeueSnapshot(run)
+      return d ? { front: d.prevFront, size: d.size, capacity: d.capacity } : { front: 0, size: 0, capacity: 5 }
+    },
+    readBack: 'next_front',
+    expect: 'number',
+    expectedFor: (run) => {
+      const d = circularDequeueSnapshot(run)
+      return d ? d.nextFront : null
+    },
+  },
+  {
+    title: 'The whole circular queue',
+    prompt: 'Enqueue every value in values, in order, then dequeue two. Logically a circular queue still behaves exactly like a plain FIFO queue - set removed to the two values that come off, in order.',
+    starter: {
+      python: [
+        '# values is given: the values to enqueue, in order.',
+        '# The circularity is an array-indexing detail; the ORDER is still',
+        '# first in, first out.',
+        'queue = []',
+        'removed = []',
+        '',
+      ].join('\n'),
+      java: 'Deque<Integer> queue = new ArrayDeque<>();\nfor (int v : values) queue.addLast(v);\nList<Integer> removed = List.of(queue.removeFirst(), queue.removeFirst());',
+    },
+    globalsFor: (run) => ({ values: itemValues(last(run)) }),
+    readBack: 'removed',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = itemValues(last(run))
+      return values.length >= 2 ? [values[0], values[1]] : null
+    },
+  },
+]
+
+// --------------------------------------------------- doubly linked list
+
+/**
+ * A node linked only backward via .prev, built from a list where
+ * values[0] is logically the TAIL and the chain walks back toward the
+ * head - the reverse-direction twin of buildChain. Used wherever a rung
+ * needs real .prev-following code without ever constructing the true
+ * two-way cycle a doubly linked list has in memory, which cannot be read
+ * back as JSON (converting it would recurse forever between a node and
+ * its own neighbour). Every DLL/CLL rung below follows the same rule:
+ * node objects the student is GIVEN stay one hop deep or acyclic: a
+ * structure the student BUILDS themselves may become truly cyclic in
+ * the sandbox, but only a plain number/list the student assembles by
+ * walking it is ever read back.
+ */
+export interface PrevLink {
+  value: number
+  next: null
+  prev: PrevLink | null
+}
+
+export function buildPrevChain(valuesTailToHead: readonly number[]): PrevLink | null {
+  let node: PrevLink | null = null
+  for (const value of valuesTailToHead) node = { value, next: null, prev: node }
+  return node
+}
+
+const DOUBLY_LINKED_LIST: CodeRung[] = [
+  {
+    title: 'Step backward one hop',
+    prompt: 'A doubly linked list node knows BOTH neighbours. Set value to the value stored one step before curr, via curr.prev - no restart from head needed.',
+    starter: {
+      python: [
+        '# curr is given: a node with .value, .next, and .prev.',
+        "# curr['prev'] is the node itself, not a value - index into it.",
+        'value = ',
+      ].join('\n'),
+      java: 'int value = curr.prev.value;',
+    },
+    globalsFor: (run) => {
+      const values = linkedValues(run)
+      const index = values.length > 0 ? Math.min(Math.floor(values.length / 2), values.length - 1) : 0
+      const curr = {
+        value: values[index] ?? 0,
+        next: null,
+        prev: index > 0 ? { value: values[index - 1], next: null, prev: null } : null,
+      }
+      return { curr }
+    },
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      const index = values.length > 0 ? Math.min(Math.floor(values.length / 2), values.length - 1) : 0
+      return index > 0 ? values[index - 1] : null
+    },
+  },
+  {
+    title: 'Search backward from the tail',
+    prompt: 'Search for target by walking backward from tail via .prev. Set found to True once it turns up.',
+    starter: {
+      python: [
+        '# tail and target are given: tail is the LAST node, linked backward',
+        '# via .prev all the way to the head.',
+        'found = False',
+        'node = tail',
+        'while node is not None:',
+        '    ',
+      ].join('\n'),
+      java: 'boolean found = false;\nfor (Node node = tail; node != null; node = node.prev) {\n    if (node.value == target) { found = true; break; }\n}',
+    },
+    globalsFor: (run) => {
+      const values = linkedValues(run)
+      return { tail: buildPrevChain(values), target: values[0] ?? 0 }
+    },
+    readBack: 'found',
+    expect: 'boolean',
+    expectedFor: (run) => (linkedValues(run).length > 0 ? true : null),
+  },
+  {
+    title: 'Delete and relink both directions',
+    prompt:
+      "Deleting a node means its neighbours must relink to EACH OTHER, in both directions. Given prev_node and next_node (the nodes either side of the deleted one), relink them, then set linked to [prev_node's new .next value, next_node's new .prev value].",
+    starter: {
+      python: [
+        '# prev_node and next_node are given - the nodes either side of the',
+        '# node being deleted.',
+        '',
+        '',
+        "linked = [prev_node['next']['value'], next_node['prev']['value']]",
+      ].join('\n'),
+      java: 'prevNode.next = nextNode;\nnextNode.prev = prevNode;\nint[] linked = { prevNode.next.value, nextNode.prev.value };',
+    },
+    globalsFor: (run) => {
+      const values = linkedValues(run)
+      const a = values[0] ?? 1
+      const b = values[1] ?? a + 1
+      return {
+        prev_node: { value: a, next: null, prev: null },
+        next_node: { value: b, next: null, prev: null },
+      }
+    },
+    readBack: 'linked',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      const a = values[0] ?? 1
+      const b = values[1] ?? a + 1
+      return [b, a]
+    },
+  },
+  {
+    title: 'Build the whole doubly linked list',
+    prompt:
+      'Build the list from values, in order, with both next and prev set correctly. Set order to the values read forward from head, followed by the values read backward from tail - proving both directions work.',
+    starter: {
+      python: [
+        '# values is given: the values in list order.',
+        '# Build the forward links first, then set every prev to point',
+        '# back at the node before it.',
+        'head = None',
+        'tail = None',
+        'for value in values:',
+        '    ',
+        '',
+        'order = []',
+        'node = head',
+        'while node is not None:',
+        "    order.append(node['value'])",
+        "    node = node['next']",
+        'node = tail',
+        'while node is not None:',
+        "    order.append(node['value'])",
+        "    node = node['prev']",
+      ].join('\n'),
+      java:
+        'Node head = null, tail = null;\nfor (int value : values) {\n    Node node = new Node(value);\n    if (tail != null) { tail.next = node; node.prev = tail; }\n    else head = node;\n    tail = node;\n}\nList<Integer> order = new ArrayList<>();\nfor (Node n = head; n != null; n = n.next) order.add(n.value);\nfor (Node n = tail; n != null; n = n.prev) order.add(n.value);',
+    },
+    globalsFor: (run) => ({ values: linkedValues(run) }),
+    readBack: 'order',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = linkedValues(run)
+      return values.length > 0 ? [...values, ...[...values].reverse()] : null
+    },
+  },
+]
+
+// -------------------------------------------------- circular linked list
+
+/**
+ * The values of a circular list, head to tail - unlike linkedValues,
+ * bounded by node COUNT rather than a null .next, since a circular
+ * list's last node never points to null (walking it with linkedValues's
+ * own stopping rule would include the head a second time).
+ */
+function circularValues(run: AlgorithmSnapshot[]): number[] {
+  const state = objectState(last(run))
+  const nodes = state.nodes
+  if (!Array.isArray(nodes)) return []
+  const byId = new Map<string, { value: number; next: string | null }>()
+  for (const node of nodes) {
+    const n = node as { id?: unknown; value?: unknown; next?: unknown }
+    if (typeof n.id === 'string' && typeof n.value === 'number') {
+      byId.set(n.id, { value: n.value, next: typeof n.next === 'string' ? n.next : null })
+    }
+  }
+  const out: number[] = []
+  let id = typeof state.headId === 'string' ? state.headId : null
+  const total = byId.size
+  while (id && byId.has(id) && out.length < total) {
+    const node = byId.get(id)!
+    out.push(node.value)
+    id = node.next
+  }
+  return out
+}
+
+const CIRCULAR_LINKED_LIST: CodeRung[] = [
+  {
+    title: 'What does the last node point to?',
+    prompt: "A circular list's last node never becomes None - its .next closes the circle back to the head. Set next_value to what tail.next.value is.",
+    starter: {
+      python: [
+        '# tail is given: the last node.',
+        "# A circular list's tail always points back to the head, never to None.",
+        'next_value = ',
+      ].join('\n'),
+      java: 'int nextValue = tail.next.value;',
+    },
+    globalsFor: (run) => {
+      const values = circularValues(run)
+      return { tail: { value: values[values.length - 1] ?? 0, next: { value: values[0] ?? 0, next: null } } }
+    },
+    readBack: 'next_value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = circularValues(run)
+      return values.length > 0 ? values[0] : null
+    },
+  },
+  {
+    title: 'Delete and keep the circle closed',
+    prompt:
+      'Deleting a node needs only ONE relink, like a singly linked list - but it must stay circular, never point to None. Relink prev_node past the deleted node, then set linked to its new .next value.',
+    starter: {
+      python: [
+        '# prev_node and next_node are given - the node being deleted sat',
+        '# between them.',
+        '',
+        "linked = prev_node['next']['value']",
+      ].join('\n'),
+      java: 'prevNode.next = nextNode;\nint linked = prevNode.next.value;',
+    },
+    globalsFor: (run) => {
+      const values = circularValues(run)
+      const a = values[0] ?? 1
+      const b = values[1] ?? a + 1
+      return {
+        prev_node: { value: a, next: null },
+        next_node: { value: b, next: null },
+      }
+    },
+    readBack: 'linked',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = circularValues(run)
+      const a = values[0] ?? 1
+      const b = values[1] ?? a + 1
+      return b
+    },
+  },
+  {
+    title: 'Close the circle',
+    prompt:
+      "Build the list from values, closing the circle (the last node's .next must point back to head, never to None). Starting at head, count the hops needed to arrive back at head - set steps to that count.",
+    starter: {
+      python: [
+        '# values is given: the values in list order.',
+        '# Build the chain forward, then close the circle.',
+        'head = None',
+        'prev = None',
+        'for value in values:',
+        "    node = {'value': value, 'next': None}",
+        '    if prev is not None:',
+        "        prev['next'] = node",
+        '    else:',
+        '        head = node',
+        '    prev = node',
+        '',
+        '',
+        'steps = 1',
+        'node = head',
+        "while node['next'] is not head:",
+        '    steps += 1',
+        "    node = node['next']",
+      ].join('\n'),
+      java:
+        'Node head = null, prev = null;\nfor (int value : values) {\n    Node node = new Node(value);\n    if (prev != null) prev.next = node; else head = node;\n    prev = node;\n}\nprev.next = head;\nint steps = 1;\nNode node = head;\nwhile (node.next != head) { steps++; node = node.next; }',
+    },
+    globalsFor: (run) => ({ values: circularValues(run) }),
+    readBack: 'steps',
+    expect: 'number',
+    expectedFor: (run) => {
+      const values = circularValues(run)
+      return values.length > 0 ? values.length : null
+    },
+  },
+  {
+    title: 'The whole circular list',
+    prompt:
+      'Build the circular list from values, then append extra, re-closing the circle. Set order to the values read by walking exactly one full lap from head (len(values) + 1 steps).',
+    starter: {
+      python: [
+        '# values and extra are given.',
+        '# Build the chain, append extra as the new last node, and close',
+        "# the circle so the new last node's .next points back to head.",
+        'head = None',
+        'prev = None',
+        'for value in values:',
+        "    node = {'value': value, 'next': None}",
+        '    if prev is not None:',
+        "        prev['next'] = node",
+        '    else:',
+        '        head = node',
+        '    prev = node',
+        '',
+        "new_node = {'value': extra, 'next': None}",
+        '',
+        '',
+        'order = []',
+        'node = head',
+        'for _ in range(len(values) + 1):',
+        "    order.append(node['value'])",
+        "    node = node['next']",
+      ].join('\n'),
+      java:
+        'Node head = null, prev = null;\nfor (int value : values) { /* build forward chain */ }\nNode newNode = new Node(extra);\nprev.next = newNode;\nnewNode.next = head;\nList<Integer> order = new ArrayList<>();\nNode node = head;\nfor (int i = 0; i < values.length + 1; i++) { order.add(node.value); node = node.next; }',
+    },
+    globalsFor: (run) => {
+      const values = circularValues(run)
+      const extra = values.length > 0 ? Math.max(...values) + 1 : 1
+      return { values, extra }
+    },
+    readBack: 'order',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const values = circularValues(run)
+      if (values.length === 0) return null
+      return [...values, Math.max(...values) + 1]
+    },
+  },
+]
+
+// ------------------------------------------------------------ hash table
+
+function hashState(snapshot: AlgorithmSnapshot | undefined): {
+  buckets: Array<{ index: number; chain: Array<{ id: string; key: number }> }>
+  capacity: number
+} {
+  const state = objectState(snapshot)
+  const buckets = Array.isArray(state.buckets)
+    ? (state.buckets as Array<{ index: number; chain: Array<{ id: string; key: number }> }>)
+    : []
+  const capacity = typeof state.capacity === 'number' ? state.capacity : buckets.length
+  return { buckets, capacity }
+}
+
+/**
+ * Every key this run inserted, in the order it inserted them - recovered
+ * from the numeric suffix hashTable.ts's nextId stamps onto every
+ * entry's id ("hash-{key}-{counter}"), since chain/slot order is bucket
+ * order, not insertion order, once a key lands behind an earlier one.
+ */
+function insertionOrderKeys(run: AlgorithmSnapshot[]): number[] {
+  const { buckets } = hashState(last(run))
+  const entries: Array<{ key: number; counter: number }> = []
+  for (const bucket of buckets) {
+    for (const entry of bucket.chain) {
+      const match = /-(\d+)$/.exec(entry.id)
+      if (match) entries.push({ key: entry.key, counter: Number(match[1]) })
+    }
+  }
+  return entries.sort((a, b) => a.counter - b.counter).map((e) => e.key)
+}
+
+/**
+ * The most recent "entry placed" snapshot - the actual insert, never the
+ * LOAD_FACTOR warning that (for linear probing, once past 70% full) can
+ * follow it as the run's true last snapshot without itself changing the
+ * table.
+ */
+function lastPlacementSnapshot(run: AlgorithmSnapshot[]): AlgorithmSnapshot | undefined {
+  for (let i = run.length - 1; i >= 0; i -= 1) {
+    const snapshot = run[i]
+    const state = objectState(snapshot)
+    if (!snapshot.isPredictionRequired && typeof state.activeBucket === 'number' && typeof state.activeKey === 'number') {
+      return snapshot
+    }
+  }
+  return undefined
+}
+
+const HASH_TABLE_CHAINING: CodeRung[] = [
+  {
+    title: 'Hash a key',
+    prompt: 'Compute which bucket key maps to: hash(key) = key % capacity. Set bucket to that index.',
+    starter: {
+      python: ['# key and capacity are given.', '# The simplest possible hash function for integer keys.', 'bucket = '].join('\n'),
+      java: 'int bucket = key % capacity;',
+    },
+    globalsFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.HASH_BUCKET))
+      return { key: state.activeKey ?? 0, capacity: typeof state.capacity === 'number' ? state.capacity : 7 }
+    },
+    readBack: 'bucket',
+    expect: 'number',
+    expectedFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.HASH_BUCKET))
+      return typeof state.hashResult === 'number' ? state.hashResult : null
+    },
+  },
+  {
+    title: 'Resolve a collision by chaining',
+    prompt: "This bucket's chain already has entries. Append key to the end of it - chaining never reorders what's already there.",
+    starter: {
+      python: ["# chain and key are given: chain is this bucket's existing keys.", '# A new key joins the back.', ''].join('\n'),
+      java: 'chain.add(key);',
+    },
+    globalsFor: (run) => {
+      const { buckets } = hashState(last(run))
+      const collided = buckets.find((b) => b.chain.length >= 2)
+      const chain = (collided?.chain ?? []).map((e) => e.key)
+      return { chain: chain.slice(0, -1), key: chain[chain.length - 1] ?? 0 }
+    },
+    readBack: 'chain',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const { buckets } = hashState(last(run))
+      const collided = buckets.find((b) => b.chain.length >= 2)
+      return collided ? collided.chain.map((e) => e.key) : null
+    },
+  },
+  {
+    title: 'Search a chain',
+    prompt: "Search this bucket's chain for target by walking it - this walk is the cost a bad hash function creates. Set found to True if target is in the chain.",
+    starter: {
+      python: ['# chain and target are given.', 'found = False', 'for k in chain:', '    '].join('\n'),
+      java: 'boolean found = false;\nfor (int k : chain) {\n    if (k == target) { found = true; break; }\n}',
+    },
+    globalsFor: (run) => {
+      const { buckets } = hashState(last(run))
+      const withEntries = buckets.find((b) => b.chain.length >= 1)
+      const chain = (withEntries?.chain ?? []).map((e) => e.key)
+      return { chain, target: chain[chain.length - 1] ?? 0 }
+    },
+    readBack: 'found',
+    expect: 'boolean',
+    expectedFor: (run) => {
+      const { buckets } = hashState(last(run))
+      return buckets.find((b) => b.chain.length >= 1) ? true : null
+    },
+  },
+  {
+    title: 'The whole chaining table',
+    prompt:
+      "Insert every key in keys into an empty table of capacity buckets, exactly as chaining does: hash, then append to that bucket's chain. Set buckets to the final chain contents, one list per bucket index.",
+    starter: {
+      python: ['# keys and capacity are given.', 'buckets = [[] for _ in range(capacity)]', 'for key in keys:', '    '].join('\n'),
+      java:
+        'List<List<Integer>> buckets = new ArrayList<>();\nfor (int i = 0; i < capacity; i++) buckets.add(new ArrayList<>());\nfor (int key : keys) buckets.get(key % capacity).add(key);',
+    },
+    globalsFor: (run) => {
+      const { capacity } = hashState(last(run))
+      return { keys: insertionOrderKeys(run), capacity }
+    },
+    readBack: 'buckets',
+    expect: 'number[][]',
+    expectedFor: (run) => {
+      const { buckets, capacity } = hashState(last(run))
+      if (insertionOrderKeys(run).length === 0) return null
+      const out: number[][] = Array.from({ length: capacity }, () => [])
+      for (const bucket of buckets) out[bucket.index] = bucket.chain.map((e) => e.key)
+      return out
+    },
+  },
+]
+
+/**
+ * The probing table flattened to one slot per index, -1 meaning empty -
+ * the single array open addressing actually uses, unlike chaining's one
+ * list per bucket.
+ */
+function probingSlots(buckets: Array<{ index: number; chain: Array<{ key: number }> }>, capacity: number): number[] {
+  const slots = Array.from({ length: capacity }, () => -1)
+  for (const bucket of buckets) slots[bucket.index] = bucket.chain[0]?.key ?? -1
+  return slots
+}
+
+const HASH_TABLE_PROBING: CodeRung[] = [
+  {
+    title: 'Hash a key',
+    prompt: 'Compute which slot key maps to: hash(key) = key % capacity. Set slot to that index.',
+    starter: {
+      python: ['# key and capacity are given.', 'slot = '].join('\n'),
+      java: 'int slot = key % capacity;',
+    },
+    globalsFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.HASH_BUCKET))
+      return { key: state.activeKey ?? 0, capacity: typeof state.capacity === 'number' ? state.capacity : 7 }
+    },
+    readBack: 'slot',
+    expect: 'number',
+    expectedFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.HASH_BUCKET))
+      return typeof state.hashResult === 'number' ? state.hashResult : null
+    },
+  },
+  {
+    title: 'Probe past a collision',
+    prompt: 'Slot is occupied. Linear probing checks the next slot by wrapping with modulo, never by restarting the hash. Set next_slot to where it checks next.',
+    starter: {
+      python: ['# slot and capacity are given.', 'next_slot = '].join('\n'),
+      java: 'int nextSlot = (slot + 1) % capacity;',
+    },
+    globalsFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.PROBE_NEXT))
+      const sequence = Array.isArray(state.activeProbeSequence) ? (state.activeProbeSequence as number[]) : []
+      return { slot: sequence[sequence.length - 1] ?? 0, capacity: typeof state.capacity === 'number' ? state.capacity : 7 }
+    },
+    readBack: 'next_slot',
+    expect: 'number',
+    expectedFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.PROBE_NEXT))
+      const sequence = Array.isArray(state.activeProbeSequence) ? (state.activeProbeSequence as number[]) : []
+      const capacity = state.capacity
+      if (sequence.length === 0 || typeof capacity !== 'number') return null
+      return (sequence[sequence.length - 1] + 1) % capacity
+    },
+  },
+  {
+    title: 'Place the key',
+    prompt: 'A free slot was found at free_slot (slots uses -1 for empty). Write key into slots there.',
+    starter: {
+      python: ['# slots, free_slot, and key are given.', 'slots[free_slot] = '].join('\n'),
+      java: 'slots[freeSlot] = key;',
+    },
+    globalsFor: (run) => {
+      const placement = lastPlacementSnapshot(run)
+      const placementIndex = placement ? run.indexOf(placement) : -1
+      const before = placementIndex > 0 ? hashState(run[placementIndex - 1]) : hashState(undefined)
+      const state = objectState(placement)
+      return {
+        slots: probingSlots(before.buckets, before.capacity),
+        free_slot: state.activeBucket ?? 0,
+        key: state.activeKey ?? 0,
+      }
+    },
+    readBack: 'slots',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const placement = lastPlacementSnapshot(run)
+      if (!placement) return null
+      const placementIndex = run.indexOf(placement)
+      if (placementIndex <= 0) return null
+      const before = hashState(run[placementIndex - 1])
+      const state = objectState(placement)
+      if (typeof state.activeBucket !== 'number' || typeof state.activeKey !== 'number') return null
+      const slots = probingSlots(before.buckets, before.capacity)
+      slots[state.activeBucket] = state.activeKey
+      return slots
+    },
+  },
+  {
+    title: 'The whole probing table',
+    prompt:
+      'Insert every key in keys into an empty table of capacity slots (-1 means empty): hash, then probe forward with wraparound until a free slot turns up. Set slots to the final table.',
+    starter: {
+      python: [
+        '# keys and capacity are given.',
+        'slots = [-1] * capacity',
+        'for key in keys:',
+        '    slot = key % capacity',
+        '    while slots[slot] != -1:',
+        '        ',
+        '    ',
+      ].join('\n'),
+      java:
+        'int[] slots = new int[capacity];\nArrays.fill(slots, -1);\nfor (int key : keys) {\n    int slot = key % capacity;\n    while (slots[slot] != -1) slot = (slot + 1) % capacity;\n    slots[slot] = key;\n}',
+    },
+    globalsFor: (run) => {
+      const { capacity } = hashState(last(run))
+      return { keys: insertionOrderKeys(run), capacity }
+    },
+    readBack: 'slots',
+    expect: 'number[]',
+    expectedFor: (run) => {
+      const { buckets, capacity } = hashState(last(run))
+      if (insertionOrderKeys(run).length === 0) return null
+      return probingSlots(buckets, capacity)
+    },
+  },
+]
+
+// -------------------------------------------------------------- recursion
+
+function factorialReturnJunctions(run: AlgorithmSnapshot[]): AlgorithmSnapshot[] {
+  return run.filter((s) => s.criticalJunctionType === CriticalJunctionType.RETURN_VALUE)
+}
+
+function parseFactorialReturn(snapshot: AlgorithmSnapshot | undefined): { n: number; prev: number } | null {
+  const n = Number(snapshot?.description.match(/factorial\((\d+)\)/)?.[1])
+  const prev = Number(snapshot?.description.match(/returned (\d+)/)?.[1])
+  return Number.isFinite(n) && Number.isFinite(prev) ? { n, prev } : null
+}
+
+const RECURSION_FACTORIAL: CodeRung[] = [
+  {
+    title: "Combine one call's result",
+    prompt: 'factorial(n) called factorial(n - 1), which returned prev. Set value to what factorial(n) returns.',
+    starter: {
+      python: ['# n and prev are given.', '# factorial(n) = n * factorial(n - 1).', 'value = '].join('\n'),
+      java: 'int value = n * prev;',
+    },
+    globalsFor: (run) => {
+      const parsed = parseFactorialReturn(factorialReturnJunctions(run)[0])
+      return { n: parsed?.n ?? 1, prev: parsed?.prev ?? 1 }
+    },
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const parsed = parseFactorialReturn(factorialReturnJunctions(run)[0])
+      return parsed ? parsed.n * parsed.prev : null
+    },
+  },
+  {
+    title: 'Count the calls to the base case',
+    prompt: 'Calling factorial(n) starts a chain of further calls before reaching the base case factorial(0). Set remaining to how many more calls that is.',
+    starter: {
+      python: ['# n is given.', 'remaining = '].join('\n'),
+      java: 'int remaining = n;',
+    },
+    globalsFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.RECURSIVE_CALL)) as { watch?: { n?: number } }
+      return { n: state.watch?.n ?? 0 }
+    },
+    readBack: 'remaining',
+    expect: 'number',
+    expectedFor: (run) => {
+      const state = objectState(firstJunction(run, CriticalJunctionType.RECURSIVE_CALL)) as { watch?: { n?: number } }
+      return typeof state.watch?.n === 'number' ? state.watch.n : null
+    },
+  },
+  {
+    title: 'Name the combine step',
+    prompt: 'Write a function combine(n, prev) that returns what factorial(n) returns, given that factorial(n - 1) already returned prev. Then set value to combine(n, prev).',
+    starter: {
+      python: ['# n and prev are given.', 'def combine(n, prev):', '    ', '', 'value = combine(n, prev)'].join('\n'),
+      java: 'static int combine(int n, int prev) { return n * prev; }\nint value = combine(n, prev);',
+    },
+    globalsFor: (run) => {
+      const junctions = factorialReturnJunctions(run)
+      const parsed = parseFactorialReturn(junctions[junctions.length - 1])
+      return { n: parsed?.n ?? 1, prev: parsed?.prev ?? 1 }
+    },
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const junctions = factorialReturnJunctions(run)
+      const parsed = parseFactorialReturn(junctions[junctions.length - 1])
+      return parsed ? parsed.n * parsed.prev : null
+    },
+  },
+  {
+    title: 'The whole recursive function',
+    prompt: 'Write the complete recursive factorial(n): a true base case and a recursive case, no loops. Set value to factorial(n) for the n this run used.',
+    starter: {
+      python: [
+        '# n is given: the full argument this run computed factorial for.',
+        'def factorial(n):',
+        '    if n == 0:',
+        '        return 1',
+        '    ',
+      ].join('\n'),
+      java: 'static int factorial(int n) {\n    if (n == 0) return 1;\n    return n * factorial(n - 1);\n}\nint value = factorial(n);',
+    },
+    globalsFor: (run) => {
+      const frames = (objectState(last(run)) as { frames?: Array<{ argument: number }> }).frames ?? []
+      const n = frames.length > 0 ? Math.max(...frames.map((f) => f.argument)) : 0
+      return { n }
+    },
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const frames = (objectState(last(run)) as { frames?: Array<{ argument: number; returnValue: number | null }> }).frames ?? []
+      if (frames.length === 0) return null
+      const root = frames.reduce((best, f) => (f.argument > best.argument ? f : best), frames[0])
+      return typeof root.returnValue === 'number' ? root.returnValue : null
+    },
+  },
+]
+
+function fibReturnJunctions(run: AlgorithmSnapshot[]): AlgorithmSnapshot[] {
+  return run.filter((s) => s.criticalJunctionType === CriticalJunctionType.RETURN_VALUE)
+}
+
+function parseFibReturn(snapshot: AlgorithmSnapshot | undefined): { left: number; right: number } | null {
+  const match = snapshot?.description.match(/returned (\d+) and (\d+)/)
+  return match ? { left: Number(match[1]), right: Number(match[2]) } : null
+}
+
+const RECURSION_FIBONACCI: CodeRung[] = [
+  {
+    title: "Combine two calls' results",
+    prompt: 'fib(k) called fib(k - 1) and fib(k - 2), which returned left and right. Set value to what fib(k) returns.',
+    starter: {
+      python: ['# left and right are given.', '# fib(k) = fib(k - 1) + fib(k - 2).', 'value = '].join('\n'),
+      java: 'int value = left + right;',
+    },
+    globalsFor: (run) => {
+      const parsed = parseFibReturn(fibReturnJunctions(run)[0])
+      return { left: parsed?.left ?? 0, right: parsed?.right ?? 0 }
+    },
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const parsed = parseFibReturn(fibReturnJunctions(run)[0])
+      return parsed ? parsed.left + parsed.right : null
+    },
+  },
+  {
+    title: 'Estimate the blowup',
+    prompt: 'Naive Fibonacci makes roughly 2^n calls for fib(n) - this is the whole reason it is exponential rather than linear. Set estimate to 2 ** n.',
+    starter: {
+      python: ['# n is given.', 'estimate = '].join('\n'),
+      java: 'int estimate = (int) Math.pow(2, n);',
+    },
+    globalsFor: (run) => {
+      const frames = (objectState(last(run)) as { frames?: Array<{ argument: number }> }).frames
+      return { n: frames?.[0]?.argument ?? 0 }
+    },
+    readBack: 'estimate',
+    expect: 'number',
+    expectedFor: (run) => {
+      const frames = (objectState(last(run)) as { frames?: Array<{ argument: number }> }).frames
+      const n = frames?.[0]?.argument
+      return typeof n === 'number' ? 2 ** n : null
+    },
+  },
+  {
+    title: 'Spot the redundant work',
+    prompt: 'Naive Fibonacci recomputes the same fib(k) many times. Given computed (the k-values already fully resolved) and k (about to be called again), set is_redundant to whether this is repeat work.',
+    starter: {
+      python: ['# computed and k are given.', 'is_redundant = '].join('\n'),
+      java: 'boolean isRedundant = computed.contains(k);',
+    },
+    globalsFor: (run) => {
+      const snapshot = run.find((s) => s.description.includes('already computed earlier'))
+      const k = Number(snapshot?.description.match(/Calling fib\((\d+)\) again/)?.[1])
+      const computed = Object.keys((objectState(snapshot) as { computedValues?: Record<string, number> }).computedValues ?? {}).map(
+        Number,
+      )
+      return { computed, k: Number.isFinite(k) ? k : 0 }
+    },
+    readBack: 'is_redundant',
+    expect: 'boolean',
+    expectedFor: (run) => (run.find((s) => s.description.includes('already computed earlier')) ? true : null),
+  },
+  {
+    title: 'The whole naive Fibonacci',
+    prompt: 'Write the complete naive recursive fib(k): the true base case (k <= 1 returns k) and the two-call recursive case, no memoisation. Set value to fib(n) for the n this run used.',
+    starter: {
+      python: ['# n is given.', 'def fib(k):', '    if k <= 1:', '        return k', '    '].join('\n'),
+      java: 'static int fib(int k) {\n    if (k <= 1) return k;\n    return fib(k - 1) + fib(k - 2);\n}\nint value = fib(n);',
+    },
+    globalsFor: (run) => {
+      const frames = (objectState(last(run)) as { frames?: Array<{ argument: number }> }).frames
+      return { n: frames?.[0]?.argument ?? 0 }
+    },
+    readBack: 'value',
+    expect: 'number',
+    expectedFor: (run) => {
+      const frames = (objectState(last(run)) as { frames?: Array<{ argument: number; returnValue: number | null }> }).frames
+      const root = frames?.[0]
+      return typeof root?.returnValue === 'number' ? root.returnValue : null
+    },
+  },
+]
+
 export const CODE_LADDERS: Record<string, CodeRung[]> = {
   'bubble-sort': BUBBLE_SORT,
   'binary-search': BINARY_SEARCH,
@@ -1036,6 +1999,14 @@ export const CODE_LADDERS: Record<string, CodeRung[]> = {
   stack: STACK,
   queue: QUEUE,
   'singly-linked-list': SINGLY_LINKED_LIST,
+  deque: DEQUE,
+  'circular-queue': CIRCULAR_QUEUE,
+  'doubly-linked-list': DOUBLY_LINKED_LIST,
+  'circular-linked-list': CIRCULAR_LINKED_LIST,
+  'hash-table-chaining': HASH_TABLE_CHAINING,
+  'hash-table-probing': HASH_TABLE_PROBING,
+  'recursion-factorial': RECURSION_FACTORIAL,
+  'recursion-fibonacci': RECURSION_FIBONACCI,
 }
 
 export function codeLadderFor(slug: string | undefined): CodeRung[] | null {

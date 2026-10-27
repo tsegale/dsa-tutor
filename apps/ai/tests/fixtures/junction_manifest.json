@@ -166,6 +166,7 @@
     "INSERT_BETWEEN"
   ],
   "circular-linked-list": [
+    "INSERT_BETWEEN",
     "WRAP_CHECK"
   ],
   "stack": [
