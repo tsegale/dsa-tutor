@@ -68,8 +68,14 @@ export function getTrackBySlug(slug: string | undefined): TrackMeta | null {
 }
 
 export const trackPath = (id: AlgorithmTrack) => `/track/${getTrack(id).slug}`
-// Practice, not Demo: Practice is the default the study argues for, and
-// Demo stays one click away on the algorithm page (remediation doc 9.8).
-export const topicPath = (topicName: string) => `/algorithm/${topicName}?mode=PRACTICE`
-/** The same topic in Demo mode: the run plays without asking for predictions. */
+// No ?mode= here: every topic opens in Demo by default now (see
+// utils/studyCondition.ts's initialMode - remediation doc 9.8's
+// Practice-by-default argument was reversed). Forcing ?mode=PRACTICE on
+// every nav link was the one spot that rule change missed, and it kept
+// silently reopening topics straight into Practice (and, with it, the AI
+// Tutor tab instead of Theory) long after Demo became the intended default.
+export const topicPath = (topicName: string) => `/algorithm/${topicName}`
+/** The same topic in Demo mode explicitly: identical to topicPath now that
+ *  Demo is the default, kept so an explicit "open in Demo" link still reads
+ *  as one even if the default ever changes again. */
 export const demoPath = (topicName: string) => `/algorithm/${topicName}?mode=DEMO`
