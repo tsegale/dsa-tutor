@@ -67,11 +67,20 @@ function StudyGate({ children }: { children: ReactNode }) {
   })
 
   if (isLoading) return null
-  if (status?.consentRequired) {
-    return <Navigate to="/consent" replace />
-  }
-  if (status?.pretestRequired) {
-    return <Navigate to="/assessment/pre" replace />
+  // consentRequired/pretestRequired answer "has this step happened yet",
+  // not "is this account still an active participant" - getStudyStatus
+  // keeps pretestRequired true for someone who withdrew before ever taking
+  // it, since withdrawing doesn't retroactively complete it. Gating on
+  // those alone re-locked a withdrawn participant into the very step they
+  // just withdrew to get out of; withdrawn exits the protocol entirely; see
+  // studyPhase(), which already treats it the same way for the header chip.
+  if (!status?.withdrawn) {
+    if (status?.consentRequired) {
+      return <Navigate to="/consent" replace />
+    }
+    if (status?.pretestRequired) {
+      return <Navigate to="/assessment/pre" replace />
+    }
   }
   return <>{children}</>
 }
