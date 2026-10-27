@@ -193,12 +193,19 @@ function AppRoutes() {
                     </ProtectedRoute>
                   }
                 />
+                {/* RequireAuth alone, not ProtectedRoute: StudySection (Phase 6B)
+                    renders the withdraw button here, and StudyJoinPage promises
+                    "you can withdraw at any time from your profile" - a promise
+                    StudyGate broke for exactly the participant most likely to
+                    want it, one mid-protocol with a pretest/posttest/consent
+                    still due, by bouncing them straight back to that same due
+                    step before the page could render. */}
                 <Route
                   path="/profile"
                   element={
-                    <ProtectedRoute>
+                    <RequireAuth>
                       <ProfilePage />
-                    </ProtectedRoute>
+                    </RequireAuth>
                   }
                 />
                 <Route
