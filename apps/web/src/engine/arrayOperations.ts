@@ -45,6 +45,18 @@ function makeSnapshot(params: SnapshotParams): AlgorithmSnapshot {
   }
 }
 
+/**
+ * What each operation runs with until the learner picks their own. One
+ * source for runFor, the registry and the left panel's fields, so the
+ * fields always describe the run on screen when a topic first opens.
+ */
+export const ARRAY_OPERATION_DEFAULTS = {
+  accessIndex: 2,
+  insertIndex: 2,
+  insertValue: 99,
+  deleteIndex: 1,
+} as const
+
 // access(arr, i): if i < 0 or i >= arr.length: throw IndexOutOfBounds; return arr[i]
 const ACCESS_LINE = { START: 0, BOUNDS_CHECK: 1, RETURN: 2 } as const
 

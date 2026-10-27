@@ -1,5 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { complexityJunctionEnabled } from '@/utils/studyCondition'
+import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine, ARRAY_OPERATION_DEFAULTS } from '@/engine/arrayOperations'
+import { withCodeMode } from '@/engine/codeMode'
+import {
+  ARRAY_OPERATION_FOR_SLUG,
+  indexHint,
+  parseArrayText,
+  randomArrayOperation,
+  validateArrayOperation,
+  type ArrayOperation,
+} from '@/utils/arrayOperationInput'
+import { APPLY_INPUT_EVENT } from './applyInput'
 import { Button } from '@/components/ui/button'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
@@ -180,6 +191,166 @@ function NumberField({
         className={inputClass}
       />
     </div>
+  )
+}
+
+const ARRAY_OPERATION_COPY: Record<ArrayOperation, { heading: string; action: (index: string, value: string) => string }> = {
+  access: { heading: 'Access an element', action: (i) => `Access arr[${i || '?'}]` },
+  insert: { heading: 'Insert an element', action: (i, v) => `Insert ${v || '?'} at index ${i || '?'}` },
+  delete: { heading: 'Delete an element', action: (i) => `Delete index ${i || '?'}` },
+}
+
+function arrayOperationRun(operation: ArrayOperation, values: number[], index: number, value: number | null) {
+  if (operation === 'access') return arrayAccessEngine(values, index)
+  if (operation === 'insert') return arrayInsertEngine(values, value ?? ARRAY_OPERATION_DEFAULTS.insertValue, index)
+  return arrayDeleteEngine(values, index)
+}
+
+/**
+ * Array Access, Insertion and Deletion: the learner picks the array, the
+ * index and (for insertion) the value.
+ *
+ * These ran on a hardcoded index 2, value 99 and index 1, with only the
+ * generic "Custom array" box beside them - so the one thing each topic is
+ * about, where the operation happens, was the one thing the learner could
+ * not change. Asking "what does inserting at the front cost compared with
+ * the end?" had no way to be tried.
+ *
+ * Insert and delete refuse an index the operation can't take rather than
+ * letting the engine clamp it, which would run a different operation from
+ * the one the fields describe. Access accepts any whole number: an
+ * out-of-bounds read is a case the engine teaches.
+ */
+function ArrayOperationControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const operation = ARRAY_OPERATION_FOR_SLUG[slug]
+  const defaultValues = getAlgorithmRegistryEntry(slug)?.defaultInput ?? [10, 20, 30, 40, 50]
+  const [arrayText, setArrayText] = useState(defaultValues.join(','))
+  const [indexText, setIndexText] = useState(
+    String(
+      operation === 'access'
+        ? ARRAY_OPERATION_DEFAULTS.accessIndex
+        : operation === 'insert'
+          ? ARRAY_OPERATION_DEFAULTS.insertIndex
+          : ARRAY_OPERATION_DEFAULTS.deleteIndex,
+    ),
+  )
+  const [valueText, setValueText] = useState(String(ARRAY_OPERATION_DEFAULTS.insertValue))
+  const [error, setError] = useState<string | null>(null)
+
+  // The end-of-run offer re-runs the topic on a new array through
+  // LeftPanel; keep this box describing what is on screen when it does.
+  useEffect(() => {
+    function handleApplyInput(event: Event) {
+      const values = (event as CustomEvent<number[]>).detail
+      if (Array.isArray(values) && values.length > 0) {
+        setArrayText(values.join(','))
+        setError(null)
+      }
+    }
+    window.addEventListener(APPLY_INPUT_EVENT, handleApplyInput)
+    return () => window.removeEventListener(APPLY_INPUT_EVENT, handleApplyInput)
+  }, [])
+
+  if (!operation) return null
+  const copy = ARRAY_OPERATION_COPY[operation]
+  const parsedLength = parseArrayText(arrayText)?.length
+
+  function show(values: number[], index: number, value: number | null) {
+    const snapshots = arrayOperationRun(operation, values, index, value)
+    apply(slug, withCodeMode(snapshots, slug, useAlgorithmStore.getState().codeEditorMode), 'start')
+  }
+
+  function run() {
+    const result = validateArrayOperation(operation, arrayText, indexText, valueText)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    setError(null)
+    show(result.values, result.index, result.value)
+  }
+
+  function handleRandom() {
+    const { values, index, value } = randomArrayOperation(operation)
+    setArrayText(values.join(','))
+    setIndexText(String(index))
+    if (value !== null) setValueText(String(value))
+    setError(null)
+    show(values, index, value)
+  }
+
+  const onEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') run()
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>{copy.heading}</h3>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="array-op-values" className={labelClass}>
+          Array
+        </label>
+        <input
+          id="array-op-values"
+          type="text"
+          inputMode="numeric"
+          value={arrayText}
+          onChange={(e) => setArrayText(e.target.value)}
+          onKeyDown={onEnter}
+          placeholder="10,20,30,40,50"
+          className={inputClass}
+        />
+      </div>
+      <div className={operation === 'insert' ? 'grid grid-cols-2 gap-2' : 'flex flex-col'}>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="array-op-index" className={labelClass}>
+            Index
+          </label>
+          <input
+            id="array-op-index"
+            type="number"
+            step={1}
+            value={indexText}
+            onChange={(e) => setIndexText(e.target.value)}
+            onKeyDown={onEnter}
+            aria-describedby="array-op-index-hint"
+            className={inputClass}
+          />
+        </div>
+        {operation === 'insert' && (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="array-op-value" className={labelClass}>
+              Value
+            </label>
+            <input
+              id="array-op-value"
+              type="number"
+              value={valueText}
+              onChange={(e) => setValueText(e.target.value)}
+              onKeyDown={onEnter}
+              className={inputClass}
+            />
+          </div>
+        )}
+      </div>
+      {parsedLength !== undefined && (
+        <p id="array-op-index-hint" className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
+          {indexHint(operation, parsedLength)}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-error">
+          {error}
+        </p>
+      )}
+      <Button variant="outline" size="sm" onClick={run}>
+        {copy.action(indexText.trim(), valueText.trim())}
+      </Button>
+      <Button variant="outline" size="sm" onClick={handleRandom}>
+        Random
+      </Button>
+    </section>
   )
 }
 
@@ -1211,6 +1382,9 @@ function MazeControls({ slug }: { slug: string }) {
  * generic "Custom array" box. Exported so LeftPanel can decide which
  * section to render without duplicating this list. */
 export const CONTEXTUAL_CONTROL_SLUGS = new Set([
+  'array-access',
+  'array-insert',
+  'array-delete',
   'stack',
   'queue',
   'circular-queue',
@@ -1276,6 +1450,12 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
   if (!slug) return null
 
   switch (slug) {
+    case 'array-access':
+    case 'array-insert':
+    case 'array-delete':
+      // Keyed: moving between the three through the curriculum list keeps
+      // this component mounted, and each needs its own default index.
+      return <ArrayOperationControls key={slug} slug={slug} />
     case 'stack':
       return <StackControls slug={slug} />
     case 'queue':

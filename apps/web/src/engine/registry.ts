@@ -53,7 +53,7 @@ import {
 } from './gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from './mazeGeneration'
 import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from './graphPresets'
-import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from './arrayOperations'
+import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine, ARRAY_OPERATION_DEFAULTS } from './arrayOperations'
 import { sllInsertBackEngine } from './singlyLinkedList'
 import { dllInsertBackEngine } from './doublyLinkedList'
 import { cllInsertEngine } from './circularLinkedList'
@@ -598,7 +598,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'array-access',
     displayName: 'Array Access',
-    engineFunction: (input) => arrayAccessEngine(input, Math.min(2, Math.max(0, input.length - 1))),
+    engineFunction: (input) => arrayAccessEngine(input, Math.min(ARRAY_OPERATION_DEFAULTS.accessIndex, Math.max(0, input.length - 1))),
     track: AlgorithmTrack.FOUNDATIONS,
     difficulty: Difficulty.BEGINNER,
     description: 'Access any element in O(1) time using its index.',
@@ -608,7 +608,8 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'array-insert',
     displayName: 'Array Insertion',
-    engineFunction: (input) => arrayInsertEngine(input, 99, Math.min(2, input.length)),
+    engineFunction: (input) =>
+      arrayInsertEngine(input, ARRAY_OPERATION_DEFAULTS.insertValue, Math.min(ARRAY_OPERATION_DEFAULTS.insertIndex, input.length)),
     track: AlgorithmTrack.FOUNDATIONS,
     difficulty: Difficulty.BEGINNER,
     description: 'Insert an element at any position, shifting others right.',
@@ -618,7 +619,7 @@ export const ALGORITHM_REGISTRY: AlgorithmRegistryEntry[] = [
   {
     algorithmName: 'array-delete',
     displayName: 'Array Deletion',
-    engineFunction: (input) => arrayDeleteEngine(input, Math.min(1, Math.max(0, input.length - 1))),
+    engineFunction: (input) => arrayDeleteEngine(input, Math.min(ARRAY_OPERATION_DEFAULTS.deleteIndex, Math.max(0, input.length - 1))),
     track: AlgorithmTrack.FOUNDATIONS,
     difficulty: Difficulty.BEGINNER,
     description: 'Delete an element at any position, shifting others left.',

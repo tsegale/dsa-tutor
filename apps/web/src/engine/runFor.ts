@@ -42,7 +42,7 @@ import {
 } from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from '@/engine/mazeGeneration'
 import { SMALL_7, MEDIUM_WEIGHTED, GRID_LIKE, DIRECTED_CYCLE, DIRECTED_ACYCLIC, TWO_COMPONENTS } from '@/engine/graphPresets'
-import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine } from '@/engine/arrayOperations'
+import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine, ARRAY_OPERATION_DEFAULTS } from '@/engine/arrayOperations'
 import { sllInsertBackEngine } from '@/engine/singlyLinkedList'
 import { dllInsertBackEngine } from '@/engine/doublyLinkedList'
 import { cllInsertEngine } from '@/engine/circularLinkedList'
@@ -179,11 +179,11 @@ function buildRun(slug: string, input: number[], target: number): AlgorithmSnaps
       return mazeKruskalEngine(MAZE_BOARD.rows, MAZE_BOARD.cols)
 
     case 'array-access':
-      return arrayAccessEngine(input, 2)
+      return arrayAccessEngine(input, ARRAY_OPERATION_DEFAULTS.accessIndex)
     case 'array-insert':
-      return arrayInsertEngine(input, 99, 2)
+      return arrayInsertEngine(input, ARRAY_OPERATION_DEFAULTS.insertValue, ARRAY_OPERATION_DEFAULTS.insertIndex)
     case 'array-delete':
-      return arrayDeleteEngine(input, 1)
+      return arrayDeleteEngine(input, ARRAY_OPERATION_DEFAULTS.deleteIndex)
 
     case 'singly-linked-list':
       return sllInsertBackEngine(input)
