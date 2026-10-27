@@ -50,6 +50,8 @@ import BottomOutModal from '@/components/prediction/BottomOutModal'
 import OpenMisconceptionIndicator from '@/components/prediction/OpenMisconceptionIndicator'
 import { junctionInstanceKey, useMisconceptionStore } from '@/store/useMisconceptionStore'
 import { STUDY_TOPIC_SLUGS } from '@/utils/misconceptionProbes'
+import { shouldAskSessionSurvey } from '@/utils/sessionSurvey'
+import { useStudyScope } from '@/hooks/useStudyScope'
 import { checkAndAwardBadges } from '@/services/badgeService'
 import type { BadgeCheckStats } from '@/data/badges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -619,16 +621,25 @@ function AlgorithmWorkspace() {
     return () => window.removeEventListener(OPEN_SHORTCUTS_MODAL_EVENT, handleOpen)
   }, [])
 
-  // Only a session actually being logged to the backend is worth asking
-  // about - without one there is nothing for mentalEffort/confidence to
-  // attach to, so leaving goes straight to the destination. The top bar
+  // Only a session the study will read is worth asking about - see
+  // shouldAskSessionSurvey: an active participant on a study topic with a
+  // session logged. Otherwise leaving goes straight to the destination. The top bar
   // says where it is going (Home, a track page, another topic); the survey
   // handlers below go there once it is answered or skipped.
   const exitDestinationRef = useRef('/')
+  // Read through a ref: the exit listener below is registered once, and
+  // study status can arrive (or change, on withdrawal) after it is.
+  const { restricted: activeParticipant } = useStudyScope()
+  const surveyContextRef = useRef({ activeParticipant, topicSlug: algorithmNameParam })
+  surveyContextRef.current = { activeParticipant, topicSlug: algorithmNameParam }
   useEffect(() => {
     function handleRequestExit(event: Event) {
       exitDestinationRef.current = (event as CustomEvent<SessionExitDetail>).detail?.to ?? '/'
-      if (useAlgorithmStore.getState().sessionId) {
+      const askSurvey = shouldAskSessionSurvey({
+        hasSession: Boolean(useAlgorithmStore.getState().sessionId),
+        ...surveyContextRef.current,
+      })
+      if (askSurvey) {
         setShowSessionEndSurvey(true)
       } else {
         navigate(exitDestinationRef.current)
