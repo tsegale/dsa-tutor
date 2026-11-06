@@ -10,6 +10,30 @@ import * as S from '../schemas/routes'
 
 const router = Router()
 
+const AUTH_ATTEMPTS_PER_WINDOW = 20
+const AUTH_WINDOW_MS = 15 * 60 * 1000
+const authAttemptsByIp = new Map<string, number[]>()
+
+function authRateLimit(req: Request, res: Response, next: () => void): void {
+  if (process.env.NODE_ENV === 'test') {
+    next()
+    return
+  }
+  const ip = req.ip ?? 'unknown'
+  const now = Date.now()
+  const recent = (authAttemptsByIp.get(ip) ?? []).filter((t) => now - t < AUTH_WINDOW_MS)
+  if (recent.length >= AUTH_ATTEMPTS_PER_WINDOW) {
+    authAttemptsByIp.set(ip, recent)
+    res.status(429).json({
+      data: null,
+      error: { code: 'AUTH_RATE_LIMITED', message: 'Too many authentication attempts. Try again in 15 minutes.' },
+    })
+    return
+  }
+  authAttemptsByIp.set(ip, [...recent, now])
+  next()
+}
+
 // "Try the demo" (4D.6): a throwaway account with no password, rate limited.
 router.post('/demo', demoCreationLimit, validate(S.auth.demo), async (_req: Request, res: Response) => {
   try {
@@ -19,7 +43,7 @@ router.post('/demo', demoCreationLimit, validate(S.auth.demo), async (_req: Requ
   }
 })
 
-router.post('/register', validate(S.auth.register), async (req: Request, res: Response) => {
+router.post('/register', authRateLimit, validate(S.auth.register), async (req: Request, res: Response) => {
   try {
     const result = await register(req.body)
     res.status(201).json({ data: result, error: null })
@@ -32,7 +56,7 @@ router.post('/register', validate(S.auth.register), async (req: Request, res: Re
   }
 })
 
-router.post('/login', validate(S.auth.login), async (req: Request, res: Response) => {
+router.post('/login', authRateLimit, validate(S.auth.login), async (req: Request, res: Response) => {
   try {
     const result = await login(req.body)
     res.json({ data: result, error: null })

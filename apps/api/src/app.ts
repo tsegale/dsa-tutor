@@ -21,6 +21,15 @@ import misconceptionEventsRouter from './routers/misconceptionEvents.router'
 import profileRouter from './routers/profile.router'
 
 const app = express()
+app.disable('x-powered-by')
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  next()
+})
 
 app.use(
   cors({
@@ -31,19 +40,26 @@ app.use(
 
 // First, so every later handler and AI call runs inside the request's context.
 app.use(requestId)
-app.use(express.json())
+app.use(express.json({ limit: '256kb' }))
 
-// Reports unset required variables by name (never values), and whether the
-// database and AI service answer, so an incomplete or broken deploy is
-// visible with one curl. Always 200 while the api itself is up: Railway uses
+// Reports unset required variables by name in non-production environments, and
+// whether the database and AI service answer, so an incomplete or broken deploy
+// is visible with one curl. Always 200 while the api itself is up: Railway uses
 // this as the api's healthcheck, and an AI outage must not get a healthy api
 // restarted. "degraded" names what is wrong instead.
-app.get('/health', async (req, res) => {
+app.get('/health', async (_req, res) => {
   const missingEnv = missingProductionEnv()
   const [database, aiService] = await Promise.all([checkDatabase(), checkAiService()])
   const status = database === 'ok' && aiService === 'ok' ? 'ok' : 'degraded'
+  const isProduction = process.env.NODE_ENV === 'production'
   res.json({
-    data: { status, config: missingEnv.length === 0 ? 'complete' : 'incomplete', missingEnv, database, aiService },
+    data: {
+      status,
+      config: missingEnv.length === 0 ? 'complete' : 'incomplete',
+      ...(isProduction ? {} : { missingEnv }),
+      database,
+      aiService,
+    },
     error: null,
   })
 })

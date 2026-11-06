@@ -340,6 +340,7 @@ export type Difficulty = (typeof Difficulty)[keyof typeof Difficulty]
 export const UserRole = {
   STUDENT: 'STUDENT',
   EDUCATOR: 'EDUCATOR',
+  ADMIN: 'ADMIN',
 } as const
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 

@@ -81,7 +81,16 @@ export async function refreshTopicMastery(userId: string, algorithmTopicId: stri
 
   await prisma.topicMastery.upsert({
     where: { userId_algorithmTopicId: { userId, algorithmTopicId } },
-    update: { criteriaMet, masteredAt },
+    update: {
+      overallScore: percent(correct, scored.length),
+      conceptualScore: percent(conceptual.filter((row) => row.predictionCorrect).length, conceptual.length),
+      proceduralScore: percent(procedural.filter((row) => row.predictionCorrect).length, procedural.length),
+      totalPredictions: scored.length,
+      correctPredictions: correct,
+      lastPracticedAt,
+      criteriaMet,
+      masteredAt,
+    },
     create: {
       userId,
       algorithmTopicId,

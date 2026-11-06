@@ -7,6 +7,11 @@ import { prisma } from '../lib/prisma'
 import { toCsv, parseCsv } from '../utils/csv'
 import { ACTIVE_PARTICIPANT_WHERE } from './study.service'
 import { STUDY_TOPICS } from '../config/studyTopics'
+import {
+  computeAgreementReport,
+  agreementReportToMarkdown,
+  type AgreementReport,
+} from './agreement.service'
 
 // Applied to every research export: a row only exists for a consenting,
 // still-enrolled, non-withdrawn participant - the same definition used to
@@ -461,4 +466,121 @@ export function agreementToMarkdownTable(rows: AgreementRow[]): string {
     (r) => `| ${r.raterCode} | ${r.ratingCount} | ${r.agreementCount} | ${r.agreementPercent}% |`,
   )
   return [header, divider, ...body].join('\n')
+}
+
+export interface RaterQueueItem {
+  interactionId: string
+  participantCode: string
+  algorithm: string
+  stepIndex: number
+  junctionType: string
+  junctionDifficulty: string
+  serialisedState: string
+  studentAnswer: string
+  ruleLabel: string | null
+  aiLabel: string | null
+  feedbackText: string
+  ratings: Record<string, string>
+}
+
+export interface RaterQueueResponse {
+  taxonomy: string[]
+  items: RaterQueueItem[]
+  agreement: AgreementReport
+  markdown: string
+}
+
+/**
+ * Returns a queue of up to 50 incorrect interactions for in-app blind human
+ * rating alongside live Cohen's kappa agreement statistics across all rated
+ * interactions. Prioritizes consenting study participants first, then fills
+ * with class student incorrect interactions if fewer than 50 study items exist.
+ */
+export async function getRaterQueueAndAgreement(includePilot = false): Promise<RaterQueueResponse> {
+  const studyInteractions = await prisma.interaction
+    .findMany({
+      where: {
+        predictionCorrect: false,
+        session: {
+          user: participantWhere(includePilot),
+          algorithmTopic: STUDY_TOPIC_FILTER,
+        },
+      },
+      include: {
+        session: {
+          include: {
+            user: { select: { id: true, participantCode: true, consentAt: true } },
+            algorithmTopic: { select: { displayName: true } },
+          },
+        },
+        misconceptionRatings: {
+          select: { raterCode: true, label: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+    .then((rows) => rows.filter((row) => isAfterConsent(row.createdAt, row.session.user.consentAt)))
+
+  let pool = studyInteractions
+  if (pool.length < 50) {
+    const existingIds = new Set(pool.map((r) => r.id))
+    const classFallback = await prisma.interaction.findMany({
+      where: {
+        predictionCorrect: false,
+        ...(existingIds.size > 0 ? { id: { notIn: [...existingIds] } } : {}),
+        session: {
+          user: { role: 'STUDENT', withdrawnAt: null },
+        },
+      },
+      include: {
+        session: {
+          include: {
+            user: { select: { id: true, participantCode: true, consentAt: true } },
+            algorithmTopic: { select: { displayName: true } },
+          },
+        },
+        misconceptionRatings: {
+          select: { raterCode: true, label: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50 - pool.length,
+    })
+    pool = [...pool, ...classFallback]
+  }
+
+  const items: RaterQueueItem[] = pool.map((interaction, idx) => {
+    const ratings: Record<string, string> = {}
+    for (const r of interaction.misconceptionRatings) {
+      ratings[r.raterCode] = r.label
+    }
+    return {
+      interactionId: interaction.id,
+      participantCode: interaction.session.user.participantCode ?? `CLASS-${idx + 1}`,
+      algorithm: interaction.session.algorithmTopic.displayName,
+      stepIndex: interaction.stepIndex,
+      junctionType: interaction.criticalJunctionType ?? 'STEP_PREDICTION',
+      junctionDifficulty: interaction.junctionDifficulty ?? 'PROCEDURAL',
+      serialisedState: interaction.dataStructureStateSnapshot
+        ? JSON.stringify(interaction.dataStructureStateSnapshot)
+        : '',
+      studentAnswer: interaction.predictionSubmitted ?? '(no answer recorded)',
+      ruleLabel: interaction.misconceptionCategory,
+      aiLabel: interaction.aiMisconceptionCategory,
+      feedbackText: interaction.feedbackText ?? '',
+      ratings,
+    }
+  })
+
+  const ratedItems = items.filter((item) => Object.keys(item.ratings).length > 0)
+  const agreement = computeAgreementReport(ratedItems)
+  const markdown = agreementReportToMarkdown(agreement)
+
+  return {
+    taxonomy: [...RATING_LABELS],
+    items,
+    agreement,
+    markdown,
+  }
 }

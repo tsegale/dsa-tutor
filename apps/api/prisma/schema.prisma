@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   STUDENT
   EDUCATOR
+  ADMIN
 }
 
 enum Track {
@@ -146,11 +147,12 @@ model Session {
   // is only the session lifecycle (set when the page closes).
   reachedFinalStep Boolean @default(false)
 
-  user           User           @relation(fields: [userId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
   interactions   Interaction[]
 
   @@index([userId])
+  @@index([userId, mode])
   @@index([algorithmTopicId])
 }
 
@@ -210,10 +212,11 @@ model Interaction {
   // was actually looking at, not just the step index.
   dataStructureStateSnapshot Json?
 
-  session          Session               @relation(fields: [sessionId], references: [id])
+  session          Session               @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   misconceptionRatings MisconceptionRating[]
 
   @@index([sessionId])
+  @@index([sessionId, interactionType])
 }
 
 // An independent human label on a sampled incorrect interaction, imported
@@ -229,7 +232,7 @@ model MisconceptionRating {
   // original column, so no migration).
   ratedAt       DateTime @default(now()) @map("createdAt")
 
-  interaction Interaction @relation(fields: [interactionId], references: [id])
+  interaction Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
 
   @@unique([interactionId, raterCode])
   @@index([interactionId])
@@ -251,8 +254,8 @@ model UserBadge {
   badgeId   String
   awardedAt DateTime @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  badge Badge @relation(fields: [badgeId], references: [id])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
 }
@@ -277,7 +280,7 @@ model TopicMastery {
   criteriaMet        Json?
   masteredAt         DateTime?
 
-  user           User           @relation(fields: [userId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   algorithmTopic AlgorithmTopic @relation(fields: [algorithmTopicId], references: [id])
 
   @@unique([userId, algorithmTopicId])
@@ -342,7 +345,7 @@ model AssessmentAttempt {
   completedAt  DateTime?
   totalScore   Int?
 
-  user       User                 @relation(fields: [userId], references: [id])
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   assessment Assessment           @relation(fields: [assessmentId], references: [id])
   responses  AssessmentResponse[]
 
@@ -359,7 +362,7 @@ model AssessmentResponse {
   timeSpentSeconds Int
   submittedAt      DateTime @default(now())
 
-  attempt AssessmentAttempt @relation(fields: [attemptId], references: [id])
+  attempt AssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   item    AssessmentItem    @relation(fields: [itemId], references: [id])
 
   @@unique([attemptId, itemId])
@@ -389,7 +392,7 @@ model MisconceptionEvent {
   junctionsSinceDetection Int       @default(0)
   bottomedOut             Boolean   @default(false)
 
-  user           User                 @relation(fields: [userId], references: [id])
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   algorithmTopic AlgorithmTopic       @relation(fields: [algorithmTopicId], references: [id])
   remediations   Remediation[]
   probes         MisconceptionProbe[]
@@ -408,7 +411,7 @@ model Remediation {
   correct      Boolean?
   skipped      Boolean   @default(false)
 
-  event MisconceptionEvent @relation(fields: [eventId], references: [id])
+  event MisconceptionEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model MisconceptionProbe {
@@ -421,5 +424,5 @@ model MisconceptionProbe {
   hintUsed      Boolean
   probedAt      DateTime @default(now())
 
-  event MisconceptionEvent @relation(fields: [eventId], references: [id])
+  event MisconceptionEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

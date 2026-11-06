@@ -3,6 +3,7 @@ import type { CreateInteractionDto, InteractionDto } from '../dtos/interaction.d
 import { xpForInteraction } from '../config/xp'
 import { MASTERY_INTERACTION_TYPES } from '../config/mastery'
 import { refreshTopicMasteryAfterWrite } from './mastery.service'
+import { evaluateAndAwardBadges } from './badge.service'
 
 export async function logInteraction(dto: CreateInteractionDto): Promise<InteractionDto> {
   const interaction = await prisma.interaction.create({
@@ -13,7 +14,7 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
       predictionCorrect: dto.predictionCorrect,
       misconceptionCategory: dto.misconceptionCategory,
       hintsRequested: dto.hintsRequested,
-      timeSpentSeconds: dto.timeSpentSeconds,
+      timeSpentSeconds: Math.max(0, Math.round(dto.timeSpentSeconds)),
       criticalJunctionType: dto.criticalJunctionType ?? null,
       junctionDifficulty: dto.junctionDifficulty ?? null,
       ...(dto.scaffoldingLevelAtTime && { scaffoldingLevelAtTime: dto.scaffoldingLevelAtTime }),
@@ -45,10 +46,16 @@ export async function logInteraction(dto: CreateInteractionDto): Promise<Interac
   if (xp > 0 || feedsMastery) {
     const session = await prisma.session.findUniqueOrThrow({
       where: { id: dto.sessionId },
-      select: { userId: true, algorithmTopicId: true, algorithmTopic: { select: { name: true } } },
+      select: { userId: true, mode: true, algorithmTopicId: true, algorithmTopic: { select: { name: true } } },
     })
     if (xp > 0) await prisma.user.update({ where: { id: session.userId }, data: { xpTotal: { increment: xp } } })
-    if (feedsMastery) await refreshTopicMasteryAfterWrite(session.userId, session.algorithmTopicId, session.algorithmTopic.name)
+    if (feedsMastery) {
+      if (session.mode === 'DEMO' && typeof prisma.session.update === 'function') {
+        await prisma.session.update({ where: { id: dto.sessionId }, data: { mode: 'PRACTICE' } }).catch(() => undefined)
+      }
+      await refreshTopicMasteryAfterWrite(session.userId, session.algorithmTopicId, session.algorithmTopic.name)
+      await evaluateAndAwardBadges(session.userId)
+    }
   }
   return toInteractionDto(interaction)
 }

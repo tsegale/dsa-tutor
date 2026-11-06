@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs'
 import path from 'path'
 import { describe, expect, it } from 'vitest'
-import { REQUIRED_PRODUCTION_ENV, missingProductionEnv } from './requiredEnv'
+import { OPTIONAL_PRODUCTION_ENV, REQUIRED_PRODUCTION_ENV, missingProductionEnv } from './requiredEnv'
 
 const apiRoot = path.resolve(__dirname, '../..')
 const repoRoot = path.resolve(apiRoot, '../..')
@@ -27,14 +27,15 @@ function variablesReadByCode(): Set<string> {
 
 describe('required production environment', () => {
   it('lists every variable the code reads - an unlisted one would go unset in Railway unnoticed', () => {
-    const unlisted = [...variablesReadByCode()].filter((name) => !(REQUIRED_PRODUCTION_ENV as readonly string[]).includes(name))
+    const known = new Set<string>([...REQUIRED_PRODUCTION_ENV, ...OPTIONAL_PRODUCTION_ENV])
+    const unlisted = [...variablesReadByCode()].filter((name) => !known.has(name))
     expect(unlisted).toEqual([])
   })
 
   it('documents every required variable in .env.example and DEPLOYMENT.md', () => {
     const example = readFileSync(path.join(apiRoot, '.env.example'), 'utf8')
     const deployment = readFileSync(path.join(repoRoot, 'DEPLOYMENT.md'), 'utf8')
-    for (const name of REQUIRED_PRODUCTION_ENV) {
+    for (const name of [...REQUIRED_PRODUCTION_ENV, ...OPTIONAL_PRODUCTION_ENV]) {
       expect(example, `.env.example is missing ${name}`).toMatch(new RegExp(`^${name}=`, 'm'))
       expect(deployment, `DEPLOYMENT.md is missing ${name}`).toContain(`| ${name} |`)
     }

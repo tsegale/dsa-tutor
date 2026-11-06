@@ -10,7 +10,11 @@ const FALLBACK_WINDOW_DAYS = 7
 export type Reachability = 'ok' | 'unreachable'
 
 async function fetchWithTimeout(url: string): Promise<Response> {
-  return fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) })
+  const internalKey = process.env.INTERNAL_API_KEY?.trim()
+  return fetch(url, {
+    signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    ...(internalKey ? { headers: { 'X-Internal-Service-Key': internalKey } } : {}),
+  })
 }
 
 export async function checkDatabase(): Promise<Reachability> {

@@ -13,7 +13,7 @@ export async function deleteAccount(userId: string, password: string): Promise<v
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true, role: true, isDemo: true } })
   if (!user) throw new Error('NOT_FOUND')
   if (user.isDemo) throw new Error('DEMO_ACCOUNT')
-  if (user.role === 'EDUCATOR') throw new Error('EDUCATOR_ACCOUNT')
+  if (user.role === 'EDUCATOR' || user.role === 'ADMIN') throw new Error('EDUCATOR_ACCOUNT')
   if (!(await bcrypt.compare(password, user.passwordHash))) throw new Error('INVALID_CREDENTIALS')
 
   await prisma.$transaction([

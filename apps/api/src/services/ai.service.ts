@@ -40,9 +40,14 @@ async function aiFetch(path: string, init: RequestInit): Promise<Response> {
   const started = Date.now()
   logEvent('ai_call_start', { requestId, path })
   try {
+    const internalKey = process.env.INTERNAL_API_KEY?.trim()
     const response = await fetch(`${AI_URL}${path}`, {
       ...init,
-      headers: { ...(init.headers as Record<string, string>), 'X-Request-Id': requestId },
+      headers: {
+        ...(init.headers as Record<string, string>),
+        'X-Request-Id': requestId,
+        ...(internalKey ? { 'X-Internal-Service-Key': internalKey } : {}),
+      },
     })
     logEvent('ai_call_end', { requestId, path, status: response.status, ms: Date.now() - started })
     return response

@@ -80,6 +80,7 @@ vi.mock('../services/research.service', () => ({
   exportSessionsCsv: vi.fn(async () => 'a'),
   exportMisconceptionEventsCsv: vi.fn(async () => 'a'),
   importMisconceptionRatings: vi.fn(async () => ({})),
+  getRaterQueueAndAgreement: vi.fn(async () => ({})),
 }))
 
 // authenticate() reads the secret per request, so setting it here is early enough.

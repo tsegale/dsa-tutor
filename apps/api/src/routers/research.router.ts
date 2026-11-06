@@ -7,6 +7,7 @@ import {
   exportSessionsCsv,
   exportMisconceptionEventsCsv,
   importMisconceptionRatings,
+  getRaterQueueAndAgreement,
   RatingsImportError,
 } from '../services/research.service'
 import { validate, type BodyOf } from '../middleware/validate'
@@ -74,6 +75,14 @@ router.get('/ops', validate(S.research.ops), async (_req: AuthRequest, res: Resp
     res.json({ data: await opsReport(), error: null })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to build the ops report' } })
+  }
+})
+
+router.get('/rater-queue', validate(S.research.export), async (req: AuthRequest, res: Response) => {
+  try {
+    res.json({ data: await getRaterQueueAndAgreement(includePilotFlag(req)), error: null })
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to load rater queue' } })
   }
 })
 

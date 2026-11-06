@@ -27,7 +27,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
 }
 
 export function requireEducator(req: AuthRequest, res: Response, next: NextFunction): void {
-  if (req.userRole !== 'EDUCATOR') {
+  if (req.userRole !== 'EDUCATOR' && req.userRole !== 'ADMIN') {
     res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Educator role required' } })
     return
   }

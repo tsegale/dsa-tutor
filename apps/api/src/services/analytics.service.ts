@@ -2,76 +2,76 @@ import { prisma } from '../lib/prisma'
 import type { EducatorAnalyticsDto } from '../dtos/analytics.dto'
 import { feynmanScoreOf, isScoredInteraction } from '../config/interactionTypes'
 
+const LEAN_INTERACTION_SELECT = {
+  stepIndex: true,
+  predictionCorrect: true,
+  misconceptionCategory: true,
+  hintsRequested: true,
+  timeSpentSeconds: true,
+  scaffoldingLevelAtTime: true,
+  masteryScoreAtTime: true,
+  interactionType: true,
+  promptKey: true,
+  rubricScore: true,
+  createdAt: true,
+} as const
+
 export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
+  // Single lean query excluding heavy JSON snapshots and feedback text blobs.
   // Demo accounts (4D.6) are visitors trying the app, not students.
-  const [totalStudents, totalSessions, loggedInteractions, students] = await Promise.all([
-    prisma.user.count({ where: { role: 'STUDENT', isDemo: false } }),
-    prisma.session.count({ where: { user: { isDemo: false } } }),
-    prisma.interaction.findMany({
-      where: { session: { user: { isDemo: false } } },
-      include: { session: { include: { algorithmTopic: true } } },
-    }),
-    prisma.user.findMany({
-      where: { role: 'STUDENT', isDemo: false },
-      include: {
-        sessions: {
-          include: { interactions: true },
+  const students = await prisma.user.findMany({
+    where: { role: 'STUDENT', isDemo: false },
+    select: {
+      id: true,
+      name: true,
+      sessions: {
+        select: {
+          id: true,
+          startTime: true,
+          challengeExplanation: true,
+          algorithmTopic: { select: { displayName: true } },
+          interactions: { select: LEAN_INTERACTION_SELECT },
         },
       },
-    }),
-  ])
-
-  // Answered junctions only: worked steps and Feynman explanations are logged
-  // too, but are not predictions and must not dilute accuracy.
-  const interactions = loggedInteractions.filter(isScoredInteraction)
-  const correctCount = interactions.filter((i) => i.predictionCorrect).length
-  const averageCorrectRate =
-    interactions.length > 0 ? Math.round((correctCount / interactions.length) * 100) : 0
-
-  const misconceptionBreakdown: Record<string, number> = {}
-  interactions.forEach((i) => {
-    if (i.misconceptionCategory) {
-      misconceptionBreakdown[i.misconceptionCategory] =
-        (misconceptionBreakdown[i.misconceptionCategory] ?? 0) + 1
-    }
+    },
   })
+
+  const totalStudents = students.length
+  const totalSessions = students.reduce((sum, s) => sum + s.sessions.length, 0)
 
   const stepErrorMap: Record<string, Record<number, number>> = {}
-  interactions
-    .filter((i) => !i.predictionCorrect)
-    .forEach((i) => {
-      const algoName = i.session.algorithmTopic.displayName
-      if (!stepErrorMap[algoName]) stepErrorMap[algoName] = {}
-      stepErrorMap[algoName][i.stepIndex] = (stepErrorMap[algoName][i.stepIndex] ?? 0) + 1
-    })
-
-  const stepDifficultyHeatmap = Object.entries(stepErrorMap)
-    .flatMap(([algorithmName, steps]) =>
-      Object.entries(steps).map(([stepIndex, errorCount]) => ({
-        stepIndex: parseInt(stepIndex),
-        errorCount,
-        algorithmName,
-      })),
-    )
-    .sort((a, b) => b.errorCount - a.errorCount)
-
+  const misconceptionBreakdown: Record<string, number> = {}
   const scaffoldingDistribution: Record<string, number> = {}
-  interactions.forEach((i) => {
-    scaffoldingDistribution[i.scaffoldingLevelAtTime] = (scaffoldingDistribution[i.scaffoldingLevelAtTime] ?? 0) + 1
-  })
+  let totalScoredCount = 0
+  let totalCorrectCount = 0
 
   const studentProgress = students.map((student) => {
-    const loggedByStudent = student.sessions.flatMap((s) => s.interactions)
+    const loggedByStudent = student.sessions.flatMap((s) =>
+      s.interactions.map((interaction) => ({ ...interaction, algoDisplayName: s.algorithmTopic.displayName })),
+    )
     const allInteractions = loggedByStudent.filter(isScoredInteraction)
     const correct = allInteractions.filter((i) => i.predictionCorrect).length
     const rate = allInteractions.length > 0 ? Math.round((correct / allInteractions.length) * 100) : 0
 
+    totalScoredCount += allInteractions.length
+    totalCorrectCount += correct
+
     const miscCounts: Record<string, number> = {}
-    allInteractions.forEach((i) => {
+    for (const i of allInteractions) {
+      scaffoldingDistribution[i.scaffoldingLevelAtTime] =
+        (scaffoldingDistribution[i.scaffoldingLevelAtTime] ?? 0) + 1
       if (i.misconceptionCategory) {
         miscCounts[i.misconceptionCategory] = (miscCounts[i.misconceptionCategory] ?? 0) + 1
+        misconceptionBreakdown[i.misconceptionCategory] =
+          (misconceptionBreakdown[i.misconceptionCategory] ?? 0) + 1
       }
-    })
+      if (!i.predictionCorrect) {
+        const algoName = i.algoDisplayName
+        if (!stepErrorMap[algoName]) stepErrorMap[algoName] = {}
+        stepErrorMap[algoName][i.stepIndex] = (stepErrorMap[algoName][i.stepIndex] ?? 0) + 1
+      }
+    }
+
     const topMisconception = Object.entries(miscCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
 
     const latestChallengeSession = [...student.sessions]
@@ -103,6 +103,19 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       averageTimePerStep: allInteractions.length > 0 ? totalTimeSpent / allInteractions.length : 0,
     }
   })
+
+  const averageCorrectRate =
+    totalScoredCount > 0 ? Math.round((totalCorrectCount / totalScoredCount) * 100) : 0
+
+  const stepDifficultyHeatmap = Object.entries(stepErrorMap)
+    .flatMap(([algorithmName, steps]) =>
+      Object.entries(steps).map(([stepIndex, errorCount]) => ({
+        stepIndex: parseInt(stepIndex, 10),
+        errorCount,
+        algorithmName,
+      })),
+    )
+    .sort((a, b) => b.errorCount - a.errorCount)
 
   return {
     totalStudents,

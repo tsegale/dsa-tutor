@@ -66,6 +66,7 @@ export const sessions = {
   update: {
     params: sessionIdParams,
     body: z.strictObject({
+      mode: sessionMode.optional(),
       endTime: z.iso.datetime().optional(),
       completed: z.boolean().optional(),
       scaffoldingLevel: scaffoldingLevel.optional(),

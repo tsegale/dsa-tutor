@@ -21,6 +21,9 @@ export const REQUIRED_PRODUCTION_ENV = [
   'STUDY_RESEARCHER_PIN',
 ] as const
 
+/** Optional variables read by the API when configured (documented alongside required ones). */
+export const OPTIONAL_PRODUCTION_ENV = ['INTERNAL_API_KEY'] as const
+
 /** Names of required variables that are unset or blank. */
 export function missingProductionEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   return REQUIRED_PRODUCTION_ENV.filter((name) => !env[name]?.trim())

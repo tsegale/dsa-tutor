@@ -26,6 +26,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me}
       AI_SERVICE_URL: http://ai:8000
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dsa-tutor-internal-dev-key}
       PORT: 3001
     volumes:
       - ./apps/api:/app/apps/api
@@ -46,6 +47,7 @@ services:
       - "8000:8000"
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-dsa-tutor-internal-dev-key}
       PORT: 8000
     volumes:
       - ./apps/ai:/app

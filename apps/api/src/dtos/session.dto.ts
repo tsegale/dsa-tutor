@@ -5,6 +5,7 @@ export interface CreateSessionDto {
 }
 
 export interface UpdateSessionDto {
+  mode?: CreateSessionDto['mode']
   endTime?: string
   completed?: boolean
   scaffoldingLevel?: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'

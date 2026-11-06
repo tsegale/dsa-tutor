@@ -75,9 +75,28 @@ export async function updateSession(
   userId: string,
   dto: UpdateSessionDto,
 ): Promise<SessionDto> {
+  let nextMode: CreateSessionDto['mode'] | undefined
+  if (dto.mode !== undefined) {
+    const existing = await prisma.session.findUniqueOrThrow({
+      where: { id: sessionId, userId },
+      select: {
+        mode: true,
+        algorithmTopic: { select: { name: true } },
+        user: { select: { participantCode: true, consentAt: true, withdrawnAt: true, classicTopicSlug: true } },
+      },
+    })
+    if (existing.mode !== 'CLASSIC' && !(dto.mode === 'DEMO' && (existing.mode === 'PRACTICE' || existing.mode === 'HANDS_ON'))) {
+      nextMode = recordedSessionMode(dto.mode, existing.algorithmTopic.name, {
+        classicTopicSlug: existing.user.classicTopicSlug,
+        active: isActiveParticipant(existing.user),
+      })
+    }
+  }
+
   const session = await prisma.session.update({
     where: { id: sessionId, userId },
     data: {
+      ...(nextMode && { mode: nextMode }),
       ...(dto.endTime && { endTime: new Date(dto.endTime) }),
       ...(dto.completed !== undefined && { completed: dto.completed }),
       ...(dto.scaffoldingLevel && { scaffoldingLevel: dto.scaffoldingLevel }),

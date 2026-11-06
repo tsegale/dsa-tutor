@@ -29,6 +29,7 @@ and `.env.example` in sync.
 | AI_SERVICE_URL | AI microservice URL | Railway AI service domain |
 | ALLOWED_ORIGINS | CORS allowed origins | Vercel frontend domain |
 | STUDY_RESEARCHER_PIN | Researcher-only PIN that lets a participant take the post-test without meeting the topic-completion rule (recorded) | Choose one; never give it to participants |
+| INTERNAL_API_KEY | Optional shared secret sent as `X-Internal-Service-Key` between `apps/api` and `apps/ai` | Generate: openssl rand -hex 32 (match `apps/ai`) |
 
 ### Showcase demo account
 

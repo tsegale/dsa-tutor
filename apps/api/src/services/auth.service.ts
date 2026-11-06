@@ -10,7 +10,25 @@ import type { RegisterDto, LoginDto, AuthResponseDto } from '../dtos/auth.dto'
  * one-day token carrying the demo claim, and never a study participant
  * (enrolment refuses it) or a row in educator analytics.
  */
+const DEMO_TTL_MS = 24 * 60 * 60 * 1000
+
 export async function createDemoAccount(): Promise<AuthResponseDto> {
+  // Opportunistically prune expired throwaway demo visitors (>24h old).
+  // Scoped strictly to @demo.dsatutor.invalid so seeded showcase accounts
+  // (e.g. showcase@dsatutor.local) are never removed.
+  if (typeof prisma.user.deleteMany === 'function') {
+    const cutoff = new Date(Date.now() - DEMO_TTL_MS)
+    await prisma.user
+      .deleteMany({
+        where: {
+          isDemo: true,
+          email: { endsWith: '@demo.dsatutor.invalid' },
+          createdAt: { lt: cutoff },
+        },
+      })
+      .catch(() => undefined)
+  }
+
   const id = randomUUID()
   const user = await prisma.user.create({
     data: {

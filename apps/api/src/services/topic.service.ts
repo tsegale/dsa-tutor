@@ -23,7 +23,7 @@ export async function getAllTopics(userId: string): Promise<TopicDto[]> {
     }),
     prisma.interaction.findMany({
       // Answered junctions only - worked steps and Feynman rows are not predictions.
-      where: { session: { userId, mode: 'PRACTICE' }, interactionType: { in: [...SCORED_INTERACTION_TYPES] } },
+      where: { session: { userId, mode: { in: ['PRACTICE', 'HANDS_ON'] } }, interactionType: { in: [...SCORED_INTERACTION_TYPES] } },
       select: { predictionCorrect: true, session: { select: { algorithmTopicId: true } } },
     }),
     masteryRowsByTopic(userId),
