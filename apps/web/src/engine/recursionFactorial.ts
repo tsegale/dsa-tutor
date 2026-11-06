@@ -49,6 +49,9 @@ export interface CallStackState {
   computedValues?: Record<number, number>
   /** Fibonacci-specific: running count of total function calls made so far. */
   totalCalls?: number
+  /** Whether memoisation is active on this Fibonacci run, and how many cache hits occurred. */
+  memoized?: boolean
+  cacheHits?: number
 }
 
 interface SnapshotParams {

@@ -202,7 +202,7 @@ export function avlInsertEngine(values: number[]): AlgorithmSnapshot[] {
     })
 
     if (node.balanceFactor > 1) {
-      const rotationType = value < node.left!.value ? 'LL' : 'LR'
+      const rotationType = node.left!.balanceFactor >= 0 ? 'LL' : 'LR'
       push({
         description: `Node ${node.value} is left-heavy (balance factor ${node.balanceFactor}). Which rotation restores balance?`,
         pseudocodeLine: rotationType === 'LL' ? PSEUDOCODE_LINE.LL_CASE : PSEUDOCODE_LINE.LR_CASE,
@@ -237,7 +237,7 @@ export function avlInsertEngine(values: number[]): AlgorithmSnapshot[] {
     }
 
     if (node.balanceFactor < -1) {
-      const rotationType = value > node.right!.value ? 'RR' : 'RL'
+      const rotationType = node.right!.balanceFactor <= 0 ? 'RR' : 'RL'
       push({
         description: `Node ${node.value} is right-heavy (balance factor ${node.balanceFactor}). Which rotation restores balance?`,
         pseudocodeLine: rotationType === 'RR' ? PSEUDOCODE_LINE.RR_CASE : PSEUDOCODE_LINE.RL_CASE,

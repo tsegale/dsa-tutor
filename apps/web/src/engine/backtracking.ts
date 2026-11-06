@@ -27,6 +27,18 @@ import type { CallFrame, CallStackState } from './recursionFactorial'
 //   search(i + 1, chosen, total)
 const LINE = { SIGNATURE: 0, SOLUTION: 1, PRUNE: 2, TAKE: 3, SKIP: 4, DONE: 5 } as const
 
+export interface NQueensBoardState {
+  size: number
+  /** Column index of the placed queen per row, or -1 when unplaced. */
+  queens: number[]
+  /** Candidate square currently being tested, if any. */
+  tryingCell: [number, number] | null
+  /** Square of an earlier queen that attacks `tryingCell`, if conflicted. */
+  attackingQueen: [number, number] | null
+  /** Solutions found (each entry is a `queens` array). */
+  solutions: number[][]
+}
+
 export interface BacktrackingState extends CallStackState {
   /** The set being searched. */
   candidates: number[]
@@ -42,6 +54,8 @@ export interface BacktrackingState extends CallStackState {
   visited: number
   /** Nodes a search with no pruning would have visited. */
   withoutPruning: number
+  /** Present when running the N-Queens chessboard problem instead of Subset Sum. */
+  nQueensBoard?: NQueensBoardState
 }
 
 export function backtrackingEngine(input: number[]): AlgorithmSnapshot[] {
@@ -203,6 +217,175 @@ export function backtrackingEngine(input: number[]): AlgorithmSnapshot[] {
     pseudocodeLine: LINE.DONE,
     chosen: [],
     total: 0,
+    isFinalStep: true,
+    currentFrameId: null,
+  })
+
+  return snapshots
+}
+
+/**
+ * N-Queens backtracking engine: place N non-attacking queens on an N x N
+ * chessboard, one per row, pruning any column or diagonal conflict immediately.
+ */
+export function nQueensBacktrackingEngine(rawSize: number = 4): AlgorithmSnapshot[] {
+  const n = Math.max(4, Math.min(5, Math.round(rawSize)))
+  const snapshots: AlgorithmSnapshot[] = []
+  let stepIndex = 0
+  let frames: CallFrame[] = []
+  let nextId = 0
+  let visited = 0
+  let junctionCount = 0
+  const boardSolutions: number[][] = []
+  const withoutPruning = Array.from({ length: n + 1 }, (_, k) => n ** k).reduce((a, b) => a + b, 0)
+
+  const pushBoard = (params: {
+    description: string
+    pseudocodeLine: number
+    queens: number[]
+    tryingCell: [number, number] | null
+    attackingQueen: [number, number] | null
+    conflict?: boolean
+    isPredictionRequired?: boolean
+    criticalJunctionType?: CriticalJunctionType | null
+    junctionDifficulty?: JunctionDifficulty | null
+    isFinalStep?: boolean
+    currentFrameId?: string | null
+  }) => {
+    const placedCount = params.queens.filter((c) => c >= 0).length
+    const state: BacktrackingState = {
+      frames: frames.map((f) => ({ ...f })),
+      baseCase: n,
+      currentFrameId: params.currentFrameId !== undefined ? params.currentFrameId : (frames[frames.length - 1]?.id ?? null),
+      candidates: Array.from({ length: n }, (_, i) => i),
+      target: 0,
+      chosen: params.queens.filter((c) => c >= 0),
+      total: params.conflict ? 1 : 0,
+      solutions: boardSolutions.map((s) => [...s]),
+      visited,
+      withoutPruning,
+      nQueensBoard: {
+        size: n,
+        queens: [...params.queens],
+        tryingCell: params.tryingCell ? [...params.tryingCell] : null,
+        attackingQueen: params.attackingQueen ? [...params.attackingQueen] : null,
+        solutions: boardSolutions.map((s) => [...s]),
+      },
+      watch: {
+        row: params.tryingCell ? params.tryingCell[0] : placedCount,
+        col: params.tryingCell ? params.tryingCell[1] : '-',
+        queensPlaced: placedCount,
+        solutionsFound: boardSolutions.length,
+      },
+    }
+    snapshots.push({
+      stepIndex: stepIndex++,
+      description: params.description,
+      pseudocodeLine: params.pseudocodeLine,
+      isPredictionRequired: params.isPredictionRequired ?? false,
+      predictionType: PredictionType.TILE_GRID,
+      canvasType: CanvasType.RECURSION_TREE,
+      dataStructureState: state,
+      activeIndices: [],
+      highlightIndices: [],
+      comparedIndices: [],
+      swappedIndices: [],
+      isFinalStep: params.isFinalStep ?? false,
+      criticalJunctionType: params.criticalJunctionType ?? null,
+      junctionDifficulty: params.junctionDifficulty ?? null,
+    })
+  }
+
+  const initialQueens = Array.from({ length: n }, () => -1)
+  pushBoard({
+    description: `Place ${n} queens on a ${n}x${n} board so no two share a row, column, or diagonal. Unpruned row-by-row placement has ${n ** n} leaf boards; conflict pruning cuts whole subtrees immediately.`,
+    pseudocodeLine: LINE.SIGNATURE,
+    queens: initialQueens,
+    tryingCell: null,
+    attackingQueen: null,
+  })
+
+  function findConflict(queens: number[], row: number, col: number): [number, number] | null {
+    for (let r = 0; r < row; r += 1) {
+      const qCol = queens[r]
+      if (qCol === col || Math.abs(qCol - col) === Math.abs(r - row)) {
+        return [r, qCol]
+      }
+    }
+    return null
+  }
+
+  function solveRow(row: number, queens: number[]) {
+    if (row === n) {
+      boardSolutions.push([...queens])
+      pushBoard({
+        description: `Solution #${boardSolutions.length} found: columns [${queens.join(', ')}]! Backtracking to look for other valid boards.`,
+        pseudocodeLine: LINE.SOLUTION,
+        queens,
+        tryingCell: null,
+        attackingQueen: null,
+      })
+      return
+    }
+
+    for (let col = 0; col < n; col += 1) {
+      const id = `nq-${nextId++}`
+      visited += 1
+      frames = [
+        ...frames,
+        {
+          id,
+          functionName: 'place',
+          argument: row * n + col,
+          label: `r${row}c${col}`,
+          returnValue: null,
+          status: 'active',
+          depth: row,
+        },
+      ]
+
+      const attacker = findConflict(queens, row, col)
+      if (attacker) {
+        const askHere = junctionCount < 4
+        if (askHere) junctionCount += 1
+        pushBoard({
+          description: askHere
+            ? `Testing row ${row}, col ${col}: queen at (${attacker[0]}, ${attacker[1]}) attacks this square. Should the search explore rows below (${row}, ${col}) or prune?`
+            : `Row ${row}, col ${col} is attacked by queen at (${attacker[0]}, ${attacker[1]}). Pruning ${n ** (n - 1 - row)} boards below it.`,
+          pseudocodeLine: LINE.PRUNE,
+          queens,
+          tryingCell: [row, col],
+          attackingQueen: attacker,
+          conflict: true,
+          isPredictionRequired: askHere,
+          criticalJunctionType: askHere ? CriticalJunctionType.PRUNE_BRANCH : null,
+          junctionDifficulty: askHere ? JunctionDifficulty.CONCEPTUAL : null,
+        })
+        frames = frames.filter((f) => f.id !== id)
+      } else {
+        const nextQueens = [...queens]
+        nextQueens[row] = col
+        pushBoard({
+          description: `Row ${row}, col ${col} is safe! Placing queen and advancing to row ${row + 1}.`,
+          pseudocodeLine: LINE.TAKE,
+          queens: nextQueens,
+          tryingCell: [row, col],
+          attackingQueen: null,
+        })
+        solveRow(row + 1, nextQueens)
+        frames = frames.filter((f) => f.id !== id)
+      }
+    }
+  }
+
+  solveRow(0, initialQueens)
+
+  pushBoard({
+    description: `Finished ${n}-Queens search: found ${boardSolutions.length} valid board${boardSolutions.length === 1 ? '' : 's'}. Visited ${visited} placements instead of ${withoutPruning} unpruned nodes.`,
+    pseudocodeLine: LINE.DONE,
+    queens: boardSolutions[0] ?? initialQueens,
+    tryingCell: null,
+    attackingQueen: null,
     isFinalStep: true,
     currentFrameId: null,
   })

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import * as d3 from 'd3'
 import { motion } from 'framer-motion'
-import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, selectIsUnansweredJunction } from '@/store/useAlgorithmStore'
 import type { RadixSortState } from '@/engine/radixSort'
 import { getPromptForSnapshot } from '@/utils/junctionPrompt'
 
@@ -39,6 +39,7 @@ function digitLabel(digitPosition: number): string {
 export default function RadixSortCanvas({ width = 600, height = 300 }: RadixSortCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
+  const unansweredJunction = useAlgorithmStore(selectIsUnansweredJunction)
 
   const state = useMemo(() => {
     const raw = snapshot?.dataStructureState
@@ -114,7 +115,7 @@ export default function RadixSortCanvas({ width = 600, height = 300 }: RadixSort
             >
               {value}
             </text>
-            {isActive && state.currentDigit >= 0 && (
+            {isActive && state.currentDigit >= 0 && !unansweredJunction && (
               <text
                 x={x + arrayBandwidth / 2}
                 y={PADDING + (ARRAY_ROW_HEIGHT - BOX_HEIGHT) / 2 - 6}

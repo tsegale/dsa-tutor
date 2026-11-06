@@ -1,17 +1,25 @@
 import { useEffect } from 'react'
 import { AlgorithmMode } from '@dsa-tutor/types'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectIsUnansweredJunction } from '@/store/useAlgorithmStore'
 import { useOnboardingStore } from './useOnboarding'
 import { useThemeStore } from '@/store/useThemeStore'
 
 interface UseKeyboardShortcutsConfig {
   onTabChange: (tab: number) => void
   onShortcutsModalOpen: () => void
+  practiceEnabled?: boolean
+  handsOnEnabled?: boolean
 }
 
 const TYPING_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
+const INTERACTIVE_SELECTOR = 'button, a, [role="button"], [role="tab"], [role="radio"], summary'
 
-export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseKeyboardShortcutsConfig) {
+export function useKeyboardShortcuts({
+  onTabChange,
+  onShortcutsModalOpen,
+  practiceEnabled = true,
+  handsOnEnabled = true,
+}: UseKeyboardShortcutsConfig) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       // The onboarding walkthrough owns ArrowRight/Enter/Escape while
@@ -24,15 +32,24 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
       if (target && (TYPING_TAGS.has(target.tagName) || target.isContentEditable)) return
 
       const store = useAlgorithmStore.getState()
+      const atUnansweredJunction = selectIsUnansweredJunction(store)
 
       switch (event.code) {
-        case 'Space':
+        case 'Space': {
+          // Never hijack Space when a button, link, tab, or radio has focus.
+          if (target?.closest(INTERACTIVE_SELECTOR)) return
           event.preventDefault()
-          if (store.isPlaying) store.stopPlayback()
-          else store.startPlayback()
+          if (store.isPlaying || store.autoAdvancing) {
+            store.stopPlayback()
+          } else if (store.snapshotArray.length > 0 && store.stepIndex >= store.snapshotArray.length - 1) {
+            store.resetAlgorithm()
+          } else if (!atUnansweredJunction) {
+            store.startPlayback()
+          }
           break
+        }
         case 'ArrowRight':
-          store.stepForward()
+          if (!atUnansweredJunction) store.stepForward()
           break
         case 'ArrowLeft':
           store.stepBackward()
@@ -44,13 +61,13 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
           store.toggleFocusMode()
           break
         case 'KeyD':
-          store.setMode(AlgorithmMode.DEMO)
+          if (!store.classicMode) store.setMode(AlgorithmMode.DEMO)
           break
         case 'KeyP':
-          store.setMode(AlgorithmMode.PRACTICE)
+          if (!store.classicMode && practiceEnabled) store.setMode(AlgorithmMode.PRACTICE)
           break
         case 'KeyO':
-          store.setMode(AlgorithmMode.HANDS_ON)
+          if (!store.classicMode && handsOnEnabled) store.setMode(AlgorithmMode.HANDS_ON)
           break
         case 'KeyT':
           useThemeStore.getState().toggleTheme()
@@ -95,5 +112,5 @@ export function useKeyboardShortcuts({ onTabChange, onShortcutsModalOpen }: UseK
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onTabChange, onShortcutsModalOpen])
+  }, [onTabChange, onShortcutsModalOpen, practiceEnabled, handsOnEnabled])
 }

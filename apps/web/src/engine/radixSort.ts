@@ -129,7 +129,7 @@ export function radixSortEngine(input: number[]): AlgorithmSnapshot[] {
       const digit = Math.floor(element / digitPosition) % 10
 
       push({
-        description: `Element ${element} (index ${i}): the ${digitLabel} digit is ${digit}. Which bucket does it go into?`,
+        description: `Element ${element} (index ${i}): extract its ${digitLabel} digit. Which bucket (0-9) does it go into?`,
         pseudocodeLine: PSEUDOCODE_LINE.DIGIT_BUCKET,
         isPredictionRequired: true,
         state: {

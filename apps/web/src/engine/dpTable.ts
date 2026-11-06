@@ -65,6 +65,8 @@ export interface DPTableState {
    * them here keeps the panel honest without turning DPTableState into a
    * union of seven engines' locals.
    */
+  /** Optimal reconstruction / traceback cells highlighted on the final step. */
+  traceback?: [number, number][]
   watch?: Record<string, number | string | boolean | null>
 }
 
@@ -93,6 +95,7 @@ export function makeDPSnapshot(params: DPSnapshotParams): AlgorithmSnapshot {
       table: params.state.table.map((row) => [...row]),
       dependsOn: params.state.dependsOn.map((cell) => [...cell] as [number, number]),
       filled: params.state.filled.map((cell) => [...cell] as [number, number]),
+      traceback: params.state.traceback ? params.state.traceback.map((cell) => [...cell] as [number, number]) : undefined,
       marked: [...params.state.marked],
     },
     // The table is the canvas here, so the index arrays describe the input

@@ -118,6 +118,16 @@ describe('avlInsertEngine', () => {
     expect(state.root?.left).toBeNull()
   })
 
+  it('rebalances three duplicate values [8, 8, 8] via RR rotation without crashing', () => {
+    const snapshots = avlInsertEngine([8, 8, 8])
+    const state = lastState(snapshots)
+    expect(values(state.root)).toEqual([8, 8, 8])
+    expect(state.root?.value).toBe(8)
+    expect(state.root?.left?.value).toBe(8)
+    expect(state.root?.right?.value).toBe(8)
+    checkHeightsAndBalance(state.root)
+  })
+
   it('has sequential stepIndex values with no gaps', () => {
     const snapshots = avlInsertEngine([10, 20, 30, 40, 50])
     expect(snapshots.map((s) => s.stepIndex)).toEqual(snapshots.map((_, i) => i))

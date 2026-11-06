@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlgorithmMode } from '@dsa-tutor/types'
+import { AlgorithmMode, CriticalJunctionType } from '@dsa-tutor/types'
 import type { GridAlgorithmState, GridCell } from '@dsa-tutor/types'
-import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
+import {
+  useAlgorithmStore,
+  selectCurrentSnapshot,
+  selectIsUnansweredJunction,
+  selectProgressPercent,
+} from '@/store/useAlgorithmStore'
 import { useHandsOnPick } from '@/hooks/useHandsOnPick'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
@@ -14,6 +19,7 @@ interface GridCanvasProps {
 }
 
 const CELL_SIZE = 20
+const RULER_SIZE = 18
 
 // A light board in both themes (see HEX_ALLOWLIST in themeTokens.test.ts),
 // so these are the light values of the canvas state tokens as literals:
@@ -48,6 +54,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   const pick = useHandsOnPick(snapshot)
   const algorithmName = useAlgorithmStore((s) => s.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
+  const unansweredJunction = useAlgorithmStore(selectIsUnansweredJunction)
   const stepIndex = useAlgorithmStore((s) => s.stepIndex)
   const mode = useAlgorithmStore((s) => s.mode)
   const setAlgorithm = useAlgorithmStore((s) => s.setAlgorithm)
@@ -59,11 +66,8 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   const [error, setError] = useState<string | null>(null)
   const [showScores, setShowScores] = useState(false)
 
-  // A weighted board shows its scores by default. The junction asks which
-  // cell has the lowest one, and on terrain that cannot be read off the
-  // picture the way it can when every move costs the same. Keyed on the
-  // board rather than every render, so turning them off within a topic
-  // sticks.
+  // A weighted board shows its scores by default. Keyed on the board rather
+  // than every render, so turning them off within a topic sticks.
   const weighted = state?.weighted ?? false
   useEffect(() => setShowScores(weighted), [weighted])
 
@@ -72,12 +76,15 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   // algorithm's "Reset to edit" convention: step back to 0 to change input).
   const isEditable = mode !== AlgorithmMode.PRACTICE && stepIndex === 0
 
-  const svgWidth = width && width > 0 ? width : (state ? state.cols * CELL_SIZE : 700)
-  const svgHeight = height && height > 0 ? height - 40 : (state ? state.rows * CELL_SIZE : 400)
+  const svgWidth = width && width > 0 ? width : state ? state.cols * CELL_SIZE + RULER_SIZE : 700
+  const svgHeight = height && height > 0 ? height - 40 : state ? state.rows * CELL_SIZE + RULER_SIZE : 400
 
   const cellSize = useMemo(() => {
     if (!state) return CELL_SIZE
-    return Math.max(6, Math.min(svgWidth / state.cols, svgHeight / state.rows))
+    return Math.max(
+      8,
+      Math.min((svgWidth - RULER_SIZE - 4) / state.cols, (svgHeight - RULER_SIZE - 4) / state.rows),
+    )
   }, [state, svgWidth, svgHeight])
 
   function regenerate(grid: GridCell[][]) {
@@ -88,14 +95,14 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
     setAlgorithm(algorithmName, snapshots)
   }
 
-  function toggleCell(row: number, col: number, mode: 'wall' | 'erase') {
+  function toggleCell(row: number, col: number, modeToUse: 'wall' | 'erase') {
     if (!state || !isEditable) return
     const [sr, sc] = state.startCell
     const [er, ec] = state.endCell
     if ((row === sr && col === sc) || (row === er && col === ec)) return
     const current = state.grid[row]?.[col]
     if (!current) return
-    const nextState: GridCell['state'] = mode === 'wall' ? 'wall' : 'empty'
+    const nextState: GridCell['state'] = modeToUse === 'wall' ? 'wall' : 'empty'
     if (current.state === nextState) return
     const grid = state.grid.map((r) => r.map((c) => ({ ...c })))
     grid[row][col] = { ...grid[row][col], state: nextState }
@@ -105,10 +112,10 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   function handlePointerDown(row: number, col: number, rightClick: boolean) {
     if (!isEditable) return
     const current = state?.grid[row]?.[col]
-    const mode = rightClick || current?.state === 'wall' ? 'erase' : 'wall'
-    paintMode.current = mode
+    const nextMode = rightClick || current?.state === 'wall' ? 'erase' : 'wall'
+    paintMode.current = nextMode
     isPainting.current = true
-    toggleCell(row, col, mode)
+    toggleCell(row, col, nextMode)
   }
 
   function handlePointerEnter(row: number, col: number) {
@@ -127,33 +134,46 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
     regenerate(grid)
   }
 
-  const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
+  const progressColorClass =
+    progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
   if (!state) {
     return (
       <svg width={svgWidth} height={svgHeight} role="img" aria-label="No algorithm loaded">
-        <text x={svgWidth / 2} y={svgHeight / 2} textAnchor="middle" dominantBaseline="middle" className="fill-text-muted text-sm dark:fill-dark-text-secondary">
+        <text
+          x={svgWidth / 2}
+          y={svgHeight / 2}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="fill-text-muted text-sm dark:fill-dark-text-secondary"
+        >
           Load an algorithm to begin
         </text>
       </svg>
     )
   }
 
-  const canvasLabel = `${algorithmName}, step ${snapshot!.stepIndex + 1}: ${snapshot!.description}`
-  const gridPixelWidth = state.cols * cellSize
-  const gridPixelHeight = state.rows * cellSize
+  const canvasLabel = `${algorithmName}, step ${snapshot!.stepIndex + 1}`
+  const gridPixelWidth = state.cols * cellSize + RULER_SIZE
+  const gridPixelHeight = state.rows * cellSize + RULER_SIZE
+  const hideFrontierFScore =
+    unansweredJunction &&
+    state.algorithmType === 'astar' &&
+    snapshot?.criticalJunctionType === CriticalJunctionType.GRID_NEXT_CELL
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between">
+    <div className="relative flex h-full flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-1.5 dark:border-dark-border">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-          <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
+          <div className="h-1 w-[90px] overflow-hidden rounded-full bg-border">
             <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+            {progressPercent}%
+          </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {LEGEND.map((item) => (
             <div key={item.label} className="flex items-center gap-1">
               <span className="size-2 rounded-sm" style={{ backgroundColor: item.colour }} aria-hidden="true" />
@@ -172,8 +192,13 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
           )}
           {(state.algorithmType === 'astar' || state.algorithmType === 'dijkstra') && (
             <label className="flex items-center gap-1 text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-              <input type="checkbox" checked={showScores} onChange={(e) => setShowScores(e.target.checked)} className="size-3" />
-              {state.algorithmType === 'astar' ? 'Show f' : 'Show g'}
+              <input
+                type="checkbox"
+                checked={showScores}
+                onChange={(e) => setShowScores(e.target.checked)}
+                className="size-3"
+              />
+              {state.algorithmType === 'astar' ? (hideFrontierFScore ? 'Show g' : 'Show f') : 'Show g'}
             </label>
           )}
           {isEditable && (
@@ -188,7 +213,7 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pt-9">
+      <div className="flex flex-1 items-center justify-center overflow-auto p-1">
         {error && <p className="px-3 text-xs text-error">{error}</p>}
         <svg
           width={gridPixelWidth}
@@ -204,98 +229,171 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
               <line x1="0" y1="0" x2="0" y2="4" stroke={ROUGH_HATCH} strokeWidth="1.5" />
             </pattern>
           </defs>
-          {state.grid.map((row, r) =>
-            row.map((cell, c) => {
-              const colours = CELL_COLOURS[cell.state]
-              const isCurrent = state.currentCell?.[0] === r && state.currentCell?.[1] === c
-              // Hands-on: a frontier cell this junction lets the learner
-              // choose. The dashed outline is drawn below, over the fill,
-              // so it reads on any cell state.
-              const canPick = pick.selectable(`${r},${c}`)
-              return (
-                <motion.rect
-                  key={`${r}-${c}`}
-                  x={c * cellSize}
-                  y={r * cellSize}
-                  width={cellSize - 1}
-                  height={cellSize - 1}
-                  animate={{ fill: colours.fill }}
-                  stroke={canPick ? 'var(--state-compare)' : isCurrent ? '#cc8200' : cell.state === 'empty' ? '#e2e8f0' : 'none'}
-                  strokeWidth={canPick ? 2.5 : isCurrent ? 2 : 0.5}
-                  strokeDasharray={canPick ? '3 2' : undefined}
-                  transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
-                  style={{ cursor: canPick || isEditable ? 'pointer' : 'default' }}
-                  role={canPick ? 'button' : undefined}
-                  aria-label={canPick ? `Choose cell row ${r}, column ${c}` : undefined}
-                  onClick={canPick ? () => pick.pick(`${r},${c}`) : undefined}
-                  onPointerDown={(e) => handlePointerDown(r, c, e.button === 2)}
-                  onPointerEnter={() => handlePointerEnter(r, c)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    handlePointerDown(r, c, true)
-                  }}
-                />
-              )
-            }),
-          )}
-          {/* Terrain, over the state fill and under the scores. */}
-          {state.grid.map((row, r) =>
-            row.map((cell, c) =>
-              (cell.weight ?? 1) > 1 && cell.state !== 'wall' ? (
-                <rect
-                  key={`rough-${r}-${c}`}
-                  x={c * cellSize}
-                  y={r * cellSize}
-                  width={cellSize - 1}
-                  height={cellSize - 1}
-                  fill="url(#rough-ground)"
-                  opacity={0.55}
-                  pointerEvents="none"
-                />
-              ) : null,
-            ),
-          )}
-          {showScores &&
-            cellSize >= 14 &&
-            state.grid.map((row, r) =>
+
+          {/* Column coordinate ruler (0..cols-1) */}
+          {Array.from({ length: state.cols }, (_, c) => {
+            const showTick = cellSize >= 16 || c % 2 === 0
+            if (!showTick) return null
+            return (
+              <text
+                key={`col-ruler-${c}`}
+                x={RULER_SIZE + c * cellSize + cellSize / 2}
+                y={RULER_SIZE / 2 + 1}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={Math.min(9, Math.max(7, cellSize * 0.42))}
+                className="fill-text-muted font-mono select-none dark:fill-dark-text-secondary"
+              >
+                {c}
+              </text>
+            )
+          })}
+
+          {/* Row coordinate ruler (0..rows-1) */}
+          {Array.from({ length: state.rows }, (_, r) => {
+            const showTick = cellSize >= 14 || r % 2 === 0
+            if (!showTick) return null
+            return (
+              <text
+                key={`row-ruler-${r}`}
+                x={RULER_SIZE - 4}
+                y={RULER_SIZE + r * cellSize + cellSize / 2}
+                textAnchor="end"
+                dominantBaseline="central"
+                fontSize={Math.min(9, Math.max(7, cellSize * 0.42))}
+                className="fill-text-muted font-mono select-none dark:fill-dark-text-secondary"
+              >
+                {r}
+              </text>
+            )
+          })}
+
+          <g transform={`translate(${RULER_SIZE}, ${RULER_SIZE})`}>
+            {state.grid.map((row, r) =>
               row.map((cell, c) => {
-                // The number each algorithm actually pops by, not always
-                // f: Dijkstra orders on g, and printing g + h beside a
-                // prompt asking for the lowest g invited the student to
-                // check the wrong column.
-                const score = state.algorithmType === 'astar' ? cell.fScore : cell.gScore
-                if (score === undefined || (cell.state !== 'frontier' && cell.state !== 'visited')) return null
+                const colours = CELL_COLOURS[cell.state]
+                const isCurrent = state.currentCell?.[0] === r && state.currentCell?.[1] === c
+                const canPick = pick.selectable(`${r},${c}`)
                 return (
-                  <text
-                    key={`score-${r}-${c}`}
-                    x={c * cellSize + cellSize / 2}
-                    y={r * cellSize + cellSize / 2}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize={Math.min(8, cellSize / 3)}
-                    fill="#1e293b"
-                    pointerEvents="none"
-                  >
-                    {score}
-                  </text>
+                  <motion.rect
+                    key={`${r}-${c}`}
+                    x={c * cellSize}
+                    y={r * cellSize}
+                    width={cellSize - 1}
+                    height={cellSize - 1}
+                    animate={{ fill: colours.fill }}
+                    stroke={
+                      canPick
+                        ? 'var(--state-compare)'
+                        : isCurrent
+                          ? '#cc8200'
+                          : cell.state === 'empty'
+                            ? '#e2e8f0'
+                            : 'none'
+                    }
+                    strokeWidth={canPick ? 2.5 : isCurrent ? 2 : 0.5}
+                    strokeDasharray={canPick ? '3 2' : undefined}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+                    style={{ cursor: canPick || isEditable ? 'pointer' : 'default' }}
+                    role={canPick ? 'button' : undefined}
+                    aria-label={canPick ? `Choose cell row ${r}, column ${c}` : undefined}
+                    onClick={canPick ? () => pick.pick(`${r},${c}`) : undefined}
+                    onPointerDown={(e) => handlePointerDown(r, c, e.button === 2)}
+                    onPointerEnter={() => handlePointerEnter(r, c)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      handlePointerDown(r, c, true)
+                    }}
+                  />
                 )
               }),
             )}
+
+            {/* Terrain hatching */}
+            {state.grid.map((row, r) =>
+              row.map((cell, c) =>
+                (cell.weight ?? 1) > 1 && cell.state !== 'wall' ? (
+                  <rect
+                    key={`rough-${r}-${c}`}
+                    x={c * cellSize}
+                    y={r * cellSize}
+                    width={cellSize - 1}
+                    height={cellSize - 1}
+                    fill="url(#rough-ground)"
+                    opacity={0.55}
+                    pointerEvents="none"
+                  />
+                ) : null,
+              ),
+            )}
+
+            {/* Start / End markers */}
+            {cellSize >= 13 && (
+              <>
+                <text
+                  x={state.startCell[1] * cellSize + cellSize / 2}
+                  y={state.startCell[0] * cellSize + cellSize / 2}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={Math.min(10, cellSize * 0.55)}
+                  fontWeight={700}
+                  fill={CELL_COLOURS.start.text}
+                  pointerEvents="none"
+                >
+                  S
+                </text>
+                <text
+                  x={state.endCell[1] * cellSize + cellSize / 2}
+                  y={state.endCell[0] * cellSize + cellSize / 2}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={Math.min(10, cellSize * 0.55)}
+                  fontWeight={700}
+                  fill={CELL_COLOURS.end.text}
+                  pointerEvents="none"
+                >
+                  E
+                </text>
+              </>
+            )}
+
+            {/* Cell scores: hide fScore on frontier during unanswered A* prediction so g + h isn't leaked */}
+            {showScores &&
+              cellSize >= 14 &&
+              state.grid.map((row, r) =>
+                row.map((cell, c) => {
+                  const score =
+                    state.algorithmType === 'astar'
+                      ? hideFrontierFScore && cell.state === 'frontier'
+                        ? cell.gScore
+                        : cell.fScore
+                      : cell.gScore
+                  if (score === undefined || (cell.state !== 'frontier' && cell.state !== 'visited')) return null
+                  return (
+                    <text
+                      key={`score-${r}-${c}`}
+                      x={c * cellSize + cellSize / 2}
+                      y={r * cellSize + cellSize / 2}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize={Math.min(8, cellSize / 3)}
+                      fill="#1e293b"
+                      pointerEvents="none"
+                    >
+                      {score}
+                    </text>
+                  )
+                }),
+              )}
+          </g>
         </svg>
       </div>
 
-      {/* The step's own narration used to repeat here, word for word, under
-          the exact same sentence already shown in the right panel's
-          "What's happening" box - the same text on screen twice with
-          nothing to tell them apart. It stays in canvasLabel (the svg's
-          aria-label) for a screen reader, and this footer keeps only the
-          numbers the right panel does not carry. */}
       <div className="shrink-0 border-t border-border px-3 py-2 dark:border-dark-border">
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">
-          Visited: {state.visitedCount}
+          Start: ({state.startCell[0]}, {state.startCell[1]}) · Goal: ({state.endCell[0]}, {state.endCell[1]}) · Visited:{' '}
+          {state.visitedCount}
           {state.pathLength !== undefined && ` · Path length: ${state.pathLength}`}
-          {/* Steps and cost come apart on terrain, and that gap is the
-              point: the shortest route is not the cheapest one. */}
           {state.pathCost !== undefined && ` · Path cost: ${state.pathCost}`}
         </p>
       </div>

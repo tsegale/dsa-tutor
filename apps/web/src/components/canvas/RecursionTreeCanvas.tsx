@@ -1,25 +1,9 @@
 import { useMemo } from 'react'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectIsLiveJunction } from '@/store/useAlgorithmStore'
 import { buildCallTree, liveStack, redundancy, type CallTreeNode } from '@/utils/callTree'
+import type { CallStackState } from '@/engine/recursionFactorial'
+import type { NQueensBoardState } from '@/engine/backtracking'
 import { cn } from '@/lib/utils'
-
-/**
- * The call tree, with the live stack beside it.
- *
- * Fibonacci rendered as a stack showed a column growing and shrinking: the
- * student never saw the branching, and never saw the same subproblem being
- * solved again. fib(6) makes 25 calls to answer a question with 7 distinct
- * answers, and that ratio is the whole reason memoisation exists. It is
- * the content of the topic, and a stack cannot show it.
- *
- * Two views, because they answer different questions. The tree is what the
- * run costs; the stack is where the program is right now. The whole tree is
- * drawn from the start, dimmed, and fills in as the student steps, so the
- * shape stays still and the growth is the only thing moving.
- *
- * No brand colour: this is a canvas, and every colour here is an algorithm
- * state token.
- */
 
 interface RecursionTreeCanvasProps {
   width?: number
@@ -27,10 +11,10 @@ interface RecursionTreeCanvasProps {
 }
 
 const NODE_RADIUS = 15
-const MARGIN = { top: 34, right: 16, bottom: 20, left: 16 }
-/** The stack drawer, when there is room for it beside the tree. */
-const DRAWER_WIDTH = 150
-const DRAWER_MIN_CANVAS_WIDTH = 520
+const MARGIN = { top: 38, right: 16, bottom: 20, left: 16 }
+const DRAWER_WIDTH = 154
+const BOARD_DRAWER_WIDTH = 192
+const DRAWER_MIN_CANVAS_WIDTH = 500
 
 function fillFor(node: CallTreeNode): string {
   if (node.pending) return 'var(--surface-sunk)'
@@ -46,9 +30,8 @@ function textFor(node: CallTreeNode): string {
 export default function RecursionTreeCanvas({ width = 600, height = 400 }: RecursionTreeCanvasProps) {
   const snapshots = useAlgorithmStore((state) => state.snapshotArray)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
+  const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
 
-  // Built from every snapshot, so the shape never shifts as the run
-  // proceeds; only the node states change. See utils/callTree.ts.
   const tree = useMemo(() => buildCallTree(snapshots, stepIndex), [snapshots, stepIndex])
   const stack = useMemo(
     () => liveStack(snapshots, stepIndex).filter((frame) => frame.status !== 'returned'),
@@ -63,35 +46,99 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
     )
   }
 
+  const currentSnapshot = snapshots[stepIndex]
+  const currentState = currentSnapshot?.dataStructureState as
+    | (CallStackState & { nQueensBoard?: NQueensBoardState })
+    | undefined
+  const nQueensBoard = currentState?.nQueensBoard
+  const isMemoized = currentState?.memoized === true
+  const cacheHits = currentState?.cacheHits ?? 0
+  const memoEntries = currentState?.computedValues
+    ? Object.entries(currentState.computedValues).sort(([a], [b]) => Number(a) - Number(b))
+    : []
+
+  const hidePruneLeak =
+    Boolean(currentSnapshot?.isPredictionRequired) &&
+    isLiveJunction &&
+    currentSnapshot?.criticalJunctionType === 'PRUNE_BRANCH'
+
+  const sidePanelWidth = nQueensBoard ? BOARD_DRAWER_WIDTH : DRAWER_WIDTH
   const showDrawer = width >= DRAWER_MIN_CANVAS_WIDTH
-  const treeWidth = Math.max(160, width - MARGIN.left - MARGIN.right - (showDrawer ? DRAWER_WIDTH : 0))
-  const treeHeight = Math.max(120, height - MARGIN.top - MARGIN.bottom)
-  // columns counts leaf slots, so the last slot sits at columns - 1.
+  const topOffset = isMemoized ? MARGIN.top + 18 : MARGIN.top
+  const treeWidth = Math.max(160, width - MARGIN.left - MARGIN.right - (showDrawer ? sidePanelWidth : 0))
+  const treeHeight = Math.max(120, height - topOffset - MARGIN.bottom)
   const xStep = treeWidth / Math.max(tree.columns, 1)
   const yStep = treeHeight / Math.max(tree.rows, 1)
   const xOf = (node: CallTreeNode) => MARGIN.left + (node.x + 0.5) * xStep
-  const yOf = (node: CallTreeNode) => MARGIN.top + (node.y + 0.5) * yStep
+  const yOf = (node: CallTreeNode) => topOffset + (node.y + 0.5) * yStep
   const radius = Math.min(NODE_RADIUS, Math.max(7, xStep / 2 - 2), Math.max(7, yStep / 2 - 4))
 
   const { distinct, calls } = redundancy(tree)
-  // Only where repeated arguments really are repeated work: see
-  // CallStackState.highlightRepeats.
-  const repeatsMatter =
-    (snapshots[stepIndex]?.dataStructureState as { highlightRepeats?: boolean } | undefined)?.highlightRepeats === true
+  const runFinished = stepIndex >= snapshots.length - 1 || tree.callsSoFar >= calls
+  const repeatsMatter = currentState?.highlightRepeats === true
   const byId = new Map(tree.nodes.map((node) => [node.id, node]))
 
   return (
-    <svg width={width} height={height} role="img" aria-label={`Call tree: ${tree.callsSoFar} of ${calls} calls made`}>
+    <svg
+      width={width}
+      height={height}
+      role="img"
+      aria-label={
+        runFinished ? `Call tree: ${tree.callsSoFar} of ${calls} calls made` : `Call tree: ${tree.callsSoFar} calls made so far`
+      }
+    >
       <text x={MARGIN.left} y={16} className="fill-text-muted text-[11px] dark:fill-dark-text-secondary">
-        {`calls made: ${tree.callsSoFar} of ${calls}`}
+        {runFinished ? `calls made: ${tree.callsSoFar} of ${calls}` : `calls made: ${tree.callsSoFar}`}
+        {isMemoized ? ` · cache hits: ${cacheHits}` : ''}
       </text>
-      {repeatsMatter && calls > distinct && (
+      {runFinished && repeatsMatter && calls > distinct && (
         <text x={MARGIN.left} y={30} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
           {`${calls} calls for ${distinct} distinct answers`}
         </text>
       )}
 
-      {/* Edges first, so nodes sit on top of them. */}
+      {/* Memoization cache strip */}
+      {isMemoized && (
+        <g>
+          <text x={MARGIN.left} y={32} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
+            memo:
+          </text>
+          {memoEntries.length === 0 ? (
+            <text x={MARGIN.left + 38} y={32} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
+              empty
+            </text>
+          ) : (
+            memoEntries.slice(0, 9).map(([k, v], idx) => {
+              const px = MARGIN.left + 38 + idx * 42
+              return (
+                <g key={`memo-${k}`}>
+                  <rect
+                    x={px}
+                    y={21}
+                    width={38}
+                    height={15}
+                    rx={4}
+                    fill="var(--surface-sunk)"
+                    stroke="var(--state-sorted)"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={px + 19}
+                    y={29}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    className="fill-text-primary font-mono text-[9px] dark:fill-dark-text-primary"
+                  >
+                    {`${k}:${v}`}
+                  </text>
+                </g>
+              )
+            })
+          )}
+        </g>
+      )}
+
+      {/* Edges */}
       {tree.nodes.map((node) => {
         const parent = node.parentId ? byId.get(node.parentId) : undefined
         if (!parent) return null
@@ -108,11 +155,9 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
         )
       })}
 
+      {/* Nodes */}
       {tree.nodes.map((node) => (
         <g key={node.id} aria-hidden="true">
-          {/* A dashed ring marks a call whose answer the run already has.
-              Drawing it on the node rather than in a legend keeps the
-              repetition where the student is looking. */}
           {repeatsMatter && node.recomputed && !node.pending && (
             <circle
               cx={xOf(node)}
@@ -124,6 +169,16 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
               strokeDasharray="2 2"
             />
           )}
+          {isMemoized && node.recomputed && !node.pending && (
+            <circle
+              cx={xOf(node)}
+              cy={yOf(node)}
+              r={radius + 3}
+              fill="none"
+              stroke="var(--state-sorted)"
+              strokeWidth={1.5}
+            />
+          )}
           <circle
             cx={xOf(node)}
             cy={yOf(node)}
@@ -133,16 +188,9 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
             strokeWidth={1}
             opacity={node.pending ? 0.6 : 1}
           />
-          <text
-            x={xOf(node)}
-            y={yOf(node) + 3}
-            textAnchor="middle"
-            className="font-mono text-[10px]"
-            fill={textFor(node)}
-          >
+          <text x={xOf(node)} y={yOf(node) + 3} textAnchor="middle" className="font-mono text-[10px]" fill={textFor(node)}>
             {node.label ?? node.argument}
           </text>
-          {/* The answer, once there is one, under the node that found it. */}
           {node.returned && node.returnValue !== null && radius >= 10 && (
             <text
               x={xOf(node)}
@@ -156,24 +204,137 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
         </g>
       ))}
 
-      {showDrawer && (
+      {/* Side drawer: N-Queens chessboard OR live call stack */}
+      {showDrawer && nQueensBoard ? (
+        (() => {
+          const panelLeft = width - sidePanelWidth
+          const n = Math.max(4, nQueensBoard.size)
+          const availW = sidePanelWidth - 28
+          const availH = Math.max(120, height - 92)
+          const sq = Math.max(18, Math.floor(Math.min(availW, availH) / n))
+          const boardOriginX = panelLeft + 18
+          const boardOriginY = 38
+          const cellCenter = (r: number, c: number) => ({
+            cx: boardOriginX + c * sq + sq / 2,
+            cy: boardOriginY + r * sq + sq / 2,
+          })
+
+          return (
+            <g>
+              <line x1={panelLeft} y1={14} x2={panelLeft} y2={height - MARGIN.bottom} stroke="var(--rule)" strokeWidth={1} />
+              <text x={boardOriginX} y={18} className="fill-text-primary text-[11px] font-semibold dark:fill-dark-text-primary">
+                {`${n}-Queens Board`}
+              </text>
+              <text x={boardOriginX} y={30} className="fill-text-muted font-mono text-[9px] dark:fill-dark-text-secondary">
+                {`solutions: ${nQueensBoard.solutions.length}`}
+              </text>
+
+              {Array.from({ length: n }, (_, r) =>
+                Array.from({ length: n }, (__, c) => {
+                  const isDark = (r + c) % 2 === 1
+                  const hasQueen = nQueensBoard.queens[r] === c
+                  const isTrying = nQueensBoard.tryingCell?.[0] === r && nQueensBoard.tryingCell?.[1] === c
+                  const isAttacker =
+                    !hidePruneLeak && nQueensBoard.attackingQueen?.[0] === r && nQueensBoard.attackingQueen?.[1] === c
+                  const sx = boardOriginX + c * sq
+                  const sy = boardOriginY + r * sq
+                  return (
+                    <g key={`sq-${r}-${c}`}>
+                      <rect
+                        x={sx}
+                        y={sy}
+                        width={sq}
+                        height={sq}
+                        fill={isDark ? 'var(--surface-sunk)' : 'var(--surface)'}
+                        stroke={isTrying ? 'var(--state-compare)' : 'var(--rule)'}
+                        strokeWidth={isTrying ? 1.75 : 0.75}
+                      />
+                      {hasQueen && (
+                        <g>
+                          <circle
+                            cx={sx + sq / 2}
+                            cy={sy + sq / 2}
+                            r={Math.max(6, sq * 0.36)}
+                            fill={isAttacker ? 'var(--state-error)' : 'var(--state-sorted)'}
+                          />
+                          <text
+                            x={sx + sq / 2}
+                            y={sy + sq / 2 + 0.5}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            style={{
+                              fill: isAttacker ? 'var(--state-error-ink)' : 'var(--state-sorted-ink)',
+                              fontSize: Math.max(9, sq * 0.45),
+                              fontWeight: 700,
+                            }}
+                          >
+                            Q
+                          </text>
+                        </g>
+                      )}
+                      {!hasQueen && isTrying && (
+                        <g>
+                          <circle cx={sx + sq / 2} cy={sy + sq / 2} r={Math.max(5, sq * 0.3)} fill="var(--state-compare)" />
+                          <text
+                            x={sx + sq / 2}
+                            y={sy + sq / 2 + 0.5}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            style={{ fill: 'var(--state-compare-ink)', fontSize: Math.max(8, sq * 0.4), fontWeight: 700 }}
+                          >
+                            ?
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  )
+                }),
+              )}
+
+              {/* Attack ray when conflict is revealed */}
+              {!hidePruneLeak &&
+                nQueensBoard.attackingQueen &&
+                nQueensBoard.tryingCell &&
+                (() => {
+                  const from = cellCenter(nQueensBoard.attackingQueen[0], nQueensBoard.attackingQueen[1])
+                  const to = cellCenter(nQueensBoard.tryingCell[0], nQueensBoard.tryingCell[1])
+                  return (
+                    <>
+                      <line
+                        x1={from.cx}
+                        y1={from.cy}
+                        x2={to.cx}
+                        y2={to.cy}
+                        stroke="var(--state-error)"
+                        strokeWidth={2}
+                        strokeDasharray="4 3"
+                      />
+                      <text
+                        x={boardOriginX}
+                        y={boardOriginY + n * sq + 15}
+                        className="fill-error font-mono text-[9px] font-semibold"
+                      >
+                        {`conflict (${nQueensBoard.attackingQueen[0]},${nQueensBoard.attackingQueen[1]}) -> prune`}
+                      </text>
+                    </>
+                  )
+                })()}
+            </g>
+          )
+        })()
+      ) : showDrawer ? (
         <g>
           <line
-            x1={width - DRAWER_WIDTH}
+            x1={width - sidePanelWidth}
             y1={MARGIN.top - 14}
-            x2={width - DRAWER_WIDTH}
+            x2={width - sidePanelWidth}
             y2={height - MARGIN.bottom}
             stroke="var(--rule)"
             strokeWidth={1}
           />
-          <text
-            x={width - DRAWER_WIDTH + 12}
-            y={16}
-            className="fill-text-muted text-[11px] dark:fill-dark-text-secondary"
-          >
+          <text x={width - sidePanelWidth + 12} y={16} className="fill-text-muted text-[11px] dark:fill-dark-text-secondary">
             {`stack: ${stack.length}`}
           </text>
-          {/* Deepest call at the bottom, the way a stack grows. */}
           {stack.map((frame, index) => {
             const rowHeight = 22
             const y = height - MARGIN.bottom - (stack.length - index) * rowHeight
@@ -181,15 +342,15 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
             return (
               <g key={frame.id}>
                 <rect
-                  x={width - DRAWER_WIDTH + 12}
+                  x={width - sidePanelWidth + 12}
                   y={y}
-                  width={DRAWER_WIDTH - 28}
+                  width={sidePanelWidth - 28}
                   height={rowHeight - 4}
                   rx={3}
                   fill={frame.status === 'active' ? 'var(--state-current)' : 'var(--surface-sunk)'}
                 />
                 <text
-                  x={width - DRAWER_WIDTH + 20}
+                  x={width - sidePanelWidth + 20}
                   y={y + 13}
                   className={cn('font-mono text-[10px]')}
                   fill={frame.status === 'active' ? 'var(--state-current-ink)' : 'var(--ink-2)'}
@@ -201,7 +362,7 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
           })}
           {stack.length === 0 && (
             <text
-              x={width - DRAWER_WIDTH + 12}
+              x={width - sidePanelWidth + 12}
               y={height - MARGIN.bottom - 8}
               className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary"
             >
@@ -209,7 +370,7 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
             </text>
           )}
         </g>
-      )}
+      ) : null}
     </svg>
   )
 }

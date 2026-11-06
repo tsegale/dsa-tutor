@@ -151,12 +151,12 @@ function buildCircularList(
  * list. WRAP_CHECK junction on what the (new) last node's .next
  * points to - the answer is always the head, never null.
  */
-export function cllInsertEngine(values: number[]): AlgorithmSnapshot[] {
+export function cllInsertEngine(values: number[], explicitValue?: number): AlgorithmSnapshot[] {
   const stepRef = { current: 0 }
   const built = buildCircularList(values, stepRef)
   const snapshots = built.snapshots
   const { nodes, headId, tailId } = built
-  const newValue = synthesizeNewValue(values)
+  const newValue = explicitValue ?? synthesizeNewValue(values)
 
   const baseState = (n: LinkedListNode[], overrides: Partial<LinkedListState> = {}): LinkedListState => ({
     nodes: cloneNodes(n),

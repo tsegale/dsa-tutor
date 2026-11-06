@@ -80,7 +80,7 @@ export function dp1DEngine(input: number[]): AlgorithmSnapshot[] {
     snapshots.push(
       makeDPSnapshot({
         stepIndex: stepIndex++,
-        description: `At index ${i}: extend the best run ending at ${i - 1} (${best[i - 1]} + ${array[i]} = ${extend}), or start a new run here (${fresh})? The bigger one is best[${i}].`,
+        description: `At index ${i}: extend the best run ending at ${i - 1}, or start a new run at arr[${i}] (${fresh})? What value goes into best[${i}]?`,
         pseudocodeLine: LINE_1D.RECURRENCE,
         isPredictionRequired: true,
         state: state({
@@ -88,8 +88,8 @@ export function dp1DEngine(input: number[]): AlgorithmSnapshot[] {
           dependsOn: [[0, i - 1]],
           marked: [i],
           markerLabel: 'the element at this position',
-          working: `best[${i}] = max(arr[${i}], best[${i - 1}] + arr[${i}]) = max(${fresh}, ${extend})`,
-          watch: { i, element: array[i], previousBest: best[i - 1] as number, extend, startFresh: fresh },
+          working: `best[${i}] = max(arr[${i}], best[${i - 1}] + arr[${i}])`,
+          watch: { i, element: array[i], previousBest: best[i - 1] as number },
         }),
         criticalJunctionType: CriticalJunctionType.DP_CELL,
         junctionDifficulty: JunctionDifficulty.PROCEDURAL,
@@ -107,7 +107,12 @@ export function dp1DEngine(input: number[]): AlgorithmSnapshot[] {
             : `best[${i}] = ${best[i]}: extending the previous run wins.`,
         pseudocodeLine: LINE_1D.RECURRENCE,
         isPredictionRequired: false,
-        state: state({ current: [0, i], marked: [i], markerLabel: 'the element at this position' }),
+        state: state({
+          current: [0, i],
+          marked: [i],
+          markerLabel: 'the element at this position',
+          working: `best[${i}] = max(${fresh}, ${extend}) = ${best[i]}`,
+        }),
       }),
     )
   }
@@ -130,6 +135,7 @@ export function dp1DEngine(input: number[]): AlgorithmSnapshot[] {
       state: state({
         current: [0, endsAt],
         marked: Array.from({ length: endsAt - startsAt + 1 }, (_unused, k) => startsAt + k),
+        traceback: Array.from({ length: endsAt - startsAt + 1 }, (_unused, k) => [0, startsAt + k] as [number, number]),
         markerLabel: 'the winning run',
         working: `answer = max(best) = ${answer}`,
         answer,
@@ -170,6 +176,16 @@ export function dp2DEngine(input: number[]): AlgorithmSnapshot[] {
 
   const source = input.length >= 3 ? letters(input.slice(0, Math.ceil(input.length / 2)), DEFAULT_SOURCE) : DEFAULT_SOURCE
   const target = input.length >= 3 ? letters(input.slice(Math.ceil(input.length / 2)), DEFAULT_TARGET) : DEFAULT_TARGET
+  return dp2DWordsEngine(source, target)
+}
+
+export function dp2DWordsEngine(rawSource: string, rawTarget: string): AlgorithmSnapshot[] {
+  const cleanWord = (w: string, fallback: string) => {
+    const cleaned = w.toLowerCase().replace(/[^a-z]/g, '').slice(0, 9)
+    return cleaned.length > 0 ? cleaned : fallback
+  }
+  const source = cleanWord(rawSource, DEFAULT_SOURCE)
+  const target = cleanWord(rawTarget, DEFAULT_TARGET)
 
   const rows = source.length + 1
   const cols = target.length + 1
@@ -235,7 +251,7 @@ export function dp2DEngine(input: number[]): AlgorithmSnapshot[] {
           stepIndex: stepIndex++,
           description: matched
             ? `"${a}" matches "${b}", so no edit is needed here: the cost is whatever it cost without this pair of letters, straight from the diagonal.`
-            : `"${a}" against "${b}": they differ, so one edit is unavoidable. Delete (from above), insert (from the left) or substitute (from the diagonal) - which neighbour is cheapest?`,
+            : `"${a}" against "${b}": they differ, so one edit is unavoidable on top of the cheapest neighbour (delete above, insert left, or substitute diagonal). What value goes into d[${i}][${j}]?`,
           pseudocodeLine: matched ? LINE_2D.MATCH : LINE_2D.RECURRENCE,
           isPredictionRequired: !matched,
           state: state({
@@ -243,7 +259,7 @@ export function dp2DEngine(input: number[]): AlgorithmSnapshot[] {
             dependsOn,
             working: matched
               ? `d[${i}][${j}] = d[${i - 1}][${j - 1}] = ${diagonal}`
-              : `d[${i}][${j}] = 1 + min(${up}, ${left}, ${diagonal})`,
+              : `d[${i}][${j}] = 1 + min(d[${i - 1}][${j}], d[${i}][${j - 1}], d[${i - 1}][${j - 1}])`,
             watch: { i, j, a, b, delete: up, insert: left, substitute: diagonal },
           }),
           criticalJunctionType: matched ? null : CriticalJunctionType.DP_CELL,
@@ -262,7 +278,11 @@ export function dp2DEngine(input: number[]): AlgorithmSnapshot[] {
             description: `d[${i}][${j}] = ${table[i][j]}, taking the ${move}.`,
             pseudocodeLine: LINE_2D.RECURRENCE,
             isPredictionRequired: false,
-            state: state({ current: [i, j], dependsOn }),
+            state: state({
+              current: [i, j],
+              dependsOn,
+              working: `d[${i}][${j}] = 1 + min(${up}, ${left}, ${diagonal}) = ${table[i][j]}`,
+            }),
           }),
         )
       }
@@ -270,13 +290,38 @@ export function dp2DEngine(input: number[]): AlgorithmSnapshot[] {
   }
 
   const answer = table[rows - 1][cols - 1] as number
+  const traceback: [number, number][] = []
+  let tr = rows - 1
+  let tc = cols - 1
+  traceback.push([tr, tc])
+  while (tr > 0 || tc > 0) {
+    if (tr > 0 && tc > 0 && source[tr - 1] === target[tc - 1] && table[tr][tc] === table[tr - 1][tc - 1]) {
+      tr -= 1
+      tc -= 1
+    } else if (tr > 0 && tc > 0 && table[tr][tc] === (table[tr - 1][tc - 1] as number) + 1) {
+      tr -= 1
+      tc -= 1
+    } else if (tr > 0 && table[tr][tc] === (table[tr - 1][tc] as number) + 1) {
+      tr -= 1
+    } else {
+      tc -= 1
+    }
+    traceback.push([tr, tc])
+  }
+  traceback.reverse()
+
   snapshots.push(
     makeDPSnapshot({
       stepIndex: stepIndex++,
       description: `"${source}" to "${target}" takes ${answer} edits. The table holds ${(rows - 1) * (cols - 1)} subproblems and each was solved once; solving them recursively without the table would solve the same ones over and over.`,
       pseudocodeLine: LINE_2D.ANSWER,
       isPredictionRequired: false,
-      state: state({ current: [rows - 1, cols - 1], working: `answer = d[${rows - 1}][${cols - 1}] = ${answer}`, answer }),
+      state: state({
+        current: [rows - 1, cols - 1],
+        traceback,
+        working: `answer = d[${rows - 1}][${cols - 1}] = ${answer}`,
+        answer,
+      }),
       isFinalStep: true,
     }),
   )

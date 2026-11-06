@@ -52,13 +52,15 @@ let idCounter = 0
  * later call for the same k can be flagged as redundant work without
  * actually skipping it (naive recursion never does memoize).
  */
-export function fibonacciEngine(n: number): AlgorithmSnapshot[] {
+export function fibonacciEngine(n: number, options: { memoize?: boolean } = {}): AlgorithmSnapshot[] {
   const clamped = Math.max(1, Math.min(8, Math.round(n)))
+  const memoize = options.memoize === true
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
   let frames: CallFrame[] = []
   const computedValues: Record<number, number> = {}
   let totalCalls = 0
+  let cacheHits = 0
   let recursiveCallJunctionShown = false
   let baseCaseJunctionShown = false
 
@@ -71,6 +73,8 @@ export function fibonacciEngine(n: number): AlgorithmSnapshot[] {
     currentFrameId: null,
     computedValues: { ...computedValues },
     totalCalls,
+    memoized: memoize,
+    cacheHits,
     ...overrides,
   })
 
@@ -82,7 +86,25 @@ export function fibonacciEngine(n: number): AlgorithmSnapshot[] {
     const id = `fib-${k}-${idCounter++}`
     frames = [...frames, { id, functionName: 'fib', argument: k, returnValue: null, status: 'active', depth: frames.length }]
 
-    if (!recursiveCallJunctionShown && k === clamped && clamped > 2) {
+    if (memoize && isRedundant) {
+      cacheHits += 1
+      const cached = computedValues[k]
+      frames = frames.map((f) => (f.id === id ? { ...f, returnValue: cached, status: 'returned' as const } : f))
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `Cache hit for fib(${k}) = ${cached}! Reused directly from memo[${k}] in O(1) without expanding its subtree.`,
+          pseudocodeLine: LINE.CALL,
+          isPredictionRequired: false,
+          state: baseState({ currentFrameId: id }),
+        }),
+      )
+      frames = frames.filter((f) => f.id !== id)
+      frames = frames.map((f, i) => (i === frames.length - 1 ? { ...f, status: 'active' as const } : f))
+      return cached
+    }
+
+    if (!memoize && !recursiveCallJunctionShown && k === clamped && clamped > 2) {
       recursiveCallJunctionShown = true
       snapshots.push(
         makeSnapshot({

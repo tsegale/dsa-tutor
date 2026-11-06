@@ -34,8 +34,9 @@ const INERT: HandsOnPick = { selection: null, selectable: () => false, pick: () 
 export function useHandsOnPick(snapshot: AlgorithmSnapshot | null | undefined, active = true): HandsOnPick {
   const mode = useAlgorithmStore((state) => state.mode)
   const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
+  const predictionResolved = useAlgorithmStore((state) => state.predictionResolved)
 
-  const enabled = active && mode === AlgorithmMode.HANDS_ON && isLiveJunction
+  const enabled = active && mode === AlgorithmMode.HANDS_ON && isLiveJunction && !predictionResolved
   const selection = enabled ? handsOnSelectionFor(snapshot) : null
 
   const pick = useCallback(

@@ -147,12 +147,12 @@ function emptyState(overrides: Partial<LinkedListState> = {}): LinkedListState {
 }
 
 /** Inserts a new value at the front. INSERT_BETWEEN junction on which two pointers must be updated (new.next/new.prev and old head's prev). */
-export function dllInsertFrontEngine(values: number[]): AlgorithmSnapshot[] {
+export function dllInsertFrontEngine(values: number[], explicitValue?: number): AlgorithmSnapshot[] {
   const stepRef = { current: 0 }
   const built = buildInitialList(values, stepRef)
   const snapshots = built.snapshots
   const { nodes, headId, tailId } = built
-  const newValue = synthesizeNewValue(values)
+  const newValue = explicitValue ?? synthesizeNewValue(values)
 
   const baseState = (n: LinkedListNode[], overrides: Partial<LinkedListState> = {}): LinkedListState => ({
     nodes: cloneNodes(n),
@@ -201,12 +201,12 @@ export function dllInsertFrontEngine(values: number[]): AlgorithmSnapshot[] {
 }
 
 /** Appends a new value to the back. TRAVERSE_DIRECTION and INSERT_BETWEEN junctions. */
-export function dllInsertBackEngine(values: number[]): AlgorithmSnapshot[] {
+export function dllInsertBackEngine(values: number[], explicitValue?: number): AlgorithmSnapshot[] {
   const stepRef = { current: 0 }
   const built = buildInitialList(values, stepRef)
   const snapshots = built.snapshots
   const { nodes, headId, tailId } = built
-  const newValue = synthesizeNewValue(values)
+  const newValue = explicitValue ?? synthesizeNewValue(values)
 
   const baseState = (n: LinkedListNode[], overrides: Partial<LinkedListState> = {}): LinkedListState => ({
     nodes: cloneNodes(n),

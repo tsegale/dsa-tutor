@@ -47,7 +47,7 @@ export default function FocusModeOverlay() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: 'easeIn' }}
-          className="fixed inset-0 z-10"
+          className="pointer-events-none fixed inset-0 z-30"
         >
           {rect ? (
             <div
@@ -61,15 +61,15 @@ export default function FocusModeOverlay() {
               }}
             />
           ) : (
-            <div className="absolute inset-0 bg-black/60" />
+            <div className="pointer-events-none absolute inset-0 bg-black/60" />
           )}
 
           <button
             type="button"
             onClick={toggleFocusMode}
-            className="fixed top-4 right-4 z-[11] rounded-md bg-popover px-3 py-1.5 text-sm font-medium text-primary shadow-md"
+            className="pointer-events-auto fixed top-16 right-4 z-40 rounded-full border border-border bg-popover px-3.5 py-1.5 text-xs font-medium text-text-primary shadow-md hover:bg-surface-sunk dark:border-dark-border dark:text-dark-text-primary"
           >
-            Exit Focus Mode
+            Exit Focus Mode (Esc)
           </button>
         </motion.div>
       )}

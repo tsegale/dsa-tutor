@@ -1,5 +1,6 @@
-import { useAlgorithmStore, selectIsLiveJunction } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectIsUnansweredJunction } from '@/store/useAlgorithmStore'
 import { cn } from '@/lib/utils'
+import TimelineScrubber from './TimelineScrubber'
 
 // Playback transport (Week 4, 4A.3): a centred pill under the canvas. It
 // drives the same store actions the left rail used to, so stepping,
@@ -9,7 +10,7 @@ const SPEEDS = [0.5, 1, 1.5, 2, 3] as const
 
 function Kbd({ children }: { children: string }) {
   return (
-    <kbd className="rounded border border-border bg-surface-sunk px-1 font-mono text-[10px] leading-4 text-text-muted dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary">
+    <kbd className="hidden rounded border border-border bg-surface-sunk px-1 font-mono text-[10px] leading-4 text-text-muted sm:inline-block dark:border-dark-border dark:bg-dark-border dark:text-dark-text-secondary">
       {children}
     </kbd>
   )
@@ -66,7 +67,7 @@ export default function TransportBar() {
   // was visibly walking itself offered no way to stop it - pressing the
   // button started playback instead.
   const autoAdvancing = useAlgorithmStore((state) => state.autoAdvancing)
-  const atLiveJunction = useAlgorithmStore(selectIsLiveJunction)
+  const atUnansweredJunction = useAlgorithmStore(selectIsUnansweredJunction)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const totalSteps = useAlgorithmStore((state) => state.snapshotArray.length)
   const playbackSpeed = useAlgorithmStore((state) => state.playbackSpeed)
@@ -80,9 +81,10 @@ export default function TransportBar() {
   const isAtFinalStep = totalSteps > 0 && stepIndex >= totalSteps - 1
   const isMoving = isPlaying || autoAdvancing
   const playLabel = isMoving ? 'Pause' : isAtFinalStep ? 'Replay' : 'Play'
-  // An unanswered junction is the learner's turn: playback there starts
-  // and stops itself on the first tick, which read as a dead button.
-  const playDisabled = atLiveJunction && !isMoving
+  // An unanswered junction is the learner's turn: neither Play nor Step
+  // forward may bypass a live prediction before it is resolved.
+  const playDisabled = atUnansweredJunction && !isMoving
+  const stepForwardDisabled = isAtFinalStep || atUnansweredJunction
 
   function handlePlayPause() {
     if (isMoving) stopPlayback()
@@ -91,12 +93,13 @@ export default function TransportBar() {
   }
 
   return (
-    <div className="flex shrink-0 justify-center px-4 pb-2">
+    <div className="flex shrink-0 flex-col items-center gap-1 px-4 pb-2">
+      <TimelineScrubber />
       <div
         id="transport-bar"
         role="toolbar"
         aria-label="Playback"
-        className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 shadow-sm dark:border-dark-border"
+        className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-border bg-card px-2 py-1 shadow-sm dark:border-dark-border"
       >
         <button type="button" onClick={stepBackward} disabled={stepIndex === 0} aria-label="Step back" aria-keyshortcuts="ArrowLeft" className={iconButton}>
           <StepBackIcon />
@@ -115,7 +118,15 @@ export default function TransportBar() {
         </button>
         <Kbd>Space</Kbd>
 
-        <button type="button" onClick={stepForward} disabled={isAtFinalStep} aria-label="Step forward" aria-keyshortcuts="ArrowRight" className={cn(iconButton, 'ml-1')}>
+        <button
+          type="button"
+          onClick={stepForward}
+          disabled={stepForwardDisabled}
+          title={atUnansweredJunction ? 'Answer the prediction to continue' : undefined}
+          aria-label="Step forward"
+          aria-keyshortcuts="ArrowRight"
+          className={cn(iconButton, 'ml-1')}
+        >
           <StepForwardIcon />
         </button>
         <Kbd>→</Kbd>

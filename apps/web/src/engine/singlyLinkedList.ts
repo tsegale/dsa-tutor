@@ -172,12 +172,12 @@ const LINE = {
 } as const
 
 /** Inserts `value` at the front of the list. NULL_CHECK junction on what the new node's .next becomes. */
-export function sllInsertFrontEngine(values: number[]): AlgorithmSnapshot[] {
+export function sllInsertFrontEngine(values: number[], explicitValue?: number): AlgorithmSnapshot[] {
   const stepRef = { current: 0 }
   const built = buildInitialList(values, stepRef)
   const snapshots = built.snapshots
   const { nodes, headId, tailId } = built
-  const newValue = synthesizeNewValue(values)
+  const newValue = explicitValue ?? synthesizeNewValue(values)
 
   const baseState = (n: LinkedListNode[], overrides: Partial<LinkedListState> = {}): LinkedListState => ({
     nodes: cloneNodes(n),
@@ -235,12 +235,12 @@ export function sllInsertFrontEngine(values: number[]): AlgorithmSnapshot[] {
 }
 
 /** Appends `value` to the back of the list. NULL_CHECK while traversing to the tail, INSERT_BETWEEN when the tail's .next is updated. */
-export function sllInsertBackEngine(values: number[]): AlgorithmSnapshot[] {
+export function sllInsertBackEngine(values: number[], explicitValue?: number): AlgorithmSnapshot[] {
   const stepRef = { current: 0 }
   const built = buildInitialList(values, stepRef)
   const snapshots = built.snapshots
   const { nodes, headId, tailId } = built
-  const newValue = synthesizeNewValue(values)
+  const newValue = explicitValue ?? synthesizeNewValue(values)
 
   const baseState = (n: LinkedListNode[], overrides: Partial<LinkedListState> = {}): LinkedListState => ({
     nodes: cloneNodes(n),

@@ -23,7 +23,7 @@ import { emptyDPState, makeDPSnapshot, type DPTableState } from './dpTable'
 // for each activity: if start >= last: take it; last = finish
 const LINE = { SORT: 0, INIT: 1, LOOP: 2, FITS: 3, TAKE: 4, DONE: 5 } as const
 
-interface Activity {
+export interface Activity {
   name: string
   start: number
   finish: number
@@ -31,7 +31,7 @@ interface Activity {
 
 /** The default set is built so that earliest-start and shortest-first both
  * lose to earliest-finish, which is the entire point of the topic. */
-const DEFAULT_ACTIVITIES: Activity[] = [
+export const DEFAULT_ACTIVITIES: Activity[] = [
   { name: 'A', start: 1, finish: 4 },
   { name: 'B', start: 3, finish: 5 },
   { name: 'C', start: 0, finish: 6 },
@@ -55,7 +55,11 @@ function activitiesFrom(input: number[]): Activity[] {
 }
 
 export function greedyEngine(input: number[]): AlgorithmSnapshot[] {
-  const unsorted = activitiesFrom(input)
+  return greedyActivitiesEngine(activitiesFrom(input))
+}
+
+export function greedyActivitiesEngine(unsortedInput: Activity[]): AlgorithmSnapshot[] {
+  const unsorted = unsortedInput.length >= 2 ? unsortedInput : DEFAULT_ACTIVITIES
   const sorted = [...unsorted].sort((a, b) => a.finish - b.finish || a.start - b.start)
   const n = sorted.length
   const snapshots: AlgorithmSnapshot[] = []

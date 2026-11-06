@@ -1,4 +1,4 @@
-import { CriticalJunctionType } from '@dsa-tutor/types'
+import { CriticalJunctionType, PredictionType } from '@dsa-tutor/types'
 import type { AlgorithmSnapshot, GraphAlgorithmState, GridAlgorithmState } from '@dsa-tutor/types'
 import type { BSTNode } from '@/engine/bst'
 import type { TraversalState } from '@/engine/treeTraversal'
@@ -66,6 +66,7 @@ function treeNodes(root: BSTNode | null | undefined): BSTNode[] {
  */
 export function handsOnSelectionFor(snapshot: AlgorithmSnapshot | null | undefined): HandsOnSelection | null {
   if (!snapshot || !snapshot.isPredictionRequired) return null
+  if (snapshot.predictionType === PredictionType.CODE_EDITOR) return null
   const state = snapshot.dataStructureState
 
   /**
@@ -101,21 +102,35 @@ export function handsOnSelectionFor(snapshot: AlgorithmSnapshot | null | undefin
 
     case CriticalJunctionType.BST_DIRECTION: {
       const s = state as {
+        root?: BSTNode | null
         currentNode: (BSTNode & { left?: BSTNode | null; right?: BSTNode | null }) | null
+        path?: string[]
+        insertionParentValue?: number | null
         deleteCase?: string
       }
       // The delete-case junction asks how a node is removed, not which
-      // way to descend: no child to point at.
-      if (s.deleteCase || !s.currentNode) return null
-      const choices: Record<string, string> = {}
-      if (s.currentNode.left) choices[s.currentNode.left.id] = 'go-left'
-      if (s.currentNode.right) choices[s.currentNode.right.id] = 'go-right'
-      // One child only would make the gesture a single button that is
-      // always right, which asks nothing.
-      // Both children must exist: one child only would be a single
-      // button that is always right, which asks nothing.
-      if (Object.keys(choices).length !== 2) return null
-      return offer({ kind: 'tree', choices, hint: 'Click the child this comparison descends to.' })
+      // way to descend: no child or slot to point at.
+      if (s.deleteCase) return null
+      if (!s.currentNode) {
+        if (s.insertionParentValue == null || !Array.isArray(s.path) || s.path.length === 0) return null
+        const parentId = s.path[s.path.length - 1]
+        const parentNode = treeNodes(s.root).find((node) => node.id === parentId)
+        if (!parentNode) return null
+        const choices: Record<string, string> = {
+          [parentNode.left ? parentNode.left.id : `${parentNode.id}::__left__`]: 'attach-left',
+          [parentNode.right ? parentNode.right.id : `${parentNode.id}::__right__`]: 'attach-right',
+        }
+        return offer({
+          kind: 'tree',
+          choices,
+          hint: 'Click the left or right slot under the parent where this value attaches.',
+        })
+      }
+      const choices: Record<string, string> = {
+        [s.currentNode.left ? s.currentNode.left.id : `${s.currentNode.id}::__left__`]: 'go-left',
+        [s.currentNode.right ? s.currentNode.right.id : `${s.currentNode.id}::__right__`]: 'go-right',
+      }
+      return offer({ kind: 'tree', choices, hint: 'Click the child or empty slot this comparison descends to.' })
     }
 
     case CriticalJunctionType.NEXT_NODE_SELECTION:

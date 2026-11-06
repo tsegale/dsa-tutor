@@ -14,7 +14,7 @@ import type { PrimState } from '@/engine/prim'
 import type { CycleDetectionState, ConnectedComponentsState } from '@/engine/graphProperties'
 import type { TileOption } from '@/components/prediction/TileGrid'
 import { complexityPredictionOptions } from '@/engine/runMetrics'
-import { correctTileIdFor } from '@/utils/correctTile'
+import { gridNextCellKeyFor } from '@/utils/correctTile'
 import type { DPTableState } from '@/engine/dpTable'
 
 /** Fisher-Yates shuffle so the correct tile isn't always in the same position. Tile ids never change, only display order. */
@@ -474,18 +474,24 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
     }
 
     case CriticalJunctionType.MIDPOINT_DECISION: {
-      const s = snapshot.dataStructureState as { array: number[]; mid: number | null; target: number }
-      const midVal = s.mid !== null ? s.array[s.mid] : undefined
+      const s = snapshot.dataStructureState as { array: number[]; mid?: number | null; blockEnd?: number; target: number }
+      const probeIdx = typeof s.mid === 'number' ? s.mid : typeof s.blockEnd === 'number' ? s.blockEnd : null
+      const midVal = probeIdx !== null ? s.array[probeIdx] : undefined
       const target = s.target
+      const isJump = typeof s.mid !== 'number' && typeof s.blockEnd === 'number'
       return shuffleArray([
         {
           id: 'search-left',
-          label: `${target} is smaller - search the left half`,
+          label: isJump
+            ? `${target} is smaller than ${midVal} - linear search this block`
+            : `${target} is smaller - search the left half`,
           misconception: MisconceptionCategory.COMPARISON_DIRECTION,
         },
         {
           id: 'search-right',
-          label: `${target} is larger - search the right half`,
+          label: isJump
+            ? `${target} is larger than ${midVal} - jump to the next block`
+            : `${target} is larger - search the right half`,
           misconception: MisconceptionCategory.COMPARISON_DIRECTION,
         },
         { id: 'found', label: `${midVal} equals ${target} - target found`, misconception: MisconceptionCategory.COMPARISON_DIRECTION },
@@ -917,7 +923,7 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       // the grid marked the lowest-g cell correct while DFS pops the
       // back of the frontier, so on Grid DFS the grid's "correct" tile
       // was the one the run does not take.
-      const correct = correctTileIdFor(snapshot)
+      const correct = gridNextCellKeyFor(snapshot)
       const key = ({ r, c }: { r: number; c: number }) => `${r},${c}`
       const label = (cell: { r: number; c: number; index: number; f: number }) => {
         if (isAStar) return `(${cell.r}, ${cell.c}) - f(n) = ${cell.f}`
@@ -933,7 +939,7 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       // produce several tiles that are all correct; for the unweighted
       // pair, the other end of the frontier and a couple of neighbours.
       const others = weighted
-        ? [...new Map(scored.filter((cell) => cell !== right).map((cell) => [cell.f, cell])).values()].slice(0, 3)
+        ? [...new Map(scored.filter((cell) => cell.f !== right.f).map((cell) => [cell.f, cell])).values()].slice(0, 3)
         : scored.filter((cell) => cell !== right).slice(0, 3)
       if (others.length === 0) {
         return shuffleArray([
@@ -1800,7 +1806,43 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
     }
 
     case CriticalJunctionType.PRUNE_BRANCH: {
-      const s = snapshot.dataStructureState as { total: number; target: number; candidates: number[] }
+      const s = snapshot.dataStructureState as {
+        total: number
+        target: number
+        candidates: number[]
+        nQueensBoard?: { attackingQueen: [number, number] | null }
+      }
+      if (s.nQueensBoard) {
+        const conflicted = s.total > s.target
+        const attacker = s.nQueensBoard.attackingQueen
+        const where = attacker ? `(${attacker[0]}, ${attacker[1]})` : 'an earlier row'
+        return shuffleArray([
+          conflicted
+            ? {
+                id: 'prune-yes',
+                label: `Abandon this square - queen at ${where} already attacks it`,
+                misconception: null,
+              }
+            : { id: 'prune-no', label: 'Place the queen and move to the next row', misconception: null },
+          conflicted
+            ? {
+                id: 'prune-no',
+                label: 'Place the queen anyway and check conflicts at the bottom',
+                misconception: MisconceptionCategory.COMPLEXITY_MISATTRIBUTION,
+              }
+            : { id: 'prune-yes', label: 'Abandon this safe square', misconception: MisconceptionCategory.PREMATURE_TERMINATION },
+          {
+            id: 'prune-all',
+            label: 'Restart the entire board from row 0',
+            misconception: MisconceptionCategory.PREMATURE_TERMINATION,
+          },
+          {
+            id: 'prune-unsafe',
+            label: 'Skip checking diagonals and only check columns',
+            misconception: MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION,
+          },
+        ])
+      }
       const overshot = s.total > s.target
       return shuffleArray([
         overshot
