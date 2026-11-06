@@ -50,9 +50,10 @@ CRITICAL_JUNCTION_GUIDANCE: dict[str, str] = {
     ),
     "RETURN_VALUE": (
         "The student was asked what a specific call returns, given what "
-        "its recursive child call already returned. Ground the feedback "
-        "in the exact argument and the exact child return value shown, "
-        "and the combination rule (multiply by n for factorial)."
+        "its recursive child call(s) already returned. Ground the "
+        "feedback in the exact argument and the exact child return "
+        "value(s) shown, and the combination rule - multiply by n for "
+        "factorial, add the two child results for Fibonacci."
     ),
     "RECURSIVE_CALL": (
         "For factorial, the student was asked how many more calls "

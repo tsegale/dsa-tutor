@@ -166,6 +166,7 @@
     "INSERT_BETWEEN"
   ],
   "circular-linked-list": [
+    "INSERT_BETWEEN",
     "WRAP_CHECK"
   ],
   "stack": [
@@ -196,7 +197,8 @@
   ],
   "recursion-fibonacci": [
     "BASE_CASE",
-    "RECURSIVE_CALL"
+    "RECURSIVE_CALL",
+    "RETURN_VALUE"
   ],
   "linear-search": [
     "ALGORITHM_COMPLETE",

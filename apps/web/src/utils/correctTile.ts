@@ -442,6 +442,13 @@ export function correctTileIdFor(snapshot: AlgorithmSnapshot): string | null {
 
     case CriticalJunctionType.RETURN_VALUE: {
       const desc = snapshot.description ?? ''
+      const fibMatch = desc.match(/returned (\d+) and (\d+)/)
+      if (fibMatch) {
+        const left = Number(fibMatch[1])
+        const right = Number(fibMatch[2])
+        if (!Number.isFinite(left) || !Number.isFinite(right)) return null
+        return `sum-${left + right}`
+      }
       const n = Number(desc.match(/factorial\((\d+)\)/)?.[1])
       const prev = Number(desc.match(/returned (\d+)/)?.[1])
       if (!Number.isFinite(n) || !Number.isFinite(prev)) return null

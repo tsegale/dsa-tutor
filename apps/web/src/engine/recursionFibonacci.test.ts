@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { JunctionDifficulty } from '@dsa-tutor/types'
 import { fibonacciEngine, type CallStackState } from './recursionFibonacci'
 
 function lastState(snapshots: ReturnType<typeof fibonacciEngine>): CallStackState {
@@ -59,6 +60,31 @@ describe('fibonacciEngine', () => {
     expect(state.frames.length).toBe(1)
     expect(state.frames[0].status).toBe('returned')
     expect(state.frames[0].argument).toBe(4)
+  })
+
+  it('flags a PROCEDURAL RETURN_VALUE junction for every non-base recursive return', () => {
+    const snapshots = fibonacciEngine(5)
+    const junctions = snapshots.filter((s) => s.criticalJunctionType === 'RETURN_VALUE')
+    // Every k>1 call returns exactly once, each asking "what does fib(k)
+    // return" from its two child results - this is what makes the
+    // recursion-fibonacci code ladder reachable (see codeMode.ts).
+    expect(junctions.length).toBeGreaterThan(0)
+    junctions.forEach((s) => {
+      expect(s.junctionDifficulty).toBe(JunctionDifficulty.PROCEDURAL)
+      expect(s.description).toMatch(/^fib\(\d+\) called fib\(\d+\) and fib\(\d+\), which returned \d+ and \d+\./)
+    })
+  })
+
+  it("the RETURN_VALUE junction's left+right matches the very next snapshot's actual return", () => {
+    const snapshots = fibonacciEngine(6)
+    const junctionIndex = snapshots.findIndex((s) => s.criticalJunctionType === 'RETURN_VALUE')
+    const match = snapshots[junctionIndex].description.match(
+      /fib\((\d+)\) called fib\(\d+\) and fib\(\d+\), which returned (\d+) and (\d+)/,
+    )!
+    const [, k, left, right] = match
+    expect(snapshots[junctionIndex + 1].description).toBe(
+      `fib(${k}) returns ${Number(left) + Number(right)}. Total calls so far: ${(snapshots[junctionIndex + 1].dataStructureState as CallStackState).totalCalls}.`,
+    )
   })
 
   it('flags a call for a repeated value as redundant in its description', () => {

@@ -253,10 +253,6 @@ function frameById(snapshot: AlgorithmSnapshot, id: string): Frame | undefined {
   return framesOf(snapshot).find((frame) => frame.id === id)
 }
 
-function activeFrame(snapshot: AlgorithmSnapshot): Frame | undefined {
-  const frames = framesOf(snapshot)
-  return frames.find((frame) => frame.status === 'active') ?? frames[frames.length - 1]
-}
 
 /**
  * The call about to return, the value the call below it handed up, and the
@@ -713,20 +709,22 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   }),
 
   'circular-linked-list': challenge({
-    prompt: 'The new node becomes the tail. Say what its next pointer has to point at for the list to stay circular.',
-    junctionTypes: [CriticalJunctionType.WRAP_CHECK],
-    python: '# values holds the list in order; the new tail is at the end.\nlast_next = ',
-    java: 'newNode.next = head;',
+    // Targets INSERT_BETWEEN (the mechanical "old tail's .next now points
+    // at the new node" step), not WRAP_CHECK (the conceptual "why does a
+    // circular list's last node never point to null" one) - a ladder
+    // topic only ever turns a PROCEDURAL junction into a code question,
+    // see withCodeMode's own doc comment.
+    prompt: "Appending closes the circle at the tail end. Set old_tail_next to what the OLD tail's .next pointer points to now.",
+    junctionTypes: [CriticalJunctionType.INSERT_BETWEEN],
+    python: '# values and value are given.\n# The old tail now points at the new node, never at null.\nold_tail_next = ',
+    java: 'oldTail.next = newNode;',
     globals: (context) => ({
       values: valuesOf(field<unknown[]>(context.snapshot, 'nodes', [])),
       value: field<number>(context.snapshot, 'operationValue', 0),
     }),
-    readBack: 'last_next',
+    readBack: 'old_tail_next',
     expect: 'number',
-    // The head's value, read out of the run: in a circular list the last
-    // node points back to it, which is exactly what has no equivalent in
-    // the singly linked version.
-    expected: (context) => valuesOf(field<unknown[]>(context.snapshot, 'nodes', []))[0] ?? null,
+    expected: (context) => field<number | null>(context.snapshot, 'operationValue', null),
   }),
 
   stack: challenge({
@@ -842,20 +840,28 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   }),
 
   'recursion-fibonacci': challenge({
-    prompt: 'Decide whether this call is a base case, the one thing that stops the recursion going forever.',
-    junctionTypes: [CriticalJunctionType.BASE_CASE],
-    python: '# n is the argument of the call being made.\nis_base = ',
-    java: 'if (n <= 1) return n;',
-    globals: (context) => ({ n: activeFrame(context.snapshot)?.argument ?? 0 }),
-    readBack: 'is_base',
-    expect: 'boolean',
-    // From the run: the engine stops here and hands back a value rather
-    // than making two more calls.
+    // Targets RETURN_VALUE (the mechanical "combine the two child
+    // results" step), not BASE_CASE (conceptual) - a ladder topic only
+    // ever turns a PROCEDURAL junction into a code question, see
+    // withCodeMode's own doc comment. fibonacciEngine's frames array is
+    // pruned as calls return (unlike factorialEngine's, which keeps
+    // every frame around), so returningFrame's frame-stack walk cannot
+    // be reused here; left/right are parsed straight from the
+    // description instead, the same way codeLadders.ts and
+    // tileBuilder.ts already do for this exact junction.
+    prompt: 'fib(k) called fib(k - 1) and fib(k - 2), which returned left and right. Combine them to give this call its return value.',
+    junctionTypes: [CriticalJunctionType.RETURN_VALUE],
+    python: '# left and right are given.\nresult = ',
+    java: 'return left + right;',
+    globals: (context) => {
+      const match = context.snapshot.description.match(/returned (\d+) and (\d+)/)
+      return { left: match ? Number(match[1]) : 0, right: match ? Number(match[2]) : 0 }
+    },
+    readBack: 'result',
+    expect: 'number',
     expected: (context) => {
-      const frame = activeFrame(context.snapshot)
-      if (!frame) return null
-      const settled = nextWhere(context, (s) => frameById(s, frame.id)?.status === 'returned')
-      return settled !== null
+      const match = context.snapshot.description.match(/returned (\d+) and (\d+)/)
+      return match ? Number(match[1]) + Number(match[2]) : null
     },
   }),
 

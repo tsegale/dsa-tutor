@@ -67,11 +67,20 @@ function StudyGate({ children }: { children: ReactNode }) {
   })
 
   if (isLoading) return null
-  if (status?.consentRequired) {
-    return <Navigate to="/consent" replace />
-  }
-  if (status?.pretestRequired) {
-    return <Navigate to="/assessment/pre" replace />
+  // consentRequired/pretestRequired answer "has this step happened yet",
+  // not "is this account still an active participant" - getStudyStatus
+  // keeps pretestRequired true for someone who withdrew before ever taking
+  // it, since withdrawing doesn't retroactively complete it. Gating on
+  // those alone re-locked a withdrawn participant into the very step they
+  // just withdrew to get out of; withdrawn exits the protocol entirely; see
+  // studyPhase(), which already treats it the same way for the header chip.
+  if (!status?.withdrawn) {
+    if (status?.consentRequired) {
+      return <Navigate to="/consent" replace />
+    }
+    if (status?.pretestRequired) {
+      return <Navigate to="/assessment/pre" replace />
+    }
   }
   return <>{children}</>
 }
@@ -193,12 +202,19 @@ function AppRoutes() {
                     </ProtectedRoute>
                   }
                 />
+                {/* RequireAuth alone, not ProtectedRoute: StudySection (Phase 6B)
+                    renders the withdraw button here, and StudyJoinPage promises
+                    "you can withdraw at any time from your profile" - a promise
+                    StudyGate broke for exactly the participant most likely to
+                    want it, one mid-protocol with a pretest/posttest/consent
+                    still due, by bouncing them straight back to that same due
+                    step before the page could render. */}
                 <Route
                   path="/profile"
                   element={
-                    <ProtectedRoute>
+                    <RequireAuth>
                       <ProfilePage />
-                    </ProtectedRoute>
+                    </RequireAuth>
                   }
                 />
                 <Route
