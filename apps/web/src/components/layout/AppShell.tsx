@@ -35,10 +35,19 @@ import { MotionPreference } from './MotionPreference'
 // palette, nav) asks AlgorithmPage first, which may show the session-end
 // survey before it navigates.
 
+export interface CrumbMenuItem {
+  label: string
+  to: string
+  number?: string
+  active?: boolean
+}
+
 export interface Crumb {
   label: string
   /** Omitted for the current page. */
   to?: string
+  /** Optional sibling switcher menu on the current page crumb. */
+  items?: CrumbMenuItem[]
 }
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -84,6 +93,33 @@ export function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
                 >
                   {crumb.label}
                 </a>
+              ) : isLast && crumb.items && crumb.items.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={`Switch topic from ${crumb.label}`}
+                      className="inline-flex min-w-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-medium text-ink transition-colors duration-quick hover:bg-surface-sunk"
+                    >
+                      <span className="truncate">{crumb.label}</span>
+                      <ChevronDownIcon />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="max-h-80 min-w-64 overflow-y-auto">
+                    {crumb.items.map((item) => (
+                      <DropdownMenuItem
+                        key={item.to}
+                        onSelect={() => {
+                          if (!item.active) go(item.to)
+                        }}
+                        className={cn(item.active && 'bg-brand-soft font-semibold text-ink')}
+                      >
+                        {item.number && <span className="w-8 shrink-0 text-mono-sm text-ink-2">{item.number}</span>}
+                        <span className="truncate">{item.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <span aria-current={isLast ? 'page' : undefined} className="truncate font-medium text-ink">
                   {crumb.label}
@@ -219,6 +255,7 @@ function NavMenu({ includeHome, includeModules, roleViews }: { includeHome: bool
               {module.title}
             </DropdownMenuItem>
           ))}
+        {includeModules && <DropdownMenuItem onSelect={() => go('/compare')}>Compare</DropdownMenuItem>}
         <DropdownMenuItem onSelect={() => go('/progress')}>Progress</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -280,7 +317,7 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
   useEffect(() => setDrawerOpen(false), [pathname])
   const { restricted } = useStudyScope()
   const { user } = useAuth()
-  const isEducator = user?.role === 'EDUCATOR'
+  const isEducator = user?.role === 'EDUCATOR' || user?.role === 'ADMIN'
   const { isTooSmall } = useLayoutBreakpoint()
   const inWorkspace = Boolean(onNavigate)
   const go = useCallback((to: string) => (onNavigate ? onNavigate(to) : navigate(to)), [navigate, onNavigate])
@@ -343,6 +380,11 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
                   one-topic module page would look broken, so Home lists them. */}
               <span className="hidden lg:contents">
                 {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}
+                {!restricted && (
+                  <NavLink to="/compare" active={pathname.startsWith('/compare')}>
+                    Compare
+                  </NavLink>
+                )}
                 <NavLink to="/progress" active={pathname === '/progress'}>
                   Progress
                 </NavLink>

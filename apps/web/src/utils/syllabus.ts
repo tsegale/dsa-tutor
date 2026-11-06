@@ -122,7 +122,7 @@ export function nextInSequence(sequence: readonly SyllabusTopic[]): SyllabusTopi
     if (entry.topic.masteryPercent > 0) furthest = index
   })
   const ahead = sequence.slice(Math.max(furthest, 0))
-  return ahead.find((entry) => entry.state !== 'complete') ?? null
+  return ahead.find((entry) => entry.state !== 'complete') ?? sequence.find((entry) => entry.state !== 'complete') ?? null
 }
 
 export function planNext(

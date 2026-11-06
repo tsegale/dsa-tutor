@@ -14,6 +14,7 @@ import { browserStorage, writeLastPosition } from '@/utils/lastPosition'
 import { apiFetch } from '@/api/client'
 import { fetchStudyStatus } from '@/api/study'
 import CanvasContainer from '@/components/canvas/CanvasContainer'
+import VariableWatchStrip from '@/components/canvas/VariableWatchStrip'
 import TopBar, { OPEN_SHORTCUTS_MODAL_EVENT } from '@/components/layout/TopBar'
 import { REQUEST_SESSION_EXIT_EVENT, requestSessionExit, type SessionExitDetail } from '@/components/layout/sessionExit'
 import { ShellNavigation } from '@/components/layout/shellNavigation'
@@ -23,7 +24,7 @@ import SessionEndSurvey from '@/components/layout/SessionEndSurvey'
 import LeftPanel from '@/components/layout/LeftPanel'
 import RightPanel from '@/components/layout/RightPanel'
 import WorkspaceSeparator from '@/components/layout/WorkspaceSeparator'
-import LargerScreenNotice from '@/components/layout/LargerScreenNotice'
+
 import TransportBar from '@/components/layout/TransportBar'
 import FocusModeOverlay from '@/components/layout/FocusModeOverlay'
 import KeyboardShortcutsModal from '@/components/layout/KeyboardShortcutsModal'
@@ -79,7 +80,7 @@ function logViewedStep(sessionId: string, stepIndex: number, elapsedMs: number) 
       predictionCorrect: null,
       misconceptionCategory: null,
       hintsRequested: 0,
-      timeSpentSeconds: Math.round(elapsedMs / 100) / 10,
+      timeSpentSeconds: Math.max(0, Math.round(elapsedMs / 1000)),
       criticalJunctionType: snapshot?.criticalJunctionType ?? null,
       junctionDifficulty: snapshot?.junctionDifficulty ?? null,
       interactionType: 'VIEW_STEP',
@@ -260,7 +261,7 @@ function AlgorithmWorkspace() {
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const leftPanelRef = usePanelRef()
   const rightPanelRef = usePanelRef()
-  const workspaceLayout = useDefaultLayout({ id: 'dsa-workspace', storage: workspaceLayoutStorage })
+  const workspaceLayout = useDefaultLayout({ id: 'dsa-workspace-v2', storage: workspaceLayoutStorage })
   const togglePanel = (ref: typeof leftPanelRef) => {
     const panel = ref.current
     if (!panel) return
@@ -317,7 +318,8 @@ function AlgorithmWorkspace() {
   // together, and the tone has to travel with the text it describes.
   const [feedbackCard, setFeedbackCard] = useState<FeedbackCard | null>(null)
   const [hint, setHint] = useState<string | null>(null)
-  const [predictionResolved, setPredictionResolved] = useState(false)
+  const predictionResolved = useAlgorithmStore((state) => state.predictionResolved)
+  const setPredictionResolved = useAlgorithmStore((state) => state.setPredictionResolved)
 
   // predictionResolved resets to false on every step change (see
   // PredictionZone's per-step effect), so it cannot gate the Quick Check
@@ -416,8 +418,12 @@ function AlgorithmWorkspace() {
       masteredTopics: topics.filter((t) => t.masteryPercent >= 80).length,
       // Phase 16 will add algorithms beyond Bubble Sort; these stay
       // false until a track can actually be completed.
-      completedSortingTrack: false,
-      completedGraphsTrack: false,
+      completedSortingTrack:
+        topics.some((t) => t.track === 'SORTING') &&
+        topics.filter((t) => t.track === 'SORTING').every((t) => t.masteryPercent >= 80),
+      completedGraphsTrack:
+        topics.some((t) => t.track === 'GRAPHS') &&
+        topics.filter((t) => t.track === 'GRAPHS').every((t) => t.masteryPercent >= 80),
     }
   }
 
@@ -809,7 +815,12 @@ function AlgorithmWorkspace() {
     // tracedToEnd: an operation control loads its run already at the end,
     // and pressing Push Front is not tracing an execution. Without this
     // the offer fired on every press of every structure control.
-    if (!tracedToEnd || !run[stepIndex]?.isFinalStep || mode !== AlgorithmMode.PRACTICE || isClassic || !algorithmNameParam) return
+    if (!tracedToEnd || !run[stepIndex]?.isFinalStep || isClassic || !algorithmNameParam) return
+    if (mode === AlgorithmMode.HANDS_ON) {
+      useAlgorithmStore.getState().noteHandsOnCompleted(algorithmNameParam)
+      return
+    }
+    if (mode !== AlgorithmMode.PRACTICE) return
     useAlgorithmStore.getState().notePracticeRunCompleted(algorithmNameParam)
     if (!hasFeynmanRubric(name) || feynmanOfferDismissedRef.current === run) return
     const minutes = (Date.now() - sessionStartedAtRef.current) / 60_000
@@ -966,9 +977,23 @@ function AlgorithmWorkspace() {
   // Wall-clock and active time for this topic session (Week 2 2F).
   useTopicTiming(sessionId)
 
+  // Promote a DEMO-opened DB session to PRACTICE/HANDS_ON the moment the
+  // learner switches into an interactive mode so first-visit predictions
+  // count toward mastery without requiring a page reload.
+  useEffect(() => {
+    if (!sessionId || isClassic) return
+    if (mode !== AlgorithmMode.PRACTICE && mode !== AlgorithmMode.HANDS_ON) return
+    apiFetch(`/api/v1/sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ mode }),
+    }).catch(() => {})
+  }, [sessionId, mode, isClassic])
+
   useKeyboardShortcuts({
     onTabChange: setActiveTab,
     onShortcutsModalOpen: () => setShortcutsModalOpen(true),
+    practiceEnabled: stageOffer(stages, 'PRACTICE').enabled,
+    handsOnEnabled: stageOffer(stages, 'HANDS_ON').enabled,
   })
 
   function handlePredictionSubmit(answer: string) {
@@ -979,6 +1004,7 @@ function AlgorithmWorkspace() {
 
   const canvasAreaChildren = isImplemented ? (
     <div className="flex h-full w-full flex-col">
+      <VariableWatchStrip />
       {/* Its own shrinking viewport, separate from PredictionZone below -
           PredictionZone used to be an absolute overlay on top of this whole
           area, hiding whatever canvas content sat under its bottom 35%
@@ -1138,13 +1164,9 @@ function AlgorithmWorkspace() {
     </>
   )
 
-  if (isTooSmall) {
-    return <LargerScreenNotice reason="The algorithm canvas, controls, and AI tutor panel need more room than this screen provides." />
-  }
-
-  if (isCompact) {
+  if (isTooSmall || isCompact) {
     return (
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
+      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
         <TopBar />
         <div className="relative flex-1 overflow-hidden">
           {compactTab === 'canvas' && (
@@ -1223,13 +1245,13 @@ function AlgorithmWorkspace() {
           links leave through the session-exit request like every other way
           out of the workspace (survey first). */}
       <ShellNavigation.Provider value={requestSessionExit}>
-        <CurriculumPanel currentTopicName={algorithmNameParam ?? null} />
+        <CurriculumPanel currentTopicName={algorithmNameParam ?? null} inWorkspace />
       </ShellNavigation.Provider>
       {/* Resizable workspace (4A.1): the same three panels, now in a
           persisted, draggable group. Sizes are percentages of the width
           except the 48px collapsed rails. */}
       <Group
-        id="dsa-workspace"
+        id="dsa-workspace-v2"
         defaultLayout={workspaceLayout.defaultLayout}
         onLayoutChanged={workspaceLayout.onLayoutChanged}
         className="min-h-0 min-w-0 flex-1"
@@ -1237,9 +1259,9 @@ function AlgorithmWorkspace() {
         <Panel
           id="left"
           panelRef={leftPanelRef}
-          defaultSize="16"
-          minSize="12"
-          maxSize="24"
+          defaultSize="18"
+          minSize="14"
+          maxSize="26"
           collapsible
           collapsedSize={COLLAPSED_RAIL_PX}
           onResize={() => setLeftCollapsed(leftPanelRef.current?.isCollapsed() ?? false)}
@@ -1260,7 +1282,7 @@ function AlgorithmWorkspace() {
 
         <WorkspaceSeparator />
 
-        <Panel id="canvas" minSize="45">
+        <Panel id="canvas" minSize="42">
           <div className="relative h-full overflow-hidden" data-canvas-area>
             {canvasAreaChildren}
           </div>
@@ -1271,9 +1293,9 @@ function AlgorithmWorkspace() {
         <Panel
           id="right"
           panelRef={rightPanelRef}
-          defaultSize="24"
-          minSize="18"
-          maxSize="34"
+          defaultSize="28"
+          minSize="22"
+          maxSize="38"
           collapsible
           collapsedSize={COLLAPSED_RAIL_PX}
           onResize={() => setRightCollapsed(rightPanelRef.current?.isCollapsed() ?? false)}

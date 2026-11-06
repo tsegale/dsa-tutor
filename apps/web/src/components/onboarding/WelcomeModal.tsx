@@ -38,7 +38,11 @@ export default function WelcomeModal({ userName, onStartTour, onSkip }: WelcomeM
         >
           <BarChartSearchIllustration />
 
-          <h2 className="text-2xl font-bold text-primary">Welcome, {userName}</h2>
+          <h2 className="text-2xl font-bold text-primary">
+            {userName && userName !== 'there' && userName !== 'Demo visitor'
+              ? `Welcome, ${userName.split(' ')[0]}`
+              : 'Welcome to DSA Tutor'}
+          </h2>
 
           <p className="text-sm text-text-secondary">
             DSA Tutor teaches algorithms by requiring you to predict each step - not just watch. Let us

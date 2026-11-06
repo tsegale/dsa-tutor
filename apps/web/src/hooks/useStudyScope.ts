@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { getToken } from '@/api/auth'
 import { fetchStudyStatus } from '@/api/study'
 
 /**
@@ -11,6 +12,10 @@ import { fetchStudyStatus } from '@/api/study'
  * Shares the ['study', 'status'] cache with App.tsx's StudyGate.
  */
 export function useStudyScope(): { restricted: boolean } {
-  const { data: status } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus })
+  const { data: status } = useQuery({
+    queryKey: ['study', 'status'],
+    queryFn: fetchStudyStatus,
+    enabled: Boolean(getToken()),
+  })
   return { restricted: Boolean(status?.isParticipant && !status.consentRequired && !status.withdrawn) }
 }

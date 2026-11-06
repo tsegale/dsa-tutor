@@ -93,19 +93,26 @@ export default function ProgressPage() {
         name: topic.displayName,
         to: topicPath(topic.name),
         value: topic.masteryPercent,
+        complete: topic.masteryPercent >= 60,
         label: `${topic.masteryPercent}% mastery`,
       }))
     : syllabus.map(({ module, status }) => ({
         key: module.id,
         name: moduleLabel(module),
         to: `/module/${module.number}`,
-        value: status.total ? Math.round((status.complete / status.total) * 100) : 0,
-        label: `${status.complete} of ${status.total} complete · ${status.mean}% mean mastery`,
+        value: status.mean,
+        complete: status.state === 'complete',
+        label: `${status.mean}% mean mastery · ${status.complete} of ${status.total} complete`,
       }))
 
   return (
     <AppShell>
-      <h1 className="mb-6 text-h1 text-ink">Progress</h1>
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="text-h1 text-ink">Progress</h1>
+        <Link to="/profile#profile-analytics" className="text-small font-medium text-primary underline-offset-2 hover:underline">
+          Detailed learning analytics
+        </Link>
+      </div>
 
       <section aria-labelledby="level-heading" className="mb-8 rounded-md border border-rule bg-surface p-card shadow-e1">
         <h2 id="level-heading" className="text-micro text-ink-2">
@@ -129,7 +136,7 @@ export default function ProgressPage() {
                 {row.name}
               </Link>
               <div className="mt-2">
-                <Progress value={row.value} label={row.label} tone={row.value >= (restricted ? 80 : 100) ? 'success' : 'brand'} />
+                <Progress value={row.value} label={row.label} tone={row.complete ? 'success' : 'brand'} />
               </div>
             </li>
           ))}

@@ -107,7 +107,7 @@ export default function Home() {
           {/* "Back" only once there is something to come back to. */}
           <h1 className="text-h1 text-ink">
             {latestSession ? 'Welcome back' : 'Welcome'}
-            {user?.name ? `, ${user.name.split(' ')[0]}` : ''}
+            {user?.name && user.name !== 'Demo visitor' ? `, ${user.name.split(' ')[0]}` : ''}
           </h1>
 
           <StudyProgressBanner topics={topics} />
@@ -120,7 +120,7 @@ export default function Home() {
 
       {showWelcomeModal && (
         <WelcomeModal
-          userName={user?.name ?? 'there'}
+          userName={user?.name ?? ''}
           onStartTour={() => {
             closeWelcomeModal()
             startTour()

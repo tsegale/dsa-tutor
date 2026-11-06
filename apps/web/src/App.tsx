@@ -1,7 +1,8 @@
 import { Suspense, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { queryClient } from '@/lib/queryClient'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { getToken } from '@/api/auth'
 import { fetchStudyStatus } from '@/api/study'
@@ -22,6 +23,7 @@ import { useThemeStore } from '@/store/useThemeStore'
 const AuthPage = lazyWithReload(() => import('@/pages/AuthPage'))
 const Home = lazyWithReload(() => import('@/pages/Home'))
 const AlgorithmPage = lazyWithReload(() => import('@/pages/AlgorithmPage'))
+const ComparePage = lazyWithReload(() => import('@/pages/ComparePage'))
 const TrackPage = lazyWithReload(() => import('@/pages/TrackPage'))
 const ProgressPage = lazyWithReload(() => import('@/pages/ProgressPage'))
 const ProfilePage = lazyWithReload(() => import('@/pages/ProfilePage'))
@@ -37,8 +39,6 @@ const CanvasTest = lazyWithReload(() => import('@/pages/CanvasTest'))
 // tree (WelcomeModal, SpotlightOverlay, OnboardingTooltip) into every page's
 // eager bundle, including the unauthenticated /auth screen.
 const OnboardingController = lazyWithReload(() => import('@/components/onboarding/OnboardingController'))
-
-const queryClient = new QueryClient()
 
 function RouteFallback() {
   return (
@@ -206,6 +206,14 @@ function AppRoutes() {
                   element={
                     <ProtectedRoute>
                       <AlgorithmRoute />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/compare"
+                  element={
+                    <ProtectedRoute>
+                      <ComparePage />
                     </ProtectedRoute>
                   }
                 />

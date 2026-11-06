@@ -70,6 +70,8 @@ export function nextStep(plan: LearningPlan, position: LastPosition | null, now:
     reasoning:
       furthest.topic.name === entry.topic.name
         ? `You have started it and your mastery is ${entry.topic.masteryPercent}%; it completes at ${TOPIC_COMPLETE}%.`
-        : `It comes next after ${furthest.number} ${furthest.topic.displayName}, the furthest you have reached.`,
+        : entry.number.localeCompare(furthest.number, undefined, { numeric: true }) < 0
+          ? `Everything from ${furthest.number} ${furthest.topic.displayName} onward is complete; this is the next incomplete topic earlier in your curriculum.`
+          : `It comes next after ${furthest.number} ${furthest.topic.displayName}, the furthest you have reached.`,
   }
 }

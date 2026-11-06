@@ -1,3 +1,5 @@
+import { computeBktMasteryFromCounts } from './bkt'
+
 /** How many of the most recent predictions the fading gate looks at when
  * deciding whether hint usage should block reducing support. Kept here
  * (rather than inlined) since AlgorithmPage needs the same number to know
@@ -29,6 +31,8 @@ export interface MasteryAssessment {
   overallScore: number
   conceptualScore: number
   proceduralScore: number
+  /** Shadow-mode 4-parameter Bayesian Knowledge Tracing P(L_t) percentage (0-100). */
+  bktShadowScore?: number
   recommendedLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
   reasoning: string
 }
@@ -51,6 +55,7 @@ export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
       overallScore: 0,
       conceptualScore: 0,
       proceduralScore: 0,
+      bktShadowScore: 0,
       recommendedLevel: 'HIGH',
       reasoning: 'No interaction data yet. Starting with maximum support.',
     }
@@ -101,7 +106,13 @@ export function calculateMastery(metrics: MasteryMetrics): MasteryAssessment {
     reasoning = `Score ${overallScore}/100. ${SUPPORT_DESCRIPTION.HIGH}`
   }
 
-  return { overallScore, conceptualScore, proceduralScore, recommendedLevel, reasoning }
+  const bktShadowScore = computeBktMasteryFromCounts(
+    metrics.correctPredictions,
+    metrics.totalPredictions,
+    metrics.consecutiveCorrect,
+  )
+
+  return { overallScore, conceptualScore, proceduralScore, bktShadowScore, recommendedLevel, reasoning }
 }
 
 const LEVEL_ORDER: MasteryAssessment['recommendedLevel'][] = ['HIGH', 'MEDIUM', 'LOW', 'NONE']

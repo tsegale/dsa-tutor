@@ -13,6 +13,7 @@ import StudentProgressTable from '../components/analytics/StudentProgressTable'
 import ClassSummaryCard from '../components/analytics/ClassSummaryCard'
 import StudentSummaryDrawer from '../components/analytics/StudentSummaryDrawer'
 import ResearchExports from '../components/analytics/ResearchExports'
+import BlindRaterQueue from '../components/analytics/BlindRaterQueue'
 import ServiceHealth from '../components/analytics/ServiceHealth'
 import LargerScreenNotice from '../components/layout/LargerScreenNotice'
 import { useLayoutBreakpoint } from '../hooks/useLayoutBreakpoint'
@@ -35,7 +36,7 @@ export default function EducatorDashboard() {
     queryKey: ['educator-analytics'],
     queryFn: getAnalytics,
     refetchInterval: 30000,
-    enabled: !user || user.role === 'EDUCATOR',
+    enabled: !user || user.role === 'EDUCATOR' || user.role === 'ADMIN',
   })
 
   // A link such as the profile's /educator#research-exports lands on that
@@ -51,7 +52,7 @@ export default function EducatorDashboard() {
     setDrawerOpen(true)
   }
 
-  if (user && user.role !== 'EDUCATOR') {
+  if (user && user.role !== 'EDUCATOR' && user.role !== 'ADMIN') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-sunk px-6 text-center dark:bg-dark-background">
         <div>
@@ -113,6 +114,10 @@ export default function EducatorDashboard() {
               <section>
                 <h2 className="mb-6 text-xl font-bold text-primary">Student Progress</h2>
                 <StudentProgressTable students={analytics.studentProgress} onSelectStudent={handleSelectStudent} />
+              </section>
+              <section>
+                <h2 className="mb-6 text-xl font-bold text-primary">Inter-Rater Reliability &amp; Blind Labelling</h2>
+                <BlindRaterQueue />
               </section>
               <section>
                 <ResearchExports />

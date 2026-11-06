@@ -58,3 +58,71 @@ export interface OpsReport {
 export function getOpsReport(): Promise<OpsReport> {
   return apiFetch<OpsReport>('/api/v1/research/ops')
 }
+
+export interface RaterQueueItemDto {
+  interactionId: string
+  participantCode: string
+  algorithm: string
+  stepIndex: number
+  junctionType: string
+  junctionDifficulty: string
+  serialisedState: string
+  studentAnswer: string
+  ruleLabel: string | null
+  aiLabel: string | null
+  feedbackText: string
+  ratings: Record<string, string>
+}
+
+export interface RaterAgreementComparisonDto {
+  name: string
+  kappa: {
+    n: number
+    observedAgreement: number
+    expectedAgreement: number
+    kappa: number | null
+  }
+  confusion: {
+    labels: string[]
+    counts: number[][]
+  }
+}
+
+export interface RaterQueueResponseDto {
+  taxonomy: string[]
+  items: RaterQueueItemDto[]
+  agreement: {
+    raters: string[]
+    itemCount: number
+    comparisons: RaterAgreementComparisonDto[]
+    aiPrecisionRecall: Array<{
+      reference: string
+      n: number
+      rows: Array<{
+        category: string
+        support: number
+        precision: number | null
+        recall: number | null
+      }>
+    }>
+  }
+  markdown: string
+}
+
+export function getRaterQueue(includePilot = false): Promise<RaterQueueResponseDto> {
+  return apiFetch<RaterQueueResponseDto>(
+    `/api/v1/research/rater-queue${includePilot ? '?includePilot=true' : ''}`,
+  )
+}
+
+export function submitBlindRating(
+  interactionId: string,
+  raterCode: string,
+  label: string,
+): Promise<{ imported: number }> {
+  const csv = `interactionId,raterCode,label\n${interactionId},${raterCode},${label}`
+  return apiFetch<{ imported: number }>('/api/v1/research/ratings', {
+    method: 'POST',
+    body: JSON.stringify({ csv }),
+  })
+}

@@ -15,6 +15,9 @@ export function IdentityHeader({ user }: { user: UserProfile }) {
   const memberSince = user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null
   const level = getLevelForXP(user.xpTotal)
 
+  const isSyntheticDemoEmail = user.isDemo || user.email.endsWith('.invalid')
+  const roleLabel = user.role === 'ADMIN' ? 'Admin' : user.role === 'EDUCATOR' ? 'Educator' : 'Student'
+
   return (
     <section aria-labelledby="profile-name" className="rounded-md border border-rule bg-surface p-panel">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -24,9 +27,11 @@ export function IdentityHeader({ user }: { user: UserProfile }) {
           <h1 id="profile-name" className="mt-0.5 truncate text-h1 text-ink">
             {user.name}
           </h1>
-          <p className="mt-1 truncate text-small text-ink-2">{user.email}</p>
+          <p className="mt-1 truncate text-small text-ink-2">
+            {isSyntheticDemoEmail ? 'Temporary demo session' : user.email}
+          </p>
           <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-small text-ink-2">
-            <span className="font-medium text-ink">{user.role === 'EDUCATOR' ? 'Educator' : 'Student'}</span>
+            <span className="font-medium text-ink">{roleLabel}</span>
             {memberSince && (
               <>
                 <span aria-hidden="true">·</span>

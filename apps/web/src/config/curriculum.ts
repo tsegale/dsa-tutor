@@ -96,7 +96,7 @@ export const MODULES: readonly Module[] = [
     number: 4,
     id: 'algorithmic-techniques',
     title: 'Algorithmic techniques',
-    subtitle: 'Nine patterns for turning a nested loop, or an exponential search, into something that finishes.',
+    subtitle: 'Ten patterns for turning a nested loop, or an exponential search, into something that finishes.',
     track: AlgorithmTrack.TECHNIQUES,
     topics: [
       // Ordered as a route, not alphabetically: each one needs the idea

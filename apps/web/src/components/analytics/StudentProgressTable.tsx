@@ -4,6 +4,7 @@ import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import MasteryRing from '@/components/ui/MasteryRing'
 import { cn } from '@/lib/utils'
 import { StudentAvatar } from '@/components/brand'
+import { computeBktMasteryFromCounts } from '@/utils/bkt'
 
 interface StudentProgressTableProps {
   students: EducatorAnalyticsDto['studentProgress']
@@ -55,16 +56,18 @@ function accuracyColorClass(rate: number): string {
 }
 
 function generateCSV(students: EducatorAnalyticsDto['studentProgress']): string {
-  const header = 'Student,Sessions,Accuracy Rate,Top Misconception,AI Challenge Type'
-  const rows = students.map((s, i) =>
-    [
+  const header = 'Student,Sessions,Accuracy Rate,BKT P(L_t) Shadow Mastery,Top Misconception,AI Challenge Type'
+  const rows = students.map((s, i) => {
+    const bktPct = computeBktMasteryFromCounts(s.correctPredictions, s.totalPredictions)
+    return [
       `Student ${i + 1}`,
       s.totalSessions,
       `${s.averageCorrectRate}%`,
+      `${bktPct}%`,
       s.topMisconception ? formatCategory(s.topMisconception) : 'None',
       s.challengeExplanation ? `"${s.challengeExplanation.replace(/"/g, '""')}"` : 'None',
-    ].join(','),
-  )
+    ].join(',')
+  })
   return [header, ...rows].join('\n')
 }
 
@@ -202,6 +205,9 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                     </button>
                   </th>
                 ))}
+                <th className="text-micro px-4 py-2.5 text-left text-text-muted" title="4-Parameter Bayesian Knowledge Tracing shadow estimate P(L_t)">
+                  BKT P(L_t)
+                </th>
                 <th className="text-micro px-4 py-2.5 text-left text-text-muted">
                   AI Challenge Type
                 </th>
@@ -224,6 +230,10 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                 const label = anonymizedLabels.get(student.userId) ?? ''
                 const avatarInitials = `S${label.match(/\d+/)?.[0] ?? ''}`
                 const hintPct = hintDependencyPercent(student)
+                const bktMasteryPct = computeBktMasteryFromCounts(
+                  student.correctPredictions,
+                  student.totalPredictions,
+                )
                 const declining = isLocallyDeclining(student)
                 const needsManualReview = student.averageCorrectRate < 50 && (hintPct ?? 0) > 70
                 const barStyle =
@@ -261,6 +271,21 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                       <span className="text-text-muted">None</span>
                     )}
                   </td>
+                  <td className="px-4 py-3">
+                    {student.totalPredictions === 0 ? (
+                      <span className="text-text-muted">-</span>
+                    ) : (
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded border border-border bg-surface-sunk px-2 py-0.5 font-mono text-xs font-medium',
+                          accuracyColorClass(bktMasteryPct),
+                        )}
+                        title={`Bayesian Knowledge Tracing posterior P(L_t) = ${(bktMasteryPct / 100).toFixed(2)} across ${student.totalPredictions} predictions`}
+                      >
+                        {bktMasteryPct}%
+                      </span>
+                    )}
+                  </td>
                   <td className="max-w-xs px-4 py-3">
                     {student.challengeExplanation ? (
                       <span className="text-text-primary" title={student.challengeExplanation}>
@@ -272,7 +297,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                   </td>
                   <td className="px-4 py-3">
                     {hintPct === null || !barStyle ? (
-                      <span className="text-text-muted">&mdash;</span>
+                      <span className="text-text-muted">-</span>
                     ) : (
                       <div className="flex items-center gap-2">
                         <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
@@ -304,7 +329,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
                         Declining trend
                       </span>
                     ) : (
-                      <span className="text-text-muted">&mdash;</span>
+                      <span className="text-text-muted">-</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-center" style={{ width: 60 }}>

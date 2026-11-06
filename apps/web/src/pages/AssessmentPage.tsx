@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import NotFound from '@/pages/NotFound'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { startAssessment, submitAssessmentResponse, completeAssessment } from '@/api/assessments'
+import { fetchStudyStatus } from '@/api/study'
 import { resumeState } from '@/lib/assessmentResume'
+import { STUDY_TOPIC_SLUGS } from '@/utils/misconceptionProbes'
+import { getAlgorithmRegistryEntry } from '@/engine/registry'
+import { topicPath } from '@/data/tracks'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
 
@@ -17,6 +21,13 @@ export default function AssessmentPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const code = phase ? CODE_BY_PHASE[phase] : undefined
+
+  const { data: studyStatus } = useQuery({
+    queryKey: ['study', 'status'],
+    queryFn: fetchStudyStatus,
+    enabled: phase === 'post',
+    staleTime: 30_000,
+  })
 
   const startMutation = useMutation({
     mutationFn: () => startAssessment(code!),
@@ -37,11 +48,6 @@ export default function AssessmentPage() {
   const [nextError, setNextError] = useState<string | null>(null)
   const hasResumedRef = useRef(false)
 
-  // On first load of an attempt that already has responses (a reload
-  // mid-assessment), resume at the first unanswered item instead of
-  // restarting from question 1, and restore that item's answer if it was
-  // already answered (e.g. every item is answered but completion never
-  // went through).
   useEffect(() => {
     if (!attempt || hasResumedRef.current) return
     hasResumedRef.current = true
@@ -59,12 +65,6 @@ export default function AssessmentPage() {
 
   const completeMutation = useMutation({
     mutationFn: () => completeAssessment(attempt!.id),
-    // The post-test is the last thing before the study's usability survey;
-    // the pre-test just returns to the dashboard to start practice sessions.
-    // Completing the pre-test flips pretestRequired server-side. The fresh
-    // status must be in the cache before navigating - invalidating alone
-    // only starts a refetch, and StudyGate would read the cached
-    // pretestRequired: true and bounce straight back to /assessment/pre.
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['study', 'status'] })
       navigate(phase === 'post' ? '/sus' : '/', { replace: true })
@@ -72,32 +72,102 @@ export default function AssessmentPage() {
   })
 
   if (!code) {
-    // A bare string with no header and no way back is the same dead end
-    // the app had for unknown routes. The address names an assessment
-    // that does not exist, so say so and offer a way out.
     return <NotFound />
   }
 
   if (attempt?.completedAt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-sunk p-8 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-sunk p-8 text-center">
         <p className="text-text-primary">This assessment has already been submitted. Thank you.</p>
+        <Button asChild variant="secondary">
+          <Link to="/">Back to Home</Link>
+        </Button>
       </div>
     )
   }
 
-  // A call that settled without producing an attempt leaves the spinner
-  // below running for ever, on a page a participant cannot get past. A
-  // malformed success is a failure from here, so it gets the retry UI
-  // rather than an indefinite wait.
   const startedButEmpty =
     startMutation.isSuccess && (!startMutation.data || !Array.isArray(startMutation.data.items))
 
   if (startMutation.isError || startedButEmpty) {
+    const isPostLocked = phase === 'post' && (!studyStatus || !studyStatus.posttestAvailable)
+    const completedSet = new Set(studyStatus?.topicsCompleted ?? [])
+
+    if (isPostLocked) {
+      return (
+        <div className="min-h-screen bg-surface-sunk">
+          <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
+            <DSATutorLogo variant="dark" showTagline={false} />
+            <Button asChild variant="secondary" size="sm">
+              <Link to="/">Back to Home</Link>
+            </Button>
+          </header>
+
+          <main className="mx-auto max-w-xl px-6 py-12">
+            <section className="rounded-md border border-border bg-card p-6 shadow-sm">
+              <p className="text-micro font-semibold text-primary uppercase">Post-Test Prerequisites</p>
+              <h1 className="mt-1 text-h2 text-ink">
+                {studyStatus?.isParticipant
+                  ? 'Finish all three study topics to unlock the post-test'
+                  : 'Enrol in the research study to take the post-test'}
+              </h1>
+              <p className="mt-2 text-small text-ink-2">
+                {studyStatus?.isParticipant
+                  ? 'The post-test opens automatically once you have completed a run on each of the three study topics below.'
+                  : 'This assessment belongs to the controlled evaluation study. You can enrol from your profile page or return to the curriculum.'}
+              </p>
+
+              {studyStatus?.isParticipant && (
+                <ul className="mt-5 divide-y divide-border rounded-md border border-border">
+                  {STUDY_TOPIC_SLUGS.map((slug) => {
+                    const done = completedSet.has(slug)
+                    const label = getAlgorithmRegistryEntry(slug)?.displayName ?? slug
+                    return (
+                      <li key={slug} className="flex items-center justify-between gap-3 px-4 py-3 text-small">
+                        <span className="font-medium text-ink">{label}</span>
+                        {done ? (
+                          <span className="rounded-full bg-state-sorted/20 px-2.5 py-0.5 text-mono-sm font-medium text-ink">
+                            Completed
+                          </span>
+                        ) : (
+                          <Link
+                            to={topicPath(slug)}
+                            className="font-medium text-primary underline-offset-2 hover:underline"
+                          >
+                            Open topic
+                          </Link>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Button asChild>
+                  <Link to={studyStatus?.isParticipant ? '/' : '/profile'}>
+                    {studyStatus?.isParticipant ? 'Continue study topics' : 'Go to Profile'}
+                  </Link>
+                </Button>
+                <Button variant="secondary" onClick={() => startMutation.mutate()}>
+                  Check again
+                </Button>
+              </div>
+            </section>
+          </main>
+        </div>
+      )
+    }
+
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-sunk p-8 text-center">
         <p className="text-text-primary">Could not start this assessment. Check your connection and try again.</p>
-        <Button onClick={() => startMutation.mutate()}>Retry</Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={() => startMutation.mutate()}>Retry</Button>
+          <Button asChild variant="secondary">
+            <Link to="/">Back to Home</Link>
+          </Button>
+        </div>
       </div>
     )
   }

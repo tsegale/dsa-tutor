@@ -5,12 +5,16 @@ import { useAuth } from '@/context/AuthContext'
 export default function AccountIdentity() {
   const { user } = useAuth()
   if (!user) return null
+  const isSyntheticDemoEmail = user.isDemo || user.email.endsWith('.invalid')
+  const roleLabel = user.role === 'ADMIN' ? 'Admin' : user.role === 'EDUCATOR' ? 'Educator' : 'Student'
 
   return (
     <div className="px-2 py-1.5">
       <p className="truncate text-small font-medium text-ink">{user.name}</p>
-      <p className="truncate text-micro text-ink-2">{user.email}</p>
-      <p className="mt-1 text-micro text-ink-2">{user.role === 'EDUCATOR' ? 'Educator' : 'Student'}</p>
+      <p className="truncate text-micro text-ink-2">
+        {isSyntheticDemoEmail ? 'Temporary demo session' : user.email}
+      </p>
+      <p className="mt-1 text-micro text-ink-2">{roleLabel}</p>
     </div>
   )
 }

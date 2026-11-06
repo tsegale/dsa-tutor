@@ -56,7 +56,7 @@ function FieldError({ message }: { message: string | null }) {
 
 function LoginForm() {
   const navigate = useNavigate()
-  const { refreshUser } = useAuth()
+  const { applySessionUser, refreshUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -68,7 +68,8 @@ function LoginForm() {
     setIsSubmitting(true)
     try {
       const result = await login(email, password)
-      await refreshUser()
+      applySessionUser(result.user)
+      void refreshUser()
       navigate(homeFor(result.user.role))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in')
@@ -117,7 +118,7 @@ function LoginForm() {
 
 function RegisterForm() {
   const navigate = useNavigate()
-  const { refreshUser } = useAuth()
+  const { applySessionUser, refreshUser } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -132,7 +133,8 @@ function RegisterForm() {
       // Self-registration always creates a STUDENT account (apps/api
       // auth.service.ts); educators are provisioned separately.
       const result = await register(email, password, name)
-      await refreshUser()
+      applySessionUser(result.user)
+      void refreshUser()
       navigate(homeFor(result.user.role))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the account')
@@ -202,7 +204,7 @@ function RegisterForm() {
 // accounts never join the study and have a capped AI allowance.
 function TryDemo() {
   const navigate = useNavigate()
-  const { refreshUser } = useAuth()
+  const { applySessionUser, refreshUser } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [isStarting, setIsStarting] = useState(false)
 
@@ -211,7 +213,8 @@ function TryDemo() {
     setIsStarting(true)
     try {
       const result = await startDemo()
-      await refreshUser()
+      applySessionUser(result.user)
+      void refreshUser()
       navigate(homeFor(result.user.role))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the demo')

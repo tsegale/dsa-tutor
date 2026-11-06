@@ -233,13 +233,21 @@ function MasteryCriteria() {
 }
 
 export function AnalyticsSection() {
+  const { restricted } = useStudyScope()
   const { data, isLoading, isError, isFetching, refetch } = useQuery({ queryKey: ['profile', 'analytics'], queryFn: fetchLearnerAnalytics, staleTime: 30 * 1000 })
 
   return (
     <section aria-labelledby="profile-analytics" className="flex flex-col gap-4">
-      <h2 id="profile-analytics" className="text-h2 text-ink">
-        Your learning so far
-      </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="profile-analytics" className="text-h2 text-ink">
+          Your learning so far
+        </h2>
+        {!restricted && (
+          <Link to="/progress" className="text-small font-medium text-accent-foreground underline-offset-2 hover:underline">
+            View XP level and badges &rarr;
+          </Link>
+        )}
+      </div>
       {isLoading ? (
         <div aria-busy="true" aria-label="Loading your analytics" className="flex flex-col gap-3">
           <Skeleton className="h-24 w-full rounded-md" />

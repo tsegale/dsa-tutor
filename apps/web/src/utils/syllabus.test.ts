@@ -176,9 +176,26 @@ describe('planNext', () => {
     expect(plan.nextByModule.get('searching')?.topic.name).toBe('linear-search')
   })
 
-  it('returns null rather than pointing backwards when nothing incomplete lies ahead', () => {
-    const plan = planNext(curriculum({ 'selection-sort': 100 }), null)
-    expect(plan.recommended).toBeNull()
+  it('wraps around to earlier incomplete topics only after everything ahead is complete, and returns null when all topics are complete', () => {
+    const wrapped = planNext(curriculum({ 'selection-sort': 100 }), null)
+    expect(wrapped.recommended?.topic.name).toBe('array-access')
+    const allComplete = Object.fromEntries(
+      [
+        'array-access',
+        'array-insert',
+        'array-delete',
+        'singly-linked-list',
+        'doubly-linked-list',
+        'circular-linked-list',
+        'stack',
+        'queue',
+        'linear-search',
+        'binary-search',
+        'bubble-sort',
+        'selection-sort',
+      ].map((n) => [n, 100]),
+    )
+    expect(planNext(curriculum(allComplete), null).recommended).toBeNull()
   })
 })
 
