@@ -23,22 +23,13 @@ interface CodeEditorInputProps {
   onSubmit: (result: CodeEvalResponse, submittedCode: string) => void
   onLoadingChange: (loading: boolean) => void
   /** This step's challenge is solved and the run is waiting on the learner.
-   * False where the correct answer re-seeded the run, which moves it on by
+   * False where the correct answer re-seeds the run, which moves it on by
    * itself. */
   solved: boolean
   /** Move the run on from a solved step. */
   onContinue: () => void
 }
 
-// Only Python is executed. Pyodide (see utils/pyodideRunner.ts) runs it in
-// a real WASM sandbox; grading Java or pseudocode would mean going back to
-// asking an LLM to "mentally execute" untrusted code and trusting its
-// answer as fact, which is exactly the defect this sandbox replaces.
-//
-// The Java tab is therefore read-only, and says so rather than offering a
-// Run button that would quietly grade nothing. The brief asks for both
-// languages, and reading the same decision written in a second syntax is
-// worth having next to the one that runs.
 type Language = 'python' | 'java'
 
 export default function CodeEditorInput({
@@ -55,18 +46,19 @@ export default function CodeEditorInput({
   const [code, setCode] = useState(task.starter.python)
   const [language, setLanguage] = useState<Language>('python')
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
+  const [consoleStdout, setConsoleStdout] = useState('')
+  const [consoleStderr, setConsoleStderr] = useState('')
+  const [consoleOpen, setConsoleOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingRuntime, setLoadingRuntime] = useState(false)
-  // Editing after solving puts the Run button back, so a learner who wants
-  // to try a second implementation is not stranded behind Continue.
   const [editedSinceSolved, setEditedSinceSolved] = useState(false)
+
   useEffect(() => {
     if (solved) setEditedSinceSolved(false)
   }, [solved])
+
   const showContinue = solved && !editedSinceSolved
 
-  // Backstop for the Code Mode toggle's preload (a page opened with Code
-  // Mode already on reaches here first).
   useEffect(() => {
     preloadPyodide()
   }, [])
@@ -79,11 +71,40 @@ export default function CodeEditorInput({
     try {
       const execution = await runPythonStep(code, spec)
       setLoadingRuntime(false)
+      const out = execution.stdout?.trim() ?? ''
+      const err = execution.stderr?.trim() ?? ''
+      setConsoleStdout(out)
+      setConsoleStderr(err)
+      if (out.length > 0 || err.length > 0) {
+        setConsoleOpen(true)
+      }
+
       if (execution.runtimeUnavailable) {
-        // Nothing ran: not graded, not logged as an answer.
         setSyntaxError('Python could not load, so your code was not run. Check your connection and press Run again.')
         return
       }
+
+      if (execution.timedOut) {
+        const timeoutMsg =
+          execution.errorMessage ??
+          'Execution timed out after 2.0s (possible infinite loop). The Python sandbox was safely reset.'
+        setSyntaxError(timeoutMsg)
+        onSubmit(
+          {
+            isLogicallyCorrect: false,
+            hasSyntaxError: true,
+            resultingState: null,
+            errorExplanation: timeoutMsg,
+            bugType: 'syntax',
+            correctiveHint: 'Check your loop termination condition so the loop makes progress toward stopping.',
+            codeReview: null,
+            executeVisually: false,
+          },
+          code,
+        )
+        return
+      }
+
       const result = await evaluateCode({
         algorithmName,
         currentState: spec.globals,
@@ -107,18 +128,13 @@ export default function CodeEditorInput({
     }
   }
 
-  // Named from the challenge's own globals, so the line can never promise
-  // a variable the sandbox was not given. It used to read "you can use
-  // index j = ..." on every topic, including the ones with no j.
   const available = Object.keys(spec.globals)
+  const hasConsoleOutput = consoleStdout.length > 0 || consoleStderr.length > 0
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="shrink-0">
         {task.rungCount > 1 && (
-          // The ladder's shape, stated: a learner who can see four rungs
-          // knows this builds to the whole algorithm rather than stopping
-          // at one expression.
           <div className="mb-1.5 flex items-center gap-2">
             <span className="text-micro font-bold tracking-wide text-ai uppercase">
               Step {task.rung} of {task.rungCount}
@@ -137,27 +153,38 @@ export default function CodeEditorInput({
         <p className="font-sans text-[15px] text-text-primary dark:text-dark-text-primary">{task.prompt}</p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4 border-b border-border pb-1.5" role="tablist" aria-label="Language">
-        {(['python', 'java'] as const).map((option) => (
+      <div className="flex shrink-0 items-center justify-between border-b border-border pb-1.5">
+        <div className="flex items-center gap-4" role="tablist" aria-label="Language">
+          {(['python', 'java'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              aria-selected={language === option}
+              onClick={() => setLanguage(option)}
+              className={cn(
+                'border-b-2 pb-0.5 text-sm font-medium transition-colors duration-quick',
+                language === option
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-ink-2 hover:text-ink',
+              )}
+            >
+              {option === 'python' ? 'Python' : 'Java'}
+            </button>
+          ))}
+        </div>
+        {hasConsoleOutput && language === 'python' && (
           <button
-            key={option}
             type="button"
-            role="tab"
-            aria-selected={language === option}
-            onClick={() => setLanguage(option)}
-            className={cn(
-              'border-b-2 pb-0.5 text-sm font-medium transition-colors duration-quick',
-              language === option
-                ? 'border-primary text-primary'
-                : 'border-transparent text-ink-2 hover:text-ink',
-            )}
+            onClick={() => setConsoleOpen((prev) => !prev)}
+            aria-expanded={consoleOpen}
+            className="rounded border border-border bg-surface-sunk px-2 py-0.5 font-mono text-[11px] font-medium text-text-secondary hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary"
           >
-            {option === 'python' ? 'Python' : 'Java'}
+            {consoleOpen ? 'Hide console' : 'Show console'}
           </button>
-        ))}
+        )}
       </div>
 
-      {/* Five lines at the editor's 1.7 line height, plus padding. */}
       <div className="flex min-h-[9.5em] flex-1">
         {language === 'python' ? (
           <Suspense
@@ -189,25 +216,38 @@ export default function CodeEditorInput({
         )}
       </div>
 
+      {hasConsoleOutput && consoleOpen && language === 'python' && (
+        <div
+          className="max-h-28 shrink-0 overflow-y-auto rounded-sm border border-border bg-surface-sunk px-2.5 py-1.5 font-mono text-[11px] dark:border-dark-border"
+          role="log"
+          aria-label="Python console output"
+        >
+          {consoleStdout.length > 0 && (
+            <pre className="whitespace-pre-wrap text-text-primary dark:text-dark-text-primary">{consoleStdout}</pre>
+          )}
+          {consoleStderr.length > 0 && (
+            <pre className="whitespace-pre-wrap text-error">{consoleStderr}</pre>
+          )}
+        </div>
+      )}
+
       {syntaxError && language === 'python' && <p className="shrink-0 text-[12px] text-error">{syntaxError}</p>}
 
       <p className="shrink-0 text-[12px] text-text-muted dark:text-dark-text-secondary">
         {language === 'python' ? (
           available.length > 0 ? (
             <>
-              Already defined for you: <span className="font-mono">{available.join(', ')}</span>.
+              Already defined for you: <span className="font-mono">{available.join(', ')}</span>. You can also use{' '}
+              <span className="font-mono">print(...)</span> to inspect values.
             </>
           ) : (
-            'Write the code for this step.'
+            'Write the code for this step. Use print(...) to inspect values.'
           )
         ) : (
           'Java is here to read. Only the Python tab runs, in a sandbox in your browser.'
         )}
       </p>
 
-      {/* One primary action, and after a correct answer it is the way out.
-          It used to stay "Run my code" forever, so a solved step offered
-          nothing but running the same code again. */}
       <button
         type="button"
         onClick={showContinue ? onContinue : () => void handleSubmit()}

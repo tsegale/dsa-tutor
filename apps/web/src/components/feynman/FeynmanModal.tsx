@@ -84,8 +84,9 @@ export default function FeynmanModal({
   isFullCompletion,
 }: FeynmanModalProps) {
   const scaffoldingLevel = useAlgorithmStore((state) => state.scaffoldingLevel)
+  const { algorithmName: topicSlug } = useParams<{ algorithmName: string }>()
   // The complexity claims to defend (Phase 8B), from the topic's facts.
-  const challenge = feynmanChallenge(useParams<{ algorithmName: string }>().algorithmName)
+  const challenge = feynmanChallenge(topicSlug)
   const stepIndex = useAlgorithmStore((state) => state.stepIndex)
   const addXP = useAlgorithmStore((state) => state.addXP)
   const { play } = useSoundEffects()
@@ -101,9 +102,36 @@ export default function FeynmanModal({
   const openedAtRef = useRef(Date.now())
   const refreshMastery = useMasteryRefresh()
 
+  const loweredDraft = explanation.toLowerCase()
+  const draftDimensions = [
+    {
+      label: 'Core Mechanism',
+      active: /(compare|swap|divide|partition|queue|stack|pointer|node|root|bucket|cell|table|search|step)/.test(
+        loweredDraft,
+      ),
+    },
+    {
+      label: 'Invariant / Why',
+      active: /\b(because|so that|until|each pass|invariant|guarantees|ensures|once|when)\b/.test(loweredDraft),
+    },
+    {
+      label: 'Time & Space',
+      active: /\b(time|space|memory|in-place|in place|log|linear|quadratic|worst|average|extra)\b|o\(/.test(
+        loweredDraft,
+      ),
+    },
+    {
+      label: 'Own Words (100+ chars)',
+      active: explanation.trim().length >= MIN_CHARS_TO_SUBMIT,
+    },
+  ]
+
   async function finalizeSession(finalResult: FeynmanResponse, submittedText: string) {
     setTerminal(true)
     setAwaitingFollowUp(false)
+    if (finalResult.isComplete && topicSlug) {
+      useAlgorithmStore.getState().noteFeynmanCompleted(topicSlug)
+    }
 
     const amount = BASE_XP + (finalResult.isComplete ? COMPLETE_BONUS_XP : 0)
     setXpAwarded(amount)
@@ -227,16 +255,43 @@ export default function FeynmanModal({
               </div>
             )}
 
+            <div className="flex flex-wrap gap-1.5" aria-label="Explanation coverage cues">
+              {draftDimensions.map((dim) => (
+                <span
+                  key={dim.label}
+                  className={cn(
+                    'rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors',
+                    dim.active
+                      ? 'border-success/50 bg-success-light text-success'
+                      : 'border-border bg-surface-sunk text-text-muted dark:border-dark-border dark:text-dark-text-secondary',
+                  )}
+                >
+                  {dim.label}
+                </span>
+              ))}
+            </div>
+
             <textarea
               value={explanation}
               onChange={(event) => setExplanation(event.target.value)}
               placeholder="Type your explanation here..."
               className="min-h-[120px] resize-y rounded-md border border-border bg-background p-3 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
             />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text-muted dark:text-dark-text-secondary">
-                {explanation.length} / {MIN_CHARS_TO_SUBMIT} characters minimum
-              </span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted dark:text-dark-text-secondary">
+                  {explanation.length} / {MIN_CHARS_TO_SUBMIT} characters minimum
+                </span>
+                <span className="text-micro text-text-muted dark:text-dark-text-secondary">
+                  {draftDimensions.filter((d) => d.active).length} of 4 dimensions touched
+                </span>
+              </div>
+              <div className="h-1 w-full overflow-hidden rounded-full bg-surface-sunk dark:bg-dark-border">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-200"
+                  style={{ width: `${Math.min(100, Math.round((explanation.length / MIN_CHARS_TO_SUBMIT) * 100))}%` }}
+                />
+              </div>
             </div>
 
             {errorMessage && <p className="text-xs text-error">{errorMessage}</p>}
@@ -275,10 +330,18 @@ export default function FeynmanModal({
           </div>
         )}
 
-        {phase === 'feedback' && result && (
+        {phase === 'feedback' && result && (() => {
+          const displayScore =
+            result.score ??
+            (result.rubricResults.length > 0
+              ? Math.round(
+                  (result.rubricResults.filter((r) => r.met).length / result.rubricResults.length) * 100,
+                )
+              : null)
+          return (
           <div className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <FeynmanAvatar expression={expressionForScore(result.score)} />
+              <FeynmanAvatar expression={expressionForScore(displayScore)} />
               <DialogTitle className="pt-1 text-xl font-bold">
                 {terminal ? (result.isComplete ? 'Great explanation!' : 'Keep practicing') : 'Almost there!'}
               </DialogTitle>
@@ -288,15 +351,15 @@ export default function FeynmanModal({
               {result.feedbackSummary}
             </div>
 
-            {result.score !== null && (
+            {displayScore !== null && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary">
-                  Explanation score: <span className="text-mono-sm text-ink">{scoreOutOfTen(result.score)} of 10</span>
+                  Explanation score: <span className="text-mono-sm text-ink">{scoreOutOfTen(displayScore)} of 10</span>
                 </span>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-surface-sunk dark:bg-dark-border">
                   <div
-                    className={cn('h-full rounded-full transition-all duration-500', scoreColorClass(result.score))}
-                    style={{ width: `${result.score}%` }}
+                    className={cn('h-full rounded-full transition-all duration-500', scoreColorClass(displayScore))}
+                    style={{ width: `${displayScore}%` }}
                   />
                 </div>
               </div>
@@ -335,7 +398,7 @@ export default function FeynmanModal({
 
             {terminal && (
               <div className="flex flex-col gap-3 border-t border-border pt-3 dark:border-dark-border">
-                <div className={cn('flex items-center gap-2 text-sm font-medium', scoreTextColorClass(result.score))}>
+                <div className={cn('flex items-center gap-2 text-sm font-medium', scoreTextColorClass(displayScore))}>
                   {result.isComplete ? (
                     <>
                       <CheckmarkIcon />
@@ -360,7 +423,8 @@ export default function FeynmanModal({
               </div>
             )}
           </div>
-        )}
+          )
+        })()}
       </DialogContent>
     </Dialog>
   )

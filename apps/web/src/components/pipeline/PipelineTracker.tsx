@@ -5,24 +5,6 @@ import { OPEN_FEYNMAN_MODAL_EVENT } from '@/components/feynman/FeynmanModeButton
 import { pipelineProgress, type PipelineStage, type PipelineStageId } from '@/config/pipeline'
 import { cn } from '@/lib/utils'
 
-/**
- * The five stages of a topic, as a route the student can see all of.
- *
- * All five are shown, which is the whole point: a student opening a topic
- * should be able to see that it runs from watching it to explaining it back.
- * Every stage the topic offers is open from the start - none waits on
- * another. A stage the topic genuinely does not offer says so, with the
- * reason, rather than appearing as something to unlock that never will.
- *
- * Demo, Practice and Hands-On are status only here, not a second way to
- * switch - the mode toggle above the canvas already does that, always
- * visible, and a click here doing the identical thing was two controls for
- * one action with no way to tell them apart. Code and Feynman stay
- * clickable: flipping the Code Mode toggle or opening the Feynman modal is
- * a step down into the stage, not a duplicate of something already on
- * screen.
- */
-
 interface PipelineTrackerProps {
   stages: readonly PipelineStage[]
 }
@@ -50,8 +32,6 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
   function isCurrent(stage: PipelineStage): boolean {
     if (stage.id === 'CODE') return codeEditorMode
     const stageMode = STAGE_MODE[stage.id]
-    // Code Mode overlays Practice, so while it is on, Practice is not the
-    // stage the student is actually in.
     if (stage.id === 'PRACTICE' && codeEditorMode) return false
     return stageMode !== undefined && stageMode === mode
   }
@@ -63,15 +43,20 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
       return
     }
     if (stage.id === 'CODE') {
-      // Code challenges are answered at Practice junctions, so Practice is
-      // where the toggle has anything to act on.
       if (store.mode !== AlgorithmMode.PRACTICE) store.setMode(AlgorithmMode.PRACTICE)
       if (!store.codeEditorMode) store.toggleCodeEditorMode()
       return
     }
-    // DEMO, PRACTICE and HANDS_ON have no action here - see the mode
-    // toggle above the canvas.
   }
+
+  // Number offered stages sequentially (1, 2, 3, 4) so skipped stages never
+  // create awkward gaps like "1, 2, -, 4, 5".
+  let offeredCounter = 0
+  const stageNumbers = stages.map((stage) => {
+    if (stage.status === 'NOT_OFFERED') return null
+    offeredCounter += 1
+    return offeredCounter
+  })
 
   return (
     <section className="flex flex-col gap-2" aria-label="Stages for this topic">
@@ -86,28 +71,28 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
         {stages.map((stage, index) => {
           const isModeStage = STAGE_MODE[stage.id] !== undefined
           const clickable = !isModeStage && (stage.status === 'AVAILABLE' || stage.status === 'DONE')
-          // A mode stage still gets a tooltip once it is reachable, so a
-          // click that used to work says where the control moved to
-          // instead of just silently stopping.
-          const hint = stage.reason ?? (isModeStage && stage.status !== 'NOT_OFFERED' ? 'Switch modes with the Demo / Practice / Hands-On toggle above the canvas.' : null)
+          const hint =
+            stage.reason ??
+            (isModeStage && stage.status !== 'NOT_OFFERED'
+              ? 'Switch modes with the Demo / Practice / Hands-On toggle above the canvas.'
+              : null)
           const current = isCurrent(stage)
           const last = index === stages.length - 1
+          const displayNumber = stageNumbers[index]
 
           const row = (
             <div className="flex gap-2">
-              {/* The rail: a marker per stage, joined by a line, so the
-                  five read as one route rather than five buttons. */}
               <div className="flex flex-col items-center" aria-hidden="true">
                 <span
                   className={cn(
-                    'flex size-[18px] shrink-0 items-center justify-center rounded-full border text-[9px]',
+                    'flex size-[18px] shrink-0 items-center justify-center rounded-full border text-[9px] tabular-nums',
                     stage.status === 'DONE' && 'border-transparent bg-brand text-white',
                     stage.status === 'AVAILABLE' && !current && 'border-rule-strong text-ink-2',
                     current && stage.status !== 'DONE' && 'border-brand bg-brand-soft text-brand',
                     stage.status === 'NOT_OFFERED' && 'border-dashed border-rule text-ink-3',
                   )}
                 >
-                  {stage.status === 'DONE' ? <TickIcon /> : stage.status === 'NOT_OFFERED' ? '-' : index + 1}
+                  {stage.status === 'DONE' ? <TickIcon /> : displayNumber !== null ? displayNumber : '·'}
                 </span>
                 {!last && (
                   <span
@@ -126,11 +111,6 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
                 >
                   {stage.label}
                 </span>
-                {/* The second line is only worth its height when it says
-                    something the label does not: why a stage is shut, or
-                    what the student is doing in the one they are in. Five
-                    three-line blocks filled the rail and pushed the live
-                    variables below the fold. */}
                 {(stage.reason ?? (current ? stage.summary : null)) && (
                   <span className="text-left text-micro font-normal text-ink-2">
                     {stage.reason ?? stage.summary}
@@ -152,11 +132,6 @@ export default function PipelineTracker({ stages }: PipelineTrackerProps) {
                   {row}
                 </button>
               ) : hint ? (
-                // Not-offered stages carry their reason in the row itself,
-                // so there is nothing hidden behind a hover; the tooltip
-                // only repeats it for a truncated line. A mode stage has no
-                // reason to show in the row, so the tooltip is the only
-                // place it says where its control actually is.
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="w-full cursor-default">{row}</div>

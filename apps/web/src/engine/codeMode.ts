@@ -61,6 +61,17 @@ export function withCodeMode(
   return changed ? next : snapshots
 }
 
+/** Strips CODE_EDITOR predictions back to TILE_GRID when Code Mode is toggled off mid-run. */
+export function withoutCodeMode(snapshots: AlgorithmSnapshot[]): AlgorithmSnapshot[] {
+  let changed = false
+  const next = snapshots.map((snapshot) => {
+    if (snapshot.predictionType !== PredictionType.CODE_EDITOR) return snapshot
+    changed = true
+    return { ...snapshot, predictionType: PredictionType.TILE_GRID }
+  })
+  return changed ? next : snapshots
+}
+
 /** Whether switching Code Mode on would change anything for this topic. */
 export function codeModeChangesAnything(snapshots: AlgorithmSnapshot[], slug: string | undefined): boolean {
   return withCodeMode(snapshots, slug, true) !== snapshots

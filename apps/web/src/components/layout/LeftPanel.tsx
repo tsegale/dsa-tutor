@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
 import { conditionFeatures } from '@/utils/studyCondition'
+import { useStudyScope } from '@/hooks/useStudyScope'
 import { useParams } from 'react-router-dom'
 import { preloadPyodide } from '@/utils/pyodideRunner'
 import { motion } from 'framer-motion'
+import { AlgorithmMode } from '@dsa-tutor/types'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { runFor } from '@/engine/runFor'
+import { withCodeMode, withoutCodeMode } from '@/engine/codeMode'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
+import DriveCanvasModal from '@/components/prediction/DriveCanvasModal'
 import { usePipeline } from '@/hooks/usePipeline'
 import PipelineTracker from '@/components/pipeline/PipelineTracker'
 import { APPLY_INPUT_EVENT } from './applyInput'
@@ -86,6 +90,7 @@ function generateRandomArray(): number[] {
 
 export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth = false, fillParent = false }: LeftPanelProps) {
   const { algorithmName: algorithmSlug } = useParams<{ algorithmName: string }>()
+  const { restricted } = useStudyScope()
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   const codeEditorMode = useAlgorithmStore((state) => state.codeEditorMode)
   const toggleCodeEditorMode = useAlgorithmStore((state) => state.toggleCodeEditorMode)
@@ -111,6 +116,28 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
 
   const [arrayInput, setArrayInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
+  const [driveModalOpen, setDriveModalOpen] = useState(false)
+
+  const registryEntry = getAlgorithmRegistryEntry(algorithmSlug ?? '')
+  const snapshotArray = useAlgorithmStore((s) => s.snapshotArray)
+  const currentCanvasType = snapshotArray[0]?.canvasType ?? 'ARRAY'
+  const canDriveArrayCanvas =
+    !restricted && features.codeMode && Boolean(registryEntry) && currentCanvasType === 'ARRAY'
+
+  function handleToggleCodeMode() {
+    const nextEnabled = !codeEditorMode
+    toggleCodeEditorMode()
+    const state = useAlgorithmStore.getState()
+    const transformed = nextEnabled
+      ? withCodeMode(state.snapshotArray, algorithmSlug, true)
+      : withoutCodeMode(state.snapshotArray)
+    if (transformed !== state.snapshotArray) {
+      useAlgorithmStore.setState({ snapshotArray: transformed })
+    }
+    if (nextEnabled && state.mode === AlgorithmMode.DEMO && stageOffer(pipeline, 'PRACTICE').enabled) {
+      state.setMode(AlgorithmMode.PRACTICE)
+    }
+  }
 
   function applyArrayInput() {
     const parsed = parseArrayInput(arrayInput)
@@ -208,6 +235,43 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
                 Custom array
               </h3>
+              {!restricted && (
+                <div className="flex flex-wrap gap-1">
+                  {(algorithmSlug === 'dp-1d' || algorithmSlug === 'divide-and-conquer'
+                    ? [
+                        { label: 'Mixed +/-', vals: [-2, 1, -3, 4, -1, 2, 1, -5, 4] },
+                        { label: 'All negative', vals: [-8, -3, -6, -2, -5, -4] },
+                        { label: 'All positive', vals: [2, 4, 1, 5, 3] },
+                      ]
+                    : algorithmSlug === 'binary-search'
+                      ? [
+                          { label: 'Sorted 8', vals: [1, 3, 5, 7, 9, 11, 15, 19] },
+                          { label: 'Wide gaps', vals: [2, 10, 24, 50, 88, 120, 200] },
+                          { label: 'Duplicates', vals: [1, 3, 5, 5, 5, 9, 15, 19] },
+                        ]
+                      : [
+                          { label: 'Sorted', vals: [1, 2, 3, 4, 5, 6] },
+                          { label: 'Reversed', vals: [8, 7, 6, 5, 4, 3, 2, 1] },
+                          { label: 'Nearly sorted', vals: [1, 2, 5, 3, 4, 6, 7] },
+                          { label: 'Duplicates', vals: [4, 2, 4, 1, 2, 4, 1] },
+                        ]
+                  ).map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setInputError(null)
+                        setArrayInput(preset.vals.join(','))
+                        const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
+                        setAlgorithm(displayName, runFor(algorithmSlug, preset.vals))
+                      }}
+                      className="rounded border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:border-primary/50 hover:bg-surface-sunk hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <input
                 type="text"
                 value={arrayInput}
@@ -248,7 +312,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             <button
               id="code-mode-toggle"
               type="button"
-              onClick={toggleCodeEditorMode}
+              onClick={handleToggleCodeMode}
               disabled={!codeModeAvailable}
               aria-pressed={codeEditorMode}
               aria-label="Toggle Code Mode"
@@ -278,6 +342,31 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               <p className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
                 {codeUnavailableReason}
               </p>
+            )}
+            {canDriveArrayCanvas && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDriveModalOpen(true)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-surface-sunk px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/50 hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+                >
+                  <CodeBracketsIcon />
+                  Drive Canvas (Python)
+                </button>
+                <DriveCanvasModal
+                  open={driveModalOpen}
+                  onClose={() => setDriveModalOpen(false)}
+                  displayName={registryEntry?.displayName ?? 'Algorithm'}
+                  initialArray={
+                    (() => {
+                      const s0 = useAlgorithmStore.getState().snapshotArray[0]?.dataStructureState
+                      return Array.isArray(s0) && s0.every((v) => typeof v === 'number')
+                        ? (s0 as number[])
+                        : (registryEntry?.defaultInput ?? [5, 3, 1, 4, 2])
+                    })()
+                  }
+                />
+              </>
             )}
           </section>
           )}

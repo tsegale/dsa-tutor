@@ -304,3 +304,32 @@ describe('Practice mode narration auto-advance', () => {
     expect(useAlgorithmStore.getState().stepIndex).toBe(0)
   })
 })
+
+describe('jumpToStep timeline scrubbing', () => {
+  it('scrubs freely to any step in DEMO mode', () => {
+    const store = useAlgorithmStore.getState()
+    store.setMode(AlgorithmMode.DEMO)
+    const last = store.snapshotArray.length - 1
+    store.jumpToStep(last)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(last)
+    store.jumpToStep(1)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(1)
+  })
+
+  it('clamps forward scrubbing in PRACTICE mode at the first unanswered Critical Junction', () => {
+    const store = useAlgorithmStore.getState()
+    const firstJunction = store.snapshotArray.findIndex((s) => s.isPredictionRequired)
+    expect(firstJunction).toBeGreaterThan(0)
+    store.setMode(AlgorithmMode.PRACTICE)
+    store.jumpToStep(store.snapshotArray.length - 1)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(firstJunction)
+
+    // Once answered, scrubbing can advance past that junction to the next one
+    useAlgorithmStore.getState().recordPredictionResult(true, 0)
+    const nextJunction = store.snapshotArray.findIndex((s, idx) => idx > firstJunction && s.isPredictionRequired)
+    useAlgorithmStore.getState().jumpToStep(store.snapshotArray.length - 1)
+    expect(useAlgorithmStore.getState().stepIndex).toBe(
+      nextJunction === -1 ? store.snapshotArray.length - 1 : nextJunction,
+    )
+  })
+})

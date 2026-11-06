@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { CODE_LADDERS, buildBst, codeLadderFor, hasCodeLadder, plainTree, type CodeRung } from '@/config/codeLadders'
 import { LADDER_SOLUTIONS } from '@/config/codeLadders.solutions'
 import { runFor } from '@/engine/runFor'
+import { findPython3 } from '@/test/findPython3'
 
 /**
  * The rungs are checked against a real Python interpreter, not asserted by
@@ -28,16 +29,7 @@ const ARRAYS = [
   [4, 4, 2, 9],
 ]
 
-function python3(): string | null {
-  try {
-    execFileSync('python3', ['--version'], { stdio: 'ignore' })
-    return 'python3'
-  } catch {
-    return null
-  }
-}
-
-const PY = python3()
+const PY = findPython3()
 
 /** Runs one rung's solution the way the sandbox does: set the globals, run
  *  the code, read one global back. */

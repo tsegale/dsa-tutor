@@ -37,14 +37,9 @@ export interface PipelineStage {
 }
 
 // ---------------------------------------------------------------- hands-on
-//
-// Four situations, not two, which is why this is four sets rather than one
-// flag. Moved here verbatim from ModeToggle, which now imports them.
 
 /** No physical construction gesture makes sense: pointer movement or
- *  recursion, not rearranging elements. Dragging a pointer is not the same
- *  interaction as dragging a bar to swap it, which is why the two-pointer
- *  and sliding-window topics sit here and not with the sorts. */
+ *  recursion, not rearranging elements. */
 export const NO_HANDS_ON = new Set([
   'recursion-factorial',
   'recursion-fibonacci',
@@ -57,11 +52,6 @@ export const NO_HANDS_ON = new Set([
   'two-pointer',
   'sliding-window-fixed',
   'sliding-window-variable',
-  // The seven paradigms: a prefix table, a stack of indices, a call tree,
-  // a sorted scan and three filled tables. None of them is a structure
-  // being rearranged, so there is no construction gesture to hand over -
-  // these are topics where writing the recurrence IS the hands-on work,
-  // which is what the Code stage is for.
   'prefix-sum',
   'monotonic-stack',
   'divide-and-conquer',
@@ -69,19 +59,14 @@ export const NO_HANDS_ON = new Set([
   'dp-1d',
   'dp-2d',
   'backtracking',
-  // Matrix view, no spatial manipulation to hand on.
   'floyd-warshall',
-  // Generation is automatic carving: nothing to drag, unlike the
-  // pathfinding grids.
   'maze-generation',
   'maze-prim',
   'maze-kruskal',
 ])
 
 /** The structure's own operation buttons (push, enqueue, insert, search)
- *  ARE the construction interaction. Entering a separate Hands-on mode
- *  would behave exactly like Practice, so the mode stays shut and the
- *  tracker points at the controls instead. */
+ *  ARE the construction interaction. */
 export const BUTTONS_ARE_HANDS_ON = new Set([
   'stack',
   'queue',
@@ -99,9 +84,6 @@ export const BUTTONS_ARE_HANDS_ON = new Set([
   'trie-insert',
   'trie-search',
   'trie-delete',
-  // Node/edge graphs: dragging nodes and choosing presets, start and
-  // target in the graph controls is the hands-on interaction. There is no
-  // separate per-step gesture.
   'dijkstra',
   'bellman-ford',
   'kruskal',
@@ -118,25 +100,7 @@ export const HANDS_ON_COMING_SOON = new Set([
   'radix-sort',
 ])
 
-/**
- * A real gesture on the canvas, built and live.
- *
- * Two gestures, not one. The sorts are dragged: a bar is moved toward
- * another and crossing the midpoint is the answer. Everything added below
- * is POINTED at - click the child this comparison descends to, the node
- * that comes off the frontier, the cell the search takes next - which is
- * the gesture a tree, a graph and a grid all have available and which is
- * the decision the algorithm is actually making.
- *
- * Those fourteen topics used to read "this structure's own operations in
- * the controls are the hands-on work", which is a fair description of
- * pressing Insert and a poor description of carrying the step out: the
- * learner pressed a button and watched the algorithm decide. The four
- * traversals read "not built yet".
- *
- * handsOnCoverage.test.ts derives this set from the engines, so a topic
- * listed here has a gesture and a topic with a gesture is listed here.
- */
+/** A real gesture on the canvas, built and live. */
 export const HANDS_ON_ACTIVE = new Set([
   'bubble-sort',
   'insertion-sort',
@@ -145,13 +109,10 @@ export const HANDS_ON_ACTIVE = new Set([
   'quick-sort',
   'shell-sort',
   'heap-sort',
-  // Wall drawing and start/end dragging directly on the grid, genuinely
-  // implemented rather than a placeholder.
   'grid-bfs',
   'grid-dfs',
   'grid-dijkstra',
   'grid-astar',
-  // Pointing, not dragging (see above).
   'bst',
   'bst-search',
   'bst-delete',
@@ -168,39 +129,15 @@ export const HANDS_ON_ACTIVE = new Set([
   'topological-sort',
 ])
 
-// -------------------------------------------------------------------- code
-//
-// Code Mode rewrites a junction's prediction into a line of code to write.
-// This used to be a hand-written set holding one slug, because one engine
-// read a `codeEditorMode` flag and no other did. It is derived now: a topic
-// has Code Mode when a challenge has been written for it, so the toggle
-// cannot advertise a topic the content does not cover, and cannot stay
-// silent about one it does.
 export function hasCodeMode(slug: string): boolean {
   return hasCodeChallenge(slug)
 }
 
 export const CODE_MODE_ACTIVE: ReadonlySet<string> = new Set(Object.keys(CODE_CHALLENGES))
 
-// ---------------------------------------------------------------- practice
-//
-// Topics whose run contains no junction at all: nothing to predict, so
-// Practice would be Demo with a different label. A student could step
-// through all 562 steps of Grid BFS in Practice and never be asked
-// anything, which is worse than being told the stage is not offered.
-//
-// Only the three maze generators, and for a reason that will not change:
-// they make random choices, so there is no next step with a right answer
-// to predict. Grid BFS and DFS were here too, and should not have been -
-// what comes off a queue or a stack next is perfectly definite, and they
-// now ask it like the weighted pair always did. pipeline.test.ts checks
-// this set against what the engines actually produce, which is what makes
-// an entry here a claim rather than an assumption.
 export const NO_JUNCTIONS = new Set(['maze-generation', 'maze-prim', 'maze-kruskal'])
 
 const RANDOM_GENERATORS = new Set(['maze-generation', 'maze-prim', 'maze-kruskal'])
-
-// ------------------------------------------------------------------ stages
 
 const SUMMARY: Record<PipelineStageId, string> = {
   DEMO: 'Watch it run, and read what it does.',
@@ -224,48 +161,34 @@ export interface PipelineInput {
   runCompletedHere: boolean
   /** A Practice run was completed on this topic, in any session. */
   practiceCompleted: boolean
-  /** Feynman is available right now (rubric exists, run completed, not
-   *  Classic). Computed by useFeynmanAccess, which owns those rules. */
+  /** A Hands-On run reached its final step on this topic. */
+  handsOnCompleted?: boolean
+  /** Feynman is available right now (rubric exists, not Classic). */
   feynmanAvailable: boolean
+  /** Feynman explanation passed on this topic. */
+  feynmanCompleted?: boolean
   /** Why Feynman is not available, when it is not. */
   feynmanReason: string | null
-  /** Classic is the study's control condition: a plain visualiser with no
-   *  tutor stages at all. */
+  /** Classic is the study's control condition: a plain visualiser with no tutor stages at all. */
   classic: boolean
-  /** The topic's code ladder has been finished to its last rung. Nothing
-   *  used to be able to mark Code done - only DEMO and PRACTICE could ever
-   *  return DONE - so the stage stayed open however much code was written. */
+  /** The topic's code challenge or code ladder has been finished. */
   codeCompleted: boolean
 }
 
-/**
- * The five stages for one topic, in order, each with a status and a reason.
- *
- * Feynman is deliberately NOT placed behind Hands-on and Code. It is one of
- * the four mastery criteria, and in a timed session almost nobody reaches
- * the end of a code challenge, so gating it there would quietly put mastery
- * out of reach. It opens when Practice is done, which is the point at which
- * a student has something to explain.
- */
 export function pipelineFor(input: PipelineInput): PipelineStage[] {
   const { slug, classic } = input
 
   if (classic) {
-    // One stage, and it is honest about being the whole of it: Classic has
-    // no tutor features, so showing four locked stages would advertise
-    // things this condition will never offer.
     return [stage('DEMO', 'AVAILABLE', null)]
   }
 
   const practiceDone = input.practiceCompleted
-  // Demo counts as done once anything downstream has been: a student who
-  // has practised the topic has plainly watched it.
-  const demoDone = practiceDone || input.runCompletedHere
+  const demoDone = practiceDone || input.runCompletedHere || Boolean(input.handsOnCompleted)
 
   return [
     stage('DEMO', demoDone ? 'DONE' : 'AVAILABLE', null),
     practiceStage(slug, practiceDone),
-    handsOnStage(slug),
+    handsOnStage(slug, Boolean(input.handsOnCompleted)),
     codeStage(slug, input.codeCompleted),
     feynmanStage(input),
   ]
@@ -288,9 +211,15 @@ function practiceStage(slug: string, practiceDone: boolean): PipelineStage {
   return stage('PRACTICE', practiceDone ? 'DONE' : 'AVAILABLE', null)
 }
 
-function handsOnStage(slug: string): PipelineStage {
+function handsOnStage(slug: string, completed: boolean): PipelineStage {
   if (NO_HANDS_ON.has(slug)) {
-    return stage('HANDS_ON', 'NOT_OFFERED', 'This algorithm has no step to carry out by hand. Write it in Code instead.')
+    return stage(
+      'HANDS_ON',
+      'NOT_OFFERED',
+      hasCodeMode(slug)
+        ? 'This algorithm has no step to carry out by hand. Write it in Code instead.'
+        : 'This algorithm has no step to carry out by hand. Watch how it works in Demo.',
+    )
   }
   if (BUTTONS_ARE_HANDS_ON.has(slug)) {
     return stage(
@@ -305,7 +234,7 @@ function handsOnStage(slug: string): PipelineStage {
   if (!HANDS_ON_ACTIVE.has(slug)) {
     return stage('HANDS_ON', 'NOT_OFFERED', 'Not available for this algorithm.')
   }
-  return stage('HANDS_ON', 'AVAILABLE', null)
+  return stage('HANDS_ON', completed ? 'DONE' : 'AVAILABLE', null)
 }
 
 function codeStage(slug: string, completed: boolean): PipelineStage {
@@ -314,9 +243,7 @@ function codeStage(slug: string, completed: boolean): PipelineStage {
       'CODE',
       'NOT_OFFERED',
       NO_JUNCTIONS.has(slug)
-        ? // Nothing to grade a line of code against, and nothing coming:
-          // the step a maze generator takes next is a random choice.
-          'This builds a random maze, so there is no step to write code for.'
+        ? 'This builds a random maze, so there is no step to write code for.'
         : 'No code challenge written for this topic yet.',
     )
   }
@@ -324,38 +251,21 @@ function codeStage(slug: string, completed: boolean): PipelineStage {
 }
 
 function feynmanStage(input: PipelineInput): PipelineStage {
-  if (input.feynmanAvailable) return stage('FEYNMAN', 'AVAILABLE', null)
-  // The only remaining reason is that this topic has no reviewed rubric,
-  // which is permanent: there is nothing the student could do to lift it.
-  // Never null - a stage that is not on offer always says why, or the mode
-  // switcher's tooltip is blank (see the agreement test in pipeline.test.ts).
+  if (input.feynmanAvailable) {
+    return stage('FEYNMAN', input.feynmanCompleted ? 'DONE' : 'AVAILABLE', null)
+  }
   return stage('FEYNMAN', 'NOT_OFFERED', input.feynmanReason ?? FEYNMAN_NO_RUBRIC_REASON)
 }
 
-/**
- * Whether the mode switcher may offer a stage, and the reason to show when
- * it may not.
- *
- * The switcher used to answer this from the four hands-on sets directly,
- * which left it one rule short: those sets say whether a gesture exists on
- * this topic, not whether the student has got to it yet. So Hands-On stayed
- * clickable while the stage tracker two inches away said "Finish a Practice
- * run first", and clicking it selected a mode that then behaved like Demo.
- *
- * The stage already carries both halves of that answer, so the switcher
- * reads it rather than deriving a second one.
- */
 export function stageOffer(
   stages: readonly PipelineStage[],
   id: PipelineStageId,
 ): { enabled: boolean; reason: string | null } {
   const found = stages.find((s) => s.id === id)
-  // Classic returns Demo alone: anything else is not on offer there.
   if (!found) return { enabled: false, reason: null }
   return { enabled: found.status === 'AVAILABLE' || found.status === 'DONE', reason: found.reason }
 }
 
-/** How far through the offered stages this topic is, for the heading. */
 export function pipelineProgress(stages: readonly PipelineStage[]): { done: number; offered: number } {
   const offered = stages.filter((s) => s.status !== 'NOT_OFFERED')
   return { done: offered.filter((s) => s.status === 'DONE').length, offered: offered.length }

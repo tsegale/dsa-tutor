@@ -307,4 +307,20 @@ describe('the Code stage can be finished', () => {
     const stages = pipelineFor(input({ slug: 'maze-recursive-backtracker', codeCompleted: true }))
     expect(statusOf(stages, 'CODE')).toBe('NOT_OFFERED')
   })
+
+  it('marks Hands-On and Feynman DONE when completed, reaching 5 of 5 on full topics', () => {
+    const stages = pipelineFor(
+      input({
+        slug: 'bubble-sort',
+        practiceCompleted: true,
+        handsOnCompleted: true,
+        codeCompleted: true,
+        feynmanAvailable: true,
+        feynmanCompleted: true,
+      }),
+    )
+    expect(statusOf(stages, 'HANDS_ON')).toBe('DONE')
+    expect(statusOf(stages, 'FEYNMAN')).toBe('DONE')
+    expect(pipelineProgress(stages)).toEqual({ done: 5, offered: 5 })
+  })
 })

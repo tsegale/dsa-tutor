@@ -50,6 +50,10 @@ export interface AlgorithmStoreState {
   tracedToEnd: boolean
   /** Topics whose Practice run reached its final step in this visit: unlocks Feynman mode (Phase 8A). */
   practiceRunCompletedTopics: string[]
+  /** Topics whose Hands-On run reached its final step in this visit. */
+  handsOnCompletedTopics: string[]
+  /** Topics whose Feynman explanation passed in this visit. */
+  feynmanCompletedTopics: string[]
   /**
    * How far up each topic's code ladder the learner has climbed, by slug:
    * the index of the rung they are on now. Absent means rung 0.
@@ -89,13 +93,24 @@ export interface AlgorithmStoreState {
   // (challengeSeed) so a logged attempt can be regenerated. Resets with
   // each new session.
   challengesStarted: number
+  /** True once the current live junction has been answered (correct, bottomed out, or revealed). Resets on step/run/mode change. */
+  predictionResolved: boolean
+  /** Highest step index visited on the current run, used by the Execution Timeline Scrubber. */
+  maxReachedStep: number
+  /** Per-step junction outcomes recorded during this run ('correct' | 'incorrect' | 'worked'). */
+  stepOutcomes: Record<number, 'correct' | 'incorrect' | 'worked'>
+  /** Variable name currently hovered in VariableWatchStrip for Pseudocode cross-highlighting. */
+  hoveredVar: string | null
 
   stepForward: () => void
   stepBackward: () => void
+  jumpToStep: (targetIndex: number) => void
   resetAlgorithm: () => void
   /** Restarts the current run asking every junction of these types (the mastery panel's accuracy offer). */
   startFocusedRun: (junctionTypes: string[]) => void
   notePracticeRunCompleted: (topicSlug: string) => void
+  noteHandsOnCompleted: (topicSlug: string) => void
+  noteFeynmanCompleted: (topicSlug: string) => void
   setMode: (mode: AlgorithmMode) => void
   /**
    * Loads a run. `landOn` decides which step the learner is shown:
@@ -122,6 +137,9 @@ export interface AlgorithmStoreState {
   toggleCodeEditorMode: () => void
   setFadingEnabled: (enabled: boolean) => void
   setClassicMode: (on: boolean) => void
+  setPredictionResolved: (resolved: boolean) => void
+  recordStepOutcome: (index: number, outcome: 'correct' | 'incorrect' | 'worked') => void
+  setHoveredVar: (name: string | null) => void
   noteSelfExplanationOffered: (key: string) => void
   noteChallengeStarted: () => void
   /** Move to a rung of a topic's code ladder. */
@@ -251,6 +269,8 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   focusJunctionTypes: [],
   tracedToEnd: false,
   practiceRunCompletedTopics: [],
+  handsOnCompletedTopics: [],
+  feynmanCompletedTopics: [],
   codeRungByTopic: {},
   codeCompletedTopics: [],
   sessionCorrectPredictions: 0,
@@ -263,6 +283,10 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   selfExplanationKeysOffered: [],
   selfExplanationsOffered: 0,
   challengesStarted: 0,
+  predictionResolved: false,
+  maxReachedStep: 0,
+  stepOutcomes: {},
+  hoveredVar: null,
 
   // Advances the step index only. Pausing playback at a prediction step
   // is the playback interval's job (see startPlayback) - stepForward
@@ -275,11 +299,19 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   // makes a single manual step past a junction chain forward through the
   // narration that follows, instead of requiring one click per step.
   stepForward: () => {
-    const { stepIndex, snapshotArray, scaffoldingLevel, segmentScaffoldingLevel } = get()
+    const state = get()
+    const { stepIndex, snapshotArray, scaffoldingLevel, segmentScaffoldingLevel } = state
     if (stepIndex < snapshotArray.length - 1) {
-      if (stepIndex + 1 >= snapshotArray.length - 1) set({ tracedToEnd: true })
+      const nextIndex = stepIndex + 1
+      if (nextIndex >= snapshotArray.length - 1) set({ tracedToEnd: true })
+      const workedHere = isWorkedStepAt(state, stepIndex)
       set({
-        stepIndex: stepIndex + 1,
+        stepIndex: nextIndex,
+        maxReachedStep: Math.max(state.maxReachedStep, nextIndex),
+        stepOutcomes: workedHere && !(stepIndex in state.stepOutcomes)
+          ? { ...state.stepOutcomes, [stepIndex]: 'worked' }
+          : state.stepOutcomes,
+        predictionResolved: false,
         // Leaving a conceptual junction ends the segment: a level change
         // made during it takes effect from here.
         segmentScaffoldingLevel: endsSegment(snapshotArray, stepIndex) ? scaffoldingLevel : segmentScaffoldingLevel,
@@ -294,19 +326,59 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     // Reviewing a past step is a deliberate choice - a pending
     // auto-advance must not immediately undo it by jumping forward again.
     clearAutoAdvanceTimer(set)
-    set({ stepIndex: stepIndex - 1 })
+    set({ stepIndex: stepIndex - 1, predictionResolved: false })
+  },
+
+  jumpToStep: (targetIndex) => {
+    const state = get()
+    if (state.snapshotArray.length === 0) return
+    clearPlaybackInterval()
+    clearAutoAdvanceTimer(set)
+    let clamped = Math.max(0, Math.min(state.snapshotArray.length - 1, Math.trunc(targetIndex)))
+    const isInteractive =
+      !state.classicMode && (state.mode === AlgorithmMode.PRACTICE || state.mode === AlgorithmMode.HANDS_ON)
+    if (isInteractive) {
+      for (let i = 0; i < clamped; i++) {
+        const answered = i in state.stepOutcomes || (i === state.stepIndex && state.predictionResolved)
+        if (!answered && isLiveJunctionAt(state, i)) {
+          clamped = i
+          break
+        }
+      }
+    }
+    set({
+      stepIndex: clamped,
+      maxReachedStep: Math.max(state.maxReachedStep, clamped),
+      isPlaying: false,
+      predictionResolved: false,
+    })
   },
 
   resetAlgorithm: () => {
     clearPlaybackInterval()
     clearAutoAdvanceTimer(set)
-    set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel }))
+    set((state) => ({
+      stepIndex: 0,
+      maxReachedStep: 0,
+      stepOutcomes: {},
+      isPlaying: false,
+      predictionResolved: false,
+      segmentScaffoldingLevel: state.scaffoldingLevel,
+    }))
   },
 
   startFocusedRun: (junctionTypes) => {
     clearPlaybackInterval()
     clearAutoAdvanceTimer(set)
-    set((state) => ({ stepIndex: 0, isPlaying: false, segmentScaffoldingLevel: state.scaffoldingLevel, focusJunctionTypes: junctionTypes }))
+    set((state) => ({
+      stepIndex: 0,
+      maxReachedStep: 0,
+      stepOutcomes: {},
+      isPlaying: false,
+      predictionResolved: false,
+      segmentScaffoldingLevel: state.scaffoldingLevel,
+      focusJunctionTypes: junctionTypes,
+    }))
   },
 
   setCodeRung: (topicSlug, rung) =>
@@ -324,6 +396,20 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       state.practiceRunCompletedTopics.includes(topicSlug) ? state : { practiceRunCompletedTopics: [...state.practiceRunCompletedTopics, topicSlug] },
     ),
 
+  noteHandsOnCompleted: (topicSlug) =>
+    set((state) =>
+      state.handsOnCompletedTopics.includes(topicSlug)
+        ? state
+        : { handsOnCompletedTopics: [...state.handsOnCompletedTopics, topicSlug] },
+    ),
+
+  noteFeynmanCompleted: (topicSlug) =>
+    set((state) =>
+      state.feynmanCompletedTopics.includes(topicSlug)
+        ? state
+        : { feynmanCompletedTopics: [...state.feynmanCompletedTopics, topicSlug] },
+    ),
+
   setMode: (mode) => {
     // Locked in Classic: the participant's condition is not theirs to change.
     if (get().classicMode) return
@@ -332,12 +418,13 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
     // progress back to step 1 with no warning.
     clearPlaybackInterval()
     clearAutoAdvanceTimer(set)
-    set({ mode, isPlaying: false })
+    set({ mode, isPlaying: false, predictionResolved: false })
   },
 
   setAlgorithm: (name, snapshots, landOn = 'start') => {
     clearPlaybackInterval()
     clearAutoAdvanceTimer()
+    const initialStep = landOn === 'result' ? Math.max(snapshots.length - 1, 0) : 0
     set({
       algorithmName: name,
       snapshotArray: snapshots,
@@ -345,9 +432,13 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
       // deque and circular queue build themselves from an empty structure,
       // so step 0 of a push is an EMPTY deque: every operation control on
       // them appeared to do nothing at all.
-      stepIndex: landOn === 'result' ? Math.max(snapshots.length - 1, 0) : 0,
+      stepIndex: initialStep,
+      maxReachedStep: initialStep,
+      stepOutcomes: {},
+      hoveredVar: null,
       tracedToEnd: false,
       isPlaying: false,
+      predictionResolved: false,
       segmentScaffoldingLevel: get().scaffoldingLevel,
       // A freshly loaded array is not an AI challenge unless the caller
       // opts back in via setActiveChallengeType right after this call.
@@ -448,11 +539,16 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   setActiveChallengeType: (type) => set({ activeChallengeType: type }),
 
   recordPredictionResult: (correct, hintsRequestedForStep) => {
-    set((state) => ({
-      sessionTotalPredictions: state.sessionTotalPredictions + 1,
-      sessionCorrectPredictions: state.sessionCorrectPredictions + (correct ? 1 : 0),
-      sessionHintsRequested: state.sessionHintsRequested + hintsRequestedForStep,
-    }))
+    set((state) => {
+      const prev = state.stepOutcomes[state.stepIndex]
+      const nextOutcome: 'correct' | 'incorrect' = correct ? 'correct' : prev === 'correct' ? 'correct' : 'incorrect'
+      return {
+        sessionTotalPredictions: state.sessionTotalPredictions + 1,
+        sessionCorrectPredictions: state.sessionCorrectPredictions + (correct ? 1 : 0),
+        sessionHintsRequested: state.sessionHintsRequested + hintsRequestedForStep,
+        stepOutcomes: { ...state.stepOutcomes, [state.stepIndex]: nextOutcome },
+      }
+    })
   },
 
   toggleCodeEditorMode: () => set((state) => ({ codeEditorMode: !state.codeEditorMode })),
@@ -470,8 +566,26 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
   setClassicMode: (on) => {
     clearPlaybackInterval()
     clearAutoAdvanceTimer()
-    set(on ? { classicMode: true, mode: AlgorithmMode.DEMO, isPlaying: false, fadingEnabled: false } : { classicMode: false })
+    set(
+      on
+        ? { classicMode: true, mode: AlgorithmMode.DEMO, isPlaying: false, fadingEnabled: false, predictionResolved: false }
+        : { classicMode: false },
+    )
   },
+
+  setPredictionResolved: (resolved) =>
+    set((state) => ({
+      predictionResolved: resolved,
+      stepOutcomes:
+        resolved && !(state.stepIndex in state.stepOutcomes)
+          ? { ...state.stepOutcomes, [state.stepIndex]: 'incorrect' }
+          : state.stepOutcomes,
+    })),
+
+  recordStepOutcome: (index, outcome) =>
+    set((state) => ({ stepOutcomes: { ...state.stepOutcomes, [index]: outcome } })),
+
+  setHoveredVar: (name) => set({ hoveredVar: name }),
 
   setFadingEnabled: (enabled) => {
     set({ fadingEnabled: enabled && !get().classicMode })
@@ -496,6 +610,12 @@ export const selectIsPredictionStep = (state: AlgorithmStoreState): boolean =>
 
 /** A junction the learner must answer now (worked steps excluded). */
 export const selectIsLiveJunction = (state: AlgorithmStoreState): boolean => isLiveJunctionAt(state, state.stepIndex)
+
+/** True while a Practice / Hands-On live junction has not yet been answered, bottomed out, or revealed. */
+export const selectIsUnansweredJunction = (state: AlgorithmStoreState): boolean =>
+  (state.mode === AlgorithmMode.PRACTICE || state.mode === AlgorithmMode.HANDS_ON) &&
+  isLiveJunctionAt(state, state.stepIndex) &&
+  !state.predictionResolved
 
 /** The current step is a worked demonstration in an interactive mode. */
 export const selectIsWorkedStep = (state: AlgorithmStoreState): boolean =>

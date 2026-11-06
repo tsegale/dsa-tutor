@@ -4,7 +4,15 @@ import pyodidePackage from 'pyodide/package.json?raw'
 const { loadPyodide } = vi.hoisted(() => ({ loadPyodide: vi.fn() }))
 vi.mock('pyodide', () => ({ loadPyodide }))
 
-import { PYODIDE_INDEX_URL, preloadPyodide, pyodideStatus, resetPyodideForTests, runPythonStep } from './pyodideRunner'
+import {
+  PYODIDE_INDEX_URL,
+  preloadPyodide,
+  pyodideStatus,
+  resetPyodideForTests,
+  runPythonStep,
+  setWorkerFactoryForTests,
+} from './pyodideRunner'
+import { traceEventsToSnapshots } from './trackedPythonScript'
 
 /** A stand-in runtime: runs nothing, hands back the globals as they were
  * set, and remembers what was deleted so the cleanup can be asserted. */
@@ -160,5 +168,109 @@ describe('the read-back shape', () => {
     const result = await readingBack(1, 'boolean')
     expect(result.hasSyntaxError).toBe(true)
     expect(result.errorMessage).toContain('True or False')
+  })
+})
+
+describe('Web Worker watchdog, console capture, and tracked canvas snapshots', () => {
+  it('captures stdout and stderr when runtime hooks are available', async () => {
+    let stdoutHandler: ((msg: string) => void) | null = null
+    const runtime = {
+      ...fakeRuntime(),
+      setStdout: ({ batched }: { batched: (msg: string) => void }) => {
+        stdoutHandler = batched
+      },
+      runPythonAsync: vi.fn(async () => {
+        stdoutHandler?.('inspect j=0')
+      }),
+    }
+    loadPyodide.mockResolvedValue(runtime)
+
+    const result = await runPythonStep('print("inspect j=0")', arrStep)
+    expect(result.hasSyntaxError).toBe(false)
+    expect(result.stdout).toBe('inspect j=0')
+  })
+
+  it('terminates a hung Web Worker on infinite-loop timeout and respawns cleanly next run', async () => {
+    let spawnedCount = 0
+    const terminateFns: Array<ReturnType<typeof vi.fn>> = []
+
+    setWorkerFactoryForTests(() => {
+      spawnedCount += 1
+      const currentSpawn = spawnedCount
+      const listeners = new Map<string, Set<(e: MessageEvent) => void>>()
+      const terminate = vi.fn()
+      terminateFns.push(terminate)
+
+      const fakeWorker = {
+        addEventListener: (type: string, cb: (e: MessageEvent) => void) => {
+          if (!listeners.has(type)) listeners.set(type, new Set())
+          listeners.get(type)!.add(cb)
+        },
+        removeEventListener: (type: string, cb: (e: MessageEvent) => void) => {
+          listeners.get(type)?.delete(cb)
+        },
+        postMessage: (msg: { id: number; type: string }) => {
+          if (msg.type === 'preload') {
+            queueMicrotask(() => {
+              listeners.get('message')?.forEach((cb) =>
+                cb({ data: { id: msg.id, type: 'preload', ok: true } } as MessageEvent),
+              )
+            })
+            return
+          }
+          // First worker hangs forever on runStep (`while True: pass`); second worker responds cleanly.
+          if (msg.type === 'runStep' && currentSpawn >= 2) {
+            queueMicrotask(() => {
+              listeners.get('message')?.forEach((cb) =>
+                cb({
+                  data: {
+                    id: msg.id,
+                    type: 'runStep',
+                    result: {
+                      hasSyntaxError: false,
+                      resultingState: [1, 2],
+                      errorMessage: null,
+                      stdout: 'recovered',
+                      stderr: '',
+                    },
+                  },
+                } as MessageEvent),
+              )
+            })
+          }
+        },
+        terminate,
+      }
+      return fakeWorker as unknown as Worker
+    })
+
+    const timedOutResult = await runPythonStep('while True: pass', arrStep, 30)
+    expect(timedOutResult.timedOut).toBe(true)
+    expect(timedOutResult.hasSyntaxError).toBe(true)
+    expect(timedOutResult.errorMessage).toContain('timed out')
+    expect(terminateFns[0]).toHaveBeenCalledTimes(1)
+
+    const nextResult = await runPythonStep('arr[0], arr[1] = arr[1], arr[0]', arrStep, 200)
+    expect(spawnedCount).toBe(2)
+    expect(nextResult.hasSyntaxError).toBe(false)
+    expect(nextResult.resultingState).toEqual([1, 2])
+    expect(nextResult.stdout).toBe('recovered')
+  })
+
+  it('converts recorded Python compare and swap trace events into valid AlgorithmSnapshots', () => {
+    const snapshots = traceEventsToSnapshots(
+      [5, 2],
+      [
+        { kind: 'compare', indices: [0, 1], array: [5, 2], description: 'Compared arr[0] (5) > arr[1] (2)' },
+        { kind: 'swap', indices: [0, 1], array: [2, 5], description: 'Swapped arr[0] and arr[1] -> [2, 5].' },
+      ],
+      [2, 5],
+      false,
+    )
+    expect(snapshots).toHaveLength(4)
+    expect(snapshots[1].comparedIndices).toEqual([0, 1])
+    expect(snapshots[2].swappedIndices).toEqual([0, 1])
+    expect(snapshots[3].isFinalStep).toBe(true)
+    expect(snapshots[3].highlightIndices).toEqual([0, 1])
   })
 })

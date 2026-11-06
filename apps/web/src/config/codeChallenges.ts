@@ -1029,7 +1029,7 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   'two-pointer': challenge({
     prompt: 'The sum is not the target. Move the pointer that can bring the sum towards it, and leave the other alone.',
     junctionTypes: [CriticalJunctionType.POINTER_MOVE],
-    python: '# arr, left, right and target are given.\nif arr[left] + arr[right] < target:\n    left = left + 1\nelse:\n    right = ',
+    python: '# arr, left, right and target are given.\nif arr[left] + arr[right] < target:\n    left = left + 1\nelse:\n    right = \npointers = [left, right]',
     java: 'if (arr[left] + arr[right] < target) left++;\nelse right--;',
     globals: (context) => ({
       arr: [...arrayOf(context.snapshot)],
@@ -1281,7 +1281,9 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
     python: '# chosen is the list of [from, to] edges already in the tree.\n# a and b are the ends of the edge being considered.\n# Walk the chosen edges and decide whether b is reachable from a.\nsame = ',
     java: 'boolean same = find(a) == find(b);',
     globals: (context) => ({
-      chosen: field<{ from: string; to: string }[]>(context.snapshot, 'mstEdges', []).map((edge) => [edge.from, edge.to]),
+      chosen: field<([string, string, number] | { from: string; to: string })[]>(context.snapshot, 'mstEdges', []).map(
+        (edge) => (Array.isArray(edge) ? [edge[0], edge[1]] : [edge.from, edge.to]),
+      ),
       a: field<string>(context.snapshot, 'fromNode', ''),
       b: field<string>(context.snapshot, 'toNode', ''),
     }),

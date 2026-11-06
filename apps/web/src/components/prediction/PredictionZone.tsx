@@ -413,23 +413,7 @@ export default function PredictionZone({
 
   useEffect(() => {
     function handleHandsOnAnswer(event: Event) {
-      const answer = (
-        event as CustomEvent<
-          | 'swap'
-          | 'no-swap'
-          | 'shift'
-          | 'stop'
-          | 'update'
-          | 'keep'
-          | 'skip'
-          | 'take-left'
-          | 'take-right'
-          | 'no-shift'
-          | 'sift'
-          | 'stay'
-          | 'extract'
-        >
-      ).detail
+      const answer = (event as CustomEvent<string>).detail
       setCurrentAnswer(answer)
       void handleSubmitRef.current(answer)
     }
@@ -1012,6 +996,9 @@ export default function PredictionZone({
       // sorted a one-element array. runFor keeps it the open topic's own
       // engine, and Code Mode is reapplied by the same pass as everywhere.
       if (advance === 'reseed') {
+        if (algorithmSlug && codeTask?.isLast) {
+          useAlgorithmStore.getState().noteCodeLadderCompleted(algorithmSlug)
+        }
         await wait(500)
         const { activeChallengeType, setAlgorithm: setAlg, setActiveChallengeType } = useAlgorithmStore.getState()
         setAlg(algorithmName, runFor(algorithmSlug, result.resultingState as number[]))
@@ -1153,7 +1140,7 @@ export default function PredictionZone({
                       // now so the card and the button do not flash stale.
                       setCodeSolved(false)
                       setCodeEvalPraise(null)
-                      if (algorithmSlug && codeTask.rungCount > 1) {
+                      if (algorithmSlug) {
                         const store = useAlgorithmStore.getState()
                         if (codeTask.isLast) store.noteCodeLadderCompleted(algorithmSlug)
                         else store.setCodeRung(algorithmSlug, codeTask.rung)
