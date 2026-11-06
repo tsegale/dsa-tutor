@@ -15,7 +15,18 @@ logger = logging.getLogger(__name__)
 
 client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 model_name = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+fast_model_name = os.getenv("CLAUDE_FAST_MODEL", "claude-haiku-4-5")
+deep_model_name = os.getenv("CLAUDE_DEEP_MODEL", model_name)
 max_tokens = int(os.getenv("MAX_TOKENS", "1000"))
+
+_FAST_TASKS = {"hint", "ask", "challenge", "code_eval"}
+
+
+def select_model_for_task(task: str) -> str:
+    """Routes low-latency interactive tasks to Haiku and deep pedagogical
+    reasoning (Feynman rubric analysis, misconception grading, summaries)
+    to Sonnet."""
+    return fast_model_name if task in _FAST_TASKS else deep_model_name
 # The prediction feedback JSON is four short fields (two sentences, a
 # question, an integer); 1000 tokens let the counterfactual run long and
 # slow every call down. A response cut off at this limit is caught as
@@ -51,6 +62,15 @@ def cached_text_block(text: str) -> dict:
     including it is cached as a prefix. Below the model's minimum cacheable
     length (1024 tokens on Sonnet 4.6) the marker silently does nothing."""
     return {"type": "text", "text": text, "cache_control": cache_control()}
+
+
+def cached_system_prompt(system: Prompt | None) -> Prompt:
+    """Wraps a static system prompt string in an ephemeral cached block."""
+    if not system:
+        return ""
+    if isinstance(system, list):
+        return system
+    return [cached_text_block(system)]
 
 # Phrases that mark a model thinking out loud mid-answer rather than giving
 # a clean, final response (e.g. "...index 1 (value 5... wait, still 5) -
@@ -107,8 +127,14 @@ def has_self_correction_marker(text: str) -> bool:
     return any(marker in lowered for marker in SELF_CORRECTION_MARKERS)
 
 
+_ABBREV_PATTERN = re.compile(r"\b(?:e\.g|i\.e|vs|cf|etc|approx|fig)\.", re.IGNORECASE)
+_DECIMAL_OR_ATTR_DOT = re.compile(r"(?<=\w)\.(?=\w)")
+
+
 def _sentence_count(text: str) -> int:
-    return len([s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s])
+    cleaned = _ABBREV_PATTERN.sub("abbrev", text.strip())
+    cleaned = _DECIMAL_OR_ATTR_DOT.sub("_", cleaned)
+    return len([s for s in re.split(r"(?<=[.!?])\s+", cleaned) if s])
 
 
 def field_failure(
@@ -185,6 +211,58 @@ def _strip_code_fences(text: str) -> str:
     return stripped
 
 
+def _extract_json_object(text: str) -> dict:
+    """Parses JSON directly after stripping code fences, or extracts the
+    outermost balanced JSON object if the model included surrounding prose."""
+    stripped = _strip_code_fences(text)
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, dict):
+            return parsed
+        return parsed
+    except json.JSONDecodeError:
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start != -1 and end > start:
+            parsed = json.loads(stripped[start : end + 1])
+            return parsed
+        raise
+
+
+async def call_claude_with_tool_schema(
+    prompt: Prompt,
+    system: Prompt | None,
+    tool_name: str,
+    input_schema: dict,
+    *,
+    description: str = "Return structured pedagogical output matching the schema.",
+    model: str | None = None,
+    timeout: float | None = None,
+    token_limit: int | None = None,
+) -> tuple[dict, CallMetadata]:
+    """Invokes Claude with strict tool-use schema enforcement (`tool_choice`)
+    so the response is guaranteed to conform to `input_schema` without brittle
+    free-text JSON formatting errors."""
+    start = time.monotonic()
+    response = await client.messages.create(
+        model=model or model_name,
+        max_tokens=token_limit or max_tokens,
+        temperature=temperature,
+        timeout=timeout or request_timeout_seconds,
+        system=cached_system_prompt(system),
+        tools=[{"name": tool_name, "description": description, "input_schema": input_schema}],
+        tool_choice={"type": "tool", "name": tool_name},
+        messages=[{"role": "user", "content": prompt}],
+    )
+    meta = _metadata(response.usage, start, response.stop_reason)
+    for block in getattr(response, "content", []):
+        if getattr(block, "type", None) == "tool_use" and isinstance(getattr(block, "input", None), dict):
+            return _sanitize_feedback_dashes(block.input), meta
+        if hasattr(block, "text") and isinstance(block.text, str):
+            return _sanitize_feedback_dashes(_extract_json_object(block.text)), meta
+    raise ValueError(f"No tool_use or JSON block returned for tool {tool_name}")
+
+
 async def _create_message(
     prompt: Prompt,
     system: Prompt | None,
@@ -215,7 +293,7 @@ def _sanitize_feedback_dashes(feedback: dict) -> dict:
 async def call_claude_for_feedback(prompt: str, system: str | None = None) -> tuple[dict, CallMetadata]:
     text, metadata = await _create_message(prompt, system)
     try:
-        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text))), metadata
+        return _sanitize_feedback_dashes(_extract_json_object(text)), metadata
     except json.JSONDecodeError:
         # Retry once, telling the model exactly what it did wrong. If this
         # also fails to parse, give up and let the caller fall back - a
@@ -226,7 +304,7 @@ async def call_claude_for_feedback(prompt: str, system: str | None = None) -> tu
             "fences, no commentary before or after it."
         )
         text, metadata = await _create_message(retry_prompt, system)
-        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text))), metadata
+        return _sanitize_feedback_dashes(_extract_json_object(text)), metadata
 
 
 async def call_claude_for_text(prompt: str, system: str | None = None) -> tuple[str, CallMetadata]:
@@ -265,7 +343,7 @@ async def attempt_feedback(
         token_limit=token_limit,
     )
     try:
-        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text))), metadata
+        return _sanitize_feedback_dashes(_extract_json_object(text)), metadata
     except json.JSONDecodeError:
         return None, metadata
 
@@ -313,7 +391,7 @@ async def stream_message(
 def parse_feedback_json(text: str) -> dict | None:
     """The same parse attempt_feedback applies, for text assembled from a stream."""
     try:
-        return _sanitize_feedback_dashes(json.loads(_strip_code_fences(text)))
+        return _sanitize_feedback_dashes(_extract_json_object(text))
     except json.JSONDecodeError:
         return None
 

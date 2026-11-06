@@ -172,3 +172,18 @@ def test_a_response_cut_off_at_the_token_limit_is_retried_as_truncated():
     assert result.retry_reason == "truncated"
     assert result.value == {"ok": True}
     assert calls == [None, "truncated"]
+
+
+def test_sentence_count_ignores_abbreviations_decimals_and_dot_access():
+    text = (
+        "Check node.left and self.next when the load factor reaches 0.75, e.g. during rehashing. "
+        "That keeps lookups fast in practice."
+    )
+    assert claude_service._sentence_count(text) == 2
+
+
+def test_model_tiering_routes_fast_and_deep_tasks():
+    assert claude_service.select_model_for_task("hint") == claude_service.fast_model_name
+    assert claude_service.select_model_for_task("ask") == claude_service.fast_model_name
+    assert claude_service.select_model_for_task("feynman") == claude_service.deep_model_name
+    assert claude_service.select_model_for_task("prediction") == claude_service.deep_model_name

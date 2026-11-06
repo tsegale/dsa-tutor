@@ -20,9 +20,16 @@ from fastapi import APIRouter, Response
 
 from models.request_models import AskRequest
 from models.response_models import AskResponse
+from prompts.complexity import COMPLEXITY, topic_slug
 from prompts.registry import get_algorithm_context
 from prompts.templates import ASK_SYSTEM_PROMPT, ASK_USER_TEMPLATE
-from services.claude_service import attempt_text, call_with_bounded_retry, field_failure, uses_foreign_array_notation
+from services.claude_service import (
+    attempt_text,
+    call_with_bounded_retry,
+    field_failure,
+    sanitize_dashes,
+    uses_foreign_array_notation,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -90,6 +97,47 @@ def _answer_failure(answer: str, pseudocode: str) -> str | None:
     return None
 
 
+def _deterministic_ask_answer(request: AskRequest, algorithm_context: str, pseudocode: str) -> str:
+    """Context-aware offline responder for Demo mode when the live Claude
+    service is unreachable or unconfigured. Grounded in the current canvas
+    snapshot, algorithm context, and complexity facts without asking a
+    Socratic question back."""
+    q_lower = request.question.lower()
+    state = request.current_state if isinstance(request.current_state, dict) else {}
+    description = str(state.get("description") or "").strip()
+    data = state.get("dataStructureState")
+    active = state.get("activeIndices")
+    slug = topic_slug(request.algorithm_name)
+    comp = COMPLEXITY.get(slug)
+
+    parts: list[str] = []
+
+    if any(k in q_lower for k in ("time", "complex", "big o", "fast", "slow", "worst", "average", "best", "space", "memory")) and comp:
+        parts.append(
+            f"{request.algorithm_name} runs in {comp['best']} best-case, {comp['average']} average-case, "
+            f"and {comp['worst']} worst-case time, with {comp['space']} auxiliary space."
+        )
+        if comp.get("note"):
+            parts.append(str(comp["note"]))
+    elif any(k in q_lower for k in ("step", "now", "happening", "current", "why", "here", "doing")) and description:
+        step_prefix = f"At step {request.step_index}, " if request.step_index is not None else "On this step, "
+        parts.append(f"{step_prefix}the visualiser shows: {description}")
+        if data is not None and isinstance(active, list) and active:
+            parts.append(f"The highlighted positions {active} are currently being inspected in {data}.")
+    else:
+        first_sentences = [s.strip() for s in algorithm_context.split(".") if s.strip()][:2]
+        if first_sentences:
+            parts.append(". ".join(first_sentences) + ".")
+        if description:
+            parts.append(f"On the current canvas step: {description}")
+
+    if not parts:
+        return FALLBACK_ANSWER
+
+    answer = sanitize_dashes(" ".join(parts))
+    return answer
+
+
 @router.post("/", response_model=AskResponse)
 async def ask(request: AskRequest, response: Response) -> AskResponse:
     algorithm_context, registry_pseudocode, _ = get_algorithm_context(request.algorithm_name)
@@ -124,12 +172,18 @@ async def ask(request: AskRequest, response: Response) -> AskResponse:
         response.headers["X-AI-Latency-Ms"] = str(result.latency_ms)
         response.headers["X-AI-Output-Tokens"] = str(result.output_tokens)
         if result.value is None:
-            return AskResponse(answer=FALLBACK_ANSWER, ai_generated=False)
+            return AskResponse(
+                answer=_deterministic_ask_answer(request, algorithm_context, pseudocode),
+                ai_generated=False,
+            )
         return AskResponse(answer=result.value)
     except Exception:
         logger.warning(
-            "AI ask call failed for algorithm=%s, falling back",
+            "AI ask call failed for algorithm=%s, falling back to deterministic responder",
             request.algorithm_name,
             exc_info=True,
         )
-        return AskResponse(answer=FALLBACK_ANSWER, ai_generated=False)
+        return AskResponse(
+            answer=_deterministic_ask_answer(request, algorithm_context, pseudocode),
+            ai_generated=False,
+        )

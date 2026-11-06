@@ -13,6 +13,7 @@ from routers.ask import (
     MAX_HISTORY_TURNS,
     MAX_QUESTION_CHARS,
     _answer_failure,
+    _deterministic_ask_answer,
     _format_conversation,
     _format_state,
 )
@@ -123,3 +124,19 @@ def test_request_carries_no_scaffolding_level():
     # there is nothing to calibrate. A scaffolding level appearing here
     # would mean the Socratic machinery had leaked into Demo.
     assert "scaffolding_level" not in AskRequest.model_fields
+
+
+def test_deterministic_ask_fallback_answers_complexity_and_step_questions():
+    comp_req = _request(question="What is the time and space complexity of Bubble Sort?")
+    comp_ans = _deterministic_ask_answer(comp_req, "Bubble Sort compares adjacent elements.", PSEUDOCODE)
+    assert "O(n" in comp_ans
+    assert "?" not in comp_ans
+
+    step_req = _request(
+        question="What is happening at this step?",
+        step_index=3,
+        current_state={"dataStructureState": [5, 3, 1], "activeIndices": [0, 1], "description": "Comparing 5 and 3"},
+    )
+    step_ans = _deterministic_ask_answer(step_req, "Bubble Sort compares adjacent elements.", PSEUDOCODE)
+    assert "step 3" in step_ans
+    assert "Comparing 5 and 3" in step_ans

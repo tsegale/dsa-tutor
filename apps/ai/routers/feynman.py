@@ -264,6 +264,141 @@ def _not_graded(feedback_summary: str, follow_up: str, failure_reason: str, rubr
     )
 
 
+_SYNONYM_GROUPS: tuple[set[str], ...] = (
+    {"adjacent", "neighbour", "neighbor", "neighbors", "neighbours", "pair", "beside"},
+    {"swap", "swaps", "swapped", "swapping", "exchange", "flip", "switch", "trade"},
+    {"greater", "bigger", "larger", "higher", "more"},
+    {"smaller", "less", "lower", "fewer", "minimum", "min"},
+    {"pass", "passes", "sweep", "iteration", "loop", "round"},
+    {"early", "stop", "stops", "terminate", "finish", "sorted", "no"},
+    {"middle", "midpoint", "mid", "center", "half", "halve", "halves", "halving", "divide", "split"},
+    {"queue", "fifo", "first"},
+    {"stack", "lifo", "last", "recursion", "recursive"},
+    {"visited", "mark", "marked", "seen", "repeat", "twice"},
+    {"left", "right", "root", "subtree", "child", "leaf", "parent", "node", "tree"},
+    {"height", "balanced", "chain", "skewed", "log", "depth"},
+    {"inorder", "sorted", "order", "traversal"},
+)
+
+
+def _expand_tokens(tokens: set[str]) -> set[str]:
+    expanded = set(tokens)
+    for token in list(tokens):
+        if len(token) >= 5:
+            expanded.add(token[:5])
+        for group in _SYNONYM_GROUPS:
+            if token in group or any(token.startswith(g[:4]) for g in group if len(g) >= 4):
+                expanded |= group
+    return expanded
+
+
+def _concept_met_deterministically(criterion: str, label: str, student_explanation: str) -> bool:
+    lowered = student_explanation.lower()
+    words = re.findall(r"[a-z0-9']+", lowered)
+    if len(words) < 6:
+        return False
+
+    student_tokens = _expand_tokens({w for w in words if len(w) >= 3 and w not in _STOPWORDS})
+
+    if label == CLARITY_LABEL:
+        connectors = ("because", "so", "until", "when", "after", "each", "step", "then", "first", "next", "since", "while")
+        has_connector = any(f" {c} " in f" {lowered} " for c in connectors)
+        return len(words) >= 16 and has_connector
+
+    if label == TIME_LABEL:
+        time_terms = ("time", "o(", "log", "n^2", "linear", "quadratic", "constant", "worst", "average", "best", "steps", "comparisons", "pass", "halv")
+        return any(t in lowered for t in time_terms) and len(words) >= 15
+
+    if label == SPACE_LABEL:
+        space_terms = ("space", "memory", "in-place", "in place", "extra", "auxiliary", "stack", "copy", "o(1)", "o(n)", "frame")
+        return any(t in lowered for t in space_terms) and len(words) >= 15
+
+    target_words = {
+        w
+        for w in re.findall(r"[a-z]+", (criterion + " " + label).lower())
+        if len(w) >= 4 and w not in _STOPWORDS and w not in {"mentions", "explains", "describes", "states", "using", "that"}
+    }
+    if not target_words:
+        return len(words) >= 12
+
+    matched = sum(
+        1
+        for tw in target_words
+        if tw in student_tokens or (len(tw) >= 5 and tw[:5] in student_tokens)
+    )
+    required = 1 if len(target_words) <= 2 else min(2, max(1, len(target_words) // 3))
+    return matched >= required
+
+
+def evaluate_feynman_deterministic(
+    algorithm_name: str,
+    student_explanation: str,
+    rubric: list[tuple[str, str]],
+    rubric_key: str | None = None,
+) -> FeynmanResponse:
+    """Offline pedagogical rubric evaluator for Feynman mode. Grades each
+    rubric concept deterministically from the student's own words and builds
+    a beginner-persona response and targeted follow-up question."""
+    rubric_results = [
+        FeynmanRubricItemResult(
+            concept_label=label,
+            met=_concept_met_deterministically(criterion, label, student_explanation),
+        )
+        for criterion, label in rubric
+    ]
+    met_labels = [r.concept_label for r in rubric_results if r.met]
+    missing_concepts = [r.concept_label for r in rubric_results if not r.met]
+    met_count = len(met_labels)
+    score = round((met_count / len(rubric_results)) * 100) if rubric_results else 0
+    complexity_met = all(r.met for r in rubric_results if r.concept_label in COMPLEXITY_LABELS)
+    is_complete = bool(rubric_results) and (met_count / len(rubric_results)) >= COMPLETION_THRESHOLD and complexity_met
+
+    priority_missing: str | None = None
+    for priority_label in (TIME_LABEL, SPACE_LABEL, CLARITY_LABEL):
+        if priority_label in missing_concepts:
+            priority_missing = priority_label
+            break
+    if priority_missing is None and missing_concepts:
+        priority_missing = missing_concepts[0]
+
+    if is_complete or priority_missing is None:
+        feedback_summary = (
+            f"That really clicked for me! You explained how {algorithm_name} works step by step "
+            "and why its time and memory costs behave the way they do."
+        )
+        follow_up = None
+    else:
+        praise_part = (
+            f"I followed the part about {met_labels[0].lower()}."
+            if met_labels
+            else f"Thanks for walking me through {algorithm_name}."
+        )
+        feedback_summary = (
+            f"{praise_part} I am still a bit fuzzy on {priority_missing.lower()}, "
+            "could you walk me through how that part works?"
+        )
+        if priority_missing == TIME_LABEL:
+            follow_up = f"How many steps or comparisons does {algorithm_name} take as the input grows?"
+        elif priority_missing == SPACE_LABEL:
+            follow_up = f"Does {algorithm_name} work in place, or what extra memory does it need?"
+        elif priority_missing == CLARITY_LABEL:
+            follow_up = f"Can you walk through one concrete example of {algorithm_name} in plain English?"
+        else:
+            follow_up = f"How does {priority_missing.lower()} work in {algorithm_name}?"
+
+    return FeynmanResponse(
+        score=score,
+        feedback_summary=feedback_summary,
+        follow_up_question=follow_up,
+        missing_concepts=missing_concepts,
+        is_complete=is_complete,
+        rubric_results=rubric_results,
+        rubric_key=rubric_key,
+        ai_generated=False,
+        failure_reason=None,
+    )
+
+
 def _judgement_failure(rubric: list[tuple[str, str]], data: object) -> str | None:
     """Names why a Feynman judgement cannot be scored, or None. A response
     that does not judge every rubric concept is not evidence that the
@@ -372,18 +507,20 @@ async def evaluate_feynman(request: FeynmanRequest) -> FeynmanResponse:
         rubric=rubric_text,
     )
 
-    fallback = (
-        "Sorry, I lost my train of thought there. Could you try explaining it again?",
-        "Can you explain it again from the beginning?",
-    )
     try:
         data, _metadata = await call_claude_for_feedback(prompt)
     except Exception as e:
-        logger.warning(f"Feynman evaluation failed: {e}")
-        return _not_graded(*fallback, "error", rubric_key)
+        logger.warning(f"Feynman evaluation failed, using deterministic rubric evaluator: {e}")
+        det = evaluate_feynman_deterministic(
+            request.algorithm_name, request.student_explanation, rubric, rubric_key
+        )
+        return det.model_copy(update={"score": None, "ai_generated": False, "failure_reason": "error"})
     why = _judgement_failure(rubric, data)
     if why:
-        logger.warning(f"Feynman judgement failed validation: {why}")
-        return _not_graded(*fallback, why, rubric_key)
+        logger.warning(f"Feynman judgement failed validation ({why}), using deterministic rubric evaluator")
+        det = evaluate_feynman_deterministic(
+            request.algorithm_name, request.student_explanation, rubric, rubric_key
+        )
+        return det.model_copy(update={"score": None, "ai_generated": False, "failure_reason": why})
     result = score_feynman_response(rubric, data)
     return result.model_copy(update={"rubric_key": rubric_key, "ai_model": model_name})

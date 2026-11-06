@@ -52,7 +52,7 @@ def test_grid_next_cell_accepts_either_tied_lowest_priority_cell():
     current_state = {
         "criticalJunctionType": "GRID_NEXT_CELL",
         "dataStructureState": {
-            "algorithmType": "bfs",
+            "algorithmType": "dijkstra",
             "frontierCells": [[0, 0], [1, 1], [2, 2]],
             "grid": _grid({(0, 0): {"gScore": 4}, (1, 1): {"gScore": 4}, (2, 2): {"gScore": 9}}),
         },
@@ -60,6 +60,30 @@ def test_grid_next_cell_accepts_either_tied_lowest_priority_cell():
     assert evaluate_answer(_request(current_state, "0,0")) is True
     assert evaluate_answer(_request(current_state, "1,1")) is True
     assert evaluate_answer(_request(current_state, "2,2")) is False
+
+
+def test_grid_next_cell_bfs_and_dfs_follow_arrival_order_not_g_score():
+    bfs_state = {
+        "criticalJunctionType": "GRID_NEXT_CELL",
+        "dataStructureState": {
+            "algorithmType": "bfs",
+            "frontierCells": [[0, 0], [1, 1], [2, 2]],
+            "grid": _grid({(0, 0): {"gScore": 4}, (1, 1): {"gScore": 4}, (2, 2): {"gScore": 4}}),
+        },
+    }
+    assert evaluate_answer(_request(bfs_state, "0,0")) is True
+    assert evaluate_answer(_request(bfs_state, "1,1")) is False
+
+    dfs_state = {
+        "criticalJunctionType": "GRID_NEXT_CELL",
+        "dataStructureState": {
+            "algorithmType": "dfs",
+            "frontierCells": [[0, 0], [1, 1], [2, 2]],
+            "grid": _grid({(0, 0): {"gScore": 1}, (1, 1): {"gScore": 2}, (2, 2): {"gScore": 5}}),
+        },
+    }
+    assert evaluate_answer(_request(dfs_state, "2,2")) is True
+    assert evaluate_answer(_request(dfs_state, "0,0")) is False
 
 
 def test_grid_next_cell_astar_uses_g_plus_h_for_ties():

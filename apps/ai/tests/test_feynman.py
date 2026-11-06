@@ -240,3 +240,22 @@ def test_an_unavailable_model_is_not_scored_as_zero(monkeypatch):
     assert body["score"] is None
     assert body["failure_reason"] == "error"
     assert body["ai_generated"] is False
+    # Offline deterministic rubric fallback populates per-concept results and a specific follow-up
+    assert len(body["rubric_results"]) > 0
+    assert body["follow_up_question"] is not None
+
+
+def test_deterministic_feynman_evaluator_scores_complete_explanation():
+    key, rubric = feynman.rubric_for("bubble-sort")
+    full_explanation = (
+        "In Bubble Sort, we repeatedly compare two neighbour elements at a time and swap them "
+        "when the left element is bigger than the right one. Because we do multiple passes over the list, "
+        "each full pass pushes the largest remaining unsorted number to its final sorted spot at the end. "
+        "If an entire pass finishes with zero swaps, we stop early because the array is already sorted. "
+        "In the worst and average case it takes O(n^2) time and comparisons, or O(n) best case when sorted, "
+        "and it works in-place using O(1) extra memory space."
+    )
+    res = feynman.evaluate_feynman_deterministic("Bubble Sort", full_explanation, rubric, key)
+    assert res.is_complete is True
+    assert res.score is not None and res.score >= 85
+    assert res.follow_up_question is None

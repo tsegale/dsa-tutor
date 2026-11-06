@@ -89,7 +89,7 @@ def _evaluate_target_check(ds: dict, student_answer: str | None) -> bool:
 
 def _evaluate_midpoint_decision(ds: dict, student_answer: str | None) -> bool:
     arr = ds.get("array") or []
-    mid = ds.get("mid")
+    mid = ds.get("mid") if ds.get("mid") is not None else ds.get("blockEnd")
     target = ds.get("target")
     if mid is None or mid < 0 or mid >= len(arr):
         return False
@@ -181,7 +181,7 @@ def _evaluate_heap_compare(wrapper: dict, student_answer: str | None) -> bool:
 
 
 def _evaluate_heap_extract(student_answer: str | None) -> bool:
-    return student_answer == "extract"
+    return student_answer in ("extract-root", "extract")
 
 
 def _evaluate_count_increment(ds: dict, student_answer: str | None) -> bool:
@@ -420,7 +420,8 @@ def _evaluate_grid_next_cell(ds: dict, student_answer: str | None) -> bool:
     grid = ds.get("grid")
     if not frontier or not grid:
         return False
-    is_astar = ds.get("algorithmType") == "astar"
+    algo_type = ds.get("algorithmType")
+    is_astar = algo_type == "astar"
 
     def priority(cell: list[int]) -> float:
         r, c = cell
@@ -429,11 +430,25 @@ def _evaluate_grid_next_cell(ds: dict, student_answer: str | None) -> bool:
         h = info.get("hScore", 0) or 0
         return g + h if is_astar else g
 
-    # Ties in BFS/Dijkstra/A* frontiers are common (e.g. two cells reached
-    # by the same shortest distance) - any cell at the minimum priority is
-    # a valid next pick, not only whichever min() happens to return first.
-    best_priority = min(priority(cell) for cell in frontier)
-    valid_answers = {f"{r},{c}" for r, c in frontier if priority([r, c]) == best_priority}
+    if algo_type == "bfs":
+        first = frontier[0]
+        valid_answers = {f"{first[0]},{first[1]}"}
+        has_distinct_distractor = len(frontier) > 1
+    elif algo_type == "dfs":
+        last = frontier[-1]
+        valid_answers = {f"{last[0]},{last[1]}"}
+        has_distinct_distractor = len(frontier) > 1
+    else:
+        # Ties in Dijkstra/A* frontiers are common - any cell at the minimum
+        # priority is a valid next pick. When all frontier cells share one
+        # priority (or only one cell is on the frontier), tileBuilder asks the
+        # conceptual 'rule-correct' question instead.
+        best_priority = min(priority(cell) for cell in frontier)
+        valid_answers = {f"{r},{c}" for r, c in frontier if priority([r, c]) == best_priority}
+        has_distinct_distractor = any(priority(cell) != best_priority for cell in frontier)
+
+    if not has_distinct_distractor and student_answer == "rule-correct":
+        return True
     return student_answer in valid_answers
 
 
@@ -669,6 +684,8 @@ def _evaluate_pointer_move(ds: dict, student_answer: str | None) -> bool:
             return False
         total = array[left] + array[right]
         target = ds["target"]
+        if student_answer == "found":
+            return total == target
         if student_answer == "move-left":
             return total < target
         if student_answer == "move-right":
@@ -704,6 +721,83 @@ def _evaluate_window_expand(ds: dict, student_answer: str | None) -> bool:
         return False
     new_sum = window_sum - array[window_start] + array[window_end + 1]
     return student_answer == f"sum-{new_sum}"
+
+
+# --- Techniques track (Module 4 paradigms) ----------------------------
+
+
+def _evaluate_prefix_cell(ds: dict, student_answer: str | None) -> bool:
+    current = ds.get("current") or [0, 0]
+    col = current[1] if len(current) > 1 else 0
+    table = ds.get("table") or []
+    row0 = table[0] if table else []
+    previous = row0[col - 1] if 0 <= col - 1 < len(row0) and row0[col - 1] is not None else 0
+    inp = ds.get("input") or []
+    element = inp[col - 1] if 0 <= col - 1 < len(inp) else 0
+    return student_answer == f"prefix-{previous + element}"
+
+
+def _evaluate_range_query(student_answer: str | None) -> bool:
+    return student_answer == "range-correct"
+
+
+def _evaluate_stack_discharge(ds: dict, student_answer: str | None) -> bool:
+    current = ds.get("current") or [0, 0]
+    col = current[1] if len(current) > 1 else 0
+    inp = ds.get("input") or []
+    marked = ds.get("marked") or []
+    incoming = inp[col] if 0 <= col < len(inp) else 0
+    waiting = marked[-1] if marked else 0
+    top = inp[waiting] if 0 <= waiting < len(inp) else 0
+    discharges = top < incoming
+    return student_answer == ("discharge-yes" if discharges else "discharge-no")
+
+
+def _evaluate_combine_result(student_answer: str | None, description: str) -> bool:
+    matches = [int(m) for m in re.findall(r"(?:left|right|crossing) (-?\d+)", description)]
+    if len(matches) < 3:
+        return False
+    left, right, cross = matches[0], matches[1], matches[2]
+    best = max(left, right, cross)
+    expected = "combine-cross" if best == cross else ("combine-left" if best == left else "combine-right")
+    return student_answer == expected
+
+
+def _evaluate_greedy_choice(ds: dict, student_answer: str | None) -> bool:
+    working = ds.get("working") or ""
+    m = re.search(r"(-?\d+) >= (-?\d+|-inf)", working)
+    compatible = True if not m else (m.group(2) == "-inf" or int(m.group(1)) >= int(m.group(2)))
+    return student_answer == ("greedy-take" if compatible else "greedy-skip")
+
+
+def _evaluate_dp_cell(ds: dict, student_answer: str | None) -> bool:
+    depends_on = ds.get("dependsOn") or []
+    table = ds.get("table") or []
+    current = ds.get("current") or [0, 0]
+    if not depends_on:
+        return False
+    reads = [
+        (table[r][c] if 0 <= r < len(table) and 0 <= c < len(table[r]) and table[r][c] is not None else 0)
+        for r, c in depends_on
+    ]
+    if len(depends_on) == 1:
+        col = current[1] if len(current) > 1 else 0
+        inp = ds.get("input") or []
+        element = inp[col] if 0 <= col < len(inp) else 0
+        extend = reads[0] + element
+        correct = max(extend, element)
+        return student_answer == f"dp1-{correct}"
+    correct = 1 + min(reads)
+    return student_answer == f"dp2-{correct}"
+
+
+def _evaluate_prune_branch(ds: dict, student_answer: str | None) -> bool:
+    total = ds.get("total")
+    target = ds.get("target")
+    if total is None or target is None:
+        return False
+    overshot = total > target
+    return student_answer == ("prune-yes" if overshot else "prune-no")
 
 
 def evaluate_answer(request: PredictionRequest) -> bool:
@@ -892,6 +986,22 @@ def evaluate_answer(request: PredictionRequest) -> bool:
         return _evaluate_window_sum(ds_dict, request.student_answer)
     if junction_type == "WINDOW_EXPAND":
         return _evaluate_window_expand(ds_dict, request.student_answer)
+
+    # Techniques track (Module 4 paradigms)
+    if junction_type == "PREFIX_CELL":
+        return _evaluate_prefix_cell(ds_dict, request.student_answer)
+    if junction_type == "RANGE_QUERY":
+        return _evaluate_range_query(request.student_answer)
+    if junction_type == "STACK_DISCHARGE":
+        return _evaluate_stack_discharge(ds_dict, request.student_answer)
+    if junction_type == "COMBINE_RESULT":
+        return _evaluate_combine_result(request.student_answer, description)
+    if junction_type == "GREEDY_CHOICE":
+        return _evaluate_greedy_choice(ds_dict, request.student_answer)
+    if junction_type == "DP_CELL":
+        return _evaluate_dp_cell(ds_dict, request.student_answer)
+    if junction_type == "PRUNE_BRANCH":
+        return _evaluate_prune_branch(ds_dict, request.student_answer)
 
     return False
 
@@ -1179,9 +1289,74 @@ def build_comparison_context(junction_type: str, wrapper: dict, student_answer: 
 
     if junction_type == "GRID_NEXT_CELL" and isinstance(ds, dict):
         frontier = ds.get("frontierCells") or []
+        algo = ds.get("algorithmType")
+        rule = (
+            "FIFO queue front"
+            if algo == "bfs"
+            else "LIFO stack top"
+            if algo == "dfs"
+            else "lowest priority score"
+        )
         return (
-            f"The current frontier cells are {frontier}. The algorithm ({ds.get('algorithmType')}) "
-            f"picks the one with the lowest priority score next. The student chose: {student_answer}."
+            f"The current frontier cells are {frontier}. The algorithm ({algo}) "
+            f"picks the cell by {rule} next. The student chose: {student_answer}."
+        )
+
+    if junction_type == "PREFIX_CELL" and isinstance(ds, dict):
+        current = ds.get("current") or [0, 0]
+        col = current[1] if len(current) > 1 else 0
+        table = ds.get("table") or []
+        row0 = table[0] if table else []
+        prev = row0[col - 1] if 0 <= col - 1 < len(row0) else 0
+        inp = ds.get("input") or []
+        elem = inp[col - 1] if 0 <= col - 1 < len(inp) else 0
+        return (
+            f"Building prefix[{col}] from prefix[{col - 1}] ({prev}) + arr[{col - 1}] ({elem}) = {prev + elem}. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "RANGE_QUERY" and isinstance(ds, dict):
+        cells = sorted((c for _, c in (ds.get("dependsOn") or [])), reverse=True)
+        high = cells[0] if len(cells) > 0 else 0
+        low = cells[1] if len(cells) > 1 else 0
+        return (
+            f"Answering the range sum query in O(1) using prefix[{high}] - prefix[{low}]. "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "STACK_DISCHARGE" and isinstance(ds, dict):
+        current = ds.get("current") or [0, 0]
+        col = current[1] if len(current) > 1 else 0
+        inp = ds.get("input") or []
+        marked = ds.get("marked") or []
+        incoming = inp[col] if 0 <= col < len(inp) else 0
+        waiting = marked[-1] if marked else 0
+        top = inp[waiting] if 0 <= waiting < len(inp) else 0
+        return (
+            f"Incoming element arr[{col}] = {incoming} is compared against stack top index {waiting} "
+            f"(value {top}). The student chose: {student_answer}."
+        )
+
+    if junction_type == "COMBINE_RESULT":
+        desc = wrapper.get("description") or ""
+        return f"Combining divide-and-conquer subproblems ({desc}). The student chose: {student_answer}."
+
+    if junction_type == "GREEDY_CHOICE" and isinstance(ds, dict):
+        return (
+            f"Evaluating greedy activity selection compatibility ({ds.get('working')}). "
+            f"The student chose: {student_answer}."
+        )
+
+    if junction_type == "DP_CELL" and isinstance(ds, dict):
+        return (
+            f"Computing DP cell {ds.get('current')} from dependencies {ds.get('dependsOn')} "
+            f"(watch: {ds.get('watch')}). The student chose: {student_answer}."
+        )
+
+    if junction_type == "PRUNE_BRANCH" and isinstance(ds, dict):
+        return (
+            f"Backtracking partial sum is {ds.get('total')} against target {ds.get('target')}. "
+            f"The student chose: {student_answer}."
         )
 
     return ""

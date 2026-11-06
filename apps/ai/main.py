@@ -1,10 +1,12 @@
+import hmac
 import json
 import logging
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 load_dotenv()
 
@@ -57,6 +59,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RequestIdMiddleware)
+
+
+@app.middleware("http")
+async def verify_internal_service_key(request: Request, call_next):
+    expected_key = os.getenv("INTERNAL_API_KEY", "").strip()
+    if expected_key and request.method != "OPTIONS" and request.url.path != "/health":
+        provided_key = request.headers.get("X-Internal-Service-Key", "")
+        if not hmac.compare_digest(provided_key, expected_key):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Forbidden: invalid internal service key"},
+            )
+    return await call_next(request)
 
 app.include_router(predictions.router, prefix="/api/v1/predictions", tags=["predictions"])
 app.include_router(hints.router, prefix="/api/v1/hints", tags=["hints"])

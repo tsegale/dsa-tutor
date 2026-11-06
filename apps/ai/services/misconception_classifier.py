@@ -127,4 +127,20 @@ def classify_misconception(
     if junction_type in ("TRIE_CHARACTER_MATCH", "TRIE_INSERT_NEW") and isinstance(ds, dict):
         return _classify_trie(normalized, ds)
 
+    if junction_type == "GRID_NEXT_CELL" and isinstance(ds, dict):
+        frontier = ds.get("frontierCells") or []
+        algo_type = ds.get("algorithmType")
+        if not frontier or normalized == "rule-correct":
+            return None
+        if algo_type == "bfs":
+            right = f"{frontier[0][0]},{frontier[0][1]}"
+            return None if student_answer == right else MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION
+        if algo_type == "dfs":
+            right = f"{frontier[-1][0]},{frontier[-1][1]}"
+            return None if student_answer == right else MisconceptionCategory.TRAVERSAL_ORDER_CONFUSION
+        return MisconceptionCategory.COMPARISON_DIRECTION
+
+    if junction_type == "HEAP_EXTRACT":
+        return None if normalized in ("extract-root", "extract") else MisconceptionCategory.STRUCTURAL_PROPERTY_VIOLATION
+
     return None
