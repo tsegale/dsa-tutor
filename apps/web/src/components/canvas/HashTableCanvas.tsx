@@ -56,7 +56,13 @@ function ChainingCanvas({
               fill={isActive ? ACTIVE_FILL : 'var(--surface-sunk)'}
               stroke="var(--rule)"
             />
-            <text x={20 + BUCKET_WIDTH / 2} y={y + BUCKET_HEIGHT / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: isActive ? ACTIVE_TEXT : 'var(--ink)', fontSize: 12, fontWeight: 600 }}>
+            <text
+              x={20 + BUCKET_WIDTH / 2}
+              y={y + BUCKET_HEIGHT / 2}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{ fill: isActive ? ACTIVE_TEXT : 'var(--ink)', fontSize: 12, fontWeight: 600 }}
+            >
               {i}
             </text>
 
@@ -75,11 +81,25 @@ function ChainingCanvas({
                       transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'backOut' }}
                     >
                       <rect width={CHAIN_NODE_WIDTH} height={CHAIN_NODE_HEIGHT} rx={4} fill={OCCUPIED_FILL} />
-                      <text x={CHAIN_NODE_WIDTH / 2} y={CHAIN_NODE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central" style={{ fill: OCCUPIED_TEXT, fontSize: 11, fontWeight: 600 }}>
+                      <text
+                        x={CHAIN_NODE_WIDTH / 2}
+                        y={CHAIN_NODE_HEIGHT / 2}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        style={{ fill: OCCUPIED_TEXT, fontSize: 11, fontWeight: 600 }}
+                      >
                         {entry.key}:{entry.value}
                       </text>
                       {ci > 0 && (
-                        <line x1={-20} y1={CHAIN_NODE_HEIGHT / 2} x2={0} y2={CHAIN_NODE_HEIGHT / 2} stroke="var(--state-neutral)" strokeWidth={1.5} markerEnd="url(#hash-chain-arrow)" />
+                        <line
+                          x1={-20}
+                          y1={CHAIN_NODE_HEIGHT / 2}
+                          x2={0}
+                          y2={CHAIN_NODE_HEIGHT / 2}
+                          stroke="var(--state-neutral)"
+                          strokeWidth={1.5}
+                          markerEnd="url(#hash-chain-arrow)"
+                        />
                       )}
                     </motion.g>
                   )
@@ -91,8 +111,16 @@ function ChainingCanvas({
               )}
             </AnimatePresence>
 
-            {bucket && bucket.chain.length > 1 && (
-              <line x1={20 + BUCKET_WIDTH} y1={y + BUCKET_HEIGHT / 2} x2={20 + BUCKET_WIDTH + 24} y2={y + BUCKET_HEIGHT / 2} stroke="var(--state-neutral)" strokeWidth={1.5} markerEnd="url(#hash-chain-arrow)" />
+            {bucket && bucket.chain.length > 0 && (
+              <line
+                x1={20 + BUCKET_WIDTH}
+                y1={y + BUCKET_HEIGHT / 2}
+                x2={20 + BUCKET_WIDTH + 24}
+                y2={y + BUCKET_HEIGHT / 2}
+                stroke="var(--state-neutral)"
+                strokeWidth={1.5}
+                markerEnd="url(#hash-chain-arrow)"
+              />
             )}
           </g>
         )
@@ -116,9 +144,50 @@ function OpenAddressingCanvas({
   prefersReducedMotion: boolean
 }) {
   const cellWidth = Math.min(70, (width - 40) / state.capacity)
+  const slotCenterX = (idx: number) => 20 + idx * cellWidth + (cellWidth - 4) / 2
+  const probeHops = state.activeProbeSequence.slice(0, -1).map((fromIdx, step) => ({
+    fromIdx,
+    toIdx: state.activeProbeSequence[step + 1],
+    step: step + 1,
+  }))
 
   return (
-    <svg width={width} height={140} role="img" aria-label={`Hash table with ${state.variant.replace('_', ' ')}, ${state.size} entries`}>
+    <svg width={width} height={156} role="img" aria-label={`Hash table with ${state.variant.replace('_', ' ')}, ${state.size} entries`}>
+      <defs>
+        <marker id="probe-hop-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--state-compare)" />
+        </marker>
+      </defs>
+
+      {/* Probing hop arcs */}
+      {probeHops.map(({ fromIdx, toIdx, step }) => {
+        const x1 = slotCenterX(fromIdx)
+        const x2 = slotCenterX(toIdx)
+        const wraps = toIdx < fromIdx
+        const arcPeak = wraps ? 8 : Math.max(10, 38 - Math.min(22, step * 4))
+        const midX = (x1 + x2) / 2
+        return (
+          <g key={`hop-${step}-${fromIdx}-${toIdx}`}>
+            <path
+              d={`M${x1},48 Q${midX},${arcPeak} ${x2},48`}
+              fill="none"
+              stroke="var(--state-compare)"
+              strokeWidth={1.5}
+              strokeDasharray={wraps ? '4 3' : undefined}
+              markerEnd="url(#probe-hop-arrow)"
+            />
+            <text
+              x={midX}
+              y={Math.max(9, arcPeak + 4)}
+              textAnchor="middle"
+              className="fill-text-muted font-mono text-[9px] dark:fill-dark-text-secondary"
+            >
+              {wraps ? 'wrap' : `+${step}`}
+            </text>
+          </g>
+        )
+      })}
+
       {Array.from({ length: state.capacity }, (_, i) => {
         const x = 20 + i * cellWidth
         const entry = state.buckets.find((b) => b.index === i)?.chain[0]
@@ -146,12 +215,27 @@ function OpenAddressingCanvas({
 
         return (
           <motion.g key={i} layout transition={canvasMove(prefersReducedMotion)}>
-            <rect x={x} y={40} width={cellWidth - 4} height={44} rx={4} fill={fill} stroke={entry || isFinalTarget || wasProbed || isDeleted ? 'none' : EMPTY_STROKE} strokeDasharray={entry || isFinalTarget || wasProbed || isDeleted ? undefined : '3 3'} />
-            <text x={x + (cellWidth - 4) / 2} y={40 + 22} textAnchor="middle" dominantBaseline="central" style={{ fill: textFill, fontSize: isDeleted ? 9 : 12, fontWeight: 600 }}>
-              {entry ? `${entry.key}` : isDeleted ? 'DELETED' : ''}
+            <rect
+              x={x}
+              y={52}
+              width={cellWidth - 4}
+              height={44}
+              rx={4}
+              fill={fill}
+              stroke={isDeleted ? 'var(--state-error)' : entry || isFinalTarget || wasProbed ? 'none' : EMPTY_STROKE}
+              strokeDasharray={isDeleted ? '3 2' : entry || isFinalTarget || wasProbed ? undefined : '3 3'}
+            />
+            <text
+              x={x + (cellWidth - 4) / 2}
+              y={52 + 22}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{ fill: textFill, fontSize: isDeleted ? 8 : 12, fontWeight: 600 }}
+            >
+              {entry ? `${entry.key}` : isDeleted ? 'TOMBSTONE' : ''}
             </text>
-            <text x={x + (cellWidth - 4) / 2} y={94} textAnchor="middle" className="fill-text-muted text-[10px] dark:fill-dark-text-secondary">
-              {i}
+            <text x={x + (cellWidth - 4) / 2} y={110} textAnchor="middle" className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
+              [{i}]
             </text>
           </motion.g>
         )
@@ -178,42 +262,53 @@ export default function HashTableCanvas({ width = 600 }: HashTableCanvasProps) {
   }
 
   const loadFactor = state.capacity > 0 ? state.size / state.capacity : 0
+  const loadPct = Math.min(100, Math.round(loadFactor * 100))
   const isHashBucketPending = snapshot?.isPredictionRequired && snapshot.criticalJunctionType === 'HASH_BUCKET'
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 flex-col gap-1 px-3 pt-2 pb-1">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-            <div className="h-1 w-[120px] overflow-hidden rounded-full bg-border">
+            <div className="h-1 w-[110px] overflow-hidden rounded-full bg-border">
               <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
-          <span
-            className={cn(
-              'rounded-md px-2 py-0.5 text-[10px] font-semibold',
-              loadFactor > 0.7 ? 'bg-error-light text-error' : 'bg-surface-sunk text-text-muted',
-            )}
-          >
-            load factor α = {loadFactor.toFixed(2)}
-            {loadFactor > 0.7 ? ' — consider resizing' : ''}
-          </span>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-sunk px-2 py-0.5 dark:border-dark-border">
+            <span className={cn('font-mono text-[10px] font-semibold', loadFactor > 0.7 ? 'text-error' : 'text-text-secondary dark:text-dark-text-secondary')}>
+              α = {loadFactor.toFixed(2)}
+            </span>
+            <div className="relative h-1.5 w-16 overflow-hidden rounded-full bg-border" title="Load factor threshold 0.70">
+              <div
+                className={cn('h-full rounded-full transition-all', loadFactor > 0.7 ? 'bg-error' : 'bg-state-current')}
+                style={{ width: `${loadPct}%` }}
+              />
+              <span className="absolute top-0 bottom-0 left-[70%] w-px bg-text-primary/50" aria-hidden="true" />
+            </div>
+            {loadFactor > 0.7 && <span className="text-[10px] font-semibold text-error">resize!</span>}
+          </div>
         </div>
         <OperationBanner label={operationLabel} />
       </div>
 
-
       {state.activeKey !== null && (
         <div className="mt-2 px-3">
-          <div className="rounded-md border border-border bg-surface-sunk px-3 py-1.5 text-center font-mono text-[12px] text-text-primary dark:border-dark-border dark:bg-dark-border dark:text-dark-text-primary">
-            hash({state.activeKey}) = {state.activeKey} % {state.capacity} ={' '}
-            {isHashBucketPending ? '?' : (state.hashResult ?? '?')}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-md border border-border bg-surface-sunk px-3 py-1.5 font-mono text-[11px] text-text-primary dark:border-dark-border dark:text-dark-text-primary">
+            <span className="rounded bg-card px-1.5 py-0.5">key = {state.activeKey}</span>
+            <span className="text-text-muted">&rarr;</span>
+            <span className="rounded bg-card px-1.5 py-0.5">
+              {state.activeKey} mod {state.capacity}
+            </span>
+            <span className="text-text-muted">&rarr;</span>
+            <span className="rounded px-1.5 py-0.5 font-semibold" style={{ backgroundColor: 'var(--state-compare)', color: 'var(--state-compare-ink)' }}>
+              bucket {isHashBucketPending ? '?' : (state.hashResult ?? '?')}
+            </span>
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-auto pt-6">
+      <div className="flex-1 overflow-auto pt-4">
         {state.variant === 'chaining' ? (
           <ChainingCanvas state={state} width={width} prefersReducedMotion={prefersReducedMotion} />
         ) : (

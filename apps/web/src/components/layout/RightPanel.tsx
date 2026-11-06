@@ -281,21 +281,21 @@ export default function RightPanel({
                   has never met the algorithm reads the briefing before any
                   animation plays. Its id is 0 so the existing tab ids, the
                   keyboard shortcuts and the Classic remap all keep working. */}
-              <TabsTrigger value="0" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="0" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
                 Theory
               </TabsTrigger>
               {features.aiTutorTab && (
-                <TabsTrigger value="1" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+                <TabsTrigger value="1" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
                   AI Tutor
                 </TabsTrigger>
               )}
-              <TabsTrigger value="2" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="2" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
                 Pseudocode
               </TabsTrigger>
-              <TabsTrigger value="3" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="3" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
                 Complexity
               </TabsTrigger>
-              <TabsTrigger value="4" className="shrink-0 px-[10px] py-2 text-[12px] tracking-normal">
+              <TabsTrigger value="4" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
                 Step log
               </TabsTrigger>
             </TabsList>

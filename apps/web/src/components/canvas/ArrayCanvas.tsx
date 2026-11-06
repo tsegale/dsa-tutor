@@ -417,6 +417,25 @@ export default function ArrayCanvas({
     () => (isSearch || algorithmSlug === 'jump-search' ? extractSearchRange(snapshot?.dataStructureState, valueCount) : null),
     [isSearch, algorithmSlug, snapshot, valueCount],
   )
+  const searchMid = useMemo(() => {
+    if (!isSearch || !snapshot?.dataStructureState || typeof snapshot.dataStructureState !== 'object') return null
+    const s = snapshot.dataStructureState as Record<string, unknown>
+    const m =
+      typeof s.midIndex === 'number'
+        ? s.midIndex
+        : typeof s.mid === 'number'
+          ? s.mid
+          : typeof s.probeIndex === 'number'
+            ? s.probeIndex
+            : null
+    return m !== null && m >= 0 && m < valueCount ? m : null
+  }, [isSearch, snapshot, valueCount])
+  const showComparisonArc =
+    canvasType === CanvasType.ARRAY &&
+    !isSearch &&
+    algorithmSlug !== 'jump-search' &&
+    !ARRAY_OPERATION_SLUGS.has(algorithmSlug ?? '') &&
+    (snapshot?.comparedIndices.length ?? 0) === 2
   const memoryView = useMemo(
     () => extractMemoryView(snapshot?.dataStructureState, valueCount),
     [snapshot, valueCount],
@@ -717,23 +736,27 @@ export default function ArrayCanvas({
                 strokeDasharray="6 4"
               />
             )}
-            <rect
-              x={displayX}
-              y={bar.y + bar.height}
-              width={bar.width}
-              height={12}
-              rx={3}
-              fill="rgba(0,0,0,0.06)"
-            />
-            <text
-              x={displayX + bar.width / 2}
-              y={bar.y + bar.height + 9}
-              textAnchor="middle"
-              className="fill-text-muted text-[9px]"
-              style={{ pointerEvents: 'none' }}
-            >
-              ⠿
-            </text>
+            {isDraggableBar && (
+              <>
+                <rect
+                  x={displayX}
+                  y={bar.y + bar.height}
+                  width={bar.width}
+                  height={12}
+                  rx={3}
+                  fill="rgba(0,0,0,0.06)"
+                />
+                <text
+                  x={displayX + bar.width / 2}
+                  y={bar.y + bar.height + 9}
+                  textAnchor="middle"
+                  className="fill-text-muted text-[9px]"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  ⠿
+                </text>
+              </>
+            )}
             {/* On or just above the bar, horizontal, at readable size and
                 AA contrast - clamped so a tall (max-value) bar's label
                 never clips past the canvas's own top edge. */}
@@ -760,6 +783,49 @@ export default function ArrayCanvas({
         )
       })}
 
+      {/* Curved comparison arc between compared sorting bars */}
+      {showComparisonArc &&
+        bars[snapshot.comparedIndices[0]] &&
+        bars[snapshot.comparedIndices[1]] &&
+        (() => {
+          const [iA, iB] = snapshot.comparedIndices
+          const barA = bars[iA]
+          const barB = bars[iB]
+          const xA = barA.x + barA.width / 2
+          const xB = barB.x + barB.width / 2
+          const minX = Math.min(xA, xB)
+          const maxX = Math.max(xA, xB)
+          const midX = (minX + maxX) / 2
+          const topBarY = Math.min(barA.y, barB.y)
+          const arcTopY = Math.max(16 + labelOffset, topBarY - 26)
+          const startY = Math.max(24 + labelOffset, topBarY - 12)
+          const hideRelation = snapshot.isPredictionRequired && isLiveJunction
+          const vA = barHeightValue(barA.value)
+          const vB = barHeightValue(barB.value)
+          const relation = hideRelation ? 'vs' : vA < vB ? '<' : vA > vB ? '>' : '='
+          return (
+            <g pointerEvents="none">
+              <path
+                d={`M${minX},${startY} Q${midX},${arcTopY} ${maxX},${startY}`}
+                fill="none"
+                stroke="var(--state-compare)"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+              />
+              <rect x={midX - 12} y={arcTopY - 8} width={24} height={15} rx={7} fill="var(--state-compare)" />
+              <text
+                x={midX}
+                y={arcTopY - 0.5}
+                textAnchor="middle"
+                dominantBaseline="central"
+                style={{ fill: 'var(--state-compare-ink)', fontSize: 9, fontWeight: 700 }}
+              >
+                {relation}
+              </text>
+            </g>
+          )
+        })()}
+
       {canvasType === CanvasType.TWO_POINTER &&
         twoPointer.left !== null &&
         twoPointer.right !== null &&
@@ -767,23 +833,26 @@ export default function ArrayCanvas({
         bars[twoPointer.right] && (
           <>
             {twoPointer.left === twoPointer.right ? (
-              <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 6})`}>
-                <polygon points="0,-8 -7,4 7,4" fill="var(--state-swap)" />
-                <text y={16} textAnchor="middle" className="fill-active text-[11px] font-bold">
+              <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 10})`}>
+                <polygon points="0,-10 -5,-3 5,-3" fill="var(--state-swap)" />
+                <rect x={-16} y={-2} width={32} height={15} rx={7} fill="var(--state-swap)" />
+                <text y={5.5} textAnchor="middle" dominantBaseline="central" style={{ fill: 'var(--state-swap-ink)', fontSize: 9, fontWeight: 700 }}>
                   L=R
                 </text>
               </g>
             ) : (
               <>
-                <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 6})`}>
-                  <polygon points="0,-8 -7,4 7,4" fill="var(--state-sorted)" />
-                  <text y={16} textAnchor="middle" className="fill-success text-[11px] font-bold">
+                <g transform={`translate(${bars[twoPointer.left].x + bars[twoPointer.left].width / 2}, ${height - 10})`}>
+                  <polygon points="0,-10 -5,-3 5,-3" fill="var(--state-sorted)" />
+                  <rect x={-11} y={-2} width={22} height={15} rx={7} fill="var(--state-sorted)" />
+                  <text y={5.5} textAnchor="middle" dominantBaseline="central" style={{ fill: 'var(--state-sorted-ink)', fontSize: 9, fontWeight: 700 }}>
                     L
                   </text>
                 </g>
-                <g transform={`translate(${bars[twoPointer.right].x + bars[twoPointer.right].width / 2}, ${height - 6})`}>
-                  <polygon points="0,-8 -7,4 7,4" fill="var(--state-error)" />
-                  <text y={16} textAnchor="middle" className="fill-error text-[11px] font-bold">
+                <g transform={`translate(${bars[twoPointer.right].x + bars[twoPointer.right].width / 2}, ${height - 10})`}>
+                  <polygon points="0,-10 -5,-3 5,-3" fill="var(--state-error)" />
+                  <rect x={-11} y={-2} width={22} height={15} rx={7} fill="var(--state-error)" />
+                  <text y={5.5} textAnchor="middle" dominantBaseline="central" style={{ fill: 'var(--state-error-ink)', fontSize: 9, fontWeight: 700 }}>
                     R
                   </text>
                 </g>
@@ -791,6 +860,59 @@ export default function ArrayCanvas({
             )}
           </>
         )}
+
+      {/* Search pointer pills (low, mid, high) */}
+      {searchRange &&
+        bars[searchRange.low] &&
+        bars[searchRange.high] &&
+        (() => {
+          const tagsByIdx = new Map<number, string[]>()
+          const pushTag = (idx: number | null, tag: string) => {
+            if (idx === null || !bars[idx]) return
+            const existing = tagsByIdx.get(idx) ?? []
+            existing.push(tag)
+            tagsByIdx.set(idx, existing)
+          }
+          pushTag(searchRange.low, 'L')
+          pushTag(searchMid, 'mid')
+          pushTag(searchRange.high, 'H')
+          return (
+            <g pointerEvents="none">
+              {[...tagsByIdx.entries()].map(([idx, tags]) => {
+                const label = tags.join('·')
+                const hasMid = tags.includes('mid')
+                const pillW = Math.max(22, label.length * 6.5 + 8)
+                const cx = bars[idx].x + bars[idx].width / 2
+                const cy = height - 8
+                return (
+                  <g key={`ptr-${idx}`} transform={`translate(${cx}, ${cy})`}>
+                    <rect
+                      x={-pillW / 2}
+                      y={-7}
+                      width={pillW}
+                      height={14}
+                      rx={7}
+                      fill={hasMid ? 'var(--state-compare)' : 'var(--surface-sunk)'}
+                      stroke={hasMid ? 'none' : 'var(--rule-strong)'}
+                    />
+                    <text
+                      y={0}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      style={{
+                        fill: hasMid ? 'var(--state-compare-ink)' : 'var(--ink-2)',
+                        fontSize: 9,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {label}
+                    </text>
+                  </g>
+                )
+              })}
+            </g>
+          )
+        })()}
 
       {/* The part of the array still in play. The band shrinking by half
           is what binary search does; recolouring alone left that to be
@@ -906,36 +1028,61 @@ export default function ArrayCanvas({
         windowOverlay.start !== null &&
         windowOverlay.end !== null &&
         bars[windowOverlay.start] &&
-        bars[windowOverlay.end] && (
-          <>
-            <motion.rect
-              layout
-              x={bars[windowOverlay.start].x}
-              y={PADDING}
-              width={bars[windowOverlay.end].x + bars[windowOverlay.end].width - bars[windowOverlay.start].x}
-              height={height - PADDING * 2}
-              rx={8}
-              fill="color-mix(in srgb, var(--state-current) 15%, transparent)"
-              stroke="var(--state-current)"
-              strokeWidth={2}
-              transition={barMove}
-            />
-            <motion.text
-              layout
-              x={
-                (bars[windowOverlay.start].x + bars[windowOverlay.end].x + bars[windowOverlay.end].width) / 2
-              }
-              y={height - 4}
-              textAnchor="middle"
-              className="fill-active text-[11px] font-semibold"
-              transition={barMove}
-            >
-              {windowOverlay.sum !== null
-                ? `Window sum: ${windowOverlay.sum}`
-                : `Window size: ${windowOverlay.end - windowOverlay.start + 1}`}
-            </motion.text>
-          </>
-        )}
+        bars[windowOverlay.end] &&
+        (() => {
+          const winLeft = bars[windowOverlay.start].x
+          const winRight = bars[windowOverlay.end].x + bars[windowOverlay.end].width
+          const winWidth = winRight - winLeft
+          const winMidX = (winLeft + winRight) / 2
+          const bracketY = Math.max(16 + labelOffset, PADDING - 10)
+          const winLen = windowOverlay.end - windowOverlay.start + 1
+          const metricText =
+            windowOverlay.sum !== null
+              ? `[${windowOverlay.start}..${windowOverlay.end}] · len=${winLen} · sum=${windowOverlay.sum}`
+              : `[${windowOverlay.start}..${windowOverlay.end}] · len=${winLen}`
+          const pillW = Math.max(96, metricText.length * 6.2 + 14)
+          return (
+            <g pointerEvents="none">
+              <motion.rect
+                layout
+                x={winLeft}
+                y={PADDING}
+                width={winWidth}
+                height={height - PADDING * 2}
+                rx={8}
+                fill="color-mix(in srgb, var(--state-current) 15%, transparent)"
+                stroke="var(--state-current)"
+                strokeWidth={2}
+                transition={barMove}
+              />
+              {/* Spanning bracket over window */}
+              <path
+                d={`M${winLeft},${bracketY + 6} L${winLeft},${bracketY} L${winRight},${bracketY} L${winRight},${bracketY + 6}`}
+                fill="none"
+                stroke="var(--state-current)"
+                strokeWidth={2}
+              />
+              <rect
+                x={winMidX - pillW / 2}
+                y={height - 18}
+                width={pillW}
+                height={16}
+                rx={8}
+                fill="var(--state-current)"
+              />
+              <text
+                x={winMidX}
+                y={height - 10}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className="font-mono"
+                style={{ fill: 'var(--state-current-ink)', fontSize: 9.5, fontWeight: 700 }}
+              >
+                {metricText}
+              </text>
+            </g>
+          )
+        })()}
     </svg>
     </>
   )

@@ -396,7 +396,7 @@ export const PSEUDOCODE: Record<string, string[]> = {
     '  frontier = walls adjacent to the maze',
     '  while frontier not empty:',
     '    pick a random frontier wall; carve it and its cell into the maze',
-    '  add that cell’s new frontier walls',
+    "  add that cell's new frontier walls",
   ],
   'maze-kruskal': [
     'generate_maze_kruskal(rows, cols):',

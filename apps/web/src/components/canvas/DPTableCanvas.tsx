@@ -1,27 +1,6 @@
-import { useAlgorithmStore, selectCurrentSnapshot, selectProgressPercent } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot, selectIsLiveJunction, selectProgressPercent } from '@/store/useAlgorithmStore'
 import type { DPTableState } from '@/engine/dpTable'
 import { cn } from '@/lib/utils'
-
-/**
- * A table being filled in, with arrows from the cells the current one is
- * computed from.
- *
- * Those arrows are the point. A dynamic programming recurrence written as
- * algebra is a line a student copies; drawn as "this cell, from those
- * cells", it is a shape they can read off the picture and reconstruct the
- * algebra from. Edit distance's cell reaching up, left and diagonally is
- * the clearest statement of what the three edit operations ARE.
- *
- * Shared by four topics - prefix sums, the monotonic stack's answer array,
- * and both dynamic programming topics - because they are the same picture
- * with different numbers of rows. A 1D table is one row; nothing else
- * changes.
- *
- * Unfilled cells are drawn, dimmed, from the first step: the table's shape
- * is a fact about the problem, not something that grows, and a canvas that
- * resized on every step would be unreadable. No brand colour anywhere -
- * this is a canvas, so every colour is an algorithm-state token.
- */
 
 interface DPTableCanvasProps {
   width?: number
@@ -35,6 +14,7 @@ const INPUT_STRIP = 46
 
 export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanvasProps) {
   const snapshot = useAlgorithmStore(selectCurrentSnapshot)
+  const isLiveJunction = useAlgorithmStore(selectIsLiveJunction)
   const algorithmName = useAlgorithmStore((state) => state.algorithmName)
   const progressPercent = useAlgorithmStore(selectProgressPercent)
   const state = snapshot?.dataStructureState as DPTableState | undefined
@@ -62,8 +42,6 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
   const progressColorClass =
     progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
 
-  // One cell size for both axes, so the table stays square-celled however
-  // long the words are.
   const cell = Math.max(
     MIN_CELL,
     Math.min(
@@ -81,25 +59,33 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
 
   const filled = new Set(state.filled.map(([r, c]) => `${r},${c}`))
   const dependsOn = new Set(state.dependsOn.map(([r, c]) => `${r},${c}`))
+  const tracebackSet = new Set((state.traceback ?? []).map(([r, c]) => `${r},${c}`))
   const marked = new Set(state.marked)
   const [currentRow, currentCol] = state.current ?? [-1, -1]
+  const hideOpLabels = Boolean(snapshot?.isPredictionRequired) && isLiveJunction
+  const showEditOpLabels = rows > 1 && cols > 1 && state.dependsOn.length === 3 && cell >= 34 && !hideOpLabels
 
   const inputCell = hasInput ? Math.max(MIN_CELL, Math.min(cell, Math.floor((width - 24) / state.input.length))) : 0
 
-  // Read out as a sentence, so a screen reader gets the step rather than a
-  // grid of numbers it cannot navigate.
   const canvasLabel = `${algorithmName}, step ${snapshot!.stepIndex + 1}: ${snapshot!.description}`
 
   return (
     <div className="flex h-full flex-col">
-      <div className="absolute top-2 right-3 left-3 z-10 flex items-center gap-2">
-        <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
-        <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
-          <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+      <div className="absolute top-2 right-3 left-3 z-10 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">Progress</span>
+          <div className="h-1 w-[100px] overflow-hidden rounded-full bg-border">
+            <div className={cn('h-full rounded-full', progressColorClass)} style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
+            {progressPercent}%
+          </span>
         </div>
-        <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">
-          {progressPercent}%
-        </span>
+        {tracebackSet.size > 0 && (
+          <span className="rounded bg-surface-sunk px-2 py-0.5 font-mono text-[10px] text-text-secondary dark:text-dark-text-secondary">
+            optimal alignment path highlighted
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 items-center justify-center overflow-auto pt-9">
@@ -115,7 +101,6 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
             </marker>
           </defs>
 
-          {/* The problem input, above the table it is being read into. */}
           {hasInput && (
             <g>
               {state.input.map((value, index) => (
@@ -149,7 +134,6 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
             </g>
           )}
 
-          {/* Column headings. */}
           {state.colLabels.map((label, col) => (
             <text
               key={`col-${col}`}
@@ -162,8 +146,6 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
             </text>
           ))}
 
-          {/* Row headings, left off entirely for a single-row table, where
-              the one label is noise next to the column headings. */}
           {rows > 1 &&
             state.rowLabels.map((label, row) => (
               <text
@@ -183,6 +165,7 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
               const isCurrent = r === currentRow && c === currentCol
               const isDependency = dependsOn.has(key)
               const isFilled = filled.has(key)
+              const onTraceback = tracebackSet.has(key)
               return (
                 <g key={key}>
                   <rect
@@ -196,13 +179,15 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
                         ? 'var(--state-current)'
                         : isDependency
                           ? 'var(--state-compare)'
-                          : isFilled
-                            ? 'var(--state-sorted)'
-                            : 'var(--surface-sunk)'
+                          : onTraceback
+                            ? 'var(--state-current)'
+                            : isFilled
+                              ? 'var(--state-sorted)'
+                              : 'var(--surface-sunk)'
                     }
-                    stroke={isFilled || isCurrent || isDependency ? 'none' : 'var(--rule)'}
-                    strokeWidth={1}
-                    opacity={isFilled || isCurrent || isDependency ? 1 : 0.65}
+                    stroke={onTraceback ? 'var(--ink)' : isFilled || isCurrent || isDependency ? 'none' : 'var(--rule)'}
+                    strokeWidth={onTraceback ? 1.5 : 1}
+                    opacity={isFilled || isCurrent || isDependency || onTraceback ? 1 : 0.65}
                   />
                   <text
                     x={xOf(c) + (cell - 2) / 2}
@@ -210,7 +195,7 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
                     textAnchor="middle"
                     className="font-mono text-[11px]"
                     fill={
-                      isCurrent
+                      isCurrent || onTraceback
                         ? 'var(--state-current-ink)'
                         : isDependency
                           ? 'var(--state-compare-ink)'
@@ -226,23 +211,61 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
             }),
           )}
 
-          {/* The recurrence, drawn: one arrow per cell the current one
-              reads. This is the only part of the picture that is not
-              simply the data. */}
+          {/* Optimal traceback polyline on final step */}
+          {state.traceback && state.traceback.length > 1 && (
+            <polyline
+              points={state.traceback.map(([r, c]) => `${centre(c, xOf)},${centre(r, yOf)}`).join(' ')}
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth={1.75}
+              strokeDasharray="4 2"
+              opacity={0.75}
+            />
+          )}
+
+          {/* Dependency arrows + optional operation tags */}
           {state.current &&
-            state.dependsOn.map(([r, c]) => (
-              <line
-                key={`dep-${r}-${c}`}
-                x1={centre(c, xOf)}
-                y1={centre(r, yOf)}
-                x2={centre(currentCol, xOf) + (c === currentCol ? 0 : c < currentCol ? -cell * 0.3 : cell * 0.3)}
-                y2={centre(currentRow, yOf) + (r === currentRow ? 0 : r < currentRow ? -cell * 0.3 : cell * 0.3)}
-                stroke="var(--state-compare)"
-                strokeWidth={1.5}
-                markerEnd="url(#dp-arrow)"
-                opacity={0.9}
-              />
-            ))}
+            state.dependsOn.map(([r, c]) => {
+              const x1 = centre(c, xOf)
+              const y1 = centre(r, yOf)
+              const x2 = centre(currentCol, xOf) + (c === currentCol ? 0 : c < currentCol ? -cell * 0.3 : cell * 0.3)
+              const y2 = centre(currentRow, yOf) + (r === currentRow ? 0 : r < currentRow ? -cell * 0.3 : cell * 0.3)
+              const opTag =
+                showEditOpLabels
+                  ? r === currentRow - 1 && c === currentCol
+                    ? 'del'
+                    : r === currentRow && c === currentCol - 1
+                      ? 'ins'
+                      : r === currentRow - 1 && c === currentCol - 1
+                        ? 'sub'
+                        : null
+                  : null
+              return (
+                <g key={`dep-${r}-${c}`}>
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="var(--state-compare)"
+                    strokeWidth={1.5}
+                    markerEnd="url(#dp-arrow)"
+                    opacity={0.9}
+                  />
+                  {opTag && (
+                    <text
+                      x={(x1 + x2) / 2}
+                      y={(y1 + y2) / 2 - 2}
+                      textAnchor="middle"
+                      className="font-mono text-[8px] font-bold"
+                      fill="var(--ink)"
+                    >
+                      {opTag}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
 
           {state.working && (
             <text

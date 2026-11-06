@@ -493,41 +493,150 @@ function GraphNodeCircle({
   )
 }
 
+function buildDisjointSets(nodes: GraphNode[], mstEdges: [string, string][]): string[][] {
+  const parent = new Map<string, string>(nodes.map((n) => [n.id, n.id]))
+  const find = (x: string): string => {
+    const p = parent.get(x) ?? x
+    if (p === x) return x
+    const root = find(p)
+    parent.set(x, root)
+    return root
+  }
+  for (const [u, v] of mstEdges) {
+    const ru = find(u)
+    const rv = find(v)
+    if (ru !== rv) parent.set(rv, ru)
+  }
+  const groups = new Map<string, string[]>()
+  for (const n of nodes) {
+    const r = find(n.id)
+    const bucket = groups.get(r) ?? []
+    bucket.push(n.label || n.id)
+    groups.set(r, bucket)
+  }
+  return [...groups.values()]
+}
+
 /** Compact horizontal strip above the canvas showing algorithm-specific
- * live state - the queue/stack contents, MST running cost, or the
- * topological order built so far. */
+ * live auxiliary data structures: Queue (FIFO), Stack (LIFO), Min-PQ,
+ * Topological Order, or MST edges + Union-Find disjoint sets. */
 function GraphStateStrip({ state, algorithmName }: { state: GraphAlgorithmState; algorithmName: string }) {
   const lower = algorithmName.toLowerCase()
+  const isDFS = lower.includes('dfs')
+  const isDijkstraLike = lower.includes('dijkstra') || lower.includes('bellman')
 
   let content: React.ReactNode = null
   if (state.mstEdges !== undefined) {
+    const edgePairs: [string, string][] = state.mstEdges.map(([u, v]) => [u, v])
+    const sets = buildDisjointSets(state.nodes, edgePairs)
     content = (
-      <span>
-        MST cost so far: <strong>{state.mstCost ?? 0}</strong> ({state.mstEdges.length} edge{state.mstEdges.length === 1 ? '' : 's'})
-      </span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-semibold text-text-primary dark:text-dark-text-primary">
+          MST cost: {state.mstCost ?? 0}
+        </span>
+        <span className="text-text-muted">|</span>
+        <span className="text-text-muted">Sets:</span>
+        {sets.map((group, idx) => (
+          <span
+            key={idx}
+            className="rounded border border-border bg-surface-sunk px-1.5 py-0.5 font-mono text-[10px] text-text-primary dark:border-dark-border dark:text-dark-text-primary"
+          >
+            {`{${group.join(',')}}`}
+          </span>
+        ))}
+      </div>
     )
   } else if (state.topoOrder !== undefined) {
-    content = <span>Order so far: {state.topoOrder.length > 0 ? state.topoOrder.join(' → ') : '—'}</span>
-  } else if (lower.includes('dijkstra') || lower.includes('bellman')) {
-    const shown = 3
-    const top = state.frontier
-      .slice(0, shown)
-      .map((id) => `(${id}, ${state.distances?.[id] === Infinity ? '∞' : (state.distances?.[id] ?? '?')})`)
-    const remaining = state.frontier.length - shown
     content = (
-      <span>
-        Priority queue: [{top.join(', ')}
-        {remaining > 0 ? `, +${remaining} more` : ''}]
-      </span>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-semibold text-text-primary dark:text-dark-text-primary">Topo Order:</span>
+        {state.topoOrder.length === 0 ? (
+          <span className="font-mono text-[10px] text-text-muted">empty</span>
+        ) : (
+          state.topoOrder.map((id, idx) => (
+            <span
+              key={id}
+              className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
+              style={{ backgroundColor: 'var(--state-sorted)', color: 'var(--state-sorted-ink)' }}
+            >
+              {`${idx + 1}:${id}`}
+            </span>
+          ))
+        )}
+      </div>
+    )
+  } else if (isDijkstraLike) {
+    const sortedFrontier = [...state.frontier].sort(
+      (a, b) => (state.distances?.[a] ?? Infinity) - (state.distances?.[b] ?? Infinity),
+    )
+    const shown = 5
+    const top = sortedFrontier.slice(0, shown)
+    const remaining = sortedFrontier.length - shown
+    content = (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-semibold text-text-primary dark:text-dark-text-primary">Min-PQ:</span>
+        {top.length === 0 ? (
+          <span className="font-mono text-[10px] text-text-muted">empty</span>
+        ) : (
+          top.map((id, idx) => {
+            const d = state.distances?.[id]
+            const dText = d === undefined ? '?' : d === Infinity ? 'inf' : String(d)
+            return (
+              <span
+                key={id}
+                className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] font-semibold dark:border-dark-border"
+                style={
+                  idx === 0
+                    ? { backgroundColor: 'var(--state-compare)', color: 'var(--state-compare-ink)', borderColor: 'transparent' }
+                    : { backgroundColor: 'var(--surface-sunk)', color: 'var(--ink)' }
+                }
+              >
+                {`${id}:${dText}`}
+              </span>
+            )
+          })
+        )}
+        {remaining > 0 && <span className="font-mono text-[10px] text-text-muted">{`+${remaining}`}</span>}
+      </div>
     )
   } else {
-    content = <span>{lower.includes('dfs') ? 'Stack' : 'Queue'}: [{state.frontier.join(', ')}]</span>
+    content = (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-semibold text-text-primary dark:text-dark-text-primary">
+          {isDFS ? 'Stack (LIFO):' : 'Queue (FIFO):'}
+        </span>
+        {!isDFS && state.frontier.length > 0 && <span className="font-mono text-[9px] text-text-muted">front&rarr;</span>}
+        {state.frontier.length === 0 ? (
+          <span className="font-mono text-[10px] text-text-muted">empty</span>
+        ) : (
+          state.frontier.map((id, idx) => {
+            const isNextPop = isDFS ? idx === state.frontier.length - 1 : idx === 0
+            return (
+              <span
+                key={`${id}-${idx}`}
+                className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] font-semibold dark:border-dark-border"
+                style={
+                  isNextPop
+                    ? { backgroundColor: 'var(--state-compare)', color: 'var(--state-compare-ink)', borderColor: 'transparent' }
+                    : { backgroundColor: 'var(--surface-sunk)', color: 'var(--ink)' }
+                }
+              >
+                {id}
+              </span>
+            )
+          })
+        )}
+        {isDFS && state.frontier.length > 0 && <span className="font-mono text-[9px] text-text-muted">&larr;top</span>}
+      </div>
+    )
   }
 
   return (
-    <div className="shrink-0 border-b border-border px-3 pt-9 pb-1.5 text-[11px] text-text-secondary dark:border-dark-border dark:text-dark-text-secondary">
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 pt-9 pb-1.5 text-[11px] text-text-secondary dark:border-dark-border dark:text-dark-text-secondary">
       {content}
-      <span className="ml-3 text-text-muted dark:text-dark-text-secondary">Visited: {state.visited.length}</span>
+      <span className="font-mono text-[10px] text-text-muted dark:text-dark-text-secondary">
+        Visited: {state.visited.length} / {state.nodes.length}
+      </span>
     </div>
   )
 }

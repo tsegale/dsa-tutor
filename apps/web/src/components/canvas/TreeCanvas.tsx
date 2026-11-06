@@ -183,15 +183,53 @@ export default function TreeCanvas({
     [edges],
   )
 
+  const ghostSlots = useMemo(() => {
+    const keys = Object.keys(pick.selection?.choices ?? {})
+    if (keys.length === 0) return []
+    const byId = new Map(layout.map((l) => [l.node.id, l]))
+    const offset = Math.max(nodeRadius * 1.5, 30)
+    const slots: Array<{
+      key: string
+      parentX: number
+      parentY: number
+      parentValue: number
+      side: 'left' | 'right'
+      x: number
+      y: number
+      depth: number
+    }> = []
+    for (const key of keys) {
+      if (!key.endsWith('::__left__') && !key.endsWith('::__right__')) continue
+      const [parentId, sideToken] = key.split('::')
+      const parent = byId.get(parentId)
+      if (!parent) continue
+      const side = sideToken === '__left__' ? 'left' : 'right'
+      slots.push({
+        key,
+        parentX: parent.x,
+        parentY: parent.y,
+        parentValue: parent.node.value,
+        side,
+        x: parent.x + (side === 'left' ? -offset : offset),
+        y: parent.y + LEVEL_HEIGHT,
+        depth: parent.depth + 1,
+      })
+    }
+    return slots
+  }, [pick.selection, layout, nodeRadius])
+
   // Content-fitted viewBox: origin and extent come from the tree's own
-  // bounding box (padded), not the container. preserveAspectRatio scales
-  // that box up or down to whatever space the canvas has, and centres it,
-  // so a 2-node tree in a wide panel isn't stretched edge to edge and a
-  // deep tree isn't clipped.
-  const viewBoxX = minX - nodeRadius - VIEWBOX_PADDING
+  // bounding box (padded), plus any interactive ghost child slots, not the
+  // container. preserveAspectRatio scales that box up or down to whatever
+  // space the canvas has, and centres it, so a 2-node tree in a wide panel
+  // isn't stretched edge to edge and a deep tree isn't clipped.
+  const effectiveMinX = ghostSlots.length > 0 ? Math.min(minX, ...ghostSlots.map((slot) => slot.x)) : minX
+  const effectiveMaxX = ghostSlots.length > 0 ? Math.max(maxX, ...ghostSlots.map((slot) => slot.x)) : maxX
+  const effectiveMaxDepth = ghostSlots.length > 0 ? Math.max(maxDepth, ...ghostSlots.map((slot) => slot.depth)) : maxDepth
+  const viewBoxX = effectiveMinX - nodeRadius - VIEWBOX_PADDING
   const viewBoxY = -nodeRadius - VIEWBOX_PADDING
-  const viewBoxWidth = maxX - minX + 2 * (nodeRadius + VIEWBOX_PADDING)
-  const viewBoxHeight = maxDepth * LEVEL_HEIGHT + 2 * (nodeRadius + VIEWBOX_PADDING)
+  const viewBoxWidth = effectiveMaxX - effectiveMinX + 2 * (nodeRadius + VIEWBOX_PADDING)
+  const viewBoxHeight = effectiveMaxDepth * LEVEL_HEIGHT + 2 * (nodeRadius + VIEWBOX_PADDING)
   const baseView = useMemo(
     () => ({ x: viewBoxX, y: viewBoxY, width: viewBoxWidth, height: viewBoxHeight }),
     [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight],
@@ -290,6 +328,12 @@ export default function TreeCanvas({
           className={cn('touch-none select-none', zoom.zoomed && 'cursor-grab active:cursor-grabbing')}
           {...zoom.handlers}
         >
+          <defs>
+            <marker id="tree-rot-arrow" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,1 L7,4 L0,7 Z" fill="var(--state-error)" />
+            </marker>
+          </defs>
+
           {edges.map((edge) => {
             const onPath = state.path.includes(edge.parentId) && state.path.includes(edge.childId)
             return (
@@ -314,6 +358,51 @@ export default function TreeCanvas({
               </g>
             )
           })}
+
+          {ghostSlots.map((slot) => (
+            <g
+              key={slot.key}
+              onClick={() => pick.pick(slot.key)}
+              style={{ cursor: 'pointer' }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Choose ${slot.side} slot of node ${slot.parentValue}`}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  pick.pick(slot.key)
+                }
+              }}
+            >
+              <line
+                x1={slot.parentX}
+                y1={slot.parentY}
+                x2={slot.x}
+                y2={slot.y}
+                stroke="var(--state-compare)"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+              />
+              <circle
+                cx={slot.x}
+                cy={slot.y}
+                r={Math.max(12, nodeRadius - 3)}
+                fill="var(--surface)"
+                stroke="var(--state-compare)"
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+              <text
+                x={slot.x}
+                y={slot.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                style={{ fill: 'var(--ink-2)', fontSize: Math.max(9, fontSize - 2), fontWeight: 600 }}
+              >
+                {slot.side === 'left' ? 'L' : 'R'}
+              </text>
+            </g>
+          ))}
 
           {layout.map(({ node, x, y }) => {
             const isCurrent = state.currentNode?.id === node.id
@@ -384,9 +473,25 @@ export default function TreeCanvas({
                   r={nodeRadius}
                   animate={{ fill: resolveColour(fill) }}
                   stroke={
-                    isUnbalanced ? 'var(--state-error)' : rbColor && isCurrent ? 'var(--state-compare)' : fill === DEFAULT_FILL ? DEFAULT_STROKE : 'none'
+                    isUnbalanced
+                      ? 'var(--state-error)'
+                      : rbColor && isCurrent
+                        ? 'var(--state-compare)'
+                        : rbColor === 'BLACK'
+                          ? DEFAULT_STROKE
+                          : fill === DEFAULT_FILL
+                            ? DEFAULT_STROKE
+                            : 'none'
                   }
-                  strokeWidth={isUnbalanced || (rbColor && isCurrent) ? 3 : fill === DEFAULT_FILL ? 1.5 : 0}
+                  strokeWidth={
+                    isUnbalanced || (rbColor && isCurrent)
+                      ? 3
+                      : rbColor === 'BLACK'
+                        ? 2
+                        : fill === DEFAULT_FILL
+                          ? 1.5
+                          : 0
+                  }
                   transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: 'easeInOut' }}
                 />
                 <text
@@ -408,6 +513,47 @@ export default function TreeCanvas({
               </motion.g>
             )
           })}
+          {/* Rotation direction arc over unbalanced / rotated subtree */}
+          {'rotationType' in state &&
+            state.rotationType &&
+            (() => {
+              const rot = state.rotationType
+              const targetLayout =
+                ('unbalancedNodeId' in state && state.unbalancedNodeId
+                  ? layout.find((l) => l.node.id === state.unbalancedNodeId)
+                  : undefined) ??
+                (state.currentNode ? layout.find((l) => l.node.id === state.currentNode?.id) : undefined) ??
+                layout[0]
+              if (!targetLayout) return null
+              const rx = targetLayout.x
+              const ry = targetLayout.y
+              const arcR = nodeRadius + 16
+              const isClockwise = rot === 'LL' || rot === 'LR'
+              const startX = isClockwise ? rx - arcR : rx + arcR
+              const endX = isClockwise ? rx + arcR : rx - arcR
+              const arcTopY = ry - arcR - 10
+              return (
+                <g pointerEvents="none">
+                  <path
+                    d={`M${startX},${ry - 6} Q${rx},${arcTopY} ${endX},${ry - 6}`}
+                    fill="none"
+                    stroke="var(--state-error)"
+                    strokeWidth={2}
+                    markerEnd="url(#tree-rot-arrow)"
+                  />
+                  <rect x={rx - 26} y={arcTopY - 12} width={52} height={15} rx={7} fill="var(--state-error)" />
+                  <text
+                    x={rx}
+                    y={arcTopY - 4.5}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    style={{ fill: 'var(--state-error-ink)', fontSize: 9, fontWeight: 700 }}
+                  >
+                    {`ROT ${rot}`}
+                  </text>
+                </g>
+              )
+            })()}
         </svg>
         <FitToViewButton zoomed={zoom.zoomed} onFit={zoom.fit} />
       </div>
@@ -424,7 +570,7 @@ export default function TreeCanvas({
         </p>
         <p className="text-[12px] text-text-secondary dark:text-dark-text-secondary">
           {state.operation === 'traverse' ? 'Visited so far' : 'Path taken'}:{' '}
-          {pathValues.length > 0 ? pathValues.join(' → ') : '—'}
+          {pathValues.length > 0 ? pathValues.join(' -> ') : 'none'}
         </p>
         <p className="text-[11px] text-text-muted dark:text-dark-text-secondary">Nodes visited: {state.path.length}</p>
         {'rotationType' in state && state.rotationType && (

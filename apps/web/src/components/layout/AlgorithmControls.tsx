@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { complexityJunctionEnabled } from '@/utils/studyCondition'
+import { useStudyScope } from '@/hooks/useStudyScope'
 import { Button } from '@/components/ui/button'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
+import { withCodeMode } from '@/engine/codeMode'
 import { stackPushEngine, stackPopEngine, stackPeekEngine } from '@/engine/stack'
 import { queueEnqueueEngine, queueDequeueEngine, circularQueueEngine, dequeEngine } from '@/engine/queue'
 import {
@@ -79,12 +81,17 @@ import {
   ASTAR_BOARD,
 } from '@/engine/gridAlgorithms'
 import { mazeGenerationEngine, mazePrimEngine, mazeKruskalEngine, MAZE_BOARD } from '@/engine/mazeGeneration'
-import type { GridCell, GridAlgorithmState } from '@dsa-tutor/types'
-import type { AlgorithmSnapshot } from '@dsa-tutor/types'
+import { dp2DWordsEngine } from '@/engine/dynamicProgramming'
+import { greedyActivitiesEngine, DEFAULT_ACTIVITIES, type Activity } from '@/engine/greedy'
+import { backtrackingEngine, nQueensBacktrackingEngine } from '@/engine/backtracking'
+import { cn } from '@/lib/utils'
+import type { GridCell, GridAlgorithmState, AlgorithmSnapshot } from '@dsa-tutor/types'
 
 const inputClass =
   'w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary'
 const labelClass = 'text-micro text-text-muted dark:text-dark-text-secondary'
+const chipClass =
+  'rounded border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:border-primary/50 hover:bg-surface-sunk hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary dark:hover:text-dark-text-primary'
 
 function parseArrayInput(input: string): number[] | null {
   const parts = input.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
@@ -95,43 +102,158 @@ function parseArrayInput(input: string): number[] | null {
 }
 
 /**
- * Runs an operation and shows its result.
- *
- * These controls are actions: pressing Push, Enqueue or Insert should
- * leave the structure holding what was just put into it. They used to load
- * the new run at step 0, which on a structure that builds itself up from
- * empty - the deque, the circular queue - is the structure BEFORE even the
- * seed operations, so all four deque controls looked completely dead.
- *
- * Pass 'start' for a control that sets a run up rather than performing an
- * operation (Apply, Random, a new board): there the learner wants to watch
- * it from the beginning.
+ * Applies a snapshot run while preserving active Code Mode challenges.
+ * Pass 'start' for runs the learner intends to step through from step 0,
+ * or 'result' for direct data-structure mutations where seeing the mutated
+ * structure immediately is primary (with Replay/Practice offered in the tape).
  */
 function useApply() {
   const setAlgorithm = useAlgorithmStore((state) => state.setAlgorithm)
   return (slug: string, snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') => {
     const displayName = getAlgorithmRegistryEntry(slug)?.displayName ?? slug
-    setAlgorithm(displayName, snapshots, landOn)
+    const prepared = withCodeMode(snapshots, slug, useAlgorithmStore.getState().codeEditorMode)
+    setAlgorithm(displayName, prepared, landOn)
   }
 }
 
-// Stack, queue, and deque seed states mirror each algorithm's own registry
-// default (registry.ts) so a fresh push/enqueue lands on a demo that
-// already has something in it, instead of an empty structure every time.
+interface HistoryEntry<TState> {
+  id: string
+  label: string
+  snapshots: AlgorithmSnapshot[]
+  prevState: TState
+}
+
+function OperationHistoryTape<TState>({
+  slug,
+  entries,
+  onUndo,
+  onReset,
+}: {
+  slug: string
+  entries: HistoryEntry<TState>[]
+  onUndo: () => void
+  onReset: () => void
+}) {
+  const apply = useApply()
+  const setMode = useAlgorithmStore((state) => state.setMode)
+  const classicMode = useAlgorithmStore((state) => state.classicMode)
+
+  if (entries.length === 0) return null
+
+  return (
+    <div className="mt-1 flex flex-col gap-1.5 rounded-md border border-border bg-surface-sunk/40 p-2 dark:border-dark-border">
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-mono text-[10px] font-semibold tracking-wider text-text-muted uppercase dark:text-dark-text-secondary">
+          History ({entries.length})
+        </span>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={onUndo} className={chipClass} title="Undo last operation">
+            Undo
+          </button>
+          <button type="button" onClick={onReset} className={chipClass} title="Reset to default seed">
+            Reset
+          </button>
+        </div>
+      </div>
+      <ul className="flex max-h-28 flex-col gap-1 overflow-y-auto">
+        {entries.map((entry, idx) => {
+          const hasJunction = entry.snapshots.some((s) => s.isPredictionRequired)
+          return (
+            <li
+              key={entry.id}
+              className="flex items-center justify-between gap-1 rounded bg-card px-1.5 py-1 text-[11px] ring-1 ring-border dark:border-dark-border"
+            >
+              <span className="min-w-0 truncate font-mono text-text-primary dark:text-dark-text-primary">
+                {idx + 1}. {entry.label}
+              </span>
+              <span className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => apply(slug, entry.snapshots, 'start')}
+                  className="rounded px-1 py-0.5 text-[10px] font-medium text-text-muted hover:bg-surface-sunk hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+                  title="Step through this operation from step 1"
+                >
+                  Replay
+                </button>
+                {!classicMode && hasJunction && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('PRACTICE')
+                      apply(slug, entry.snapshots, 'start')
+                    }}
+                    className="rounded px-1 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10"
+                    title="Practice predicting this operation's junctions"
+                  >
+                    Practice
+                  </button>
+                )}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function PresetChips({
+  presets,
+  onSelect,
+}: {
+  presets: ReadonlyArray<{ label: string; onPick: () => void }>
+  onSelect?: () => void
+}) {
+  const { restricted } = useStudyScope()
+  if (restricted || presets.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1">
+      {presets.map((p) => (
+        <button
+          key={p.label}
+          type="button"
+          onClick={() => {
+            p.onPick()
+            onSelect?.()
+          }}
+          className={chipClass}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 const STACK_SEED = [5, 3, 8, 1, 9]
 const QUEUE_SEED = [5, 3, 8, 1, 9]
-const CQ_SEED: Array<{ op: 'enqueue'; value: number }> = [
+type CQOp = { op: 'enqueue'; value: number } | { op: 'dequeue' }
+const CQ_SEED: CQOp[] = [
   { op: 'enqueue', value: 5 },
   { op: 'enqueue', value: 3 },
+  { op: 'dequeue' },
   { op: 'enqueue', value: 8 },
+  { op: 'enqueue', value: 1 },
+  { op: 'enqueue', value: 9 },
 ]
-const DQ_SEED: Array<{ op: 'pushFront' | 'pushBack'; value: number }> = [
+type DQOp =
+  | { op: 'pushFront'; value: number }
+  | { op: 'pushBack'; value: number }
+  | { op: 'popFront' }
+  | { op: 'popBack' }
+const DQ_SEED: DQOp[] = [
   { op: 'pushBack', value: 5 },
   { op: 'pushFront', value: 3 },
+  { op: 'popFront' },
   { op: 'pushBack', value: 8 },
 ]
-const LL_SEED = [3, 7, 1]
+const LL_SEED = [3, 7, 1, 9, 4, 10]
 const BST_SEED = BST_DEFAULT_SEED
+const AVL_SEED = [10, 20, 30, 40, 50, 25]
+const RB_SEED = [10, 20, 30, 40, 50, 25]
+const HASH_CHAINING_SEED = [15, 11, 27, 8, 12, 19]
+const HASH_PROBING_SEED = [15, 11, 27, 8, 12]
+const HEAP_SEED = HEAP_DEFAULT_SEED
 
 function bstRootFor(values: number[]): BSTNode | null {
   const snapshots = bstInsertEngine(values)
@@ -139,20 +261,21 @@ function bstRootFor(values: number[]): BSTNode | null {
   return (last?.dataStructureState as { root: BSTNode | null } | undefined)?.root ?? null
 }
 
-const AVL_SEED = [10, 20, 30, 40, 50, 25]
-
 function avlRootFor(values: number[]): AVLNode | null {
   const snapshots = avlInsertEngine(values)
   const last = snapshots[snapshots.length - 1]
   return (last?.dataStructureState as { root: AVLNode | null } | undefined)?.root ?? null
 }
 
-const RB_SEED = [10, 20, 30, 40, 50, 25]
-
 function rbRootFor(values: number[]): RBNode | null {
   const snapshots = rbInsertEngine(values)
   const last = snapshots[snapshots.length - 1]
   return (last?.dataStructureState as { root: RBNode | null } | undefined)?.root ?? null
+}
+
+function trieRootFor(words: string[]): TrieNode {
+  const snapshots = trieInsertEngine(words)
+  return (snapshots[snapshots.length - 1].dataStructureState as TrieState).root
 }
 
 function NumberField({
@@ -186,24 +309,76 @@ function NumberField({
 function StackControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
+  const [items, setItems] = useState<number[]>(STACK_SEED)
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
+
+  function record(label: string, nextItems: number[], snapshots: AlgorithmSnapshot[]) {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: items }])
+    setItems(nextItems)
+    apply(slug, snapshots)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setItems(last.prevState)
+    const prevSnaps = nextHist[nextHist.length - 1]?.snapshots ?? stackPushEngine([], last.prevState, 6)
+    apply(slug, prevSnaps)
+  }
+
+  function handleReset(seed: number[] = STACK_SEED) {
+    setHistory([])
+    setItems(seed)
+    apply(slug, stackPushEngine([], seed, 6))
+  }
+
+  const num = Number(value) || 0
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Stack operations</h3>
+      <h3 className={labelClass}>Stack operations (size {items.length}/6)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(STACK_SEED) },
+          { label: 'Full (6/6)', onPick: () => handleReset([2, 4, 6, 8, 10, 12]) },
+          { label: 'Empty', onPick: () => handleReset([]) },
+        ]}
+      />
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => apply(slug, stackPushEngine(STACK_SEED, [Number(value) || 0], 6))}
-      >
-        Push
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, stackPopEngine(STACK_SEED, 1))}>
-        Pop
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, stackPeekEngine(STACK_SEED))}>
-        Peek
-      </Button>
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const snaps = stackPushEngine(items, [num], 6)
+            const next = items.length < 6 ? [...items, num] : items
+            record(`push(${num})`, next, snaps)
+          }}
+        >
+          Push
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const snaps = stackPopEngine(items, 1)
+            const next = items.slice(0, -1)
+            record('pop()', next, snaps)
+          }}
+        >
+          Pop
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => record('peek()', items, stackPeekEngine(items))}
+        >
+          Peek
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
@@ -212,33 +387,134 @@ function QueueControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
   const isCircular = slug === 'circular-queue'
+  const [linearItems, setLinearItems] = useState<number[]>(QUEUE_SEED)
+  const [cqOps, setCqOps] = useState<CQOp[]>(CQ_SEED)
+  const [history, setHistory] = useState<HistoryEntry<{ linear: number[]; cq: CQOp[] }>[]>([])
+
+  const num = Number(value) || 0
+
+  function handleEnqueue() {
+    if (isCircular) {
+      const nextOps: CQOp[] = [...cqOps, { op: 'enqueue', value: num }]
+      const snaps = circularQueueEngine(5, nextOps)
+      setHistory((h) => [
+        ...h,
+        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+      ])
+      setCqOps(nextOps)
+      apply(slug, snaps)
+    } else {
+      const snaps = queueEnqueueEngine(linearItems, [num], 6)
+      const next = linearItems.length < 6 ? [...linearItems, num] : linearItems
+      setHistory((h) => [
+        ...h,
+        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+      ])
+      setLinearItems(next)
+      apply(slug, snaps)
+    }
+  }
+
+  function handleDequeue() {
+    if (isCircular) {
+      const nextOps: CQOp[] = [...cqOps, { op: 'dequeue' }]
+      const snaps = circularQueueEngine(5, nextOps)
+      setHistory((h) => [
+        ...h,
+        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+      ])
+      setCqOps(nextOps)
+      apply(slug, snaps)
+    } else {
+      const snaps = queueDequeueEngine(linearItems, 1)
+      const next = linearItems.slice(1)
+      setHistory((h) => [
+        ...h,
+        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+      ])
+      setLinearItems(next)
+      apply(slug, snaps)
+    }
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setLinearItems(last.prevState.linear)
+    setCqOps(last.prevState.cq)
+    const fallback = isCircular
+      ? circularQueueEngine(5, last.prevState.cq)
+      : queueEnqueueEngine([], last.prevState.linear, 6)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? fallback)
+  }
+
+  function handleReset() {
+    setHistory([])
+    setLinearItems(QUEUE_SEED)
+    setCqOps(CQ_SEED)
+    apply(slug, isCircular ? circularQueueEngine(5, CQ_SEED) : queueEnqueueEngine([], QUEUE_SEED, 6))
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Queue operations</h3>
+      <h3 className={labelClass}>{isCircular ? 'Circular queue' : 'Queue'} operations</h3>
+      <PresetChips
+        presets={
+          isCircular
+            ? [
+                { label: 'Wrap-around', onPick: handleReset },
+                {
+                  label: 'Full ring',
+                  onPick: () => {
+                    const full: CQOp[] = [10, 20, 30, 40, 50].map((v) => ({ op: 'enqueue', value: v }))
+                    setHistory([])
+                    setCqOps(full)
+                    apply(slug, circularQueueEngine(5, full))
+                  },
+                },
+                {
+                  label: 'Empty',
+                  onPick: () => {
+                    setHistory([])
+                    setCqOps([])
+                    apply(slug, circularQueueEngine(5, []))
+                  },
+                },
+              ]
+            : [
+                { label: 'Default', onPick: handleReset },
+                {
+                  label: 'Full (6/6)',
+                  onPick: () => {
+                    const full = [2, 4, 6, 8, 10, 12]
+                    setHistory([])
+                    setLinearItems(full)
+                    apply(slug, queueEnqueueEngine([], full, 6))
+                  },
+                },
+                {
+                  label: 'Empty',
+                  onPick: () => {
+                    setHistory([])
+                    setLinearItems([])
+                    apply(slug, queueEnqueueEngine([], [], 6))
+                  },
+                },
+              ]
+        }
+      />
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() =>
-          isCircular
-            ? apply(slug, circularQueueEngine(5, [...CQ_SEED, { op: 'enqueue', value: Number(value) || 0 }]))
-            : apply(slug, queueEnqueueEngine(QUEUE_SEED, [Number(value) || 0], 6))
-        }
-      >
-        Enqueue
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() =>
-          isCircular
-            ? apply(slug, circularQueueEngine(5, [...CQ_SEED, { op: 'dequeue' }]))
-            : apply(slug, queueDequeueEngine(QUEUE_SEED, 1))
-        }
-      >
-        Dequeue
-      </Button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <Button variant="outline" size="sm" onClick={handleEnqueue}>
+          Enqueue
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleDequeue}>
+          Dequeue
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={handleReset} />
     </section>
   )
 }
@@ -246,60 +522,152 @@ function QueueControls({ slug }: { slug: string }) {
 function DequeControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
+  const [ops, setOps] = useState<DQOp[]>(DQ_SEED)
+  const [history, setHistory] = useState<HistoryEntry<DQOp[]>[]>([])
 
-  const run = (op: 'pushFront' | 'pushBack' | 'popFront' | 'popBack') =>
-    apply(
-      slug,
-      dequeEngine(5, [...DQ_SEED, op === 'pushFront' || op === 'pushBack' ? { op, value: Number(value) || 0 } : { op }]),
-    )
+  const run = (op: 'pushFront' | 'pushBack' | 'popFront' | 'popBack') => {
+    const num = Number(value) || 0
+    const nextOp: DQOp = op === 'pushFront' || op === 'pushBack' ? { op, value: num } : { op }
+    const nextOps = [...ops, nextOp]
+    const snaps = dequeEngine(5, nextOps)
+    const label = op === 'pushFront' || op === 'pushBack' ? `${op}(${num})` : `${op}()`
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots: snaps, prevState: ops }])
+    setOps(nextOps)
+    apply(slug, snaps)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setOps(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? dequeEngine(5, last.prevState))
+  }
+
+  function handleReset(seed: DQOp[] = DQ_SEED) {
+    setHistory([])
+    setOps(seed)
+    apply(slug, dequeEngine(5, seed))
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
       <h3 className={labelClass}>Deque operations</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(DQ_SEED) },
+          {
+            label: 'Alternating ends',
+            onPick: () =>
+              handleReset([
+                { op: 'pushBack', value: 10 },
+                { op: 'pushFront', value: 20 },
+                { op: 'pushBack', value: 30 },
+                { op: 'pushFront', value: 40 },
+              ]),
+          },
+          { label: 'Empty', onPick: () => handleReset([]) },
+        ]}
+      />
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-      <Button variant="outline" size="sm" onClick={() => run('pushFront')}>
-        Push Front
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => run('popFront')}>
-        Pop Front
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => run('pushBack')}>
-        Push Back
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => run('popBack')}>
-        Pop Back
-      </Button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <Button variant="outline" size="sm" onClick={() => run('pushFront')}>
+          Push Front
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => run('popFront')}>
+          Pop Front
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => run('pushBack')}>
+          Push Back
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => run('popBack')}>
+          Pop Back
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
 
-// The insert engines auto-pick their own demo value (max of the existing
-// list + 1) rather than taking one as a parameter - see the judgment call
-// documented in singlyLinkedList.ts. Insert Front/Back here replay that
-// built-in demo; the typed value only drives Delete/Search, which do take
-// an explicit target.
 function LinkedListControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState('7')
+  const [items, setItems] = useState<number[]>(LL_SEED)
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
+
+  function record(label: string, nextItems: number[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: items }])
+    setItems(nextItems)
+    apply(slug, snapshots, landOn)
+  }
+
+  function rebuildSeed(seed: number[]) {
+    if (slug === 'circular-linked-list') {
+      return seed.length > 0 ? cllInsertEngine(seed.slice(0, -1), seed[seed.length - 1]) : cllTraverseEngine([])
+    }
+    if (slug === 'doubly-linked-list') {
+      return seed.length > 0 ? dllInsertBackEngine(seed.slice(0, -1), seed[seed.length - 1]) : dllSearchEngine([], 0)
+    }
+    return seed.length > 0 ? sllInsertBackEngine(seed.slice(0, -1), seed[seed.length - 1]) : sllSearchEngine([], 0)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setItems(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? rebuildSeed(last.prevState))
+  }
+
+  function handleReset(seed: number[] = LL_SEED) {
+    setHistory([])
+    setItems(seed)
+    apply(slug, rebuildSeed(seed))
+  }
 
   if (slug === 'circular-linked-list') {
     return (
       <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-        <h3 className={labelClass}>List operations</h3>
-        <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
-          Value below is used by Delete only - insert always demonstrates the next value in sequence.
-        </p>
-        <NumberField label="Value (for delete)" value={value} onChange={setValue} min={1} max={99} />
-        <Button variant="outline" size="sm" onClick={() => apply(slug, cllInsertEngine(LL_SEED))}>
-          Insert
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => apply(slug, cllDeleteEngine(LL_SEED, target))}>
-          Delete
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => apply(slug, cllTraverseEngine(LL_SEED))}>
-          Traverse
-        </Button>
+        <h3 className={labelClass}>Circular list ({items.length} nodes)</h3>
+        <PresetChips
+          presets={[
+            { label: 'Default', onPick: () => handleReset(LL_SEED) },
+            { label: 'Single node', onPick: () => handleReset([42]) },
+            { label: 'Empty', onPick: () => handleReset([]) },
+          ]}
+        />
+        <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+        <div className="grid grid-cols-3 gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => record(`insert(${target})`, [...items, target], cllInsertEngine(items, target))}
+          >
+            Insert
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const idx = items.indexOf(target)
+              const next = idx >= 0 ? [...items.slice(0, idx), ...items.slice(idx + 1)] : items
+              record(`delete(${target})`, next, cllDeleteEngine(items, target))
+            }}
+          >
+            Delete
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => record('traverse()', items, cllTraverseEngine(items), 'start')}
+          >
+            Traverse
+          </Button>
+        </div>
+        <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
       </section>
     )
   }
@@ -312,78 +680,188 @@ function LinkedListControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>List operations</h3>
-      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
-        Value below is used by Delete and Search only - insert always demonstrates the next value in sequence.
-      </p>
+      <h3 className={labelClass}>{isDoubly ? 'Doubly' : 'Singly'} list ({items.length} nodes)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(LL_SEED) },
+          { label: 'Single node', onPick: () => handleReset([42]) },
+          { label: 'Empty', onPick: () => handleReset([]) },
+        ]}
+      />
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-      <Button variant="outline" size="sm" onClick={() => apply(slug, insertFront(LL_SEED))}>
-        Insert Front
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, insertBack(LL_SEED))}>
-        Insert Back
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, del(LL_SEED, target))}>
-        Delete
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, search(LL_SEED, target))}>
-        Search
-      </Button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => record(`insertFront(${target})`, [target, ...items], insertFront(items, target))}
+        >
+          Insert Front
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => record(`insertBack(${target})`, [...items, target], insertBack(items, target))}
+        >
+          Insert Back
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const idx = items.indexOf(target)
+            const next = idx >= 0 ? [...items.slice(0, idx), ...items.slice(idx + 1)] : items
+            record(`delete(${target})`, next, del(items, target))
+          }}
+        >
+          Delete
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => record(`search(${target})`, items, search(items, target), 'start')}
+        >
+          Search
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
 
 function HashTableControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [key, setKey] = useState('15')
-  const [value, setValue] = useState('')
   const isProbing = slug === 'hash-table-probing'
+  const defaultKeys = isProbing ? HASH_PROBING_SEED : HASH_CHAINING_SEED
+  const [key, setKey] = useState('27')
+  const [keys, setKeys] = useState<number[]>(defaultKeys)
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
+
   const insert = isProbing ? hashInsertLinearProbingEngine : hashInsertChainingEngine
   const search = isProbing ? hashSearchLinearProbingEngine : hashSearchChainingEngine
   const del = isProbing ? hashDeleteLinearProbingEngine : hashDeleteChainingEngine
   const keyNum = Number(key) || 0
 
+  function record(label: string, nextKeys: number[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: keys }])
+    setKeys(nextKeys)
+    apply(slug, snapshots, landOn)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setKeys(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? insert(last.prevState, 7))
+  }
+
+  function handleReset(seed: number[] = defaultKeys) {
+    setHistory([])
+    setKeys(seed)
+    apply(slug, insert(seed, 7))
+  }
+
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Hash table operations</h3>
+      <h3 className={labelClass}>Hash table (m = 7, n = {keys.length})</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(defaultKeys) },
+          { label: 'All collide (mod 7)', onPick: () => handleReset([7, 14, 21, 28]) },
+          { label: 'High load (6/7)', onPick: () => handleReset([10, 18, 25, 32, 4, 11]) },
+        ]}
+      />
       <NumberField label="Key" value={key} onChange={setKey} min={1} max={99} />
-      <div className="flex flex-col gap-1">
-        <label className={labelClass}>Value (optional)</label>
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="not used by this demo"
-          className={inputClass}
-        />
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const canInsert = !isProbing || keys.length < 7
+            const next = canInsert && !keys.includes(keyNum) ? [...keys, keyNum] : keys
+            record(`insert(${keyNum})`, next, insert([...keys, keyNum], 7))
+          }}
+        >
+          Insert
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => record(`search(${keyNum})`, keys, search(keys, keyNum, 7), 'start')}
+        >
+          Search
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const next = keys.filter((k) => k !== keyNum)
+            record(`delete(${keyNum})`, next, del(keys, keyNum, 7))
+          }}
+        >
+          Delete
+        </Button>
       </div>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, insert([15, 8, 23, keyNum], 7))}>
-        Insert
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, search([15, 8, 23], keyNum, 7))}>
-        Search
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => apply(slug, del([15, 8, 23], keyNum, 7))}>
-        Delete
-      </Button>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
 
 function RecursionControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [n, setN] = useState(slug === 'recursion-fibonacci' ? '6' : '6')
-  const engine = slug === 'recursion-fibonacci' ? fibonacciEngine : factorialEngine
+  const { restricted } = useStudyScope()
+  const isFib = slug === 'recursion-fibonacci'
+  const [n, setN] = useState('6')
+  const [memoize, setMemoize] = useState(false)
+
+  function runWith(nextN: number, nextMemo: boolean) {
+    const clamped = Math.min(isFib ? 8 : 10, Math.max(1, nextN || 1))
+    apply(slug, isFib ? fibonacciEngine(clamped, { memoize: nextMemo }) : factorialEngine(clamped), 'start')
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
       <h3 className={labelClass}>Recursion input</h3>
-      <NumberField label="n" value={n} onChange={setN} min={1} max={10} />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => apply(slug, engine(Math.min(10, Math.max(1, Number(n) || 1))), 'start')}
-      >
+      {isFib && !restricted && (
+        <div className="flex flex-col gap-1">
+          <span className={labelClass}>Execution strategy</span>
+          <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-surface-sunk/50 p-0.5 dark:border-dark-border">
+            <button
+              type="button"
+              onClick={() => {
+                setMemoize(false)
+                runWith(Number(n), false)
+              }}
+              className={cn(
+                'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+                !memoize
+                  ? 'bg-card text-text-primary shadow-sm dark:text-dark-text-primary'
+                  : 'text-text-muted hover:text-text-primary dark:text-dark-text-secondary',
+              )}
+            >
+              Naive O(2^n)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMemoize(true)
+                runWith(Number(n), true)
+              }}
+              className={cn(
+                'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+                memoize
+                  ? 'bg-card text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary dark:text-dark-text-secondary',
+              )}
+            >
+              Memoized O(n)
+            </button>
+          </div>
+        </div>
+      )}
+      <NumberField label={isFib ? 'n (1-8)' : 'n (1-10)'} value={n} onChange={setN} min={1} max={isFib ? 8 : 10} />
+      <Button variant="outline" size="sm" onClick={() => runWith(Number(n), memoize)}>
         Run
       </Button>
     </section>
@@ -392,33 +870,53 @@ function RecursionControls({ slug }: { slug: string }) {
 
 function TwoPointerControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [arrayInput, setArrayInput] = useState('1,3,4,5,7,10,11')
+  const [arrayInput, setArrayInput] = useState('1,2,4,6,8,10,12')
   const [target, setTarget] = useState('14')
   const [error, setError] = useState<string | null>(null)
 
-  function run() {
-    const values = parseArrayInput(arrayInput)
+  function run(rawArray = arrayInput, rawTarget = target) {
+    const values = parseArrayInput(rawArray)
     if (!values) {
-      setError('Enter a comma-separated list of numbers, e.g. 1,3,4,5,7')
+      setError('Enter a comma-separated list of numbers, e.g. 1,2,4,6,8')
       return
     }
     setError(null)
-    apply(slug, twoSumSortedEngine(values, Number(target) || 0), 'start')
+    apply(slug, twoSumSortedEngine([...values].sort((a, b) => a - b), Number(rawTarget) || 0), 'start')
   }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Input array</h3>
+      <h3 className={labelClass}>Two-pointer input</h3>
+      <PresetChips
+        presets={[
+          {
+            label: 'Ends meet',
+            onPick: () => {
+              setArrayInput('1,2,4,6,8,10,12')
+              setTarget('13')
+              run('1,2,4,6,8,10,12', '13')
+            },
+          },
+          {
+            label: 'No pair',
+            onPick: () => {
+              setArrayInput('2,5,8,11,14')
+              setTarget('99')
+              run('2,5,8,11,14', '99')
+            },
+          },
+        ]}
+      />
       <input
         type="text"
         value={arrayInput}
         onChange={(e) => setArrayInput(e.target.value)}
-        placeholder="1,3,4,5,7,10,11"
+        placeholder="1,2,4,6,8,10,12"
         className={inputClass}
       />
       <NumberField label="Target sum" value={target} onChange={setTarget} />
       {error && <p className="text-xs text-error">{error}</p>}
-      <Button variant="outline" size="sm" onClick={run}>
+      <Button variant="outline" size="sm" onClick={() => run()}>
         Apply
       </Button>
     </section>
@@ -428,7 +926,7 @@ function TwoPointerControls({ slug }: { slug: string }) {
 function SlidingWindowControls({ slug }: { slug: string }) {
   const apply = useApply()
   const isFixed = slug === 'sliding-window-fixed'
-  const [arrayInput, setArrayInput] = useState('2,3,1,2,4,3')
+  const [arrayInput, setArrayInput] = useState(isFixed ? '2,1,5,1,3,2,4,1' : '2,3,1,2,4,3')
   const [param, setParam] = useState(isFixed ? '3' : '7')
   const [error, setError] = useState<string | null>(null)
 
@@ -480,25 +978,53 @@ function SlidingWindowControls({ slug }: { slug: string }) {
 function SearchControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [arrayInput, setArrayInput] = useState('1,3,5,7,9,12,15,18,21,25')
-  const [target, setTarget] = useState('12')
+  const [target, setTarget] = useState('15')
   const [error, setError] = useState<string | null>(null)
 
   const engine =
     slug === 'jump-search' ? jumpSearchEngine : slug === 'interpolation-search' ? interpolationSearchEngine : exponentialSearchEngine
 
-  function run() {
-    const values = parseArrayInput(arrayInput)
+  function run(rawArray = arrayInput, rawTarget = target) {
+    const values = parseArrayInput(rawArray)
     if (!values) {
       setError('Enter a comma-separated, sorted list of numbers, e.g. 1,3,5,7,9')
       return
     }
     setError(null)
-    apply(slug, engine([...values].sort((a, b) => a - b), Number(target) || 0), 'start')
+    apply(slug, engine([...values].sort((a, b) => a - b), Number(rawTarget) || 0), 'start')
   }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Input array (must be sorted)</h3>
+      <h3 className={labelClass}>Sorted input array</h3>
+      <PresetChips
+        presets={[
+          {
+            label: 'Uniform',
+            onPick: () => {
+              setArrayInput('10,20,30,40,50,60,70,80')
+              setTarget('60')
+              run('10,20,30,40,50,60,70,80', '60')
+            },
+          },
+          {
+            label: 'Exponential skew',
+            onPick: () => {
+              setArrayInput('1,2,4,8,16,32,64,128,256')
+              setTarget('64')
+              run('1,2,4,8,16,32,64,128,256', '64')
+            },
+          },
+          {
+            label: 'Missing target',
+            onPick: () => {
+              setArrayInput('1,3,5,7,9,12,15,18')
+              setTarget('14')
+              run('1,3,5,7,9,12,15,18', '14')
+            },
+          },
+        ]}
+      />
       <input
         type="text"
         value={arrayInput}
@@ -508,18 +1034,16 @@ function SearchControls({ slug }: { slug: string }) {
       />
       <NumberField label="Target" value={target} onChange={setTarget} />
       {error && <p className="text-xs text-error">{error}</p>}
-      <Button variant="outline" size="sm" onClick={run}>
+      <Button variant="outline" size="sm" onClick={() => run()}>
         Apply
       </Button>
     </section>
   )
 }
 
-// Each BST page (Insert/Search/Delete are now separate algorithm routes)
-// shows only its own operation, driven by a single "value" field - not
-// all three buttons on every page.
 function BSTControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const { restricted } = useStudyScope()
   const defaultValue =
     slug === 'bst-search'
       ? String(BST_DEFAULT_SEARCH_TARGET)
@@ -527,134 +1051,322 @@ function BSTControls({ slug }: { slug: string }) {
         ? String(BST_DEFAULT_DELETE_TARGET)
         : String(BST_DEFAULT_INSERT_VALUE)
   const [value, setValue] = useState(defaultValue)
+  const [treeValues, setTreeValues] = useState<number[]>(BST_SEED)
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
 
-  if (slug === 'bst-search') {
+  // Study participants on 'bst' get deterministic study controls without
+  // mutating the underlying seed across runs.
+  if (restricted) {
     return (
       <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-        <h3 className={labelClass}>BST search</h3>
-        <NumberField label="Search for value" value={value} onChange={setValue} min={1} max={99} />
-        <Button variant="outline" size="sm" onClick={() => apply(slug, bstSearchEngine(bstRootFor(BST_SEED), target))}>
-          Search
+        <h3 className={labelClass}>BST insert</h3>
+        <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            apply(
+              slug,
+              bstInsertEngine([...BST_SEED, target], {
+                withCompletionCheck: slug === 'bst',
+                withComplexityPrediction: slug === 'bst' && complexityJunctionEnabled(),
+              }),
+            )
+          }
+        >
+          Insert
         </Button>
       </section>
     )
   }
 
-  if (slug === 'bst-delete') {
-    return (
-      <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-        <h3 className={labelClass}>BST delete</h3>
-        <NumberField label="Delete value" value={value} onChange={setValue} min={1} max={99} />
-        <Button variant="outline" size="sm" onClick={() => apply(slug, bstDeleteEngine(bstRootFor(BST_SEED), target))}>
-          Delete
-        </Button>
-      </section>
+  function record(label: string, nextVals: number[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: treeValues }])
+    setTreeValues(nextVals)
+    apply(slug, snapshots, landOn)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setTreeValues(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? bstInsertEngine(last.prevState))
+  }
+
+  function handleReset(seed: number[] = BST_SEED) {
+    setHistory([])
+    setTreeValues(seed)
+    apply(
+      slug,
+      bstInsertEngine(seed, {
+        withCompletionCheck: slug === 'bst',
+        withComplexityPrediction: slug === 'bst' && complexityJunctionEnabled(),
+      }),
     )
   }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>BST insert</h3>
-      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
-        Rebuilds the tree from scratch with this value inserted last - unrelated to the practice question above.
-      </p>
+      <h3 className={labelClass}>BST sandbox ({treeValues.length} nodes)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Balanced', onPick: () => handleReset(BST_SEED) },
+          { label: 'Right-skewed', onPick: () => handleReset([2, 4, 6, 8, 10]) },
+          { label: 'Zig-zag', onPick: () => handleReset([16, 4, 14, 6, 12, 8]) },
+        ]}
+      />
       <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-      <Button variant="outline" size="sm" onClick={() => apply(slug, bstInsertEngine([...BST_SEED, target], {
-            withCompletionCheck: slug === 'bst',
-            withComplexityPrediction: slug === 'bst' && complexityJunctionEnabled(),
-          }))}>
-        Insert
-      </Button>
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const next = [...treeValues, target]
+            record(
+              `insert(${target})`,
+              next,
+              bstInsertEngine(next, {
+                withCompletionCheck: slug === 'bst',
+                withComplexityPrediction: slug === 'bst' && complexityJunctionEnabled(),
+              }),
+            )
+          }}
+        >
+          Insert
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => record(`search(${target})`, treeValues, bstSearchEngine(bstRootFor(treeValues), target), 'start')}
+        >
+          Search
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const idx = treeValues.indexOf(target)
+            const next = idx >= 0 ? [...treeValues.slice(0, idx), ...treeValues.slice(idx + 1)] : treeValues
+            record(`delete(${target})`, next, bstDeleteEngine(bstRootFor(treeValues), target))
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
 
 function AVLControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [value, setValue] = useState('7')
-  const target = Number(value) || 0
   const isDelete = slug === 'avl-delete'
+  const [value, setValue] = useState(isDelete ? '30' : '7')
+  const [treeValues, setTreeValues] = useState<number[]>(AVL_SEED)
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
+  const target = Number(value) || 0
+
+  function record(label: string, nextVals: number[], snapshots: AlgorithmSnapshot[]) {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: treeValues }])
+    setTreeValues(nextVals)
+    apply(slug, snapshots)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setTreeValues(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? avlInsertEngine(last.prevState))
+  }
+
+  function handleReset(seed: number[] = AVL_SEED) {
+    setHistory([])
+    setTreeValues(seed)
+    apply(slug, avlInsertEngine(seed))
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>AVL tree operations</h3>
-      <NumberField label={isDelete ? 'Delete value' : 'Value'} value={value} onChange={setValue} min={1} max={99} />
-      {isDelete ? (
-        <Button variant="outline" size="sm" onClick={() => apply(slug, avlDeleteEngine(avlRootFor(AVL_SEED), target))}>
-          Delete
-        </Button>
-      ) : (
-        <Button variant="outline" size="sm" onClick={() => apply(slug, avlInsertEngine([...AVL_SEED, target]))}>
+      <h3 className={labelClass}>AVL tree ({treeValues.length} nodes)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(AVL_SEED) },
+          { label: 'LL case (30,20,10)', onPick: () => handleReset([30, 20, 10]) },
+          { label: 'RR case (10,20,30)', onPick: () => handleReset([10, 20, 30]) },
+          { label: 'LR case (30,10,20)', onPick: () => handleReset([30, 10, 20]) },
+          { label: 'RL case (10,30,20)', onPick: () => handleReset([10, 30, 20]) },
+        ]}
+      />
+      <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+      <div className="grid grid-cols-2 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const next = [...treeValues, target]
+            record(`insert(${target})`, next, avlInsertEngine(next))
+          }}
+        >
           Insert
         </Button>
-      )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const idx = treeValues.indexOf(target)
+            const next = idx >= 0 ? [...treeValues.slice(0, idx), ...treeValues.slice(idx + 1)] : treeValues
+            record(`delete(${target})`, next, avlDeleteEngine(avlRootFor(treeValues), target))
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
 
 function RBControls({ slug }: { slug: string }) {
   const apply = useApply()
-  const [value, setValue] = useState('7')
-  const target = Number(value) || 0
   const isDelete = slug === 'rb-delete'
+  const [value, setValue] = useState(isDelete ? '30' : '7')
+  const [treeValues, setTreeValues] = useState<number[]>(RB_SEED)
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
+  const target = Number(value) || 0
+
+  function record(label: string, nextVals: number[], snapshots: AlgorithmSnapshot[]) {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: treeValues }])
+    setTreeValues(nextVals)
+    apply(slug, snapshots)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setTreeValues(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? rbInsertEngine(last.prevState))
+  }
+
+  function handleReset(seed: number[] = RB_SEED) {
+    setHistory([])
+    setTreeValues(seed)
+    apply(slug, rbInsertEngine(seed))
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Red-black tree operations</h3>
-      <NumberField label={isDelete ? 'Delete value' : 'Value'} value={value} onChange={setValue} min={1} max={99} />
-      {isDelete ? (
-        <Button variant="outline" size="sm" onClick={() => apply(slug, rbDeleteEngine(rbRootFor(RB_SEED), target))}>
-          Delete
-        </Button>
-      ) : (
-        <Button variant="outline" size="sm" onClick={() => apply(slug, rbInsertEngine([...RB_SEED, target]))}>
+      <h3 className={labelClass}>Red-black tree ({treeValues.length} nodes)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(RB_SEED) },
+          { label: 'Ascending 1..7', onPick: () => handleReset([1, 2, 3, 4, 5, 6, 7]) },
+          { label: 'Red uncle recolour', onPick: () => handleReset([20, 10, 30, 5]) },
+        ]}
+      />
+      <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+      <div className="grid grid-cols-2 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const next = treeValues.includes(target) ? treeValues : [...treeValues, target]
+            record(`insert(${target})`, next, rbInsertEngine(next))
+          }}
+        >
           Insert
         </Button>
-      )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const idx = treeValues.indexOf(target)
+            const next = idx >= 0 ? [...treeValues.slice(0, idx), ...treeValues.slice(idx + 1)] : treeValues
+            record(`delete(${target})`, next, rbDeleteEngine(rbRootFor(treeValues), target))
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
-}
-
-const HEAP_SEED = HEAP_DEFAULT_SEED
-
-function trieRootFor(words: string[]): TrieNode {
-  const snapshots = trieInsertEngine(words)
-  return (snapshots[snapshots.length - 1].dataStructureState as TrieState).root
 }
 
 function HeapControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [value, setValue] = useState(String(HEAP_DEFAULT_INSERT_VALUE))
-  const target = Number(value) || 0
   const isMax = slug.startsWith('max-heap')
-  const isDelete = slug.endsWith('delete')
+  const heapType = isMax ? 'max' : 'min'
   const insertEngine = isMax ? maxHeapInsertEngine : minHeapInsertEngine
   const deleteEngine = isMax ? maxHeapDeleteEngine : minHeapDeleteEngine
-  const heapType = isMax ? 'max' : 'min'
+  const [items, setItems] = useState<number[]>(() => buildHeapArray(heapType, HEAP_SEED))
+  const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
+  const target = Number(value) || 0
+
+  function record(label: string, nextItems: number[], snapshots: AlgorithmSnapshot[]) {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: items }])
+    setItems(nextItems)
+    apply(slug, snapshots)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setItems(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? insertEngine(last.prevState))
+  }
+
+  function handleReset(seed: number[] = HEAP_SEED) {
+    const built = buildHeapArray(heapType, seed)
+    setHistory([])
+    setItems(built)
+    apply(slug, insertEngine(seed))
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>{isMax ? 'Max-heap' : 'Min-heap'} operations</h3>
-      {isDelete ? (
+      <h3 className={labelClass}>{isMax ? 'Max-heap' : 'Min-heap'} ({items.length} items)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(HEAP_SEED) },
+          { label: 'Reverse order', onPick: () => handleReset(isMax ? [2, 5, 9, 14, 21, 30] : [30, 21, 14, 9, 5, 2]) },
+        ]}
+      />
+      <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
+      <div className="grid grid-cols-2 gap-1.5">
         <Button
           variant="outline"
           size="sm"
-          onClick={() => apply(slug, deleteEngine(buildHeapArray(heapType, HEAP_SEED)))}
+          onClick={() => {
+            const snaps = insertEngine([...items, target])
+            const finalHeap = (snaps[snaps.length - 1]?.dataStructureState as { heap?: number[] } | undefined)?.heap ?? buildHeapArray(heapType, [...items, target])
+            record(`insert(${target})`, finalHeap, snaps)
+          }}
         >
-          Delete (remove root)
+          Insert
         </Button>
-      ) : (
-        <>
-          <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
-            Rebuilds the heap from scratch with this value inserted last - unrelated to the practice question above.
-          </p>
-          <NumberField label="Value" value={value} onChange={setValue} min={1} max={99} />
-          <Button variant="outline" size="sm" onClick={() => apply(slug, insertEngine([...HEAP_SEED, target]))}>
-            Insert
-          </Button>
-        </>
-      )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const snaps = deleteEngine(items)
+            const finalHeap = (snaps[snaps.length - 1]?.dataStructureState as { heap?: number[] } | undefined)?.heap ?? items.slice(1)
+            record('extractRoot()', finalHeap, snaps)
+          }}
+        >
+          Extract Root
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
@@ -662,29 +1374,50 @@ function HeapControls({ slug }: { slug: string }) {
 function TrieControls({ slug }: { slug: string }) {
   const apply = useApply()
   const [word, setWord] = useState('apple')
+  const [words, setWords] = useState<string[]>(DEFAULT_TRIE_WORDS)
+  const [history, setHistory] = useState<HistoryEntry<string[]>[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  function run() {
-    if (!/^[a-zA-Z]+$/.test(word)) {
+  function validateWord(): string | null {
+    const cleaned = word.trim().toLowerCase()
+    if (!/^[a-z]+$/.test(cleaned)) {
       setError('Enter a word using letters only, e.g. apple')
-      return
+      return null
     }
     setError(null)
-    if (slug === 'trie-insert') {
-      apply(slug, trieInsertEngine([...DEFAULT_TRIE_WORDS, word]))
-    } else if (slug === 'trie-search') {
-      apply(slug, trieSearchEngine(trieRootFor(DEFAULT_TRIE_WORDS), word))
-    } else {
-      apply(slug, trieDeleteEngine(trieRootFor(DEFAULT_TRIE_WORDS), word))
-    }
+    return cleaned
   }
 
-  const label = slug === 'trie-insert' ? 'Insert' : slug === 'trie-search' ? 'Search' : 'Delete'
+  function record(label: string, nextWords: string[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: words }])
+    setWords(nextWords)
+    apply(slug, snapshots, landOn)
+  }
+
+  function handleUndo() {
+    const last = history[history.length - 1]
+    if (!last) return
+    const nextHist = history.slice(0, -1)
+    setHistory(nextHist)
+    setWords(last.prevState)
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? trieInsertEngine(last.prevState))
+  }
+
+  function handleReset(seed: string[] = DEFAULT_TRIE_WORDS) {
+    setHistory([])
+    setWords(seed)
+    apply(slug, trieInsertEngine(seed))
+  }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Trie operations</h3>
-      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">Enter a word (letters only)</p>
+      <h3 className={labelClass}>Trie ({words.length} words)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Default', onPick: () => handleReset(DEFAULT_TRIE_WORDS) },
+          { label: 'Shared prefix', onPick: () => handleReset(['car', 'card', 'care', 'cart']) },
+        ]}
+      />
       <input
         type="text"
         value={word}
@@ -693,9 +1426,44 @@ function TrieControls({ slug }: { slug: string }) {
         className={inputClass}
       />
       {error && <p className="text-xs text-error">{error}</p>}
-      <Button variant="outline" size="sm" onClick={run}>
-        {label}
-      </Button>
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const w = validateWord()
+            if (!w) return
+            const next = words.includes(w) ? words : [...words, w]
+            record(`insert(${w})`, next, trieInsertEngine([...words, w]))
+          }}
+        >
+          Insert
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const w = validateWord()
+            if (!w) return
+            record(`search(${w})`, words, trieSearchEngine(trieRootFor(words), w), 'start')
+          }}
+        >
+          Search
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const w = validateWord()
+            if (!w) return
+            const next = words.filter((item) => item !== w)
+            record(`delete(${w})`, next, trieDeleteEngine(trieRootFor(words), w))
+          }}
+        >
+          Delete
+        </Button>
+      </div>
+      <OperationHistoryTape slug={slug} entries={history} onUndo={handleUndo} onReset={() => handleReset()} />
     </section>
   )
 }
@@ -729,7 +1497,7 @@ function TreeTraversalControls({ slug }: { slug: string }) {
   }
 
   function handleRandom() {
-    const length = Math.floor(Math.random() * 5) + 6 // 6-10
+    const length = Math.floor(Math.random() * 5) + 6
     const values = Array.from({ length }, () => Math.floor(Math.random() * 20) + 1)
     setArrayInput(values.join(','))
     setError(null)
@@ -739,9 +1507,24 @@ function TreeTraversalControls({ slug }: { slug: string }) {
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
       <h3 className={labelClass}>Tree values</h3>
-      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
-        Values are inserted into a BST, then traversed.
-      </p>
+      <PresetChips
+        presets={[
+          {
+            label: 'Balanced',
+            onPick: () => {
+              setArrayInput(BST_SEED.join(','))
+              run(BST_SEED)
+            },
+          },
+          {
+            label: 'Right chain',
+            onPick: () => {
+              setArrayInput('2,4,6,8,10')
+              run([2, 4, 6, 8, 10])
+            },
+          },
+        ]}
+      />
       <input
         type="text"
         value={arrayInput}
@@ -784,7 +1567,7 @@ function CountingSortControls({ slug }: { slug: string }) {
   }
 
   function handleRandom() {
-    const length = Math.floor(Math.random() * 3) + 6 // 6-8
+    const length = Math.floor(Math.random() * 3) + 6
     const values = Array.from({ length }, () => Math.floor(Math.random() * 10))
     setArrayInput(values.join(','))
     setError(null)
@@ -793,8 +1576,7 @@ function CountingSortControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Input array</h3>
-      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">Integers 0-9 only</p>
+      <h3 className={labelClass}>Input array (0-9)</h3>
       <input
         type="text"
         value={arrayInput}
@@ -837,7 +1619,7 @@ function RadixSortControls({ slug }: { slug: string }) {
   }
 
   function handleRandom() {
-    const length = Math.floor(Math.random() * 3) + 6 // 6-8
+    const length = Math.floor(Math.random() * 3) + 6
     const values = Array.from({ length }, () => Math.floor(Math.random() * 200) + 1)
     setArrayInput(values.join(','))
     setError(null)
@@ -846,8 +1628,7 @@ function RadixSortControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Input array</h3>
-      <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">Integers 0-999 only</p>
+      <h3 className={labelClass}>Input array (0-999)</h3>
       <input
         type="text"
         value={arrayInput}
@@ -866,19 +1647,289 @@ function RadixSortControls({ slug }: { slug: string }) {
   )
 }
 
+function DP2DControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const [sourceWord, setSourceWord] = useState('kitten')
+  const [targetWord, setTargetWord] = useState('sitting')
+  const [error, setError] = useState<string | null>(null)
+
+  function runPair(src: string, tgt: string) {
+    const s = src.trim().toLowerCase().replace(/[^a-z]/g, '')
+    const t = tgt.trim().toLowerCase().replace(/[^a-z]/g, '')
+    if (s.length === 0 || t.length === 0) {
+      setError('Enter two words using letters a-z (1 to 9 letters each).')
+      return
+    }
+    setError(null)
+    apply(slug, dp2DWordsEngine(s, t), 'start')
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Edit distance words</h3>
+      <PresetChips
+        presets={[
+          {
+            label: 'kitten -> sitting',
+            onPick: () => {
+              setSourceWord('kitten')
+              setTargetWord('sitting')
+              runPair('kitten', 'sitting')
+            },
+          },
+          {
+            label: 'flaw -> lawn',
+            onPick: () => {
+              setSourceWord('flaw')
+              setTargetWord('lawn')
+              runPair('flaw', 'lawn')
+            },
+          },
+          {
+            label: 'sunday -> saturday',
+            onPick: () => {
+              setSourceWord('sunday')
+              setTargetWord('saturday')
+              runPair('sunday', 'saturday')
+            },
+          },
+        ]}
+      />
+      <div className="flex flex-col gap-1">
+        <label className={labelClass}>Source word</label>
+        <input
+          type="text"
+          maxLength={9}
+          value={sourceWord}
+          onChange={(e) => setSourceWord(e.target.value)}
+          placeholder="kitten"
+          className={inputClass}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className={labelClass}>Target word</label>
+        <input
+          type="text"
+          maxLength={9}
+          value={targetWord}
+          onChange={(e) => setTargetWord(e.target.value)}
+          placeholder="sitting"
+          className={inputClass}
+        />
+      </div>
+      {error && <p className="text-xs text-error">{error}</p>}
+      <Button variant="outline" size="sm" onClick={() => runPair(sourceWord, targetWord)}>
+        Apply
+      </Button>
+    </section>
+  )
+}
+
+function parseIntervals(raw: string): Activity[] | null {
+  const parts = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+  if (parts.length < 2) return null
+  const out: Activity[] = []
+  for (let i = 0; i < parts.length && out.length < 8; i += 1) {
+    const match = /^(\d+)\s*-\s*(\d+)$/.exec(parts[i])
+    if (!match) return null
+    const start = Number(match[1])
+    const finish = Number(match[2])
+    if (finish <= start) return null
+    out.push({ name: String.fromCharCode(65 + out.length), start, finish })
+  }
+  return out
+}
+
+function GreedyControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const defaultText = DEFAULT_ACTIVITIES.map((a) => `${a.start}-${a.finish}`).join(', ')
+  const [intervalsInput, setIntervalsInput] = useState(defaultText)
+  const [error, setError] = useState<string | null>(null)
+
+  function runActivities(acts: Activity[]) {
+    setError(null)
+    setIntervalsInput(acts.map((a) => `${a.start}-${a.finish}`).join(', '))
+    apply(slug, greedyActivitiesEngine(acts), 'start')
+  }
+
+  function handleApply() {
+    const parsed = parseIntervals(intervalsInput)
+    if (!parsed) {
+      setError('Enter at least two start-finish intervals, e.g. 1-4, 3-5, 0-6, 5-7')
+      return
+    }
+    setError(null)
+    apply(slug, greedyActivitiesEngine(parsed), 'start')
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Activity intervals (start-finish)</h3>
+      <PresetChips
+        presets={[
+          { label: 'Counterexample', onPick: () => runActivities(DEFAULT_ACTIVITIES) },
+          {
+            label: 'Back-to-back',
+            onPick: () =>
+              runActivities([
+                { name: 'A', start: 0, finish: 2 },
+                { name: 'B', start: 2, finish: 4 },
+                { name: 'C', start: 4, finish: 6 },
+                { name: 'D', start: 1, finish: 5 },
+              ]),
+          },
+          {
+            label: 'All overlap',
+            onPick: () =>
+              runActivities([
+                { name: 'A', start: 1, finish: 8 },
+                { name: 'B', start: 2, finish: 6 },
+                { name: 'C', start: 3, finish: 5 },
+                { name: 'D', start: 0, finish: 9 },
+              ]),
+          },
+        ]}
+      />
+      <input
+        type="text"
+        value={intervalsInput}
+        onChange={(e) => setIntervalsInput(e.target.value)}
+        placeholder="1-4, 3-5, 0-6, 5-7"
+        className={inputClass}
+      />
+      {error && <p className="text-xs text-error">{error}</p>}
+      <Button variant="outline" size="sm" onClick={handleApply}>
+        Apply
+      </Button>
+    </section>
+  )
+}
+
+function BacktrackingControls({ slug }: { slug: string }) {
+  const apply = useApply()
+  const { restricted } = useStudyScope()
+  const [problem, setProblem] = useState<'subset' | 'nqueens'>('subset')
+  const [candidatesInput, setCandidatesInput] = useState('3,4,5,2')
+  const [boardSize, setBoardSize] = useState<'4' | '5'>('4')
+  const [error, setError] = useState<string | null>(null)
+
+  function runSubset(raw = candidatesInput) {
+    const parsed = parseArrayInput(raw)
+    if (!parsed || parsed.filter((v) => v > 0).length < 3) {
+      setError('Enter 3 to 5 positive integers, e.g. 3,4,5,2')
+      return
+    }
+    setError(null)
+    apply(slug, backtrackingEngine(parsed), 'start')
+  }
+
+  return (
+    <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
+      <h3 className={labelClass}>Backtracking problem</h3>
+      {!restricted && (
+        <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-surface-sunk/50 p-0.5 dark:border-dark-border">
+          <button
+            type="button"
+            onClick={() => {
+              setProblem('subset')
+              runSubset()
+            }}
+            className={cn(
+              'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              problem === 'subset'
+                ? 'bg-card text-text-primary shadow-sm dark:text-dark-text-primary'
+                : 'text-text-muted hover:text-text-primary dark:text-dark-text-secondary',
+            )}
+          >
+            Subset Sum
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setProblem('nqueens')
+              apply(slug, nQueensBacktrackingEngine(Number(boardSize)), 'start')
+            }}
+            className={cn(
+              'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              problem === 'nqueens'
+                ? 'bg-card text-primary shadow-sm'
+                : 'text-text-muted hover:text-text-primary dark:text-dark-text-secondary',
+            )}
+          >
+            N-Queens
+          </button>
+        </div>
+      )}
+
+      {problem === 'nqueens' ? (
+        <>
+          <div className="flex flex-col gap-1">
+            <label className={labelClass}>Board size</label>
+            <select
+              value={boardSize}
+              onChange={(e) => {
+                const next = e.target.value as '4' | '5'
+                setBoardSize(next)
+                apply(slug, nQueensBacktrackingEngine(Number(next)), 'start')
+              }}
+              className={inputClass}
+            >
+              <option value="4">4 x 4 board (2 solutions)</option>
+              <option value="5">5 x 5 board (10 solutions)</option>
+            </select>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => apply(slug, nQueensBacktrackingEngine(Number(boardSize)), 'start')}
+          >
+            Run N-Queens
+          </Button>
+        </>
+      ) : (
+        <>
+          <PresetChips
+            presets={[
+              {
+                label: 'Default (3,4,5,2)',
+                onPick: () => {
+                  setCandidatesInput('3,4,5,2')
+                  runSubset('3,4,5,2')
+                },
+              },
+              {
+                label: 'Heavy pruning (6,7,8,2)',
+                onPick: () => {
+                  setCandidatesInput('6,7,8,2')
+                  runSubset('6,7,8,2')
+                },
+              },
+            ]}
+          />
+          <input
+            type="text"
+            value={candidatesInput}
+            onChange={(e) => setCandidatesInput(e.target.value)}
+            placeholder="3,4,5,2"
+            className={inputClass}
+          />
+          {error && <p className="text-xs text-error">{error}</p>}
+          <Button variant="outline" size="sm" onClick={() => runSubset()}>
+            Apply
+          </Button>
+        </>
+      )}
+    </section>
+  )
+}
+
 const WEIGHTED_GRAPH_ALGOS = new Set(['dijkstra', 'bellman-ford', 'kruskal', 'prim'])
 const NEEDS_TARGET_NODE = new Set(['bfs', 'dfs', 'dijkstra', 'bellman-ford'])
 const NEEDS_START_NODE = new Set(['bfs', 'dfs', 'dijkstra', 'bellman-ford', 'prim'])
-// Algorithms where more than one preset from the relevant (weighted/
-// unweighted) bucket is actually valid to run - cycle-detection needs
-// its one preset that HAS a cycle, and topological-sort needs a DAG
-// (no cycle), so neither gets a free choice between the two unweighted
-// presets without risking a broken demo.
 const HAS_PRESET_CHOICE = new Set(['bfs', 'dfs', 'connected-components', 'dijkstra', 'bellman-ford', 'kruskal', 'prim'])
-// Kruskal/Prim assume an undirected graph (a spanning TREE isn't a
-// well-defined concept on a directed graph in general), so they don't
-// get a directed toggle; topological-sort is only ever meaningful on a
-// directed acyclic graph, so it doesn't either.
 const HAS_DIRECTED_TOGGLE = new Set(['bfs', 'dfs', 'connected-components', 'cycle-detection', 'dijkstra', 'bellman-ford'])
 
 const GRAPH_DEFAULT_PRESET: Record<string, GraphPresetName> = {
@@ -900,13 +1951,6 @@ const GRAPH_DISPLAY_NAME: Record<string, string> = {
   'two-components': 'Two disconnected groups (8 nodes)',
 }
 
-// `preset.adjacency as never` below: `preset` is typed as the union of
-// both preset shapes since the dropdown can offer either, but
-// `presetOptions` (derived from WEIGHTED_GRAPH_ALGOS) only ever lets the
-// student choose from the bucket matching this specific `slug` - so by
-// the time an engine call is reached, the adjacency shape it expects is
-// already guaranteed at runtime, just not provable to the type checker
-// without a much larger per-branch type-narrowing rewrite.
 function runGraphAlgorithm(
   slug: string,
   preset: UnweightedPreset | WeightedPreset,
@@ -964,7 +2008,7 @@ function GraphControls({ slug }: { slug: string }) {
   }
 
   function run() {
-    apply(slug, runGraphAlgorithm(slug, preset, directed, startId, targetId))
+    apply(slug, runGraphAlgorithm(slug, preset, directed, startId, targetId), 'start')
   }
 
   return (
@@ -1028,16 +2072,11 @@ function GraphControls({ slug }: { slug: string }) {
   )
 }
 
-// Topological sort is only ever meaningful on a directed *acyclic*
-// graph, which rules out both of the "unweighted bucket" presets
-// (small-7 is undirected; directed-cycle - as its name says - has an
-// actual cycle) - it gets its own fixed DAG rather than a dropdown of
-// choices that could silently produce a broken demo.
 function TopologicalSortControls({ slug }: { slug: string }) {
   const apply = useApply()
 
   function run() {
-    apply(slug, topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency))
+    apply(slug, topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency), 'start')
   }
 
   return (
@@ -1058,12 +2097,6 @@ type GridSizeName = 'default' | 'small' | 'medium' | 'large'
 type SizeOption = { label: string; rows: number; cols: number; start: [number, number]; end: [number, number] }
 type Board = { readonly rows: number; readonly cols: number; readonly start?: readonly number[]; readonly end?: readonly number[] }
 
-/**
- * The size menu, whose first entry is the board this topic actually
- * opened on. It used to start on a fixed 'medium' whatever was on
- * screen, so it announced 20x35 over a board that was not - and the
- * pathfinders and the mazes do not open on the same one.
- */
 function sizeOptionsFor(board: Board): Record<GridSizeName, SizeOption> {
   const mid = Math.floor(board.rows / 2)
   return {
@@ -1093,16 +2126,11 @@ function GridControls({ slug }: { slug: string }) {
   const engine = GRID_ENGINE_FOR[slug] ?? gridBfsEngine
   const options = sizeOptionsFor(slug === 'grid-astar' ? ASTAR_BOARD : PATHFINDER_BOARD)
 
-  // Whichever board this topic opens on, at the chosen size. Rebuilding
-  // every size as a plain walled board would have dropped the terrain the
-  // moment a learner resized Dijkstra - and Dijkstra without weights is
-  // just BFS again, which is the thing the terrain exists to fix.
   const buildBoard =
     slug === 'grid-astar' ? buildOpenGrid : slug === 'grid-dijkstra' ? buildTerrainGrid : buildWalledGrid
 
   function runOn(sizeName: GridSizeName, grid?: GridCell[][]) {
     const cfg = options[sizeName]
-    // Setting up a board, not performing an operation: start at the top.
     apply(slug, engine(grid ?? buildBoard(cfg.rows, cfg.cols), cfg.start[0], cfg.start[1], cfg.end[0], cfg.end[1]), 'start')
   }
 
@@ -1166,12 +2194,16 @@ function MazeControls({ slug }: { slug: string }) {
     const cfg = options[sizeName]
     const snapshots = engine(cfg.rows, cfg.cols)
     setLastMaze(snapshots[snapshots.length - 1].dataStructureState as GridAlgorithmState)
-    apply(slug, snapshots)
+    apply(slug, snapshots, 'start')
   }
 
   function runAStarOnMaze() {
     if (!lastMaze) return
-    apply(slug, gridAStarEngine(lastMaze.grid, lastMaze.startCell[0], lastMaze.startCell[1], lastMaze.endCell[0], lastMaze.endCell[1]))
+    apply(
+      slug,
+      gridAStarEngine(lastMaze.grid, lastMaze.startCell[0], lastMaze.startCell[1], lastMaze.endCell[0], lastMaze.endCell[1]),
+      'start',
+    )
   }
 
   return (
@@ -1264,48 +2296,41 @@ export const CONTEXTUAL_CONTROL_SLUGS = new Set([
   'maze-kruskal',
   'counting-sort',
   'radix-sort',
+  'dp-2d',
+  'greedy',
+  'backtracking',
 ])
 
-/**
- * Renders the algorithm-specific input section that replaces the generic
- * "Custom array" box for algorithms whose input isn't a plain number array.
- * Returns null for sorting algorithms (and anything else unlisted), which
- * keeps LeftPanel's existing custom-array controls.
- */
 export default function AlgorithmControls({ slug }: { slug: string | undefined }) {
   if (!slug) return null
 
   switch (slug) {
     case 'stack':
-      return <StackControls slug={slug} />
+      return <StackControls key={slug} slug={slug} />
     case 'queue':
     case 'circular-queue':
-      return <QueueControls slug={slug} />
+      return <QueueControls key={slug} slug={slug} />
     case 'deque':
-      return <DequeControls slug={slug} />
+      return <DequeControls key={slug} slug={slug} />
     case 'singly-linked-list':
     case 'doubly-linked-list':
     case 'circular-linked-list':
-      return <LinkedListControls slug={slug} />
+      return <LinkedListControls key={slug} slug={slug} />
     case 'hash-table-chaining':
     case 'hash-table-probing':
-      return <HashTableControls slug={slug} />
+      return <HashTableControls key={slug} slug={slug} />
     case 'recursion-factorial':
     case 'recursion-fibonacci':
-      return <RecursionControls slug={slug} />
+      return <RecursionControls key={slug} slug={slug} />
     case 'two-pointer':
-      return <TwoPointerControls slug={slug} />
+      return <TwoPointerControls key={slug} slug={slug} />
     case 'sliding-window-fixed':
     case 'sliding-window-variable':
-      return <SlidingWindowControls slug={slug} />
-    // binary-search and linear-search are part of the original algorithm
-    // set and already work correctly through LeftPanel's default custom-
-    // array Apply/Random (engineForSlug already routes them) - only the
-    // three newer search algorithms need their own section here.
+      return <SlidingWindowControls key={slug} slug={slug} />
     case 'jump-search':
     case 'interpolation-search':
     case 'exponential-search':
-      return <SearchControls slug={slug} />
+      return <SearchControls key={slug} slug={slug} />
     case 'bfs':
     case 'dfs':
     case 'dijkstra':
@@ -1314,18 +2339,18 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'prim':
     case 'cycle-detection':
     case 'connected-components':
-      return <GraphControls slug={slug} />
+      return <GraphControls key={slug} slug={slug} />
     case 'topological-sort':
-      return <TopologicalSortControls slug={slug} />
+      return <TopologicalSortControls key={slug} slug={slug} />
     case 'grid-bfs':
     case 'grid-dfs':
     case 'grid-dijkstra':
     case 'grid-astar':
-      return <GridControls slug={slug} />
+      return <GridControls key={slug} slug={slug} />
     case 'maze-generation':
     case 'maze-prim':
     case 'maze-kruskal':
-      return <MazeControls slug={slug} />
+      return <MazeControls key={slug} slug={slug} />
     case 'bst':
     case 'bst-search':
     case 'bst-delete':
@@ -1334,26 +2359,32 @@ export default function AlgorithmControls({ slug }: { slug: string | undefined }
     case 'tree-preorder':
     case 'tree-postorder':
     case 'tree-level-order':
-      return <TreeTraversalControls slug={slug} />
+      return <TreeTraversalControls key={slug} slug={slug} />
     case 'avl-insert':
     case 'avl-delete':
-      return <AVLControls slug={slug} />
+      return <AVLControls key={slug} slug={slug} />
     case 'rb-insert':
     case 'rb-delete':
-      return <RBControls slug={slug} />
+      return <RBControls key={slug} slug={slug} />
     case 'max-heap-insert':
     case 'max-heap-delete':
     case 'min-heap-insert':
     case 'min-heap-delete':
-      return <HeapControls slug={slug} />
+      return <HeapControls key={slug} slug={slug} />
     case 'trie-insert':
     case 'trie-search':
     case 'trie-delete':
-      return <TrieControls slug={slug} />
+      return <TrieControls key={slug} slug={slug} />
     case 'counting-sort':
-      return <CountingSortControls slug={slug} />
+      return <CountingSortControls key={slug} slug={slug} />
     case 'radix-sort':
-      return <RadixSortControls slug={slug} />
+      return <RadixSortControls key={slug} slug={slug} />
+    case 'dp-2d':
+      return <DP2DControls key={slug} slug={slug} />
+    case 'greedy':
+      return <GreedyControls key={slug} slug={slug} />
+    case 'backtracking':
+      return <BacktrackingControls key={slug} slug={slug} />
     default:
       return null
   }

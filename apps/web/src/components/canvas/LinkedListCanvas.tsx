@@ -18,17 +18,23 @@ interface LinkedListCanvasProps {
   isCircular?: boolean
 }
 
-const NODE_WIDTH = 90
+const NODE_WIDTH = 112
 const NODE_HEIGHT = 44
-const ARROW_GAP = 50
-const ROW_HEIGHT = 130
-const NODES_PER_ROW = 8
+const ARROW_GAP = 52
+const ROW_HEIGHT = 138
+const NODES_PER_ROW = 7
 const LEFT_PADDING = 60
-const TOP_PADDING = 70
+const TOP_PADDING = 72
 
-// Canvas state tokens from index.css. Framer's `animate={{ fill }}` needs
-// a literal colour to interpolate toward, so animated fills go through
-// useResolveColour, which also re-resolves them when the theme flips.
+function simAddress(id: string): string {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) & 0x0fff
+  }
+  const aligned = (0x1000 + ((hash & 0x0ff0) || 0x0040)).toString(16).toUpperCase()
+  return `0x${aligned}`
+}
+
 const DEFAULT_FILL = 'var(--surface)'
 const DEFAULT_STROKE = 'var(--rule)'
 const DEFAULT_TEXT = 'var(--ink)'
@@ -40,6 +46,7 @@ const DELETE_FILL = 'var(--state-error-text)'
 const DELETE_TEXT = 'var(--state-error-ink)'
 const POINTER_BG = 'var(--surface-sunk)'
 const ARROW_ACTIVE = 'var(--state-current)'
+const ARROW_REWIRE = 'var(--state-compare)'
 const ARROW_INACTIVE = 'var(--state-neutral)'
 
 const LEGEND: { label: string; colour: string }[] = [
@@ -63,9 +70,6 @@ function layoutNodes(nodes: LinkedListNode[], headId: string | null): LayoutNode
   const ordered: LinkedListNode[] = []
   const seen = new Set<string>()
   let cursor: string | null = headId
-  // Walk the chain from head so layout order matches traversal order,
-  // not array insertion order - guards against an out-of-order `nodes`
-  // array (e.g. after a delete/relink) drawing a visually tangled list.
   while (cursor && !seen.has(cursor)) {
     const node = byId.get(cursor)
     if (!node) break
@@ -73,8 +77,6 @@ function layoutNodes(nodes: LinkedListNode[], headId: string | null): LayoutNode
     seen.add(cursor)
     cursor = node.next
   }
-  // Any node unreachable from head (shouldn't normally happen) still
-  // gets drawn so nothing silently disappears from the canvas.
   for (const node of nodes) {
     if (!seen.has(node.id)) ordered.push(node)
   }
@@ -102,15 +104,11 @@ export default function LinkedListCanvas({
   const operationLabel = operationLabelFor(snapshot?.dataStructureState)
   const headerRef = useRef<HTMLDivElement>(null)
   const headerHeight = useElementHeight(headerRef)
-  // The header sits above the drawing and takes real height now, so the
-  // drawing gets what is left rather than the whole box - otherwise the
-  // bottom of it is cut off by the container, which is what "the
-  // visualisations go out of view" was.
   const height = Math.max(boxHeight - headerHeight, 180)
 
   const layout = useMemo(() => layoutNodes(state?.nodes ?? [], state?.headId ?? null), [state])
   const rowCount = layout.reduce((max, l) => Math.max(max, l.row + 1), 1)
-  const svgHeight = Math.max(height, TOP_PADDING + rowCount * ROW_HEIGHT + 40)
+  const svgHeight = Math.max(height, TOP_PADDING + rowCount * ROW_HEIGHT + 44)
   const svgWidth = Math.max(width, LEFT_PADDING + NODES_PER_ROW * (NODE_WIDTH + ARROW_GAP))
 
   const progressColorClass = progressPercent >= 80 ? 'bg-state-sorted' : progressPercent >= 50 ? 'bg-state-compare' : 'bg-state-current'
@@ -137,6 +135,7 @@ export default function LinkedListCanvas({
 
   const byId = new Map(layout.map((l) => [l.node.id, l]))
   const canvasLabel = `${algorithmName}, ${state.operation}: ${snapshot?.description ?? ''}`
+  const isRewiringOp = state.operation === 'insert' || state.operation === 'delete' || state.operation === 'reverse'
 
   return (
     <div className="flex h-full flex-col">
@@ -163,12 +162,14 @@ export default function LinkedListCanvas({
         <OperationBanner label={operationLabel} />
       </div>
 
-
       <div className="flex-1 overflow-auto pt-2">
         <svg width={svgWidth} height={svgHeight} role="img" aria-label={canvasLabel}>
           <defs>
             <marker id="ll-arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
               <path d="M0,0 L8,4 L0,8 Z" fill={ARROW_ACTIVE} />
+            </marker>
+            <marker id="ll-arrow-rewire" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill={ARROW_REWIRE} />
             </marker>
             <marker id="ll-arrow-inactive" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
               <path d="M0,0 L8,4 L0,8 Z" fill={ARROW_INACTIVE} />
@@ -180,14 +181,11 @@ export default function LinkedListCanvas({
               const isLast = i === layout.length - 1
               const nextLayout = node.next ? byId.get(node.next) : null
               const isActiveEdge = state.currentId === node.id && state.activePointer !== 'prev'
+              const isRewiringEdge = isActiveEdge && isRewiringOp
 
               if (isLast) return null
               if (!nextLayout) return null
 
-              // Same row: straight arrow between pointer box edges. Wrapped
-              // to a new row: curve down from the row's right edge and back
-              // in from the left, rather than drawing a long diagonal
-              // across unrelated nodes.
               const sameRow = nextLayout.y === y
               const x1 = x + NODE_WIDTH
               const y1 = y + NODE_HEIGHT / 2
@@ -203,9 +201,10 @@ export default function LinkedListCanvas({
                   layout
                   d={path}
                   fill="none"
-                  stroke={isActiveEdge ? ARROW_ACTIVE : ARROW_INACTIVE}
+                  stroke={isRewiringEdge ? ARROW_REWIRE : isActiveEdge ? ARROW_ACTIVE : ARROW_INACTIVE}
                   strokeWidth={isActiveEdge ? 2.5 : 1.5}
-                  markerEnd={`url(#ll-arrow-${isActiveEdge ? 'active' : 'inactive'})`}
+                  strokeDasharray={isRewiringEdge ? '6 3' : undefined}
+                  markerEnd={`url(#ll-arrow-${isRewiringEdge ? 'rewire' : isActiveEdge ? 'active' : 'inactive'})`}
                   transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeInOut' }}
                 />
               )
@@ -239,6 +238,7 @@ export default function LinkedListCanvas({
                 const prevLayout = byId.get(node.prev)
                 if (!prevLayout || prevLayout.y !== y) return null
                 const isActiveEdge = state.currentId === node.id && state.activePointer === 'prev'
+                const isRewiringEdge = isActiveEdge && isRewiringOp
                 const x1 = x
                 const y1 = y + NODE_HEIGHT / 2 + 10
                 const x2 = prevLayout.x + NODE_WIDTH
@@ -248,10 +248,10 @@ export default function LinkedListCanvas({
                     layout
                     d={`M${x1},${y1} L${x2},${y1}`}
                     fill="none"
-                    stroke={isActiveEdge ? ARROW_ACTIVE : ARROW_INACTIVE}
+                    stroke={isRewiringEdge ? ARROW_REWIRE : isActiveEdge ? ARROW_ACTIVE : ARROW_INACTIVE}
                     strokeWidth={isActiveEdge ? 2.5 : 1.5}
                     strokeDasharray="4 3"
-                    markerEnd={`url(#ll-arrow-${isActiveEdge ? 'active' : 'inactive'})`}
+                    markerEnd={`url(#ll-arrow-${isRewiringEdge ? 'rewire' : isActiveEdge ? 'active' : 'inactive'})`}
                     transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
                   />
                 )
@@ -263,9 +263,17 @@ export default function LinkedListCanvas({
               const isMarked = state.markedForDelete === node.id
               const fill = isMarked ? DELETE_FILL : isFound ? FOUND_FILL : isCurrent ? CURRENT_FILL : DEFAULT_FILL
               const textFill = isMarked ? DELETE_TEXT : isFound ? FOUND_TEXT : isCurrent ? CURRENT_TEXT : DEFAULT_TEXT
-              const valueWidth = isDLL ? NODE_WIDTH * 0.4 : NODE_WIDTH * 0.6
+              const prevWidth = isDLL ? NODE_WIDTH * 0.28 : 0
+              const valueWidth = isDLL ? NODE_WIDTH * 0.44 : NODE_WIDTH * 0.56
+              const nextWidth = isDLL ? NODE_WIDTH * 0.28 : NODE_WIDTH * 0.44
               const isHead = node.id === state.headId
               const isTail = node.id === state.tailId
+              const nodeAddr = simAddress(node.id)
+              const nextTargetId = node.next ?? (isCircular && i === layout.length - 1 ? state.headId : null)
+              const nextAddrShort = nextTargetId ? simAddress(nextTargetId).slice(2) : 'null'
+              const prevAddrShort = node.prev ? simAddress(node.prev).slice(2) : 'null'
+              const highlightNextBox = isCurrent && isRewiringOp && state.activePointer !== 'prev'
+              const highlightPrevBox = isCurrent && isRewiringOp && state.activePointer === 'prev'
 
               return (
                 <motion.g
@@ -280,14 +288,14 @@ export default function LinkedListCanvas({
                   }
                 >
                   {isHead && (
-                    <text x={0} y={-24} textAnchor="middle" className="fill-state-current text-[10px] font-semibold">
+                    <text x={14} y={-10} textAnchor="middle" className="fill-state-current text-[10px] font-semibold">
                       &#9660; head
                     </text>
                   )}
                   {isTail && (
                     <text
-                      x={NODE_WIDTH}
-                      y={-24}
+                      x={NODE_WIDTH - 14}
+                      y={-10}
                       textAnchor="middle"
                       className="fill-text-muted text-[10px] font-semibold dark:fill-dark-text-secondary"
                     >
@@ -300,36 +308,43 @@ export default function LinkedListCanvas({
                       <rect
                         x={0}
                         y={0}
-                        width={NODE_WIDTH * 0.3}
+                        width={prevWidth}
                         height={NODE_HEIGHT}
-                        rx={6}
+                        rx={5}
                         fill={POINTER_BG}
-                        stroke={DEFAULT_STROKE}
+                        stroke={highlightPrevBox ? ARROW_REWIRE : DEFAULT_STROKE}
+                        strokeWidth={highlightPrevBox ? 2 : 1}
                       />
-                      <text x={NODE_WIDTH * 0.15} y={NODE_HEIGHT / 2} textAnchor="middle" dominantBaseline="central" className="fill-text-muted text-[11px]">
-                        &larr;
+                      <text
+                        x={prevWidth / 2}
+                        y={NODE_HEIGHT / 2}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        className="fill-text-muted font-mono text-[8px] dark:fill-dark-text-secondary"
+                      >
+                        {prevAddrShort}
                       </text>
                     </>
                   )}
 
                   <rect
-                    x={isDLL ? NODE_WIDTH * 0.3 : 0}
+                    x={prevWidth}
                     y={0}
                     width={valueWidth}
                     height={NODE_HEIGHT}
-                    rx={6}
+                    rx={5}
                     fill={fill}
                     stroke={fill === DEFAULT_FILL ? DEFAULT_STROKE : 'none'}
                   />
                   <text
-                    x={(isDLL ? NODE_WIDTH * 0.3 : 0) + valueWidth / 2}
+                    x={prevWidth + valueWidth / 2}
                     y={NODE_HEIGHT / 2}
                     textAnchor="middle"
                     dominantBaseline="central"
                     style={{
                       fill: textFill,
                       fontSize: 14,
-                      fontWeight: 500,
+                      fontWeight: 600,
                       textDecoration: isMarked ? 'line-through' : 'none',
                     }}
                   >
@@ -337,24 +352,36 @@ export default function LinkedListCanvas({
                   </text>
 
                   <rect
-                    x={isDLL ? NODE_WIDTH * 0.7 : NODE_WIDTH * 0.6}
+                    x={prevWidth + valueWidth}
                     y={0}
-                    width={NODE_WIDTH * (isDLL ? 0.3 : 0.4)}
+                    width={nextWidth}
                     height={NODE_HEIGHT}
-                    rx={6}
+                    rx={5}
                     fill={POINTER_BG}
-                    stroke={DEFAULT_STROKE}
+                    stroke={highlightNextBox ? ARROW_REWIRE : DEFAULT_STROKE}
+                    strokeWidth={highlightNextBox ? 2 : 1}
                   />
                   <text
-                    x={isDLL ? NODE_WIDTH * 0.85 : NODE_WIDTH * 0.8}
+                    x={prevWidth + valueWidth + nextWidth / 2}
                     y={NODE_HEIGHT / 2}
                     textAnchor="middle"
                     dominantBaseline="central"
                     className={cn(
-                      node.next ? 'text-[14px] fill-text-primary dark:fill-dark-text-primary' : 'fill-text-muted text-[10px]',
+                      'font-mono',
+                      nextTargetId ? 'fill-text-primary text-[9px] dark:fill-dark-text-primary' : 'fill-text-muted text-[9px]',
                     )}
                   >
-                    {node.next ? '→' : isCircular && i === layout.length - 1 ? '→' : 'null'}
+                    {nextTargetId ? `0x${nextAddrShort}` : 'null'}
+                  </text>
+
+                  {/* Simulated memory address beneath node */}
+                  <text
+                    x={NODE_WIDTH / 2}
+                    y={NODE_HEIGHT + 13}
+                    textAnchor="middle"
+                    className="fill-text-muted font-mono text-[9px] dark:fill-dark-text-secondary"
+                  >
+                    @{nodeAddr}
                   </text>
                 </motion.g>
               )

@@ -23,19 +23,22 @@ import { ChevronIcon } from './icons'
 // on each. Module numbering is earned: the curriculum is a sequence.
 
 const COLLAPSED_KEY = 'dsa-tutor-curriculum-collapsed'
+const WORKSPACE_COLLAPSED_KEY = 'dsa-tutor-workspace-curriculum-collapsed'
 
-function readCollapsed(): boolean {
+function readCollapsed(inWorkspace: boolean): boolean {
   try {
-    return window.localStorage.getItem(COLLAPSED_KEY) === 'true'
+    const raw = window.localStorage.getItem(inWorkspace ? WORKSPACE_COLLAPSED_KEY : COLLAPSED_KEY)
+    if (raw === null) return inWorkspace
+    return raw === 'true'
   } catch {
-    // Blocked storage: start expanded.
-    return false
+    // Blocked storage: collapse inside the workspace (3-column studio), expand elsewhere.
+    return inWorkspace
   }
 }
 
-function writeCollapsed(value: boolean) {
+function writeCollapsed(inWorkspace: boolean, value: boolean) {
   try {
-    window.localStorage.setItem(COLLAPSED_KEY, String(value))
+    window.localStorage.setItem(inWorkspace ? WORKSPACE_COLLAPSED_KEY : COLLAPSED_KEY, String(value))
   } catch {
     // Blocked storage: the choice holds for this visit only.
   }
@@ -64,10 +67,12 @@ export interface CurriculumPanelProps {
   currentTopicName?: string | null
   /** 'rail' collapses to 48px; 'drawer' (small screens) always shows in full. */
   variant?: 'rail' | 'drawer'
+  /** Inside /algorithm/:name, defaults to collapsed so the 3-column studio gets full width. */
+  inWorkspace?: boolean
   className?: string
 }
 
-export function CurriculumPanel({ currentTopicName = null, variant = 'rail', className }: CurriculumPanelProps) {
+export function CurriculumPanel({ currentTopicName = null, variant = 'rail', inWorkspace = false, className }: CurriculumPanelProps) {
   const { user } = useAuth()
   const go = useShellNavigate()
   // Feynman mode on demand from the rail (Phase 8A). Not for an active
@@ -86,7 +91,7 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', cla
   const [stored, setStored] = useState<string[] | null>(() => readExpanded(storage(), key))
   useEffect(() => setStored(readExpanded(storage(), key)), [key])
 
-  const [collapsed, setCollapsed] = useState(() => variant === 'rail' && readCollapsed())
+  const [collapsed, setCollapsed] = useState(() => variant === 'rail' && readCollapsed(inWorkspace))
   const isCollapsed = variant === 'rail' && collapsed
 
   // Exactly one module open on first load (the one holding the focus topic);
@@ -108,7 +113,7 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', cla
 
   function setPanelCollapsed(value: boolean) {
     setCollapsed(value)
-    writeCollapsed(value)
+    writeCollapsed(inWorkspace, value)
   }
 
   const listRef = useRef<HTMLDivElement>(null)

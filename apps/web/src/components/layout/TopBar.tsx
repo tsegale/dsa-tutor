@@ -3,6 +3,7 @@ import { conditionFeatures } from '@/utils/studyCondition'
 import { useAlgorithmStore, selectProgressPercent } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { moduleForTrack, moduleLabel } from '@/config/curriculum'
+import { topicPath } from '@/data/tracks'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import ModeToggle from '@/components/ui/ModeToggle'
@@ -45,11 +46,23 @@ export default function TopBar() {
   // A study participant has no track pages (see useStudyScope).
   const { restricted } = useStudyScope()
   const algorithmDisplayName = registryEntry?.displayName ?? algorithmName
-  const crumbs = registryEntry && !restricted
+  const activeModule = registryEntry && !restricted ? moduleForTrack(registryEntry.track) : null
+  const siblingItems = activeModule
+    ? activeModule.topics.map((slug, idx) => {
+        const entry = getAlgorithmRegistryEntry(slug)
+        return {
+          number: `${activeModule.number}.${idx + 1}`,
+          label: entry?.displayName ?? slug,
+          to: topicPath(slug),
+          active: slug === algorithmSlug,
+        }
+      })
+    : undefined
+  const crumbs = activeModule
     ? [
         { label: 'Home', to: '/' },
-        { label: moduleLabel(moduleForTrack(registryEntry.track)), to: `/module/${moduleForTrack(registryEntry.track).number}` },
-        { label: algorithmDisplayName },
+        { label: moduleLabel(activeModule), to: `/module/${activeModule.number}` },
+        { label: algorithmDisplayName, items: siblingItems },
       ]
     : [{ label: 'Home', to: '/' }, { label: algorithmDisplayName }]
 
