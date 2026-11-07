@@ -915,7 +915,7 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
         const cell = s.grid[r]?.[c]
         const g = cell?.gScore ?? 0
         const h = cell?.hScore ?? 0
-        return { r, c, index, f: isAStar ? g + h : g }
+        return { r, c, index, g, h, f: isAStar ? g + h : g }
       })
       // Which cell is right is correctTileIdFor's to say, not this
       // function's. Both used to decide it, and when Grid BFS and DFS
@@ -925,8 +925,12 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
       // was the one the run does not take.
       const correct = gridNextCellKeyFor(snapshot)
       const key = ({ r, c }: { r: number; c: number }) => `${r},${c}`
-      const label = (cell: { r: number; c: number; index: number; f: number }) => {
-        if (isAStar) return `(${cell.r}, ${cell.c}) - f(n) = ${cell.f}`
+      const label = (cell: { r: number; c: number; index: number; g: number; h: number; f: number }) => {
+        // The parts, not the sum: the question is which cell has the
+        // lowest f(n), and printing f on each tile made it a comparison of
+        // two numbers. GridCanvas already hides f on the frontier at this
+        // junction for the same reason; the tiles were undoing that.
+        if (isAStar) return `(${cell.r}, ${cell.c}) - g = ${cell.g}, h = ${cell.h}`
         if (weighted) return `(${cell.r}, ${cell.c}) - g(n) = ${cell.f}`
         // A queue and a stack are ordered by arrival, not by score, so
         // the position is the thing a learner reasons about.
