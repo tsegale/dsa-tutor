@@ -30,6 +30,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # correctTile.test.ts grades every topic's correct tile through the AI
+      # service's real predictions.py, so the web tests need its packages.
+      # Without them the contract test can't import pydantic and fails.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: apps/ai/requirements.txt
+
+      - name: Install AI service dependencies (for the grading contract test)
+        run: pip install -r apps/ai/requirements.txt
+
       # The api's typecheck and tests import @prisma/client types, which only
       # exist once the client is generated. No database is needed for this.
       - name: Generate Prisma client
