@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useOnboarding } from '@/hooks/useOnboarding'
@@ -7,12 +8,12 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
 import { IdentityHeader } from '@/components/profile/IdentityHeader'
 import { StudySection } from '@/components/profile/StudySection'
-import { AnalyticsSection } from '@/components/profile/AnalyticsSection'
 import { PreferencesSection } from '@/components/profile/PreferencesSection'
 import { DataPrivacySection } from '@/components/profile/DataPrivacySection'
 
-// The learner and participant hub (Phase 6): identity, study participation
-// (participants only), and the guided tour. It must read as complete for a
+// The account: identity, study participation (participants only),
+// preferences, data and privacy, and the guided tour. Learning analytics
+// moved to Progress, so how the learning is going is in one place. It must read as complete for a
 // non-participant, which most accounts are, the presentation's demo account
 // included: their page simply has no study section.
 
@@ -36,6 +37,12 @@ export default function ProfilePage() {
   const { startTour } = useOnboarding()
   // Shares the ['study', 'status'] cache with the study gate and header chip.
   const { data: studyStatus } = useQuery({ queryKey: ['study', 'status'], queryFn: fetchStudyStatus })
+  const location = useLocation()
+
+  // Old links to the analytics that used to be here still land on them.
+  useEffect(() => {
+    if (location.hash === '#profile-analytics') navigate('/progress#learning-analytics', { replace: true })
+  }, [location.hash, navigate])
 
   return (
     <AppShell>
@@ -45,7 +52,15 @@ export default function ProfilePage() {
         {/* Participants only; absent for everyone else, with no placeholder. */}
         {studyStatus && <StudySection status={studyStatus} />}
 
-        <AnalyticsSection />
+        <Section title="Your learning">
+          <p className="text-small text-ink-2">
+            Mastery, analytics, recent sessions and badges are on{' '}
+            <Link to="/progress" className="font-medium text-accent-foreground underline-offset-2 hover:underline">
+              Progress
+            </Link>
+            .
+          </p>
+        </Section>
 
         <PreferencesSection />
 

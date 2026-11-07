@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { topicPath } from '@/data/tracks'
 import { moduleLabel } from '@/config/curriculum'
@@ -13,10 +14,12 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
 import BadgesSection from '@/components/dashboard/BadgesSection'
+import { AnalyticsSection } from '@/components/profile/AnalyticsSection'
 
-// Progress over the curriculum: level and XP (moved here from the old
-// dashboard header), completion per module (or per study topic for a study
-// participant), and badges.
+// Everything about how the learning is going, in one place: level and XP,
+// mastery per module (or per study topic for a participant), the detailed
+// analytics that used to sit on Profile, and badges. Profile is the account:
+// identity, study participation, preferences, data and privacy.
 
 function ChartIcon() {
   return (
@@ -31,6 +34,15 @@ export default function ProgressPage() {
   const { restricted } = useStudyScope()
   const { topicsQuery, syllabus, plan } = useLearningPlan()
   const { data: topics, isLoading, isFetching, refetch } = topicsQuery
+  const { hash } = useLocation()
+
+  // Links into the analytics (including old ones to Profile, which redirect
+  // here) land on them once the page has rendered past its loading state.
+  useEffect(() => {
+    if (hash === '#learning-analytics' && topics) {
+      document.getElementById('learning-analytics')?.scrollIntoView({ block: 'start' })
+    }
+  }, [hash, topics])
 
   if (isLoading) {
     return (
@@ -107,12 +119,7 @@ export default function ProgressPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-h1 text-ink">Progress</h1>
-        <Link to="/profile#profile-analytics" className="text-small font-medium text-primary underline-offset-2 hover:underline">
-          Detailed learning analytics
-        </Link>
-      </div>
+      <h1 className="mb-6 text-h1 text-ink">Progress</h1>
 
       <section aria-labelledby="level-heading" className="mb-8 rounded-md border border-rule bg-surface p-card shadow-e1">
         <h2 id="level-heading" className="text-micro text-ink-2">
@@ -142,6 +149,10 @@ export default function ProgressPage() {
           ))}
         </ul>
       </section>
+
+      <div className="mb-8">
+        <AnalyticsSection />
+      </div>
 
       <BadgesSection />
     </AppShell>

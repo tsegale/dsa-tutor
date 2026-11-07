@@ -12,7 +12,7 @@ import { useLocation } from 'react-router-dom'
 const MAX_FRAMES = 30
 
 export function RouteFocus() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const previous = useRef<string | null>(null)
 
   useEffect(() => {
@@ -30,13 +30,20 @@ export function RouteFocus() {
       if (target) {
         if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1')
         target.focus({ preventScroll: true })
-        window.scrollTo({ top: 0 })
+        // A link to a section (/progress#learning-analytics) lands on that
+        // section; scrolling to the top here used to override it.
+        const anchor = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null
+        if (anchor) anchor.scrollIntoView({ block: 'start' })
+        else window.scrollTo({ top: 0 })
         return
       }
       if (++frame < MAX_FRAMES) handle = requestAnimationFrame(attempt)
     }
     handle = requestAnimationFrame(attempt)
     return () => cancelAnimationFrame(handle)
+    // hash is read when the route changes, not watched: same-page hash
+    // changes are the browser's to scroll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
   return null

@@ -1,11 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import type { AlgorithmTrack, LearnerAnalyticsDto } from '@dsa-tutor/types'
+import type { LearnerAnalyticsDto } from '@dsa-tutor/types'
 import { fetchLearnerAnalytics } from '@/api/profile'
-import { MODULES, moduleForTrack } from '@/config/curriculum'
 import { SUPPORT_LEVEL } from '@/config/supportLevels'
-import { useStudyScope } from '@/hooks/useStudyScope'
 import { supportFromIndex } from '@/utils/supportBand'
 import { formatDuration, misconceptionName, sessionModeLabel } from '@/utils/learnerFormat'
 import { SupportMeter } from '@/components/ui/SupportMeter'
@@ -73,50 +71,6 @@ function SummaryRow({ summary }: { summary: LearnerAnalyticsDto['summary'] }) {
         </span>
       </Figure>
     </dl>
-  )
-}
-
-function ModuleBars({ modules }: { modules: LearnerAnalyticsDto['modules'] }) {
-  const { restricted } = useStudyScope()
-  const byNumber = new Map(modules.map((row) => [moduleForTrack(row.track as AlgorithmTrack).number, row]))
-  const rows = MODULES.filter((module) => byNumber.has(module.number))
-  return (
-    <ul className="flex flex-col gap-3">
-      {rows.map((module) => {
-        const row = byNumber.get(module.number)!
-        const content = (
-          <>
-            <span className="flex items-baseline justify-between gap-4">
-              <span className="min-w-0 truncate text-small text-ink">
-                <span className="mr-1.5 text-mono-sm text-ink-2">Module {module.number}</span>
-                {module.title}
-              </span>
-              <span className="shrink-0 text-mono-sm text-ink-2 tabular-nums">
-                {row.meanMastery}% · {row.complete}/{row.topics}
-              </span>
-            </span>
-            <span aria-hidden="true" className="mt-1.5 block h-2 w-full overflow-hidden rounded-full bg-surface-sunk">
-              <span className="block h-full rounded-full bg-brand" style={{ width: `${row.meanMastery}%` }} />
-            </span>
-          </>
-        )
-        const label = `Module ${module.number}: ${module.title}, ${row.meanMastery}% mean mastery, ${row.complete} of ${row.topics} complete`
-        return (
-          <li key={module.id}>
-            {/* A participant has no module pages, so their bars are not links. */}
-            {restricted ? (
-              <div aria-label={label} className="block">
-                {content}
-              </div>
-            ) : (
-              <Link to={`/module/${module.number}`} aria-label={label} className="block rounded-sm py-0.5 hover:[&_span.bg-brand]:bg-brand-hover">
-                {content}
-              </Link>
-            )}
-          </li>
-        )
-      })}
-    </ul>
   )
 }
 
@@ -233,21 +187,16 @@ function MasteryCriteria() {
 }
 
 export function AnalyticsSection() {
-  const { restricted } = useStudyScope()
   const { data, isLoading, isError, isFetching, refetch } = useQuery({ queryKey: ['profile', 'analytics'], queryFn: fetchLearnerAnalytics, staleTime: 30 * 1000 })
 
   return (
-    <section aria-labelledby="profile-analytics" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="profile-analytics" className="text-h2 text-ink">
-          Your learning so far
-        </h2>
-        {!restricted && (
-          <Link to="/progress" className="text-small font-medium text-accent-foreground underline-offset-2 hover:underline">
-            View XP level and badges &rarr;
-          </Link>
-        )}
-      </div>
+    // Lives on Progress, next to the module list - which is why it has no
+    // "Mastery by module" chart of its own any more: the two showed the same
+    // modules on adjacent pages, one as completion and one as mean mastery.
+    <section id="learning-analytics" aria-labelledby="learning-analytics-heading" className="flex flex-col gap-4">
+      <h2 id="learning-analytics-heading" className="text-h2 text-ink">
+        Your learning so far
+      </h2>
       {isLoading ? (
         <div aria-busy="true" aria-label="Loading your analytics" className="flex flex-col gap-3">
           <Skeleton className="h-24 w-full rounded-md" />
@@ -265,9 +214,6 @@ export function AnalyticsSection() {
           <SummaryRow summary={data.summary} />
           <Card title="Scaffolding trajectory" description="Your mastery score after each answer in a session, with the support you had at the time shaded behind it. Shading lightens as support fades.">
             <TrajectoryPanel sessions={data.trajectory} />
-          </Card>
-          <Card title="Mastery by module" description="Mean mastery and topics complete in each module.">
-            <ModuleBars modules={data.modules} />
           </Card>
           <Card title="Mastery criteria" description="How often each criterion is met across the topics you have started. Hints per step is shown on each topic, for reference, and is never a criterion.">
             <MasteryCriteria />
