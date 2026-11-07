@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { EducatorAnalyticsDto } from '@dsa-tutor/types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ALGORITHM_REGISTRY } from '@/engine/registry'
+import { junctionLabel, OTHER_STEPS_LABEL } from '@/utils/junctionLabel'
 
 interface StepHeatmapProps {
   heatmap: EducatorAnalyticsDto['stepDifficultyHeatmap']
@@ -15,61 +16,42 @@ interface PhaseBucket {
   label: string
   sub: string | null
   isHot: boolean
-  stepRange: [number, number]
   totalErrors: number
 }
 
-const BUBBLE_SORT_PHASES = [
-  { label: '1. Initialisation', sub: 'Setup', isHot: false, stepRange: [0, 0] as [number, number] },
-  { label: '2. Outer loop', sub: 'Pass start', isHot: false, stepRange: [1, 10] as [number, number] },
-  { label: '3. Comparison check', sub: null, isHot: true, stepRange: [11, 50] as [number, number] },
-  { label: '4. Pointer swap', sub: 'If needed', isHot: false, stepRange: [51, 70] as [number, number] },
-  { label: '5. Pass boundary', sub: 'Invariant check', isHot: false, stepRange: [71, 999] as [number, number] },
-] as const
-
-function buildDynamicPhases(
-  algorithmName: string,
-  cells: EducatorAnalyticsDto['stepDifficultyHeatmap'],
-): PhaseBucket[] {
-  if (algorithmName === 'Bubble Sort') {
-    const totals = BUBBLE_SORT_PHASES.map((phase) =>
-      cells
-        .filter((c) => c.stepIndex >= phase.stepRange[0] && c.stepIndex <= phase.stepRange[1])
-        .reduce((sum, c) => sum + c.errorCount, 0),
-    )
-    const maxTotal = Math.max(0, ...totals)
-    return BUBBLE_SORT_PHASES.map((phase, idx) => ({
-      label: phase.label,
-      sub: phase.sub,
-      stepRange: phase.stepRange,
-      totalErrors: totals[idx],
-      // No errors yet means no phase is hot - falling back to the static
-      // flag put "High error rate" on phase 3 for a class with none.
-      isHot: maxTotal > 0 && totals[idx] === maxTotal,
-    }))
+/**
+ * One column per kind of question, in the order the run first asks it.
+ *
+ * Phases used to be ranges of step numbers - hardcoded for Bubble Sort
+ * (steps 11-50 "Comparison check", 51-70 "Pointer swap", ...) and split
+ * into quarters for every other topic. Step numbers move with every custom
+ * input, and the default Bubble Sort run is 52 steps long, so its last two
+ * phases could never hold an error while swaps happened throughout. The
+ * question asked is recorded with every answer, and it is the thing an
+ * educator wants grouped: which kind of decision students get wrong.
+ */
+export function buildPhases(cells: EducatorAnalyticsDto['stepDifficultyHeatmap']): PhaseBucket[] {
+  const byType = new Map<string, { label: string; firstStep: number; steps: Set<number>; totalErrors: number }>()
+  for (const cell of cells) {
+    const label = junctionLabel(cell.junctionType)
+    const bucket = byType.get(label) ?? { label, firstStep: cell.stepIndex, steps: new Set<number>(), totalErrors: 0 }
+    bucket.firstStep = Math.min(bucket.firstStep, cell.stepIndex)
+    bucket.steps.add(cell.stepIndex)
+    bucket.totalErrors += cell.errorCount
+    byType.set(label, bucket)
   }
-
-  const maxObservedStep = Math.max(12, ...cells.map((c) => c.stepIndex))
-  const q1 = Math.max(1, Math.floor(maxObservedStep * 0.25))
-  const q2 = Math.max(q1 + 1, Math.floor(maxObservedStep * 0.65))
-  const rawPhases: Array<{ label: string; sub: string; stepRange: [number, number] }> = [
-    { label: '1. Setup & Init', sub: 'Step 0 state', stepRange: [0, 0] },
-    { label: '2. Early Pass / Search', sub: `Steps 1-${q1}`, stepRange: [1, q1] },
-    { label: '3. Core Decision Loop', sub: `Steps ${q1 + 1}-${q2}`, stepRange: [q1 + 1, q2] },
-    { label: '4. Boundary & Termination', sub: `Steps ${q2 + 1}+`, stepRange: [q2 + 1, 9999] },
-  ]
-
-  const totals = rawPhases.map((phase) =>
-    cells
-      .filter((c) => c.stepIndex >= phase.stepRange[0] && c.stepIndex <= phase.stepRange[1])
-      .reduce((sum, c) => sum + c.errorCount, 0),
+  const ordered = [...byType.values()].sort(
+    // Unlabelled steps last, otherwise in the order the run reaches them.
+    (a, b) =>
+      Number(a.label === OTHER_STEPS_LABEL) - Number(b.label === OTHER_STEPS_LABEL) || a.firstStep - b.firstStep,
   )
-  const maxTotal = Math.max(0, ...totals)
-
-  return rawPhases.map((phase, idx) => ({
-    ...phase,
-    totalErrors: totals[idx],
-    isHot: maxTotal > 0 && totals[idx] === maxTotal,
+  const maxTotal = Math.max(0, ...ordered.map((b) => b.totalErrors))
+  return ordered.map((bucket) => ({
+    label: bucket.label,
+    sub: `${bucket.steps.size} ${bucket.steps.size === 1 ? 'step' : 'steps'}`,
+    totalErrors: bucket.totalErrors,
+    // No errors means no phase is hot.
+    isHot: maxTotal > 0 && bucket.totalErrors === maxTotal,
   }))
 }
 
@@ -112,18 +94,23 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
       : (activeAlgorithmNames[0] ?? 'Bubble Sort'),
   )
 
-  const cells = useMemo(
-    () =>
-      heatmap
-        .filter((h) => h.algorithmName === selectedAlgorithm)
-        .sort((a, b) => a.stepIndex - b.stepIndex),
+  const topicCells = useMemo(
+    () => heatmap.filter((h) => h.algorithmName === selectedAlgorithm),
     [heatmap, selectedAlgorithm],
   )
 
-  const phases = useMemo(
-    () => buildDynamicPhases(selectedAlgorithm, cells),
-    [selectedAlgorithm, cells],
-  )
+  const phases = useMemo(() => buildPhases(topicCells), [topicCells])
+
+  // The per-step strip: one box per step number, whatever was asked there.
+  const cells = useMemo(() => {
+    const byStep = new Map<number, { stepIndex: number; errorCount: number }>()
+    for (const cell of topicCells) {
+      const entry = byStep.get(cell.stepIndex) ?? { stepIndex: cell.stepIndex, errorCount: 0 }
+      entry.errorCount += cell.errorCount
+      byStep.set(cell.stepIndex, entry)
+    }
+    return [...byStep.values()].sort((a, b) => a.stepIndex - b.stepIndex)
+  }, [topicCells])
 
   const maxPhaseTotal = Math.max(1, ...phases.map((p) => p.totalErrors))
   const totalAlgorithmErrors = cells.reduce((sum, c) => sum + c.errorCount, 0)
@@ -138,7 +125,7 @@ export default function StepHeatmap({ heatmap, totalStudents }: StepHeatmapProps
         <div>
           <h2 className="text-lg font-bold text-text-primary">Step Difficulty Heatmap</h2>
           <p className="text-xs text-text-muted">
-            Darker cells indicate higher error frequency at that algorithm step across all 73 curriculum topics
+            Errors grouped by the kind of question students answered, then step by step. Darker means more errors.
           </p>
         </div>
         <div className="flex items-center gap-2">

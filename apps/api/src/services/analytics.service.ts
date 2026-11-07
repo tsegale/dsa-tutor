@@ -8,6 +8,7 @@ const LEAN_INTERACTION_SELECT = {
   misconceptionCategory: true,
   hintsRequested: true,
   timeSpentSeconds: true,
+  criticalJunctionType: true,
   scaffoldingLevelAtTime: true,
   masteryScoreAtTime: true,
   interactionType: true,
@@ -45,7 +46,10 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     sessions.filter((s) => s.mode === 'PRACTICE' || s.mode === 'HANDS_ON').length
   const totalSessions = students.reduce((sum, s) => sum + practiceSessionCount(s.sessions), 0)
 
-  const stepErrorMap: Record<string, Record<number, number>> = {}
+  // Keyed by step and by the question asked there, so the dashboard can
+  // group errors by what the step does - step numbers shift with every
+  // custom input, the question type does not.
+  const stepErrorMap: Record<string, Record<string, { stepIndex: number; junctionType: string | null; errorCount: number }>> = {}
   const misconceptionBreakdown: Record<string, number> = {}
   const scaffoldingDistribution: Record<string, number> = {}
   let totalScoredCount = 0
@@ -74,7 +78,10 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       if (!i.predictionCorrect) {
         const algoName = i.algoDisplayName
         if (!stepErrorMap[algoName]) stepErrorMap[algoName] = {}
-        stepErrorMap[algoName][i.stepIndex] = (stepErrorMap[algoName][i.stepIndex] ?? 0) + 1
+        const junctionType = i.criticalJunctionType ?? null
+        const cellKey = `${i.stepIndex}|${junctionType ?? ''}`
+        const cell = (stepErrorMap[algoName][cellKey] ??= { stepIndex: i.stepIndex, junctionType, errorCount: 0 })
+        cell.errorCount++
       }
     }
 
@@ -114,13 +121,7 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     totalScoredCount > 0 ? Math.round((totalCorrectCount / totalScoredCount) * 100) : 0
 
   const stepDifficultyHeatmap = Object.entries(stepErrorMap)
-    .flatMap(([algorithmName, steps]) =>
-      Object.entries(steps).map(([stepIndex, errorCount]) => ({
-        stepIndex: parseInt(stepIndex, 10),
-        errorCount,
-        algorithmName,
-      })),
-    )
+    .flatMap(([algorithmName, cells]) => Object.values(cells).map((cell) => ({ ...cell, algorithmName })))
     .sort((a, b) => b.errorCount - a.errorCount)
 
   return {

@@ -836,6 +836,8 @@ export interface EducatorAnalyticsDto {
     stepIndex: number
     errorCount: number
     algorithmName: string
+    /** The question asked at this step (a CriticalJunctionType), or null. */
+    junctionType: string | null
   }>
   scaffoldingDistribution: Record<string, number>
   studentProgress: Array<{
