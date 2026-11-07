@@ -931,7 +931,21 @@ export function getTilesForSnapshot(snapshot: AlgorithmSnapshot, algorithmName: 
         // two numbers. GridCanvas already hides f on the frontier at this
         // junction for the same reason; the tiles were undoing that.
         if (isAStar) return `(${cell.r}, ${cell.c}) - g = ${cell.g}, h = ${cell.h}`
-        if (weighted) return `(${cell.r}, ${cell.c}) - g(n) = ${cell.f}`
+        if (weighted) {
+          // Same reasoning for Dijkstra: printing g(n) answered "lowest
+          // known distance" on the button. The parts are the relaxation
+          // itself - the distance of the settled cell it was reached
+          // from, plus the cost of stepping onto it.
+          const here = s.grid[cell.r]?.[cell.c]
+          const [pr, pc] = (here?.parent ?? '').split(',').map(Number)
+          const from = Number.isInteger(pr) && Number.isInteger(pc) ? s.grid[pr]?.[pc] : undefined
+          if (from) {
+            const fromG = from.gScore ?? 0
+            const step = here?.weight ?? 1
+            return `(${cell.r}, ${cell.c}) - from (${pr}, ${pc}) at ${fromG}, entering costs ${step}`
+          }
+          return `(${cell.r}, ${cell.c})`
+        }
         // A queue and a stack are ordered by arrival, not by score, so
         // the position is the thing a learner reasons about.
         return `(${cell.r}, ${cell.c}) - ${cell.index + 1} of ${scored.length} on the frontier`

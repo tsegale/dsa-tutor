@@ -156,10 +156,13 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
   const canvasLabel = `${algorithmName}, step ${snapshot!.stepIndex + 1}`
   const gridPixelWidth = state.cols * cellSize + RULER_SIZE
   const gridPixelHeight = state.rows * cellSize + RULER_SIZE
-  const hideFrontierFScore =
-    unansweredJunction &&
-    state.algorithmType === 'astar' &&
-    snapshot?.criticalJunctionType === CriticalJunctionType.GRID_NEXT_CELL
+  const atNextCellQuestion =
+    unansweredJunction && snapshot?.criticalJunctionType === CriticalJunctionType.GRID_NEXT_CELL
+  const hideFrontierFScore = atNextCellQuestion && state.algorithmType === 'astar'
+  // Dijkstra's question is the frontier's g itself, so at that moment only
+  // settled cells keep their numbers - the ones a frontier distance is
+  // worked out from.
+  const hideFrontierG = atNextCellQuestion && state.algorithmType === 'dijkstra'
 
   return (
     <div className="relative flex h-full flex-col">
@@ -367,7 +370,9 @@ export default function GridCanvas({ width, height }: GridCanvasProps) {
                       ? hideFrontierFScore && cell.state === 'frontier'
                         ? cell.gScore
                         : cell.fScore
-                      : cell.gScore
+                      : hideFrontierG && cell.state === 'frontier'
+                        ? undefined
+                        : cell.gScore
                   if (score === undefined || (cell.state !== 'frontier' && cell.state !== 'visited')) return null
                   return (
                     <text
