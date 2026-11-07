@@ -229,7 +229,9 @@ function handsOnStage(slug: string, completed: boolean): PipelineStage {
     )
   }
   if (HANDS_ON_COMING_SOON.has(slug)) {
-    return stage('HANDS_ON', 'NOT_OFFERED', 'The drag interaction for this topic is not built yet.')
+    // Says what the learner can do, not what the app hasn't built: the
+    // decisions a drag would test are asked as Practice questions.
+    return stage('HANDS_ON', 'NOT_OFFERED', 'Hands-on is not part of this topic. Practice asks the same decisions as questions.')
   }
   if (!HANDS_ON_ACTIVE.has(slug)) {
     return stage('HANDS_ON', 'NOT_OFFERED', 'Not available for this algorithm.')
@@ -244,7 +246,7 @@ function codeStage(slug: string, completed: boolean): PipelineStage {
       'NOT_OFFERED',
       NO_JUNCTIONS.has(slug)
         ? 'This builds a random maze, so there is no step to write code for.'
-        : 'No code challenge written for this topic yet.',
+        : 'There is no code challenge for this topic.',
     )
   }
   return stage('CODE', completed ? 'DONE' : 'AVAILABLE', null)

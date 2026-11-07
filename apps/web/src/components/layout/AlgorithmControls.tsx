@@ -380,7 +380,8 @@ function ArrayOperationControls({ slug }: { slug: string }) {
 
   function show(values: number[], index: number, value: number | null) {
     const snapshots = arrayOperationRun(operation, values, index, value)
-    apply(slug, withCodeMode(snapshots, slug, useAlgorithmStore.getState().codeEditorMode), 'start')
+    // useApply keeps Code Mode applied, as it does for every control.
+    apply(slug, snapshots, 'start')
   }
 
   function run() {

@@ -105,9 +105,11 @@ describe('pipelineFor', () => {
       expect(stages.find((s) => s.id === 'HANDS_ON')!.reason).toMatch(/controls/)
     })
 
-    it('says so plainly where the drag interaction is not built yet', () => {
+    it('points at Practice, without apologising, where there is no drag interaction', () => {
       const stages = pipelineFor(input({ slug: 'array-insert', practiceCompleted: true }))
-      expect(stages.find((s) => s.id === 'HANDS_ON')!.reason).toMatch(/not built yet/)
+      const reason = stages.find((s) => s.id === 'HANDS_ON')!.reason
+      expect(reason).toMatch(/Practice/)
+      expect(reason).not.toMatch(/not built|yet/)
     })
   })
 

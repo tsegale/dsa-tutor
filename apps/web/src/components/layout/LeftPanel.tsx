@@ -106,7 +106,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   // it never showed, because that only rendered when no challenge existed.
   const codeOffer = stageOffer(pipeline, 'CODE')
   const codeModeAvailable = codeOffer.enabled
-  const codeUnavailableReason = codeOffer.reason ?? 'No code challenge written for this topic yet.'
+  const codeUnavailableReason = codeOffer.reason ?? 'There is no code challenge for this topic.'
 
   // Code Mode on: fetch the Python runtime now, in the background, so the
   // first code question does not wait on a ~13MB download.
