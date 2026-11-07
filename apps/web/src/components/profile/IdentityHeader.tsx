@@ -15,7 +15,9 @@ export function IdentityHeader({ user }: { user: UserProfile }) {
   const memberSince = user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null
   const level = getLevelForXP(user.xpTotal)
 
-  const isSyntheticDemoEmail = user.isDemo || user.email.endsWith('.invalid')
+  // Optional-chained: one user object without an email (an older cached
+  // sign-in) used to throw here and take the whole page down with it.
+  const isSyntheticDemoEmail = Boolean(user.isDemo || user.email?.endsWith('.invalid'))
   const roleLabel = user.role === 'ADMIN' ? 'Admin' : user.role === 'EDUCATOR' ? 'Educator' : 'Student'
 
   return (

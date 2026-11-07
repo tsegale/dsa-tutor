@@ -5,7 +5,9 @@ import { useAuth } from '@/context/AuthContext'
 export default function AccountIdentity() {
   const { user } = useAuth()
   if (!user) return null
-  const isSyntheticDemoEmail = user.isDemo || user.email.endsWith('.invalid')
+  // Optional-chained: one user object without an email (an older cached
+  // sign-in) used to throw here and take the whole page down with it.
+  const isSyntheticDemoEmail = Boolean(user.isDemo || user.email?.endsWith('.invalid'))
   const roleLabel = user.role === 'ADMIN' ? 'Admin' : user.role === 'EDUCATOR' ? 'Educator' : 'Student'
 
   return (
