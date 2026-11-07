@@ -2,7 +2,7 @@ import type { AlgorithmSnapshot } from '@dsa-tutor/types'
 import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { topMisconceptionOf } from '@/utils/junctionTargeting'
 import { useAlgorithmStore } from '@/store/useAlgorithmStore'
-import { getAlgorithmRegistryEntry } from '@/engine/registry'
+import { autoSearchTarget, getAlgorithmRegistryEntry } from '@/engine/registry'
 import { withCodeMode } from '@/engine/codeMode'
 import { bubbleSortEngine } from '@/engine/bubbleSort'
 import { linearSearchEngine } from '@/engine/linearSearch'
@@ -269,10 +269,21 @@ function buildRun(slug: string, input: number[], target: number): AlgorithmSnaps
 
 /** A run of `slug`, on `values` when given and the topic's own default
  * input otherwise. Code Mode is honoured automatically. */
-export function runFor(slug: string | undefined, values?: number[]): AlgorithmSnapshot[] {
+export function runFor(
+  slug: string | undefined,
+  values?: number[],
+  options: { target?: number } = {},
+): AlgorithmSnapshot[] {
   const entry = getAlgorithmRegistryEntry(slug ?? '')
   const input = values && values.length > 0 ? values : (entry?.defaultInput ?? [5, 3, 1, 4, 2])
-  const target = entry?.defaultTarget ?? 9
+  // A learner-chosen target goes through here too, so it gets the same
+  // engine options (Binary Search's complexity question) and Code Mode as
+  // every other run.
+  const target =
+    options.target ??
+    (slug === 'linear-search' || slug === 'binary-search'
+      ? autoSearchTarget(slug, input)
+      : (entry?.defaultTarget ?? 9))
   const snapshots = buildRun(slug ?? '', input, target)
   return withCodeMode(snapshots, slug, useAlgorithmStore.getState().codeEditorMode)
 }

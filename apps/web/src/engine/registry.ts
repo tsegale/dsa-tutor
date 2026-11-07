@@ -107,6 +107,26 @@ export function searchTargetFor(input: number[]): number {
   return input[Math.max(0, input.length - 2)]
 }
 
+/**
+ * The target Linear and Binary Search run with when the learner hasn't
+ * typed one. Their own default array keeps its usual target; any other
+ * array searches for one of its own values (searchTargetFor - for Binary
+ * Search, of the sorted array it actually searches).
+ *
+ * runFor used to search every array for the registry default (9 and 15),
+ * so a custom array mostly searched for a number it didn't contain, while
+ * the target field's "Auto" placeholder showed searchTargetFor's value - a
+ * different number from the one the run used. Both read this now.
+ */
+export function autoSearchTarget(slug: string, values: number[]): number {
+  const entry = getAlgorithmRegistryEntry(slug)
+  const defaults = entry?.defaultInput
+  const isDefaultInput =
+    !!defaults && defaults.length === values.length && defaults.every((v, i) => v === values[i])
+  if (isDefaultInput && entry?.defaultTarget !== undefined) return entry.defaultTarget
+  return searchTargetFor(slug === 'binary-search' ? [...values].sort((a, b) => a - b) : values)
+}
+
 /** bstSearchEngine/bstDeleteEngine and the traversal engines all operate
  * on an existing tree root rather than a value array - build one from
  * `input` via bstInsertEngine's final snapshot, matching AlgorithmPage's

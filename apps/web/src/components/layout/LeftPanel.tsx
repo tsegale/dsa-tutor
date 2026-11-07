@@ -9,9 +9,7 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { runFor } from '@/engine/runFor'
 import { withCodeMode, withoutCodeMode } from '@/engine/codeMode'
-import { getAlgorithmRegistryEntry, searchTargetFor } from '@/engine/registry'
-import { linearSearchEngine } from '@/engine/linearSearch'
-import { binarySearchEngine } from '@/engine/binarySearch'
+import { autoSearchTarget, getAlgorithmRegistryEntry } from '@/engine/registry'
 import { prefixSumEngine } from '@/engine/prefixSum'
 import { floydWarshallEngine } from '@/engine/floydWarshall'
 import { MEDIUM_WEIGHTED } from '@/engine/graphPresets'
@@ -233,11 +231,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
         return
       }
       setInputError(null)
-      const snapshots =
-        algorithmSlug === 'binary-search'
-          ? binarySearchEngine([...values].sort((a, b) => a - b), target)
-          : linearSearchEngine(values, target)
-      setAlgorithm(displayName, withCodeMode(snapshots, algorithmSlug, codeModeOn))
+      setAlgorithm(displayName, runFor(algorithmSlug, values, { target }))
       return
     }
     if (isPrefixSum && (fromRaw.trim().length > 0 || toRaw.trim().length > 0)) {
@@ -504,7 +498,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') applyArrayInput()
                     }}
-                    placeholder={`Auto (${searchTargetFor(parseArrayInput(arrayInput) ?? registryEntry?.defaultInput ?? [5, 3, 1, 4, 2])})`}
+                    placeholder={`Auto (${autoSearchTarget(algorithmSlug ?? '', parseArrayInput(arrayInput) ?? registryEntry?.defaultInput ?? [5, 3, 1, 4, 2])})`}
                     className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
                   />
                 </div>
