@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type KeyboardEvent } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { complexityJunctionEnabled } from '@/utils/studyCondition'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { arrayAccessEngine, arrayInsertEngine, arrayDeleteEngine, ARRAY_OPERATION_DEFAULTS } from '@/engine/arrayOperations'
@@ -2100,7 +2100,16 @@ function BacktrackingControls({ slug }: { slug: string }) {
 const WEIGHTED_GRAPH_ALGOS = new Set(['dijkstra', 'bellman-ford', 'kruskal', 'prim'])
 const NEEDS_TARGET_NODE = new Set(['bfs', 'dfs', 'dijkstra', 'bellman-ford'])
 const NEEDS_START_NODE = new Set(['bfs', 'dfs', 'dijkstra', 'bellman-ford', 'prim'])
-const HAS_PRESET_CHOICE = new Set(['bfs', 'dfs', 'connected-components', 'dijkstra', 'bellman-ford', 'kruskal', 'prim'])
+const HAS_PRESET_CHOICE = new Set([
+  'bfs',
+  'dfs',
+  'connected-components',
+  'cycle-detection',
+  'dijkstra',
+  'bellman-ford',
+  'kruskal',
+  'prim',
+])
 const HAS_DIRECTED_TOGGLE = new Set(['bfs', 'dfs', 'connected-components', 'cycle-detection', 'dijkstra', 'bellman-ford'])
 
 const GRAPH_DEFAULT_PRESET: Record<string, GraphPresetName> = {
@@ -2119,6 +2128,7 @@ const GRAPH_DISPLAY_NAME: Record<string, string> = {
   'medium-weighted': 'Medium, weighted (8 nodes)',
   'grid-like': 'Grid-like mesh (9 nodes)',
   'directed-cycle': 'Directed, has a cycle (6 nodes)',
+  'directed-acyclic': 'Directed DAG, no cycle (6 nodes)',
   'two-components': 'Two disconnected groups (8 nodes)',
 }
 
@@ -2167,7 +2177,9 @@ function GraphControls({ slug }: { slug: string }) {
     ? ['medium-weighted', 'grid-like']
     : slug === 'connected-components'
       ? ['two-components', 'small-7', 'directed-cycle']
-      : ['small-7', 'directed-cycle']
+      : slug === 'cycle-detection'
+        ? ['directed-cycle', 'directed-acyclic', 'small-7']
+        : ['small-7', 'directed-cycle', 'directed-acyclic']
 
   function changePreset(name: GraphPresetName) {
     setPresetName(name)
@@ -2176,6 +2188,7 @@ function GraphControls({ slug }: { slug: string }) {
     const ids = nextPreset.nodes.map((n) => n.id)
     setStartId(ids[0])
     setTargetId(ids[ids.length - 1])
+    apply(slug, runGraphAlgorithm(slug, nextPreset, nextPreset.directed, ids[0], ids[ids.length - 1]), 'start')
   }
 
   function run() {
@@ -2206,7 +2219,15 @@ function GraphControls({ slug }: { slug: string }) {
       {NEEDS_START_NODE.has(slug) && (
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Start node</label>
-          <select value={startId} onChange={(e) => setStartId(e.target.value)} className={inputClass}>
+          <select
+            value={startId}
+            onChange={(e) => {
+              const nextStart = e.target.value
+              setStartId(nextStart)
+              apply(slug, runGraphAlgorithm(slug, preset, directed, nextStart, targetId), 'start')
+            }}
+            className={inputClass}
+          >
             {nodeIds.map((id) => (
               <option key={id} value={id}>
                 {id}
@@ -2219,7 +2240,15 @@ function GraphControls({ slug }: { slug: string }) {
       {NEEDS_TARGET_NODE.has(slug) && (
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Target node</label>
-          <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={inputClass}>
+          <select
+            value={targetId}
+            onChange={(e) => {
+              const nextTarget = e.target.value
+              setTargetId(nextTarget)
+              apply(slug, runGraphAlgorithm(slug, preset, directed, startId, nextTarget), 'start')
+            }}
+            className={inputClass}
+          >
             {nodeIds.map((id) => (
               <option key={id} value={id}>
                 {id}
@@ -2231,7 +2260,15 @@ function GraphControls({ slug }: { slug: string }) {
 
       {HAS_DIRECTED_TOGGLE.has(slug) && (
         <label className="flex items-center gap-2 text-[12px] text-text-primary dark:text-dark-text-primary">
-          <input type="checkbox" checked={directed} onChange={(e) => setDirected(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={directed}
+            onChange={(e) => {
+              const nextDirected = e.target.checked
+              setDirected(nextDirected)
+              apply(slug, runGraphAlgorithm(slug, preset, nextDirected, startId, targetId), 'start')
+            }}
+          />
           Directed
         </label>
       )}
@@ -2243,20 +2280,84 @@ function GraphControls({ slug }: { slug: string }) {
   )
 }
 
+type DagPresetName = 'diamond' | 'chain' | 'courses'
+
+const DAG_PRESETS: Record<DagPresetName, { label: string; graph: UnweightedPreset }> = {
+  diamond: {
+    label: 'Diamond DAG (6 nodes)',
+    graph: DIRECTED_ACYCLIC,
+  },
+  chain: {
+    label: 'Linear chain (5 nodes)',
+    graph: {
+      directed: true,
+      nodes: [
+        { id: 'A', label: 'A', x: 0.12, y: 0.5 },
+        { id: 'B', label: 'B', x: 0.31, y: 0.3 },
+        { id: 'C', label: 'C', x: 0.5, y: 0.5 },
+        { id: 'D', label: 'D', x: 0.69, y: 0.7 },
+        { id: 'E', label: 'E', x: 0.88, y: 0.5 },
+      ],
+      adjacency: {
+        A: ['B'],
+        B: ['C'],
+        C: ['D'],
+        D: ['E'],
+        E: [],
+      },
+    },
+  },
+  courses: {
+    label: 'Parallel prerequisites (6 nodes)',
+    graph: {
+      directed: true,
+      nodes: DIRECTED_ACYCLIC.nodes,
+      adjacency: {
+        A: ['C', 'D'],
+        B: ['D', 'E'],
+        C: ['F'],
+        D: ['F'],
+        E: ['F'],
+        F: [],
+      },
+    },
+  },
+}
+
 function TopologicalSortControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const [dagName, setDagName] = useState<DagPresetName>('diamond')
 
-  function run() {
-    apply(slug, topologicalSortEngine(DIRECTED_ACYCLIC.nodes, DIRECTED_ACYCLIC.adjacency), 'start')
+  function runDag(name: DagPresetName) {
+    const dag = DAG_PRESETS[name].graph
+    apply(slug, topologicalSortEngine(dag.nodes, dag.adjacency), 'start')
   }
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
       <h3 className={labelClass}>Graph controls</h3>
+      <div className="flex flex-col gap-1">
+        <label className={labelClass}>Preset DAG</label>
+        <select
+          value={dagName}
+          onChange={(e) => {
+            const next = e.target.value as DagPresetName
+            setDagName(next)
+            runDag(next)
+          }}
+          className={inputClass}
+        >
+          {(Object.keys(DAG_PRESETS) as DagPresetName[]).map((name) => (
+            <option key={name} value={name}>
+              {DAG_PRESETS[name].label}
+            </option>
+          ))}
+        </select>
+      </div>
       <p className="text-[10px] text-text-muted dark:text-dark-text-secondary">
-        Fixed DAG (6 nodes) - topological order only exists for a directed, acyclic graph.
+        Topological order only exists for a directed, acyclic graph (DAG).
       </p>
-      <Button variant="outline" size="sm" onClick={run}>
+      <Button variant="outline" size="sm" onClick={() => runDag(dagName)}>
         Re-run
       </Button>
     </section>

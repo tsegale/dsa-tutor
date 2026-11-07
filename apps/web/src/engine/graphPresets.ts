@@ -1,6 +1,12 @@
 import type { AdjacencyList, GraphNode, WeightedAdjacencyList } from '@dsa-tutor/types'
 
-export type GraphPresetName = 'small-7' | 'medium-weighted' | 'grid-like' | 'directed-cycle' | 'two-components'
+export type GraphPresetName =
+  | 'small-7'
+  | 'medium-weighted'
+  | 'grid-like'
+  | 'directed-cycle'
+  | 'directed-acyclic'
+  | 'two-components'
 
 export interface UnweightedPreset {
   nodes: GraphNode[]
@@ -169,5 +175,6 @@ export const GRAPH_PRESETS: Record<GraphPresetName, UnweightedPreset | WeightedP
   'medium-weighted': MEDIUM_WEIGHTED,
   'grid-like': GRID_LIKE,
   'directed-cycle': DIRECTED_CYCLE,
+  'directed-acyclic': DIRECTED_ACYCLIC,
   'two-components': TWO_COMPONENTS,
 }

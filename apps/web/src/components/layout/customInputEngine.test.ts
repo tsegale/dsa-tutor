@@ -94,3 +94,81 @@ describe('runFor, for every topic in the curriculum', () => {
     expect(JSON.stringify(runFor(slug))).not.toBe(bubble)
   })
 })
+
+describe('custom parameters for search, prefix-sum, floyd-warshall, topological-sort, and cycle-detection', () => {
+  it('linear-search and binary-search produce distinct runs when a custom target (including missing target) is supplied', async () => {
+    const { linearSearchEngine } = await import('@/engine/linearSearch')
+    const { binarySearchEngine } = await import('@/engine/binarySearch')
+    const arr = [2, 5, 8, 12, 16, 23]
+
+    const linFirst = linearSearchEngine(arr, 2)
+    const linMissing = linearSearchEngine(arr, 99)
+    expect(linFirst.length).toBeLessThan(linMissing.length)
+    expect(linFirst[linFirst.length - 1].description).toMatch(/2/)
+    expect(linMissing[linMissing.length - 1].description).toMatch(/99/)
+
+    const binFirst = binarySearchEngine(arr, 2)
+    const binMissing = binarySearchEngine(arr, 99)
+    expect(binFirst).not.toEqual(binMissing)
+    expect(binMissing[binMissing.length - 1].description).toMatch(/99/)
+  })
+
+  it('prefix-sum accepts custom [from, to] range queries and reflects them in the final query snapshots', async () => {
+    const { prefixSumEngine } = await import('@/engine/prefixSum')
+    const arr = [3, 1, 4, 1, 5, 9]
+    const defaultRun = prefixSumEngine(arr)
+    const customRun = prefixSumEngine(arr, [
+      { from: 0, to: 2 },
+      { from: 2, to: 4 },
+    ])
+    expect(customRun).not.toEqual(defaultRun)
+    expect(JSON.stringify(customRun)).toContain('p5 - p2 = 14 - 4 = 10')
+  })
+
+  it('floyd-warshall builds distinct matrix runs across different graph presets', async () => {
+    const { floydWarshallEngine } = await import('@/engine/floydWarshall')
+    const { MEDIUM_WEIGHTED } = await import('@/engine/graphPresets')
+    const defaultRun = floydWarshallEngine(
+      MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id),
+      MEDIUM_WEIGHTED.adjacency,
+    )
+    const denseRun = floydWarshallEngine(['A', 'B', 'C', 'D'], {
+      A: [
+        { to: 'B', weight: 8 },
+        { to: 'D', weight: 1 },
+      ],
+      B: [{ to: 'C', weight: 1 }],
+      C: [{ to: 'A', weight: 4 }],
+      D: [
+        { to: 'B', weight: 2 },
+        { to: 'C', weight: 9 },
+      ],
+    })
+    expect(denseRun.length).toBeGreaterThan(0)
+    expect(denseRun).not.toEqual(defaultRun)
+  })
+
+  it('cycle-detection and topological-sort support multiple graph presets via GRAPH_PRESETS', async () => {
+    const { GRAPH_PRESETS } = await import('@/engine/graphPresets')
+    const { cycleDetectionEngine, topologicalSortEngine } = await import('@/engine/graphProperties')
+
+    expect(GRAPH_PRESETS['directed-acyclic']).toBeDefined()
+    const cyclic = cycleDetectionEngine(
+      GRAPH_PRESETS['directed-cycle'].nodes,
+      GRAPH_PRESETS['directed-cycle'].adjacency as never,
+      true,
+    )
+    const acyclic = cycleDetectionEngine(
+      GRAPH_PRESETS['directed-acyclic'].nodes,
+      GRAPH_PRESETS['directed-acyclic'].adjacency as never,
+      true,
+    )
+    expect(cyclic).not.toEqual(acyclic)
+
+    const topoDiamond = topologicalSortEngine(
+      GRAPH_PRESETS['directed-acyclic'].nodes,
+      GRAPH_PRESETS['directed-acyclic'].adjacency as never,
+    )
+    expect(topoDiamond.length).toBeGreaterThan(0)
+  })
+})

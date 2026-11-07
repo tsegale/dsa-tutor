@@ -9,7 +9,13 @@ import { useAlgorithmStore } from '@/store/useAlgorithmStore'
 import { Button } from '@/components/ui/button'
 import { runFor } from '@/engine/runFor'
 import { withCodeMode, withoutCodeMode } from '@/engine/codeMode'
-import { getAlgorithmRegistryEntry } from '@/engine/registry'
+import { getAlgorithmRegistryEntry, searchTargetFor } from '@/engine/registry'
+import { linearSearchEngine } from '@/engine/linearSearch'
+import { binarySearchEngine } from '@/engine/binarySearch'
+import { prefixSumEngine } from '@/engine/prefixSum'
+import { floydWarshallEngine } from '@/engine/floydWarshall'
+import { MEDIUM_WEIGHTED } from '@/engine/graphPresets'
+import type { WeightedAdjacencyList } from '@dsa-tutor/types'
 import AlgorithmControls, { CONTEXTUAL_CONTROL_SLUGS } from './AlgorithmControls'
 import ChallengeGenerator from '@/components/challenge/ChallengeGenerator'
 import FeynmanModeButton from '@/components/feynman/FeynmanModeButton'
@@ -72,6 +78,56 @@ function ChevronIcon({ pointRight }: { pointRight: boolean }) {
  */
 export const FIXED_INPUT_SLUGS = new Set(['floyd-warshall'])
 
+type FloydPresetName = 'default' | 'dense' | 'chain' | 'shortcut'
+
+const FLOYD_WARSHALL_PRESETS: Record<
+  FloydPresetName,
+  { label: string; nodeIds: string[]; adjacency: WeightedAdjacencyList }
+> = {
+  default: {
+    label: 'Default (5 nodes, A-E)',
+    nodeIds: MEDIUM_WEIGHTED.nodes.slice(0, 5).map((n) => n.id),
+    adjacency: MEDIUM_WEIGHTED.adjacency,
+  },
+  dense: {
+    label: 'Dense 4-node (A-D)',
+    nodeIds: ['A', 'B', 'C', 'D'],
+    adjacency: {
+      A: [
+        { to: 'B', weight: 8 },
+        { to: 'D', weight: 1 },
+      ],
+      B: [{ to: 'C', weight: 1 }],
+      C: [{ to: 'A', weight: 4 }],
+      D: [
+        { to: 'B', weight: 2 },
+        { to: 'C', weight: 9 },
+      ],
+    },
+  },
+  chain: {
+    label: 'Directed chain (4 nodes)',
+    nodeIds: ['A', 'B', 'C', 'D'],
+    adjacency: {
+      A: [{ to: 'B', weight: 3 }, { to: 'D', weight: 15 }],
+      B: [{ to: 'C', weight: 4 }],
+      C: [{ to: 'D', weight: 2 }],
+      D: [],
+    },
+  },
+  shortcut: {
+    label: 'Indirect shortcut (5 nodes)',
+    nodeIds: ['A', 'B', 'C', 'D', 'E'],
+    adjacency: {
+      A: [{ to: 'B', weight: 2 }, { to: 'E', weight: 20 }],
+      B: [{ to: 'C', weight: 3 }],
+      C: [{ to: 'D', weight: 2 }],
+      D: [{ to: 'E', weight: 3 }],
+      E: [{ to: 'A', weight: 5 }],
+    },
+  },
+}
+
 function parseArrayInput(input: string): number[] | null {
   const parts = input
     .split(',')
@@ -115,8 +171,19 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
   }, [codeEditorMode, features.codeMode])
 
   const [arrayInput, setArrayInput] = useState('')
+  const [targetInput, setTargetInput] = useState('')
+  const [rangeFromInput, setRangeFromInput] = useState('')
+  const [rangeToInput, setRangeToInput] = useState('')
+  const [floydPreset, setFloydPreset] = useState<FloydPresetName>('default')
   const [inputError, setInputError] = useState<string | null>(null)
   const [driveModalOpen, setDriveModalOpen] = useState(false)
+
+  useEffect(() => {
+    setTargetInput('')
+    setRangeFromInput('')
+    setRangeToInput('')
+    setInputError(null)
+  }, [algorithmSlug])
 
   const registryEntry = getAlgorithmRegistryEntry(algorithmSlug ?? '')
   const snapshotArray = useAlgorithmStore((s) => s.snapshotArray)
@@ -139,17 +206,82 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
     }
   }
 
-  function applyArrayInput() {
+  const isSearchGeneric = algorithmSlug === 'linear-search' || algorithmSlug === 'binary-search'
+  const isPrefixSum = algorithmSlug === 'prefix-sum'
+
+  function getActiveArray(): number[] | null {
     const parsed = parseArrayInput(arrayInput)
+    if (parsed) return parsed
+    if (
+      (isSearchGeneric && targetInput.trim().length > 0) ||
+      (isPrefixSum && (rangeFromInput.trim().length > 0 || rangeToInput.trim().length > 0))
+    ) {
+      return registryEntry?.defaultInput && registryEntry.defaultInput.length > 0
+        ? [...registryEntry.defaultInput]
+        : [5, 3, 1, 4, 2]
+    }
+    return null
+  }
+
+  function runWithCustomParams(values: number[], customTargetRaw = targetInput, fromRaw = rangeFromInput, toRaw = rangeToInput) {
+    const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
+    const codeModeOn = useAlgorithmStore.getState().codeEditorMode
+    if (isSearchGeneric && customTargetRaw.trim().length > 0) {
+      const target = Number(customTargetRaw.trim())
+      if (Number.isNaN(target) || !Number.isFinite(target)) {
+        setInputError('Enter a valid target number.')
+        return
+      }
+      setInputError(null)
+      const snapshots =
+        algorithmSlug === 'binary-search'
+          ? binarySearchEngine([...values].sort((a, b) => a - b), target)
+          : linearSearchEngine(values, target)
+      setAlgorithm(displayName, withCodeMode(snapshots, algorithmSlug, codeModeOn))
+      return
+    }
+    if (isPrefixSum && (fromRaw.trim().length > 0 || toRaw.trim().length > 0)) {
+      const fromVal = fromRaw.trim().length > 0 ? Number(fromRaw.trim()) : 0
+      const toVal = toRaw.trim().length > 0 ? Number(toRaw.trim()) : values.length - 1
+      if (
+        !Number.isInteger(fromVal) ||
+        !Number.isInteger(toVal) ||
+        fromVal < 0 ||
+        toVal >= values.length ||
+        fromVal > toVal
+      ) {
+        setInputError(`Enter valid indices 0 <= from <= to <= ${values.length - 1}.`)
+        return
+      }
+      setInputError(null)
+      const queries =
+        fromVal === 0
+          ? [{ from: fromVal, to: toVal }, { from: Math.min(1, values.length - 1), to: values.length - 1 }]
+          : [{ from: 0, to: Math.min(2, values.length - 1) }, { from: fromVal, to: toVal }]
+      setAlgorithm(displayName, withCodeMode(prefixSumEngine(values, queries), algorithmSlug, codeModeOn))
+      return
+    }
+    setInputError(null)
+    setAlgorithm(displayName, runFor(algorithmSlug, values))
+  }
+
+  function applyArrayInput() {
+    const parsed = getActiveArray()
     if (!parsed) {
       setInputError('Enter a comma-separated list of numbers, e.g. 5,3,1,4,2')
       return
     }
-    setInputError(null)
-    const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
+    runWithCustomParams(parsed)
+  }
+
+  function applyFloydPreset(presetName: FloydPresetName) {
+    setFloydPreset(presetName)
+    const preset = FLOYD_WARSHALL_PRESETS[presetName]
+    const displayName = getAlgorithmRegistryEntry('floyd-warshall')?.displayName ?? 'Floyd-Warshall'
+    const codeModeOn = useAlgorithmStore.getState().codeEditorMode
     setAlgorithm(
       displayName,
-      runFor(algorithmSlug, parsed),
+      withCodeMode(floydWarshallEngine(preset.nodeIds, preset.adjacency), 'floyd-warshall', codeModeOn),
     )
   }
 
@@ -227,8 +359,28 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
               <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">Input</h3>
               <p className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
-                This algorithm runs on a fixed weighted graph, so there is no array to change.
+                This algorithm runs on a weighted graph distance matrix rather than a 1D array.
               </p>
+              <div className="flex flex-col gap-1">
+                <label className="text-micro text-text-muted dark:text-dark-text-secondary">
+                  Preset graph
+                </label>
+                <select
+                  aria-label="Floyd-Warshall graph preset"
+                  value={floydPreset}
+                  onChange={(event) => applyFloydPreset(event.target.value as FloydPresetName)}
+                  className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
+                >
+                  {(Object.keys(FLOYD_WARSHALL_PRESETS) as FloydPresetName[]).map((key) => (
+                    <option key={key} value={key}>
+                      {FLOYD_WARSHALL_PRESETS[key].label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => applyFloydPreset(floydPreset)}>
+                Re-run
+              </Button>
             </section>
           ) : (
             <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
@@ -249,12 +401,24 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                           { label: 'Wide gaps', vals: [2, 10, 24, 50, 88, 120, 200] },
                           { label: 'Duplicates', vals: [1, 3, 5, 5, 5, 9, 15, 19] },
                         ]
-                      : [
-                          { label: 'Sorted', vals: [1, 2, 3, 4, 5, 6] },
-                          { label: 'Reversed', vals: [8, 7, 6, 5, 4, 3, 2, 1] },
-                          { label: 'Nearly sorted', vals: [1, 2, 5, 3, 4, 6, 7] },
-                          { label: 'Duplicates', vals: [4, 2, 4, 1, 2, 4, 1] },
-                        ]
+                      : algorithmSlug === 'linear-search'
+                        ? [
+                            { label: 'Unsorted', vals: [14, 7, 22, 3, 19, 8, 11] },
+                            { label: 'Target at start', vals: [9, 4, 12, 7, 15, 9] },
+                            { label: 'Duplicates', vals: [5, 2, 8, 2, 9, 2, 4] },
+                          ]
+                        : algorithmSlug === 'prefix-sum'
+                          ? [
+                              { label: 'Default', vals: [3, 1, 4, 1, 5, 9, 2] },
+                              { label: 'Unit steps', vals: [1, 2, 3, 4, 5, 6] },
+                              { label: 'Mixed +/-', vals: [4, -2, 5, -1, 3, -3, 6] },
+                            ]
+                          : [
+                              { label: 'Sorted', vals: [1, 2, 3, 4, 5, 6] },
+                              { label: 'Reversed', vals: [8, 7, 6, 5, 4, 3, 2, 1] },
+                              { label: 'Nearly sorted', vals: [1, 2, 5, 3, 4, 6, 7] },
+                              { label: 'Duplicates', vals: [4, 2, 4, 1, 2, 4, 1] },
+                            ]
                   ).map((preset) => (
                     <button
                       key={preset.label}
@@ -262,8 +426,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                       onClick={() => {
                         setInputError(null)
                         setArrayInput(preset.vals.join(','))
-                        const displayName = getAlgorithmRegistryEntry(algorithmSlug ?? '')?.displayName ?? 'Bubble Sort'
-                        setAlgorithm(displayName, runFor(algorithmSlug, preset.vals))
+                        runWithCustomParams(preset.vals)
                       }}
                       className="rounded border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:border-primary/50 hover:bg-surface-sunk hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
                     >
@@ -282,6 +445,103 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                 placeholder="5,3,1,4,2"
                 className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
               />
+              {isSearchGeneric && !restricted && (
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-micro text-text-muted dark:text-dark-text-secondary">
+                      Target value
+                    </label>
+                    <div className="flex gap-1">
+                      {(
+                        [
+                          {
+                            label: 'First',
+                            pick: (arr: number[]) => arr[0],
+                          },
+                          {
+                            label: 'Mid',
+                            pick: (arr: number[]) => arr[Math.floor(arr.length / 2)],
+                          },
+                          {
+                            label: 'Last',
+                            pick: (arr: number[]) => arr[arr.length - 1],
+                          },
+                          {
+                            label: 'Missing',
+                            pick: (arr: number[]) => Math.max(...arr) + 7,
+                          },
+                        ] as const
+                      ).map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          onClick={() => {
+                            const active =
+                              parseArrayInput(arrayInput) ??
+                              (registryEntry?.defaultInput?.length
+                                ? [...registryEntry.defaultInput]
+                                : [1, 3, 5, 7, 9, 11])
+                            const normalized =
+                              algorithmSlug === 'binary-search'
+                                ? [...active].sort((a, b) => a - b)
+                                : active
+                            const nextTarget = String(chip.pick(normalized))
+                            setTargetInput(nextTarget)
+                            runWithCustomParams(normalized, nextTarget)
+                          }}
+                          className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:border-primary/50 hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary"
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    aria-label="Search target"
+                    value={targetInput}
+                    onChange={(event) => setTargetInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') applyArrayInput()
+                    }}
+                    placeholder={`Auto (${searchTargetFor(parseArrayInput(arrayInput) ?? registryEntry?.defaultInput ?? [5, 3, 1, 4, 2])})`}
+                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
+                  />
+                </div>
+              )}
+              {isPrefixSum && !restricted && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-micro text-text-muted dark:text-dark-text-secondary">
+                    Query range [from .. to]
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      aria-label="Range from"
+                      value={rangeFromInput}
+                      onChange={(event) => setRangeFromInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') applyArrayInput()
+                      }}
+                      placeholder="from (0)"
+                      className="w-full rounded-md border border-border bg-background px-2.5 py-1 text-xs text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      aria-label="Range to"
+                      value={rangeToInput}
+                      onChange={(event) => setRangeToInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') applyArrayInput()
+                      }}
+                      placeholder="to (n-1)"
+                      className="w-full rounded-md border border-border bg-background px-2.5 py-1 text-xs text-text-primary outline-none focus:border-primary dark:text-dark-text-primary"
+                    />
+                  </div>
+                </div>
+              )}
               {inputError && <p className="text-xs text-error">{inputError}</p>}
               <Button variant="outline" size="sm" onClick={applyArrayInput}>
                 Apply
