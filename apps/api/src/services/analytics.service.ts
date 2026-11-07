@@ -27,6 +27,7 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
       sessions: {
         select: {
           id: true,
+          mode: true,
           startTime: true,
           challengeExplanation: true,
           algorithmTopic: { select: { displayName: true } },
@@ -37,7 +38,12 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
   })
 
   const totalStudents = students.length
-  const totalSessions = students.reduce((sum, s) => sum + s.sessions.length, 0)
+  // The dashboard labels these "Practice sessions completed" and "Sessions
+  // completed". Every topic opens in Demo, so counting all sessions counted
+  // each page visit; only the modes where a student answers anything count.
+  const practiceSessionCount = (sessions: Array<{ mode: string }>) =>
+    sessions.filter((s) => s.mode === 'PRACTICE' || s.mode === 'HANDS_ON').length
+  const totalSessions = students.reduce((sum, s) => sum + practiceSessionCount(s.sessions), 0)
 
   const stepErrorMap: Record<string, Record<number, number>> = {}
   const misconceptionBreakdown: Record<string, number> = {}
@@ -84,7 +90,7 @@ export async function getEducatorAnalytics(): Promise<EducatorAnalyticsDto> {
     return {
       userId: student.id,
       name: student.name,
-      totalSessions: student.sessions.length,
+      totalSessions: practiceSessionCount(student.sessions),
       averageCorrectRate: rate,
       topMisconception,
       challengeExplanation: latestChallengeSession?.challengeExplanation ?? null,

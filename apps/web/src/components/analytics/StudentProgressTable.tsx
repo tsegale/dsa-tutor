@@ -357,7 +357,7 @@ export default function StudentProgressTable({ students, onSelectStudent }: Stud
           disabled={students.length === 0}
           className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Export heatmap
+          Export student progress CSV
         </button>
       </div>
     </div>

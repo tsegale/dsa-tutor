@@ -43,7 +43,9 @@ function buildDynamicPhases(
       sub: phase.sub,
       stepRange: phase.stepRange,
       totalErrors: totals[idx],
-      isHot: maxTotal > 0 ? totals[idx] === maxTotal : phase.isHot,
+      // No errors yet means no phase is hot - falling back to the static
+      // flag put "High error rate" on phase 3 for a class with none.
+      isHot: maxTotal > 0 && totals[idx] === maxTotal,
     }))
   }
 
