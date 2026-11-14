@@ -223,3 +223,41 @@ describe('dequeEngine', () => {
     expect(snapshots.map((s) => s.stepIndex)).toEqual(snapshots.map((_, i) => i))
   })
 })
+
+describe('continuing from the state on the canvas', () => {
+  it('circular queue: starts from the given slots and never replays earlier operations', () => {
+    // Front at 3, rear at 0: the queue has already wrapped.
+    const start = { items: [{ value: 8, index: 3 }, { value: 9, index: 4 }, { value: 4, index: 0 }], frontIndex: 3, rearIndex: 0 }
+    const snaps = circularQueueEngine(5, [{ op: 'enqueue', value: 7 }], start)
+    expect(snaps).toHaveLength(2)
+    const first = snaps[0].dataStructureState as QueueState
+    expect(first.items.map((it) => [it.index, it.value])).toEqual([[3, 8], [4, 9], [0, 4]])
+    expect(first.frontIndex).toBe(3)
+    const last = snaps[1].dataStructureState as QueueState
+    expect(last.rearIndex).toBe(1)
+    expect(last.items.find((it) => it.index === 1)?.value).toBe(7)
+    expect(snaps.some((s) => /Enqueued 0|Dequeued 0/.test(s.description))).toBe(false)
+  })
+
+  it('circular queue: dequeue from a wrapped start returns the value at the front slot', () => {
+    const start = { items: [{ value: 8, index: 3 }, { value: 4, index: 0 }], frontIndex: 3, rearIndex: 0 }
+    const snaps = circularQueueEngine(5, [{ op: 'dequeue' }], start)
+    expect(snaps[snaps.length - 1].description).toContain('Dequeued 8 from index 3')
+    expect((snaps[snaps.length - 1].dataStructureState as QueueState).frontIndex).toBe(4)
+  })
+
+  it('circular queue: an emptied queue keeps its rear position', () => {
+    const snaps = circularQueueEngine(5, [{ op: 'enqueue', value: 1 }], { items: [], frontIndex: -1, rearIndex: 2 })
+    const last = snaps[snaps.length - 1].dataStructureState as QueueState
+    expect(last.items).toEqual([expect.objectContaining({ value: 1, index: 3 })])
+    expect(last.frontIndex).toBe(3)
+  })
+
+  it('deque: starts from the given values and animates only the new operation', () => {
+    const snaps = dequeEngine(5, [{ op: 'pushFront', value: 7 }], [1, 2, 3])
+    expect((snaps[0].dataStructureState as QueueState).items.map((it) => it.value)).toEqual([1, 2, 3])
+    const values = (snaps[snaps.length - 1].dataStructureState as QueueState).items.map((it) => it.value)
+    expect(values).toEqual([7, 1, 2, 3])
+    expect(snaps.filter((s) => s.isPredictionRequired).length).toBeLessThanOrEqual(1)
+  })
+})

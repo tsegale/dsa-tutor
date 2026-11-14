@@ -628,7 +628,11 @@ export default function ArrayCanvas({
       )}
 
       {renderBars.map((bar) => {
-        const isHighlighted = snapshot.highlightIndices.includes(bar.index)
+        // Heap Sort: everything past the heap boundary is already in its final
+        // place, including on the sift-down steps that do not re-highlight it.
+        const heapSize = (snapshot.dataStructureState as { heapSize?: number } | undefined)?.heapSize
+        const isPastHeap = typeof heapSize === 'number' && heapSize < bars.length && bar.index >= heapSize
+        const isHighlighted = snapshot.highlightIndices.includes(bar.index) || isPastHeap
         const isSwapped = snapshot.swappedIndices.includes(bar.index)
         const isActive = snapshot.activeIndices.includes(bar.index)
         const isCompared = snapshot.comparedIndices.includes(bar.index)
@@ -855,6 +859,17 @@ export default function ArrayCanvas({
         const x1 = leftBar.x - 4
         const x2 = rightBar.x + rightBar.width + 4
         const py = pivotBar.y
+        // The tag sits at the LEFT end of the line: in Lomuto partitioning the
+        // pivot is the rightmost bar, whose own value label is at the right
+        // end. It goes above the line unless a value label is there too.
+        const tagW = 58
+        const tagX = x1 + 2
+        const labelSpans = bars
+          .filter((b) => b.x < tagX + tagW && b.x + b.width > tagX)
+          .map((b) => [Math.max(b.y - 10, 16) - 12, Math.max(b.y - 10, 16) + 4] as const)
+        const clear = (top: number) => labelSpans.every(([a, b]) => top + 14 < a || top > b)
+        const above = Math.max(14 + labelOffset, py - 17)
+        const tagY = clear(above) ? above : py + 3
         return (
           <g pointerEvents="none">
             <line
@@ -866,10 +881,10 @@ export default function ArrayCanvas({
               strokeWidth={1.5}
               strokeDasharray="5 3"
             />
-            <rect x={x2 - 58} y={Math.max(14 + labelOffset, py - 16)} width={58} height={14} rx={4} fill="var(--state-swap)" />
+            <rect x={tagX} y={tagY} width={tagW} height={14} rx={4} fill="var(--state-swap)" />
             <text
-              x={x2 - 29}
-              y={Math.max(14 + labelOffset, py - 16) + 7}
+              x={tagX + tagW / 2}
+              y={tagY + 7}
               textAnchor="middle"
               dominantBaseline="central"
               style={{ fill: 'var(--state-swap-ink)', fontSize: 8.5, fontWeight: 700, fontFamily: 'monospace' }}
@@ -885,25 +900,31 @@ export default function ArrayCanvas({
         const ms = snapshot.dataStructureState as
           | { leftRegion?: [number, number]; rightRegion?: [number, number]; phase?: string }
           | undefined
-        if (!ms || !ms.leftRegion || !ms.rightRegion) return null
+        // Only while two runs are being merged. The regions are what is LEFT
+        // of each run, so a run that has been used up (start past end) gets
+        // no bracket rather than an impossible one like R[6..5].
+        if (!ms || ms.phase !== 'merging' || !ms.leftRegion || !ms.rightRegion) return null
         const [lStart, lEnd] = ms.leftRegion
         const [rStart, rEnd] = ms.rightRegion
-        if (lStart < 0 || rStart < 0 || !bars[lStart] || !bars[lEnd] || !bars[rStart] || !bars[rEnd]) return null
-        const lx1 = bars[lStart].x
-        const lx2 = bars[lEnd].x + bars[lEnd].width
-        const rx1 = bars[rStart].x
-        const rx2 = bars[rEnd].x + bars[rEnd].width
+        if (lStart === 0 && lEnd === 0 && rStart === 0 && rEnd === 0) return null
         const by = height - PADDING + 14
+        const bracket = (start: number, end: number, name: 'L' | 'R', colour: string) => {
+          if (start < 0 || start > end || !bars[start] || !bars[end]) return null
+          const x1 = bars[start].x
+          const x2 = bars[end].x + bars[end].width
+          return (
+            <g key={name}>
+              <path d={`M${x1},${by - 4} L${x1},${by} L${x2},${by} L${x2},${by - 4}`} fill="none" stroke={colour} strokeWidth={2} />
+              <text x={(x1 + x2) / 2} y={by + 10} textAnchor="middle" style={{ fill: colour, fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}>
+                {`${name}[${start}..${end}]`}
+              </text>
+            </g>
+          )
+        }
         return (
           <g pointerEvents="none">
-            <path d={`M${lx1},${by - 4} L${lx1},${by} L${lx2},${by} L${lx2},${by - 4}`} fill="none" stroke="var(--state-compare)" strokeWidth={2} />
-            <text x={(lx1 + lx2) / 2} y={by + 10} textAnchor="middle" style={{ fill: 'var(--state-compare)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}>
-              {`L[${lStart}..${lEnd}]`}
-            </text>
-            <path d={`M${rx1},${by - 4} L${rx1},${by} L${rx2},${by} L${rx2},${by - 4}`} fill="none" stroke="var(--state-swap)" strokeWidth={2} />
-            <text x={(rx1 + rx2) / 2} y={by + 10} textAnchor="middle" style={{ fill: 'var(--state-swap)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}>
-              {`R[${rStart}..${rEnd}]`}
-            </text>
+            {bracket(lStart, lEnd, 'L', 'var(--state-compare)')}
+            {bracket(rStart, rEnd, 'R', 'var(--state-swap)')}
           </g>
         )
       })()}
@@ -927,11 +948,23 @@ export default function ArrayCanvas({
               strokeWidth={1.5}
               strokeDasharray="4 3"
             />
+            {/* Written along the divider, in the gap between two bars, so it
+                never sits on a bar's value label. */}
             <text
               x={divX}
-              y={PADDING + labelOffset - 10}
+              y={(PADDING + labelOffset + height - PADDING) / 2}
               textAnchor="middle"
-              style={{ fill: 'var(--state-sorted)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}
+              dominantBaseline="central"
+              transform={`rotate(-90 ${divX} ${(PADDING + labelOffset + height - PADDING) / 2})`}
+              style={{
+                fill: 'var(--state-sorted)',
+                fontSize: 9,
+                fontWeight: 700,
+                fontFamily: 'monospace',
+                paintOrder: 'stroke',
+                stroke: 'var(--surface)',
+                strokeWidth: 3,
+              }}
             >
               {`heap (${hs.heapSize}) | sorted`}
             </text>

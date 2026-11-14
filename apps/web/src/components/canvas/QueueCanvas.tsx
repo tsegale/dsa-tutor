@@ -142,8 +142,11 @@ function CircularQueue({
   prefersReducedMotion: boolean
 }) {
   const cx = width / 2
-  const cy = height / 2
-  const radius = Math.max(68, Math.min(width, height) / 2 - 64)
+  // Slot 0 sits at the top of the ring, and its FRONT/REAR badge sits above
+  // it: the ring is nudged down and in so that badge clears the operation
+  // banner across the top of the canvas.
+  const cy = height / 2 + 14
+  const radius = Math.max(68, Math.min(width, height) / 2 - 78)
   const cellSize = 54
   const sameSlot = state.frontIndex >= 0 && state.frontIndex === state.rearIndex
 

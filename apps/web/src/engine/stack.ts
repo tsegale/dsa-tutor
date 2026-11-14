@@ -157,7 +157,7 @@ export function stackPushEngine(
 }
 
 /** Pops `popCount` times from a stack that starts with `initialItems`. STACK_POP_RESULT junction after each pop; UNDERFLOW_CHECK if the stack is already empty. */
-export function stackPopEngine(initialItems: number[], popCount: number): AlgorithmSnapshot[] {
+export function stackPopEngine(initialItems: number[], popCount: number, capacity: number | null = null): AlgorithmSnapshot[] {
   let items = itemsFrom(initialItems)
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
@@ -168,7 +168,7 @@ export function stackPopEngine(initialItems: number[], popCount: number): Algori
       description: `Starting with ${items.length} item${items.length === 1 ? '' : 's'} on the stack.`,
       pseudocodeLine: LINE.POP_CHECK,
       isPredictionRequired: false,
-      state: baseStackState(items, null),
+      state: baseStackState(items, capacity),
     }),
   )
 
@@ -182,7 +182,7 @@ export function stackPopEngine(initialItems: number[], popCount: number): Algori
           description: 'The stack is empty. What does pop() return?',
           pseudocodeLine: LINE.POP_CHECK,
           isPredictionRequired: true,
-          state: baseStackState(items, null, { isUnderflow: true }),
+          state: baseStackState(items, capacity, { isUnderflow: true }),
           criticalJunctionType: CriticalJunctionType.UNDERFLOW_CHECK,
           junctionDifficulty: JunctionDifficulty.CONCEPTUAL,
           isFinalStep: true,
@@ -199,7 +199,7 @@ export function stackPopEngine(initialItems: number[], popCount: number): Algori
           description: `Inspecting top element ${popped.value} at index ${items.length - 1} before removing it.`,
           pseudocodeLine: LINE.POP_CHECK,
           isPredictionRequired: false,
-          state: baseStackState(items, null, { lastOperation: 'peek', lastOperationValue: popped.value }),
+          state: baseStackState(items, capacity, { lastOperation: 'peek', lastOperationValue: popped.value }),
         }),
       )
     }
@@ -210,7 +210,7 @@ export function stackPopEngine(initialItems: number[], popCount: number): Algori
         description: `What value does pop() return?`,
         pseudocodeLine: LINE.POP_RETURN,
         isPredictionRequired: true,
-        state: baseStackState(items, null, { lastOperation: 'pop', lastOperationValue: popped.value }),
+        state: baseStackState(items, capacity, { lastOperation: 'pop', lastOperationValue: popped.value }),
         criticalJunctionType: CriticalJunctionType.STACK_POP_RESULT,
         junctionDifficulty: JunctionDifficulty.PROCEDURAL,
         isFinalStep: isLastPop,
@@ -226,7 +226,7 @@ export function stackPopEngine(initialItems: number[], popCount: number): Algori
 }
 
 /** Demonstrates peek(): reveals the top value without removing it. */
-export function stackPeekEngine(initialItems: number[]): AlgorithmSnapshot[] {
+export function stackPeekEngine(initialItems: number[], capacity: number | null = null): AlgorithmSnapshot[] {
   const items = itemsFrom(initialItems)
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
@@ -238,7 +238,7 @@ export function stackPeekEngine(initialItems: number[]): AlgorithmSnapshot[] {
         description: 'The stack is empty. peek() would underflow, just like pop().',
         pseudocodeLine: LINE.PEEK_CHECK,
         isPredictionRequired: false,
-        state: baseStackState(items, null, { isUnderflow: true }),
+        state: baseStackState(items, capacity, { isUnderflow: true }),
         isFinalStep: true,
       }),
     )
@@ -252,7 +252,7 @@ export function stackPeekEngine(initialItems: number[]): AlgorithmSnapshot[] {
       description: `peek() looks at the top of the stack without removing it.`,
       pseudocodeLine: LINE.PEEK_CHECK,
       isPredictionRequired: false,
-      state: baseStackState(items, null),
+      state: baseStackState(items, capacity),
     }),
   )
 
@@ -262,7 +262,7 @@ export function stackPeekEngine(initialItems: number[]): AlgorithmSnapshot[] {
       description: `peek() returns ${top.value}. The stack is unchanged - nothing was removed.`,
       pseudocodeLine: LINE.PEEK_RETURN,
       isPredictionRequired: false,
-      state: baseStackState(items, null, { lastOperation: 'peek', lastOperationValue: top.value }),
+      state: baseStackState(items, capacity, { lastOperation: 'peek', lastOperationValue: top.value }),
       isFinalStep: true,
     }),
   )

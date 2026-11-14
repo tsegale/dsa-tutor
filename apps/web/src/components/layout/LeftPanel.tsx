@@ -348,7 +348,17 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
           {/* Zone 1: where am I. */}
           <PipelineTracker stages={pipeline} />
           {algorithmSlug && CONTEXTUAL_CONTROL_SLUGS.has(algorithmSlug) ? (
-            <AlgorithmControls slug={algorithmSlug} />
+            // A mouse click on Push/Pop/Insert must not leave that button
+            // focused: Space would then press it again instead of playing
+            // the operation. Keyboard presses (detail 0) keep their focus.
+            <div
+              className="contents"
+              onClick={(event) => {
+                if (event.detail > 0) (event.target as HTMLElement).closest('button')?.blur()
+              }}
+            >
+              <AlgorithmControls slug={algorithmSlug} />
+            </div>
           ) : algorithmSlug && FIXED_INPUT_SLUGS.has(algorithmSlug) ? (
             <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
               <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">Input</h3>

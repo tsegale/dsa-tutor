@@ -747,8 +747,18 @@ function GraphStateStrip({ state, algorithmName }: { state: GraphAlgorithmState;
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 pt-9 pb-1.5 text-[11px] text-text-secondary dark:border-dark-border dark:text-dark-text-secondary">
       {content}
       <span className="font-mono text-[10px] text-text-muted dark:text-dark-text-secondary">
-        Visited: {state.visited.length} / {state.nodes.length}
+        Visited: {visitedCount(state)} / {state.nodes.length}
       </span>
     </div>
   )
+}
+
+/** Cycle detection tracks progress in its WHITE/GRAY/BLACK colouring, not in
+ * `visited`: a node counts as visited once it is no longer WHITE. */
+function visitedCount(state: GraphAlgorithmState): number {
+  const colours = (state as GraphAlgorithmState & CycleGraphExtras).colors
+  if (colours && Object.keys(colours).length > 0) {
+    return Object.values(colours).filter((c) => c !== 'WHITE').length
+  }
+  return state.visited.length
 }

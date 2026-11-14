@@ -284,21 +284,36 @@ export function queueDequeueEngine(initialItems: number[], dequeueCount: number)
  * would advance past capacity-1 and must wrap to 0 - the core visual
  * insight of a circular queue.
  */
+export interface CircularQueueStart {
+  items: Array<{ value: number; index: number }>
+  frontIndex: number
+  rearIndex: number
+}
+
+/**
+ * Runs `operations` on a circular queue of fixed `capacity`. With `start`,
+ * the queue begins in that state (the one on the canvas) instead of empty,
+ * so an operation is animated on its own rather than after a replay of
+ * every operation that built the queue.
+ */
 export function circularQueueEngine(
   capacity: number,
   operations: Array<{ op: 'enqueue' | 'dequeue'; value?: number }>,
+  start?: CircularQueueStart,
 ): AlgorithmSnapshot[] {
-  let items: QueueState['items'] = []
-  let frontIndex = -1
-  let rearIndex = -1
-  let size = 0
+  let items: QueueState['items'] = start ? start.items.map((it) => ({ id: nextId(it.value), value: it.value, index: it.index })) : []
+  let frontIndex = start && items.length > 0 ? start.frontIndex : -1
+  let rearIndex = start ? start.rearIndex : -1
+  let size = items.length
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
 
   snapshots.push(
     makeSnapshot({
       stepIndex: stepIndex++,
-      description: `Starting with an empty circular queue of capacity ${capacity}.`,
+      description: start
+        ? `The circular queue holds ${size} of ${capacity} slots${size > 0 ? `, front at index ${frontIndex}, rear at index ${rearIndex}` : ''}.`
+        : `Starting with an empty circular queue of capacity ${capacity}.`,
       pseudocodeLine: LINE.ENQUEUE_CHECK,
       isPredictionRequired: false,
       state: baseState(items, capacity, frontIndex, rearIndex, 'circular'),
@@ -411,8 +426,11 @@ export function circularQueueEngine(
 export function dequeEngine(
   capacity: number,
   operations: Array<{ op: 'pushFront' | 'pushBack' | 'popFront' | 'popBack'; value?: number }>,
+  startValues?: number[],
 ): AlgorithmSnapshot[] {
-  let items: Array<{ id: string; value: number }> = []
+  // With `startValues` the deque begins as shown on the canvas (front to
+  // back) instead of empty, so only the new operation is animated.
+  let items: Array<{ id: string; value: number }> = (startValues ?? []).map((value) => ({ id: nextId(value), value }))
   const snapshots: AlgorithmSnapshot[] = []
   let stepIndex = 0
 
@@ -421,10 +439,12 @@ export function dequeEngine(
   snapshots.push(
     makeSnapshot({
       stepIndex: stepIndex++,
-      description: `Starting with an empty deque of capacity ${capacity}.`,
+      description: startValues
+        ? `The deque holds ${items.length} of ${capacity} slots.`
+        : `Starting with an empty deque of capacity ${capacity}.`,
       pseudocodeLine: LINE.ENQUEUE_CHECK,
       isPredictionRequired: false,
-      state: baseState([], capacity, -1, -1, 'deque'),
+      state: baseState(toQueueItems(), capacity, items.length > 0 ? 0 : -1, items.length - 1, 'deque'),
     }),
   )
 

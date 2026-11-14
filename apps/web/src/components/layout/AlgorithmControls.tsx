@@ -16,6 +16,7 @@ import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmSt
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { withCodeMode } from '@/engine/codeMode'
 import { stackPushEngine, stackPopEngine, stackPeekEngine } from '@/engine/stack'
+import type { CircularQueueStart } from '@/engine/queue'
 import { queueEnqueueEngine, queueDequeueEngine, circularQueueEngine, dequeEngine } from '@/engine/queue'
 import {
   hashInsertChainingEngine,
@@ -331,29 +332,22 @@ function extractLiveLinearQueueItems(raw: unknown): number[] | null {
     .filter((n) => !Number.isNaN(n))
 }
 
-function reconstructCqOpsFromState(raw: unknown, fallback: CQOp[]): CQOp[] {
-  if (!raw || typeof raw !== 'object') return fallback
+function extractLiveCircularStart(raw: unknown): CircularQueueStart | null {
+  if (!raw || typeof raw !== 'object') return null
   const q = raw as {
     items?: Array<{ value: number | string; index: number }>
     frontIndex?: number
-    capacity?: number
+    rearIndex?: number
     variant?: string
   }
-  if (q.variant !== 'circular' || !Array.isArray(q.items)) return fallback
-  if (q.items.length === 0) return []
-  const cap = q.capacity ?? 5
-  const front = Math.max(0, q.frontIndex ?? 0)
-  const ops: CQOp[] = []
-  for (let i = 0; i < front; i++) {
-    ops.push({ op: 'enqueue', value: 0 }, { op: 'dequeue' })
+  if (q.variant !== 'circular' || !Array.isArray(q.items)) return null
+  return {
+    items: q.items
+      .map((it) => ({ value: Number(it.value), index: it.index }))
+      .filter((it) => !Number.isNaN(it.value)),
+    frontIndex: q.frontIndex ?? -1,
+    rearIndex: q.rearIndex ?? -1,
   }
-  const byIdx = new Map(q.items.map((it) => [it.index, Number(it.value) || 0]))
-  for (let k = 0; k < q.items.length; k++) {
-    const idx = (front + k) % cap
-    const val = byIdx.get(idx)
-    if (val !== undefined) ops.push({ op: 'enqueue', value: val })
-  }
-  return ops
 }
 
 function extractLiveLinkedListItems(raw: unknown): number[] | null {
@@ -685,7 +679,7 @@ function StackControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const snaps = stackPopEngine(activeItems, 1)
+            const snaps = stackPopEngine(activeItems, 1, 6)
             const next = activeItems.slice(0, -1)
             record('pop()', next, snaps)
           }}
@@ -695,7 +689,7 @@ function StackControls({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record('peek()', activeItems, stackPeekEngine(activeItems))}
+          onClick={() => record('peek()', activeItems, stackPeekEngine(activeItems, 6))}
         >
           Peek
         </Button>
@@ -712,21 +706,28 @@ function QueueControls({ slug }: { slug: string }) {
   const isCircular = slug === 'circular-queue'
   const [linearItems, setLinearItems] = useState<number[]>(QUEUE_SEED)
   const [cqOps, setCqOps] = useState<CQOp[]>(CQ_SEED)
-  const [history, setHistory] = useState<HistoryEntry<{ linear: number[]; cq: CQOp[] }>[]>([])
+  const [history, setHistory] = useState<
+    HistoryEntry<{ linear: number[]; cq: CQOp[]; cqStart: CircularQueueStart | null }>[]
+  >([])
 
   const activeLinearItems = extractLiveLinearQueueItems(currentSnapshot?.dataStructureState) ?? linearItems
-  const activeCqOps = isCircular ? reconstructCqOpsFromState(currentSnapshot?.dataStructureState, cqOps) : cqOps
+  // A circular queue is continued from exactly what the canvas shows (slots,
+  // front and rear), so an operation never replays or invents earlier ones.
+  const liveCqStart = isCircular ? extractLiveCircularStart(currentSnapshot?.dataStructureState) : null
+  const runCircular = (op: CQOp) =>
+    liveCqStart ? circularQueueEngine(5, [op], liveCqStart) : circularQueueEngine(5, [...cqOps, op])
   const liveCapacity = (currentSnapshot?.dataStructureState as { capacity?: number } | undefined)?.capacity ?? (isCircular ? 5 : 6)
 
   const num = Number(value) || 0
 
   function handleEnqueue() {
     if (isCircular) {
-      const nextOps: CQOp[] = [...activeCqOps, { op: 'enqueue', value: num }]
-      const snaps = circularQueueEngine(5, nextOps)
+      const op: CQOp = { op: 'enqueue', value: num }
+      const nextOps: CQOp[] = [...cqOps, op]
+      const snaps = runCircular(op)
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
+        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: activeLinearItems, cq: cqOps, cqStart: liveCqStart } },
       ])
       setCqOps(nextOps)
       apply(slug, snaps)
@@ -735,7 +736,7 @@ function QueueControls({ slug }: { slug: string }) {
       const next = activeLinearItems.length < 6 ? [...activeLinearItems, num] : activeLinearItems
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
+        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: activeLinearItems, cq: cqOps, cqStart: liveCqStart } },
       ])
       setLinearItems(next)
       apply(slug, snaps)
@@ -744,11 +745,12 @@ function QueueControls({ slug }: { slug: string }) {
 
   function handleDequeue() {
     if (isCircular) {
-      const nextOps: CQOp[] = [...activeCqOps, { op: 'dequeue' }]
-      const snaps = circularQueueEngine(5, nextOps)
+      const op: CQOp = { op: 'dequeue' }
+      const nextOps: CQOp[] = [...cqOps, op]
+      const snaps = runCircular(op)
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
+        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: activeLinearItems, cq: cqOps, cqStart: liveCqStart } },
       ])
       setCqOps(nextOps)
       apply(slug, snaps)
@@ -757,7 +759,7 @@ function QueueControls({ slug }: { slug: string }) {
       const next = activeLinearItems.slice(1)
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
+        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: activeLinearItems, cq: cqOps, cqStart: liveCqStart } },
       ])
       setLinearItems(next)
       apply(slug, snaps)
@@ -772,7 +774,9 @@ function QueueControls({ slug }: { slug: string }) {
     setLinearItems(last.prevState.linear)
     setCqOps(last.prevState.cq)
     const fallback = isCircular
-      ? circularQueueEngine(5, last.prevState.cq)
+      ? last.prevState.cqStart
+        ? circularQueueEngine(5, [], last.prevState.cqStart)
+        : circularQueueEngine(5, last.prevState.cq)
       : queueEnqueueEngine([], last.prevState.linear, 6)
     apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? fallback)
   }
@@ -853,8 +857,10 @@ function DequeControls({ slug }: { slug: string }) {
   const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [value, setValue] = useState('7')
   const [ops, setOps] = useState<DQOp[]>(DQ_SEED)
-  const [history, setHistory] = useState<HistoryEntry<DQOp[]>[]>([])
+  const [history, setHistory] = useState<HistoryEntry<{ ops: DQOp[]; values: number[] | null }>[]>([])
 
+  // The deque is continued from exactly what the canvas shows (front to
+  // back); only the new operation is animated.
   const liveDequeValues = extractLiveLinearQueueItems(currentSnapshot?.dataStructureState)
   const activeOps: DQOp[] =
     liveDequeValues !== null
@@ -865,9 +871,9 @@ function DequeControls({ slug }: { slug: string }) {
     const num = Number(value) || 0
     const nextOp: DQOp = op === 'pushFront' || op === 'pushBack' ? { op, value: num } : { op }
     const nextOps = [...activeOps, nextOp]
-    const snaps = dequeEngine(5, nextOps)
+    const snaps = liveDequeValues !== null ? dequeEngine(5, [nextOp], liveDequeValues) : dequeEngine(5, nextOps)
     const label = op === 'pushFront' || op === 'pushBack' ? `${op}(${num})` : `${op}()`
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots: snaps, prevState: activeOps }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots: snaps, prevState: { ops: activeOps, values: liveDequeValues } }])
     setOps(nextOps)
     apply(slug, snaps)
   }
@@ -877,8 +883,9 @@ function DequeControls({ slug }: { slug: string }) {
     if (!last) return
     const nextHist = history.slice(0, -1)
     setHistory(nextHist)
-    setOps(last.prevState)
-    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? dequeEngine(5, last.prevState))
+    setOps(last.prevState.ops)
+    const { values } = last.prevState
+    apply(slug, nextHist[nextHist.length - 1]?.snapshots ?? (values !== null ? dequeEngine(5, [], values) : dequeEngine(5, last.prevState.ops)))
   }
 
   function handleReset(seed: DQOp[] = DQ_SEED) {
