@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { submitSus } from '@/api/study'
 import { Button } from '@/components/ui/button'
 import { DSATutorLogo } from '@/components/brand'
@@ -25,11 +25,15 @@ const LIKERT_SCALE = [1, 2, 3, 4, 5]
 
 export default function SusPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [responses, setResponses] = useState<Array<number | null>>(Array(10).fill(null))
 
   const submitMutation = useMutation({
     mutationFn: () => submitSus(responses as number[]),
-    onSuccess: () => navigate('/', { replace: true }),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['study', 'status'] })
+      navigate('/', { replace: true })
+    },
   })
 
   const canSubmit = responses.every((r) => r !== null)
