@@ -176,7 +176,7 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
                         </div>
                         {greedyLastFinish !== null && greedyLastFinish !== undefined && (
                           <div
-                            className="pointer-events-none absolute top-0 bottom-0 border-l border-dashed border-primary"
+                            className="pointer-events-none absolute top-0 bottom-0 border-l border-dashed border-state-current"
                             style={{ left: `${(greedyLastFinish / maxTime) * 100}%` }}
                           />
                         )}

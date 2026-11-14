@@ -31,6 +31,10 @@ const VISITED_FILL = 'var(--state-current)'
 const VISITED_TEXT = 'var(--state-current-ink)'
 const PATH_FILL = 'var(--state-sorted)'
 const PATH_TEXT = 'var(--state-sorted-ink)'
+// DFS colouring: BLACK (finished) is a solid neutral fill, so it reads apart from
+// WHITE (hollow) and GRAY (compare amber) in both themes.
+const FINISHED_FILL = 'var(--state-neutral)'
+const FINISHED_TEXT = 'var(--state-neutral-ink)'
 const START_LABEL = 'var(--state-sorted)'
 const TARGET_LABEL = 'var(--state-swap)'
 const EDGE_DEFAULT = 'var(--rule-strong)'
@@ -66,7 +70,7 @@ const LEGEND: { label: string; colour: string }[] = [
 const CYCLE_LEGEND: { label: string; colour: string }[] = [
   { label: 'WHITE (unvisited)', colour: DEFAULT_STROKE },
   { label: 'GRAY (active path)', colour: CURRENT_FILL },
-  { label: 'BLACK (finished)', colour: '#334155' },
+  { label: 'BLACK (finished)', colour: FINISHED_FILL },
   { label: 'Cycle back-edge', colour: 'var(--state-error-text)' },
 ]
 
@@ -452,7 +456,7 @@ function GraphNodeCircle({
       ? cycleColor === 'GRAY'
         ? CURRENT_FILL
         : cycleColor === 'BLACK'
-          ? '#334155'
+          ? FINISHED_FILL
           : DEFAULT_FILL
       : isCurrent
         ? CURRENT_FILL
@@ -469,7 +473,7 @@ function GraphNodeCircle({
       ? cycleColor === 'GRAY'
         ? CURRENT_TEXT
         : cycleColor === 'BLACK'
-          ? '#f8fafc'
+          ? FINISHED_TEXT
           : DEFAULT_TEXT
       : isCurrent
         ? CURRENT_TEXT
