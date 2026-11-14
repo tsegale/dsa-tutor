@@ -12,7 +12,7 @@ const EXPORTS: { kind: ResearchExportKind; label: string }[] = [
 
 const PYTHON_ANALYSIS_SCRIPT = `"""
 Reproducible Research Statistical Analysis Pipeline for DSA Tutor Study
-========================================================================
+=======================================================================
 Place this script in the same directory as your exported CSV files:
   - assessments.csv
   - sessions.csv
@@ -24,125 +24,194 @@ Usage:
   python analyze_study.py
 """
 
+import csv
 import math
 import pathlib
-import pandas as pd
-from scipy import stats
+import statistics
+from collections import defaultdict
 
 
-def cohens_d_paired(diffs: pd.Series) -> float:
-    std = diffs.std(ddof=1)
-    if std == 0 or math.isnan(std):
-        return 0.0
-    return float(diffs.mean() / std)
+def read_csv_rows(filename: str) -> list[dict[str, str]]:
+    path = pathlib.Path(filename)
+    if not path.exists():
+        print(f"[skip] {filename} not found")
+        return []
+    with path.open(newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def paired_t_and_d(xs: list[float], ys: list[float]) -> tuple[float, float, float]:
+    n = len(xs)
+    diffs = [x - y for x, y in zip(xs, ys)]
+    mean_d = statistics.mean(diffs)
+    sd_d = statistics.stdev(diffs) if n >= 2 else 0.0
+    if sd_d == 0.0:
+        return 0.0, 1.0, 0.0
+    t_stat = mean_d / (sd_d / math.sqrt(n))
+    cohens_d = mean_d / sd_d
+    df = n - 1
+    # Two-tailed p-value via normal-t approximation (Cornish-Fisher)
+    z = abs(t_stat) * (1.0 - 1.0 / (4.0 * df)) / math.sqrt(1.0 + (t_stat * t_stat) / (2.0 * df))
+    p_val = math.erfc(z / math.sqrt(2.0))
+    return t_stat, p_val, cohens_d
 
 
 def analyze_assessments() -> None:
-    path = pathlib.Path("assessments.csv")
-    if not path.exists():
-        print("[skip] assessments.csv not found")
-        return
-    df = pd.read_csv(path)
-    if df.empty:
-        print("[info] assessments.csv has 0 rows")
+    rows = read_csv_rows("assessments.csv")
+    if not rows:
         return
 
-    item_scores = (
-        df.groupby(["participantCode", "kind"])["correct"]
-        .mean()
-        .unstack()
-        * 100.0
-    )
-    if "PRE" in item_scores.columns and "POST" in item_scores.columns:
-        paired = item_scores.dropna(subset=["PRE", "POST"]).copy()
-        paired["gain"] = paired["POST"] - paired["PRE"]
-        paired["norm_gain"] = paired["gain"] / (100.0 - paired["PRE"]).replace(0, float("nan"))
-        n = len(paired)
-        print(f"=== 1. Pre/Post Learning Gains (n = {n}) ===")
-        if n >= 2:
-            t_stat, p_val = stats.ttest_rel(paired["POST"], paired["PRE"])
-            w_stat, w_pval = stats.wilcoxon(paired["POST"], paired["PRE"], zero_method="zsplit")
-            d_val = cohens_d_paired(paired["gain"])
-            print(f"  Pre-test Mean (SD):  {paired['PRE'].mean():.2f}% ({paired['PRE'].std():.2f}%)")
-            print(f"  Post-test Mean (SD): {paired['POST'].mean():.2f}% ({paired['POST'].std():.2f}%)")
-            print(f"  Paired t-test:       t = {t_stat:.3f}, p = {p_val:.4f}, Cohen's d = {d_val:.3f}")
-            print(f"  Wilcoxon signed:     W = {w_stat:.3f}, p = {w_pval:.4f}")
-            print(f"  Normalized Gain <g>: {paired['norm_gain'].mean():.3f}")
+    by_part_phase: dict[tuple[str, str], list[float]] = defaultdict(list)
+    by_part_cond_phase: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+
+    for r in rows:
+        code = r.get("participantCode", "")
+        phase = r.get("phase", "")
+        cond = r.get("condition", "")
+        score_str = r.get("score", "")
+        if code and phase and score_str != "":
+            val = float(score_str)
+            by_part_phase[(code, phase)].append(val)
+            if cond:
+                by_part_cond_phase[(code, cond, phase)].append(val)
+
+    participants = sorted({k[0] for k in by_part_phase})
+    pre_scores: list[float] = []
+    post_scores: list[float] = []
+    norm_gains: list[float] = []
+
+    for p in participants:
+        if (p, "PRE") in by_part_phase and (p, "POST") in by_part_phase:
+            pre = statistics.mean(by_part_phase[(p, "PRE")]) * 100.0
+            post = statistics.mean(by_part_phase[(p, "POST")]) * 100.0
+            pre_scores.append(pre)
+            post_scores.append(post)
+            if pre < 100.0:
+                norm_gains.append((post - pre) / (100.0 - pre))
+
+    n = len(pre_scores)
+    print(f"=== 1. Pre/Post Learning Gains (n = {n}) ===")
+    if n >= 2:
+        t_stat, p_val, d_val = paired_t_and_d(post_scores, pre_scores)
+        print(f"  Pre-test Mean (SD):  {statistics.mean(pre_scores):.2f}% ({statistics.stdev(pre_scores):.2f}%)")
+        print(f"  Post-test Mean (SD): {statistics.mean(post_scores):.2f}% ({statistics.stdev(post_scores):.2f}%)")
+        print(f"  Mean Absolute Gain:  +{statistics.mean([b - a for a, b in zip(pre_scores, post_scores)]):.2f}%")
+        print(f"  Paired t-test:       t({n - 1}) = {t_stat:.3f}, p = {p_val:.4f}, Cohen's d = {d_val:.3f}")
+        if norm_gains:
+            print(f"  Normalized Gain <g>: {statistics.mean(norm_gains):.3f}")
+
+    tutor_gains: list[float] = []
+    classic_gains: list[float] = []
+    for p in participants:
+        has_t = (p, "TUTOR", "PRE") in by_part_cond_phase and (p, "TUTOR", "POST") in by_part_cond_phase
+        has_c = (p, "CLASSIC", "PRE") in by_part_cond_phase and (p, "CLASSIC", "POST") in by_part_cond_phase
+        if has_t and has_c:
+            t_gain = (
+                statistics.mean(by_part_cond_phase[(p, "TUTOR", "POST")])
+                - statistics.mean(by_part_cond_phase[(p, "TUTOR", "PRE")])
+            ) * 100.0
+            c_gain = (
+                statistics.mean(by_part_cond_phase[(p, "CLASSIC", "POST")])
+                - statistics.mean(by_part_cond_phase[(p, "CLASSIC", "PRE")])
+            ) * 100.0
+            tutor_gains.append(t_gain)
+            classic_gains.append(c_gain)
+
+    if len(tutor_gains) >= 2:
+        t_g, p_g, d_g = paired_t_and_d(tutor_gains, classic_gains)
+        print(f"\\n=== 2. Within-Subject Pre->Post Gain by Condition (n = {len(tutor_gains)}) ===")
+        print(f"  TUTOR Mean Gain:     +{statistics.mean(tutor_gains):.2f}% (SD = {statistics.stdev(tutor_gains):.2f}%)")
+        print(f"  CLASSIC Mean Gain:   +{statistics.mean(classic_gains):.2f}% (SD = {statistics.stdev(classic_gains):.2f}%)")
+        print(f"  Paired Difference:   t({len(tutor_gains) - 1}) = {t_g:.3f}, p = {p_g:.4f}, Cohen's d = {d_g:.3f}")
 
 
-def analyze_conditions() -> None:
-    path = pathlib.Path("interactions.csv")
-    if not path.exists():
-        print("[skip] interactions.csv not found")
+def analyze_interactions() -> None:
+    rows = read_csv_rows("interactions.csv")
+    if not rows:
         return
-    df = pd.read_csv(path)
-    if df.empty or "condition" not in df.columns:
-        print("[info] interactions.csv has 0 rows")
-        return
 
-    by_cond = (
-        df.groupby(["participantCode", "condition"])["correct"]
-        .mean()
-        .unstack()
-        * 100.0
-    )
-    print("\\n=== 2. Within-Subject Condition Comparison (TUTOR vs CLASSIC) ===")
-    for col in by_cond.columns:
-        series = by_cond[col].dropna()
-        print(f"  Condition {col}: n = {len(series)}, Mean Accuracy = {series.mean():.2f}% (SD = {series.std():.2f}%)")
+    by_part_acc: dict[str, list[float]] = defaultdict(list)
+    hints_list: list[float] = []
+    bottom_outs = 0
+    by_cond_dwell: dict[str, list[float]] = defaultdict(list)
 
-    if "TUTOR" in by_cond.columns and "CLASSIC" in by_cond.columns:
-        both = by_cond.dropna(subset=["TUTOR", "CLASSIC"])
-        if len(both) >= 2:
-            diffs = both["TUTOR"] - both["CLASSIC"]
-            t_stat, p_val = stats.ttest_rel(both["TUTOR"], both["CLASSIC"])
-            d_val = cohens_d_paired(diffs)
-            print(f"  Paired TUTOR vs CLASSIC: t = {t_stat:.3f}, p = {p_val:.4f}, Cohen's d = {d_val:.3f}")
+    for r in rows:
+        cond = r.get("condition", "")
+        dwell_str = r.get("timeSpentSeconds", "")
+        if cond and dwell_str != "":
+            by_cond_dwell[cond].append(float(dwell_str))
+        if r.get("interactionType") == "PREDICTION":
+            c_str = r.get("correct", "").lower()
+            if c_str in ("true", "false"):
+                by_part_acc[r["participantCode"]].append(1.0 if c_str == "true" else 0.0)
+                hints_list.append(float(r.get("hintsRequested") or 0))
+                if r.get("bottomedOut", "").lower() == "true":
+                    bottom_outs += 1
+
+    print("\\n=== 3. Process & Interaction Telemetry (interactions.csv) ===")
+    if by_part_acc:
+        part_means = [statistics.mean(v) * 100.0 for v in by_part_acc.values()]
+        sd = statistics.stdev(part_means) if len(part_means) >= 2 else 0.0
+        print(f"  Participant Prediction Accuracy: Mean = {statistics.mean(part_means):.2f}% (SD = {sd:.2f}%, n = {len(part_means)})")
+        print(f"  Graded Predictions: {len(hints_list)} | Mean Hints/Junction: {statistics.mean(hints_list):.2f} | Bottom-Outs: {bottom_outs}")
+    for cond in sorted(by_cond_dwell):
+        vals = by_cond_dwell[cond]
+        sd = statistics.stdev(vals) if len(vals) >= 2 else 0.0
+        print(f"  Condition {cond:7s}: {len(vals):2d} interactions | Mean Step Dwell = {statistics.mean(vals):.1f}s (SD = {sd:.1f}s)")
 
 
 def analyze_misconception_events() -> None:
-    path = pathlib.Path("misconception_events.csv")
-    if not path.exists():
-        print("[skip] misconception_events.csv not found")
-        return
-    df = pd.read_csv(path)
-    if df.empty:
-        print("[info] misconception_events.csv has 0 rows")
+    rows = read_csv_rows("misconception_events.csv")
+    if not rows:
         return
 
-    print("\\n=== 3. Misconception Detect-Remediate-Reprobe Loop ===")
-    counts = df["status"].value_counts().to_dict()
-    resolved = counts.get("RESOLVED", 0)
-    persistent = counts.get("PERSISTENT", 0)
+    counts: dict[str, int] = defaultdict(int)
+    for r in rows:
+        counts[r.get("status", "UNKNOWN")] += 1
+    resolved = counts["RESOLVED"]
+    persistent = counts["PERSISTENT"]
+    remediated = counts["REMEDIATED"]
     tested = resolved + persistent
     rate = (resolved / tested * 100.0) if tested > 0 else 0.0
-    print(f"  Total Detected: {len(df)} | Resolved: {resolved} | Persistent: {persistent} | Resolution Rate: {rate:.1f}%")
+    print("\\n=== 4. Misconception Detect-Remediate-Reprobe Loop (misconception_events.csv) ===")
+    print(f"  Total Events: {len(rows)} | Resolved: {resolved} | Persistent: {persistent} | Awaiting Reprobe: {remediated}")
+    print(f"  Empirical Resolution Rate (Resolved / Reprobed): {rate:.1f}% ({resolved}/{tested})")
 
 
 def analyze_sessions() -> None:
-    path = pathlib.Path("sessions.csv")
-    if not path.exists():
-        print("[skip] sessions.csv not found")
-        return
-    df = pd.read_csv(path)
-    if df.empty:
-        print("[info] sessions.csv has 0 rows")
+    rows = read_csv_rows("sessions.csv")
+    if not rows:
         return
 
-    print("\\n=== 4. Cognitive Load (Paas 1-9) & Usability (SUS 0-100) ===")
-    if "mentalEffort" in df.columns:
-        me = df["mentalEffort"].dropna()
-        if not me.empty:
-            print(f"  Mental Effort (1-9): Mean = {me.mean():.2f}, SD = {me.std():.2f} (n = {len(me)} sessions)")
-    if "susScore" in df.columns:
-        sus = df.groupby("participantCode")["susScore"].first().dropna()
-        if not sus.empty:
-            print(f"  System Usability Scale (SUS): Mean = {sus.mean():.2f}, SD = {sus.std():.2f} (n = {len(sus)} participants)")
+    effort_by_cond: dict[str, list[float]] = defaultdict(list)
+    conf_by_cond: dict[str, list[float]] = defaultdict(list)
+    sus_by_part: dict[str, float] = {}
+
+    for r in rows:
+        cond = r.get("condition", "")
+        if r.get("mentalEffort", "") != "":
+            effort_by_cond[cond].append(float(r["mentalEffort"]))
+        if r.get("confidence", "") != "":
+            conf_by_cond[cond].append(float(r["confidence"]))
+        if r.get("susScore", "") != "" and r.get("participantCode"):
+            sus_by_part[r["participantCode"]] = float(r["susScore"])
+
+    print("\\n=== 5. Cognitive Load (Paas 1-9), Confidence (1-5) & Usability (SUS 0-100) ===")
+    for cond in sorted(effort_by_cond):
+        me = effort_by_cond[cond]
+        cf = conf_by_cond[cond]
+        me_sd = statistics.stdev(me) if len(me) >= 2 else 0.0
+        cf_sd = statistics.stdev(cf) if len(cf) >= 2 else 0.0
+        print(f"  Condition {cond:7s}: Mental Effort = {statistics.mean(me):.2f} (SD = {me_sd:.2f}), Confidence = {statistics.mean(cf):.2f} (SD = {cf_sd:.2f})")
+    if sus_by_part:
+        sus_vals = list(sus_by_part.values())
+        sus_sd = statistics.stdev(sus_vals) if len(sus_vals) >= 2 else 0.0
+        print(f"  System Usability Scale (SUS): Mean = {statistics.mean(sus_vals):.2f}, SD = {sus_sd:.2f} (Min = {min(sus_vals):.1f}, Max = {max(sus_vals):.1f}, n = {len(sus_vals)})")
 
 
 if __name__ == "__main__":
     analyze_assessments()
-    analyze_conditions()
+    analyze_interactions()
     analyze_misconception_events()
     analyze_sessions()
 `
