@@ -43,8 +43,45 @@ const COLLAPSED_WIDTH = 48
 
 function CodeBracketsIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <path d="M8 4 4 12l4 8M16 4l4 8-4 8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SlidersIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <line x1="4" y1="21" x2="4" y2="14" strokeLinecap="round" />
+      <line x1="4" y1="10" x2="4" y2="3" strokeLinecap="round" />
+      <line x1="12" y1="21" x2="12" y2="12" strokeLinecap="round" />
+      <line x1="12" y1="8" x2="12" y2="3" strokeLinecap="round" />
+      <line x1="20" y1="21" x2="20" y2="16" strokeLinecap="round" />
+      <line x1="20" y1="12" x2="20" y2="3" strokeLinecap="round" />
+      <line x1="1" y1="14" x2="7" y2="14" strokeLinecap="round" />
+      <line x1="9" y1="8" x2="15" y2="8" strokeLinecap="round" />
+      <line x1="17" y1="16" x2="23" y2="16" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ApplyPlayIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function DiceShuffleIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" />
+      <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" />
+      <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" />
     </svg>
   )
 }
@@ -352,16 +389,27 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             // focused: Space would then press it again instead of playing
             // the operation. Keyboard presses (detail 0) keep their focus.
             <div
-              className="contents"
+              className="rounded-md border border-border bg-surface-sunk/40 p-2.5 dark:border-dark-border"
               onClick={(event) => {
                 if (event.detail > 0) (event.target as HTMLElement).closest('button')?.blur()
               }}
             >
+              <div className="mb-2 flex items-center gap-1.5 text-micro font-semibold text-text-primary dark:text-dark-text-primary">
+                <span className="text-brand">
+                  <SlidersIcon />
+                </span>
+                <span>Controls & Data</span>
+              </div>
               <AlgorithmControls slug={algorithmSlug} />
             </div>
           ) : algorithmSlug && FIXED_INPUT_SLUGS.has(algorithmSlug) ? (
-            <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-              <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">Input</h3>
+            <section className="flex flex-col gap-2 rounded-md border border-border bg-surface-sunk/40 p-2.5 dark:border-dark-border">
+              <h3 className="inline-flex items-center gap-1.5 text-micro font-semibold text-text-primary dark:text-dark-text-primary">
+                <span className="text-brand">
+                  <SlidersIcon />
+                </span>
+                Input
+              </h3>
               <p className="text-micro font-normal text-text-muted dark:text-dark-text-secondary">
                 This algorithm runs on a weighted graph distance matrix rather than a 1D array.
               </p>
@@ -387,8 +435,11 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
               </Button>
             </section>
           ) : (
-            <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-              <h3 className="text-micro text-text-muted dark:text-dark-text-secondary">
+            <section className="flex flex-col gap-2 rounded-md border border-border bg-surface-sunk/40 p-2.5 dark:border-dark-border">
+              <h3 className="inline-flex items-center gap-1.5 text-micro font-semibold text-text-primary dark:text-dark-text-primary">
+                <span className="text-brand">
+                  <SlidersIcon />
+                </span>
                 Custom array
               </h3>
               {!restricted && (
@@ -547,12 +598,16 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
                 </div>
               )}
               {inputError && <p className="text-xs text-error">{inputError}</p>}
-              <Button variant="outline" size="sm" onClick={applyArrayInput}>
-                Apply
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleRandom}>
-                Random
-              </Button>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button variant="outline" size="sm" onClick={applyArrayInput} className="gap-1">
+                  <ApplyPlayIcon />
+                  Apply
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleRandom} className="gap-1">
+                  <DiceShuffleIcon />
+                  Random
+                </Button>
+              </div>
             </section>
           )}
         </div>
@@ -563,7 +618,7 @@ export default function LeftPanel({ collapsed, onToggle, difficulty, fullWidth =
             Code Mode are peers - each changes what the page asks of you -
             so they sit together, no longer under an "AI tools" heading
             that described how they are built rather than what they do. */}
-        <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-2.5 pb-1 dark:border-dark-border">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-surface-sunk/40 px-3 pt-2.5 pb-1.5 dark:border-dark-border">
           {features.aiChallenge && (
           <section id="ai-tools-section" className="flex flex-col gap-2">
             <ChallengeGenerator difficulty={difficulty} />

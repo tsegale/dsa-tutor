@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Difficulty } from '@dsa-tutor/types'
 import { cn } from '@/lib/utils'
 import { demoPath, topicPath } from '@/data/tracks'
 import { isTopicComplete, practiceAction } from '@/utils/curriculum'
@@ -8,6 +9,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { ProgressRing } from '@/components/ui/progress'
 import { MasteryMark } from '@/components/mastery/MasteryMark'
 import { CriteriaSegments } from '@/components/mastery/CriteriaSegments'
+import { TopicArtwork, getTopicTheme } from './TopicArtwork'
 
 function CheckIcon() {
   return (
@@ -15,6 +17,41 @@ function CheckIcon() {
       <path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 4.8V8l2.2 1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function PlayMiniIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3 shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M5 3.5v9l7-4.5-7-4.5Z" />
+    </svg>
+  )
+}
+
+const DIFFICULTY_TONE: Record<Difficulty, { bg: string; fg: string; border: string }> = {
+  [Difficulty.BEGINNER]: {
+    bg: 'var(--tone-emerald-bg)',
+    fg: 'var(--tone-emerald-fg)',
+    border: 'var(--tone-emerald-border)',
+  },
+  [Difficulty.INTERMEDIATE]: {
+    bg: 'var(--tone-sky-bg)',
+    fg: 'var(--tone-sky-fg)',
+    border: 'var(--tone-sky-border)',
+  },
+  [Difficulty.ADVANCED]: {
+    bg: 'var(--tone-rose-bg)',
+    fg: 'var(--tone-rose-fg)',
+    border: 'var(--tone-rose-border)',
+  },
 }
 
 /**
@@ -47,6 +84,8 @@ export function TopicCard({
   const label = action ?? 'Open'
   const { status } = topic.mastery
   const masteryMarked = status === 'MASTERED' || status === 'PROFICIENT'
+  const theme = getTopicTheme(topic.name)
+  const diffTone = DIFFICULTY_TONE[topic.difficulty] ?? DIFFICULTY_TONE[Difficulty.BEGINNER]
 
   return (
     <li
@@ -54,16 +93,20 @@ export function TopicCard({
         // content-visibility lets the browser skip layout and paint for cards
         // off screen (Phase 5E: 66 cards with every section open); they stay
         // in the DOM and accessibility tree, so Tab and find still reach them.
-        'relative flex flex-col rounded-md border border-rule bg-surface p-card transition-shadow duration-quick [contain-intrinsic-size:auto_18rem] [content-visibility:auto]',
-        'hover:shadow-e2'
+        'group relative flex flex-col overflow-hidden rounded-md border border-t-[3px] border-rule bg-surface p-card transition-all duration-quick [contain-intrinsic-size:auto_22rem] [content-visibility:auto]',
+        'hover:-translate-y-0.5 hover:shadow-e2',
       )}
+      style={{ borderTopColor: theme.accent }}
     >
+      {/* Visual mini-diagram banner */}
+      <TopicArtwork slug={topic.name} className="mb-3 transition-transform duration-quick group-hover:scale-[1.01]" />
+
       <div className="flex items-start justify-between gap-3">
-        <span className="flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-sm border border-rule bg-surface-sunk px-2 py-0.5">
           {masteryMarked && <MasteryMark status={status} />}
           {!masteryMarked && state === 'complete' && <CheckIcon />}
           {!masteryMarked && state === 'in-progress' && <span aria-hidden="true" className="size-2 rounded-full bg-brand" />}
-          <span className="text-mono-sm text-ink-2">{number}</span>
+          <span className="text-mono-sm font-semibold text-ink-2">{number}</span>
         </span>
         <span className="flex w-12 flex-col items-stretch gap-1.5">
           <ProgressRing
@@ -77,7 +120,7 @@ export function TopicCard({
         </span>
       </div>
 
-      <h3 className="mt-2 text-h3 text-ink">
+      <h3 className="mt-2.5 text-h3 text-ink transition-colors duration-quick group-hover:text-brand">
         <Link
           to={topicPath(topic.name)}
           data-card-link
@@ -90,9 +133,23 @@ export function TopicCard({
         </Link>
       </h3>
       <p className="mt-1 line-clamp-2 text-small text-ink-2">{topic.description}</p>
-      <p className="mt-3 text-micro text-ink-2">
-        {DIFFICULTY_LABEL[topic.difficulty]} · <span className="text-mono-sm">{topic.estimatedMinutes} min</span>
-      </p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-micro">
+        <span
+          className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+          style={{
+            backgroundColor: diffTone.bg,
+            color: diffTone.fg,
+            borderColor: diffTone.border,
+          }}
+        >
+          {DIFFICULTY_LABEL[topic.difficulty]}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-full border border-rule bg-surface-sunk px-2 py-0.5 text-ink-2">
+          <ClockIcon />
+          <span className="text-mono-sm">{topic.estimatedMinutes} min</span>
+        </span>
+      </div>
 
       <div className="mt-auto flex flex-col items-stretch gap-2 pt-4">
         {action && (
@@ -103,8 +160,9 @@ export function TopicCard({
         <Link
           to={demoPath(topic.name)}
           aria-label={`Watch demo: ${number} ${topic.displayName}`}
-          className="relative z-10 self-center rounded-sm px-1 text-small text-ink-2 underline-offset-2 hover:text-ink hover:underline"
+          className="relative z-10 inline-flex items-center justify-center gap-1 self-center rounded-sm px-2 py-0.5 text-small font-medium text-ink-2 underline-offset-2 transition-colors hover:bg-surface-sunk hover:text-ink hover:underline"
         >
+          <PlayMiniIcon />
           Watch demo
         </Link>
       </div>

@@ -69,6 +69,43 @@ function SearchIcon() {
   )
 }
 
+function HomeNavIcon() {
+  return (
+    <svg className="size-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M2.5 7 8 2.5 13.5 7v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7Z" strokeLinejoin="round" />
+      <path d="M6.25 14V9.5h3.5V14" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ModulesNavIcon() {
+  return (
+    <svg className="size-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <rect x="2.25" y="2.25" width="4.75" height="4.75" rx="1" />
+      <rect x="9" y="2.25" width="4.75" height="4.75" rx="1" />
+      <rect x="2.25" y="9" width="4.75" height="4.75" rx="1" />
+      <rect x="9" y="9" width="4.75" height="4.75" rx="1" />
+    </svg>
+  )
+}
+
+function CompareNavIcon() {
+  return (
+    <svg className="size-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M3 13V7m3.3 6V4m3.4 9V9M13 13V5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ProgressNavIcon() {
+  return (
+    <svg className="size-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <circle cx="8" cy="8" r="5.75" />
+      <path d="m5.5 8.2 1.8 1.8 3.4-3.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
   const go = useShellNavigate()
   return (
@@ -149,7 +186,7 @@ function NavLink({ to, active, children }: { to: string; active: boolean; childr
         go(to)
       }}
       className={cn(
-        'relative inline-flex h-14 items-center px-1 text-small font-medium transition-colors duration-quick',
+        'relative inline-flex h-14 items-center gap-1.5 px-1.5 text-small font-medium transition-colors duration-quick',
         active ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-brand' : 'text-ink-2 hover:text-ink'
       )}
     >
@@ -199,10 +236,11 @@ function ModulesMenu({ active }: { active: boolean }) {
           type="button"
           aria-current={active ? 'page' : undefined}
           className={cn(
-            'relative inline-flex h-14 items-center gap-1 px-1 text-small font-medium transition-colors duration-quick',
+            'relative inline-flex h-14 items-center gap-1.5 px-1.5 text-small font-medium transition-colors duration-quick',
             active ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-brand' : 'text-ink-2 hover:text-ink'
           )}
         >
+          <ModulesNavIcon />
           Modules
           <ChevronDownIcon />
         </button>
@@ -372,6 +410,7 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
               {!isEducator && (
                 <span className="hidden lg:contents">
                   <NavLink to="/" active={pathname === '/'}>
+                    <HomeNavIcon />
                     Home
                   </NavLink>
                 </span>
@@ -382,10 +421,12 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
                 {!restricted && <ModulesMenu active={pathname.startsWith('/track/') || pathname.startsWith('/module/')} />}
                 {!restricted && (
                   <NavLink to="/compare" active={pathname.startsWith('/compare')}>
+                    <CompareNavIcon />
                     Compare
                   </NavLink>
                 )}
                 <NavLink to="/progress" active={pathname === '/progress'}>
+                  <ProgressNavIcon />
                   Progress
                 </NavLink>
               </span>
@@ -444,7 +485,7 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
 export function AppShell({ context, children }: { context?: ReactNode; children: ReactNode }) {
   return (
     <MotionPreference>
-      <div className="flex min-h-screen flex-col bg-paper">
+      <div className="flex min-h-screen flex-col bg-dot-grid">
         <AppTopBar context={context} />
         <div className="flex min-h-0 flex-1">
           {/* The curriculum rail: pinned under the header tiers, scrolling on its own. */}

@@ -10,6 +10,7 @@ import PseudocodePanel from '@/components/canvas/PseudocodePanel'
 import ComplexityPanel from '@/components/canvas/ComplexityPanel'
 import TheoryPanel from '@/components/canvas/TheoryPanel'
 import DemoAssistant from '@/components/tutor/DemoAssistant'
+import { AITutorAvatar } from '@/components/brand'
 import StepLog from './StepLog'
 import ScaffoldingFader from './ScaffoldingFader'
 import MistakeAnalysisToast from '@/components/prediction/MistakeAnalysisToast'
@@ -44,17 +45,17 @@ interface RightPanelProps {
 const EXPANDED_WIDTH = 280
 const COLLAPSED_WIDTH = 48
 
-function ExplanationIcon() {
+function ExplanationIcon({ className = 'size-4' }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 6h16M4 12h16M4 18h10" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function TheoryIcon() {
+function TheoryIcon({ className = 'size-4' }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <path d="M4 5a2 2 0 0 1 2-2h7v18H6a2 2 0 0 1-2-2z" />
       <path d="M13 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
       <path d="M8 8h2M8 12h2" />
@@ -62,27 +63,35 @@ function TheoryIcon() {
   )
 }
 
-function PseudocodeIcon() {
+function PseudocodeIcon({ className = 'size-4' }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M8 4 3 12l5 8M16 4l5 8-5 8" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M8 4 3 12l5 8M16 4l5 8-5 8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function ComplexityIcon() {
+function ComplexityIcon({ className = 'size-4' }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
+      <path d="M12 7v5l3 3" strokeLinecap="round" />
     </svg>
   )
 }
 
-function StepLogIcon() {
+function StepLogIcon({ className = 'size-4' }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function HintBulbIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden="true">
+      <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2Z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -122,25 +131,31 @@ function SocraticGuidanceBox({ hint, predictionResolved }: { hint: string | null
   const guidance = guidanceFor({ snapshot, algorithmName, isLiveJunction, predictionResolved, workedNarration })
 
   return (
-    <div className="rounded-md border border-border bg-card p-3">
-      <p className="text-micro font-bold text-primary">{guidance.heading}</p>
+    <div className="rounded-md border border-l-4 border-border border-l-brand bg-card p-3 shadow-e1 dark:border-dark-border dark:border-l-brand">
+      <div className="flex items-center gap-2">
+        <AITutorAvatar size={24} className="shrink-0 rounded-sm" />
+        <p className="text-micro font-bold tracking-wide text-primary uppercase">{guidance.heading}</p>
+      </div>
       {guidance.kind === 'worked' ? (
-        <WorkedStepNotice narration={guidance.text} className="mt-1.5" />
+        <WorkedStepNotice narration={guidance.text} className="mt-2" />
       ) : (
-        <p className="mt-1.5 text-body text-text-primary dark:text-dark-text-primary">{guidance.text}</p>
+        <p className="mt-2 text-body leading-relaxed text-text-primary dark:text-dark-text-primary">{guidance.text}</p>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] text-text-muted tabular-nums dark:text-dark-text-secondary">
+      <div className="mt-3 flex items-center gap-2 rounded-sm border border-border bg-surface-sunk px-2.5 py-1.5 dark:border-dark-border">
+        <span className="text-[11px] font-medium text-text-muted tabular-nums dark:text-dark-text-secondary">
           {total > 0 ? `${correct}/${total} correct (${accuracy}%)` : 'No predictions yet'}
         </span>
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-border">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${accuracy}%` }} />
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border dark:bg-dark-border">
+          <div className="h-full rounded-full bg-primary transition-all duration-quick" style={{ width: `${accuracy}%` }} />
         </div>
       </div>
 
       {hint && (
-        <div className="mt-3 rounded-md border-l-4 border-ai bg-ai-light p-2.5">
+        <div className="mt-3 flex items-start gap-2 rounded-md border border-ai/30 border-l-4 border-l-ai bg-ai-light p-2.5">
+          <span className="text-ai-foreground">
+            <HintBulbIcon />
+          </span>
           <p className="text-body text-ai-foreground">{hint}</p>
         </div>
       )}
@@ -276,36 +291,41 @@ export default function RightPanel({
                 scrolls itself; without that, focusing a tab made the browser
                 scroll the overflow-hidden Tabs root sideways to reveal it,
                 cutting off the whole panel's left edge. */}
-            <TabsList id="right-panel-tabs" className="w-full max-w-full shrink-0 justify-start overflow-x-auto">
+            <TabsList id="right-panel-tabs" className="w-full max-w-full shrink-0 justify-start gap-0.5 overflow-x-auto rounded-md border border-border bg-surface-sunk p-1 dark:border-dark-border">
               {/* Theory is first and is Demo mode's default: a student who
                   has never met the algorithm reads the briefing before any
                   animation plays. Its id is 0 so the existing tab ids, the
                   keyboard shortcuts and the Classic remap all keep working. */}
-              <TabsTrigger value="0" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
+              <TabsTrigger value="0" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
+                <TheoryIcon className="size-3.5 shrink-0" />
                 Theory
               </TabsTrigger>
               {features.aiTutorTab && (
-                <TabsTrigger value="1" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
+                <TabsTrigger value="1" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
+                  <ExplanationIcon className="size-3.5 shrink-0" />
                   AI Tutor
                 </TabsTrigger>
               )}
-              <TabsTrigger value="2" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
+              <TabsTrigger value="2" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
+                <PseudocodeIcon className="size-3.5 shrink-0" />
                 Pseudocode
               </TabsTrigger>
-              <TabsTrigger value="3" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
+              <TabsTrigger value="3" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
+                <ComplexityIcon className="size-3.5 shrink-0" />
                 Complexity
               </TabsTrigger>
-              <TabsTrigger value="4" className="shrink-0 px-2 py-1.5 text-[11px] tracking-normal whitespace-nowrap">
+              <TabsTrigger value="4" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
+                <StepLogIcon className="size-3.5 shrink-0" />
                 Step log
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="0" className="flex-1 overflow-y-auto">
+            <TabsContent value="0" className="mt-2 flex-1 overflow-y-auto">
               <TheoryPanel />
             </TabsContent>
             {features.aiTutorTab && (
             <TabsContent
               value="1"
-              className={cn('flex flex-1 flex-col gap-3', isDemo ? 'min-h-0 overflow-hidden' : 'overflow-y-auto')}
+              className={cn('mt-2 flex flex-1 flex-col gap-3', isDemo ? 'min-h-0 overflow-hidden' : 'overflow-y-auto')}
             >
               {isDemo ? (
                 <DemoAssistant />
@@ -325,13 +345,13 @@ export default function RightPanel({
               )}
             </TabsContent>
             )}
-            <TabsContent value="2" className="flex-1 overflow-y-auto">
+            <TabsContent value="2" className="mt-2 flex-1 overflow-y-auto">
               <PseudocodePanel />
             </TabsContent>
-            <TabsContent value="3" className="flex-1 overflow-y-auto">
+            <TabsContent value="3" className="mt-2 flex-1 overflow-y-auto">
               <ComplexityPanel />
             </TabsContent>
-            <TabsContent value="4" className="flex-1 overflow-y-auto">
+            <TabsContent value="4" className="mt-2 flex-1 overflow-y-auto">
               <StepLog predictionResolved={predictionResolved} />
             </TabsContent>
           </Tabs>

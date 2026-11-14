@@ -24,6 +24,23 @@ function readStoredLanguage(): ReferenceLanguage {
   return 'pseudocode'
 }
 
+function CopyClipIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  )
+}
+
+function CodeFileIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-state-current" aria-hidden="true">
+      <path d="M8 4 3 12l5 8M16 4l5 8-5 8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function renderHighlightedLine(line: string, hoveredVar: string | null): ReactNode {
   if (!hoveredVar || !/^[A-Za-z_]\w*$/.test(hoveredVar)) return line
   const regex = new RegExp(`(\\b${hoveredVar}\\b)`, 'g')
@@ -64,10 +81,11 @@ export default function PseudocodePanel() {
   if (!codeView) {
     return (
       <div
-        className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-card"
+        className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-card shadow-e1 dark:border-dark-border"
         style={{ width: '100%' }}
       >
-        <div className="border-b border-border px-4 py-2">
+        <div className="flex items-center gap-2 border-b border-border bg-surface-sunk/60 px-3 py-2 dark:border-dark-border">
+          <CodeFileIcon />
           <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Reference Code</span>
         </div>
         <div className="flex flex-1 items-center justify-center p-4 text-center">
@@ -91,17 +109,21 @@ export default function PseudocodePanel() {
 
   return (
     <div
-      className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-card"
+      className="flex h-full flex-col overflow-x-hidden rounded-md border border-border bg-card shadow-e1 dark:border-dark-border"
       style={{ width: '100%' }}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-sm font-semibold text-text-primary dark:text-dark-text-primary">Reference Code</span>
+      <div className="flex items-center justify-between border-b border-border bg-surface-sunk/60 px-3 py-2 dark:border-dark-border">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary dark:text-dark-text-primary">
+          <CodeFileIcon />
+          Reference Code
+        </span>
         <button
           type="button"
           onClick={handleCopy}
           aria-label="Copy code"
-          className="rounded border border-border px-2 py-0.5 font-mono text-[10px] text-text-muted transition-colors hover:bg-surface-sunk hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+          className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-medium text-text-muted transition-colors hover:bg-surface-sunk hover:text-text-primary dark:border-dark-border dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
         >
+          <CopyClipIcon />
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -109,7 +131,7 @@ export default function PseudocodePanel() {
       <div
         role="tablist"
         aria-label="Reference implementation language"
-        className="flex items-center gap-1 border-b border-border bg-surface-sunk/50 px-2 py-1 text-[11px] dark:border-dark-border"
+        className="flex items-center gap-1 border-b border-border bg-surface-sunk/40 px-2 py-1 text-[11px] dark:border-dark-border"
       >
         {LANGUAGES.map((option) => {
           const selected = lang === option.id
@@ -145,18 +167,18 @@ export default function PseudocodePanel() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute inset-0 border-l-[3px] border-state-current bg-[color-mix(in_srgb,var(--state-current)_10%,transparent)]"
+                    className="absolute inset-0 rounded-r-sm border-l-[3px] border-state-current bg-[color-mix(in_srgb,var(--state-current)_12%,transparent)]"
                   />
                 )}
               </AnimatePresence>
-              <span className="relative w-6 shrink-0 pl-1.5 text-right text-[10px] text-text-muted select-none">
+              <span className="relative w-7 shrink-0 border-r border-border/60 pr-1.5 text-right text-[10px] text-text-muted select-none dark:border-dark-border">
                 {index + 1}
               </span>
               <span
                 className={cn(
                   'relative min-w-0 flex-1 pl-2.5 text-[11px]',
                   isActive
-                    ? 'font-medium text-text-primary dark:text-dark-text-primary'
+                    ? 'font-semibold text-text-primary dark:text-dark-text-primary'
                     : 'font-normal text-text-primary dark:text-dark-text-primary',
                 )}
                 style={{ whiteSpace: 'pre', overflow: 'visible' }}

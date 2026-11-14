@@ -144,11 +144,20 @@
   --tone-indigo-soft-bg: #e0e7ff;
   --tone-emerald-bg: #d1fae5;
   --tone-emerald-fg: #065f46;
+  --tone-emerald-border: #a7f3d0;
   --tone-orange-bg: #fed7aa;
   --tone-orange-fg: #9a3412;
+  --tone-amber-border: #fde68a;
   --tone-rose-bg: #fecaca;
   --tone-rose-bar: #fca5a5;
   --tone-rose-fg: #7f1d1d;
+  --tone-rose-border: #fecdd3;
+  --tone-sky-bg: #e0f2fe;
+  --tone-sky-fg: #0369a1;
+  --tone-sky-border: #bae6fd;
+  --tone-violet-bg: #f3e8ff;
+  --tone-violet-fg: #6b21a8;
+  --tone-violet-border: #e9d5ff;
   --tier-bronze-bg: #fdf0e6;
   --tier-silver-bg: #f4f4f5;
   --tier-gold-bg: #fef9e7;
@@ -250,13 +259,22 @@
   --tone-slate-fg: #cbd5e1;
   --tone-indigo-label: #a5b4fc;
   --tone-indigo-soft-bg: rgba(99, 102, 241, 0.25);
-  --tone-emerald-bg: rgba(16, 185, 129, 0.2);
+  --tone-emerald-bg: rgba(16, 185, 129, 0.16);
   --tone-emerald-fg: #6ee7b7;
-  --tone-orange-bg: rgba(249, 115, 22, 0.2);
+  --tone-emerald-border: rgba(110, 231, 183, 0.28);
+  --tone-orange-bg: rgba(249, 115, 22, 0.16);
   --tone-orange-fg: #fdba74;
-  --tone-rose-bg: rgba(244, 63, 94, 0.2);
+  --tone-amber-border: rgba(252, 211, 77, 0.28);
+  --tone-rose-bg: rgba(244, 63, 94, 0.16);
   --tone-rose-bar: rgba(244, 63, 94, 0.45);
   --tone-rose-fg: #fda4af;
+  --tone-rose-border: rgba(253, 164, 175, 0.28);
+  --tone-sky-bg: rgba(14, 165, 233, 0.16);
+  --tone-sky-fg: #7dd3fc;
+  --tone-sky-border: rgba(125, 211, 252, 0.28);
+  --tone-violet-bg: rgba(168, 85, 247, 0.16);
+  --tone-violet-fg: #d8b4fe;
+  --tone-violet-border: rgba(216, 180, 254, 0.28);
   --tier-bronze-bg: rgba(205, 127, 50, 0.18);
   --tier-silver-bg: rgba(168, 169, 173, 0.18);
   --tier-gold-bg: rgba(212, 175, 55, 0.18);
@@ -622,4 +640,11 @@ kbd {
 @utility text-11 {
   font-size: 11px;
 }
+
+@utility bg-dot-grid {
+  background-color: var(--paper);
+  background-image: radial-gradient(color-mix(in srgb, var(--rule-strong) 70%, transparent) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 
