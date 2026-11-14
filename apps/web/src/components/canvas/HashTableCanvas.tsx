@@ -143,7 +143,8 @@ function OpenAddressingCanvas({
   width: number
   prefersReducedMotion: boolean
 }) {
-  const cellWidth = Math.min(70, (width - 40) / state.capacity)
+  // Clamped: the first render can measure the container before layout.
+  const cellWidth = Math.max(8, Math.min(70, (width - 40) / state.capacity))
   const slotCenterX = (idx: number) => 20 + idx * cellWidth + (cellWidth - 4) / 2
   const probeHops = state.activeProbeSequence.slice(0, -1).map((fromIdx, step) => ({
     fromIdx,

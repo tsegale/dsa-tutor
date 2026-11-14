@@ -386,7 +386,9 @@ export default function ArrayCanvas({
     const xScale = d3
       .scaleBand<number>()
       .domain(values.map((_, i) => i))
-      .range([PADDING, width - PADDING])
+      // Never a reversed range: the first render can measure the container
+      // at 0px wide, which gave every bar a negative width.
+      .range([PADDING, Math.max(PADDING + 1, width - PADDING)])
       .paddingInner(0.15)
 
     const yScale = d3
@@ -1064,7 +1066,8 @@ export default function ArrayCanvas({
           is what binary search does; recolouring alone left that to be
           inferred. Drawn behind nothing: it sits over the bars at low
           opacity so the values stay readable through it. */}
-      {searchRange && bars[searchRange.low] && bars[searchRange.high] && (
+      {/* low > high is the search ending empty-handed: nothing is in play. */}
+      {searchRange && searchRange.low <= searchRange.high && bars[searchRange.low] && bars[searchRange.high] && (
         <>
           <motion.rect
             layout
