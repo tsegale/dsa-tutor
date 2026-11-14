@@ -12,7 +12,7 @@ import {
 } from '@/utils/arrayOperationInput'
 import { APPLY_INPUT_EVENT } from './applyInput'
 import { Button } from '@/components/ui/button'
-import { useAlgorithmStore } from '@/store/useAlgorithmStore'
+import { useAlgorithmStore, selectCurrentSnapshot } from '@/store/useAlgorithmStore'
 import { getAlgorithmRegistryEntry } from '@/engine/registry'
 import { withCodeMode } from '@/engine/codeMode'
 import { stackPushEngine, stackPopEngine, stackPeekEngine } from '@/engine/stack'
@@ -150,6 +150,24 @@ function OperationHistoryTape<TState>({
 
   if (entries.length === 0) return null
 
+  function handlePlayAll() {
+    const combined: AlgorithmSnapshot[] = []
+    entries.forEach((entry, entryIdx) => {
+      const slice = entryIdx === 0 ? entry.snapshots : entry.snapshots.slice(1)
+      slice.forEach((snap) => {
+        combined.push({
+          ...snap,
+          stepIndex: combined.length,
+          isFinalStep: false,
+        })
+      })
+    })
+    if (combined.length === 0) return
+    combined[combined.length - 1] = { ...combined[combined.length - 1], isFinalStep: true }
+    apply(slug, combined, 'start')
+    useAlgorithmStore.getState().startPlayback()
+  }
+
   return (
     <div className="mt-1 flex flex-col gap-1.5 rounded-md border border-border bg-surface-sunk/40 p-2 dark:border-dark-border">
       <div className="flex items-center justify-between gap-1">
@@ -157,6 +175,11 @@ function OperationHistoryTape<TState>({
           History ({entries.length})
         </span>
         <div className="flex items-center gap-1">
+          {entries.length > 1 && (
+            <button type="button" onClick={handlePlayAll} className={chipClass} title="Play all operations in sequence">
+              Play all
+            </button>
+          )}
           <button type="button" onClick={onUndo} className={chipClass} title="Undo last operation">
             Undo
           </button>
@@ -179,9 +202,12 @@ function OperationHistoryTape<TState>({
               <span className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => apply(slug, entry.snapshots, 'start')}
+                  onClick={() => {
+                    apply(slug, entry.snapshots, 'start')
+                    useAlgorithmStore.getState().startPlayback()
+                  }}
                   className="rounded px-1 py-0.5 text-[10px] font-medium text-text-muted hover:bg-surface-sunk hover:text-text-primary dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
-                  title="Step through this operation from step 1"
+                  title="Play through this operation from step 1"
                 >
                   Replay
                 </button>
@@ -286,6 +312,128 @@ function rbRootFor(values: number[]): RBNode | null {
 function trieRootFor(words: string[]): TrieNode {
   const snapshots = trieInsertEngine(words)
   return (snapshots[snapshots.length - 1].dataStructureState as TrieState).root
+}
+
+function extractLiveStackItems(raw: unknown): number[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const items = (raw as { items?: Array<{ value: number | string }> }).items
+  if (!Array.isArray(items)) return null
+  return items.map((it) => Number(it.value)).filter((n) => !Number.isNaN(n))
+}
+
+function extractLiveLinearQueueItems(raw: unknown): number[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const q = raw as { items?: Array<{ value: number | string; index: number }>; variant?: string }
+  if (!Array.isArray(q.items)) return null
+  return [...q.items]
+    .sort((a, b) => a.index - b.index)
+    .map((it) => Number(it.value))
+    .filter((n) => !Number.isNaN(n))
+}
+
+function reconstructCqOpsFromState(raw: unknown, fallback: CQOp[]): CQOp[] {
+  if (!raw || typeof raw !== 'object') return fallback
+  const q = raw as {
+    items?: Array<{ value: number | string; index: number }>
+    frontIndex?: number
+    capacity?: number
+    variant?: string
+  }
+  if (q.variant !== 'circular' || !Array.isArray(q.items)) return fallback
+  if (q.items.length === 0) return []
+  const cap = q.capacity ?? 5
+  const front = Math.max(0, q.frontIndex ?? 0)
+  const ops: CQOp[] = []
+  for (let i = 0; i < front; i++) {
+    ops.push({ op: 'enqueue', value: 0 }, { op: 'dequeue' })
+  }
+  const byIdx = new Map(q.items.map((it) => [it.index, Number(it.value) || 0]))
+  for (let k = 0; k < q.items.length; k++) {
+    const idx = (front + k) % cap
+    const val = byIdx.get(idx)
+    if (val !== undefined) ops.push({ op: 'enqueue', value: val })
+  }
+  return ops
+}
+
+function extractLiveLinkedListItems(raw: unknown): number[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const ll = raw as {
+    nodes?: Array<{ id: string; value: number | string; nextId: string | null }>
+    headId?: string | null
+  }
+  if (!Array.isArray(ll.nodes)) return null
+  if (ll.nodes.length === 0 || !ll.headId) return []
+  const byId = new Map(ll.nodes.map((n) => [n.id, n]))
+  const ordered: number[] = []
+  const visited = new Set<string>()
+  let cur: string | null = ll.headId
+  while (cur && !visited.has(cur)) {
+    visited.add(cur)
+    const node = byId.get(cur)
+    if (!node) break
+    const num = Number(node.value)
+    if (!Number.isNaN(num)) ordered.push(num)
+    cur = node.nextId
+  }
+  return ordered
+}
+
+function extractLiveHashKeys(raw: unknown): number[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const ht = raw as {
+    buckets?: Array<{ chain: Array<{ id: string; key: number | string }> }>
+  }
+  if (!Array.isArray(ht.buckets)) return null
+  const entries = ht.buckets.flatMap((b) => b.chain)
+  return entries
+    .slice()
+    .sort((a, b) => {
+      const seqA = Number(String(a.id).split('-').pop()) || 0
+      const seqB = Number(String(b.id).split('-').pop()) || 0
+      return seqA - seqB
+    })
+    .map((e) => Number(e.key))
+    .filter((n) => !Number.isNaN(n))
+}
+
+function extractLiveTreeValues(raw: unknown): number[] | null {
+  if (!raw || typeof raw !== 'object' || !('root' in raw)) return null
+  const root = (raw as { root: BSTNode | null }).root
+  if (!root) return []
+  const result: number[] = []
+  const queue: BSTNode[] = [root]
+  while (queue.length > 0) {
+    const node = queue.shift()!
+    result.push(node.value)
+    if (node.left) queue.push(node.left)
+    if (node.right) queue.push(node.right)
+  }
+  return result
+}
+
+function extractLiveHeapItems(raw: unknown): number[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const arr = (raw as { array?: number[] }).array
+  return Array.isArray(arr) ? arr : null
+}
+
+function collectTrieWords(node: TrieNode | undefined, prefix = ''): string[] {
+  if (!node || !(node.children instanceof Map)) return []
+  const words: string[] = []
+  const nextPrefix = prefix + (node.char || '')
+  if (node.isTerminal && nextPrefix.length > 0) words.push(nextPrefix)
+  for (const [, child] of node.children) {
+    words.push(...collectTrieWords(child, nextPrefix))
+  }
+  return words
+}
+
+function extractLiveTrieState(raw: unknown): { words: string[]; root: TrieNode } | null {
+  if (!raw || typeof raw !== 'object') return null
+  const root = (raw as { root?: TrieNode }).root
+  if (!root || !(root.children instanceof Map)) return null
+  return { words: collectTrieWords(root), root }
 }
 
 function NumberField({
@@ -479,12 +627,15 @@ function ArrayOperationControls({ slug }: { slug: string }) {
 
 function StackControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [value, setValue] = useState('7')
   const [items, setItems] = useState<number[]>(STACK_SEED)
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
 
+  const activeItems = extractLiveStackItems(currentSnapshot?.dataStructureState) ?? items
+
   function record(label: string, nextItems: number[], snapshots: AlgorithmSnapshot[]) {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: items }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeItems }])
     setItems(nextItems)
     apply(slug, snapshots)
   }
@@ -509,7 +660,7 @@ function StackControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Stack operations (size {items.length}/6)</h3>
+      <h3 className={labelClass}>Stack operations (size {activeItems.length}/6)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(STACK_SEED) },
@@ -523,8 +674,8 @@ function StackControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const snaps = stackPushEngine(items, [num], 6)
-            const next = items.length < 6 ? [...items, num] : items
+            const snaps = stackPushEngine(activeItems, [num], 6)
+            const next = activeItems.length < 6 ? [...activeItems, num] : activeItems
             record(`push(${num})`, next, snaps)
           }}
         >
@@ -534,8 +685,8 @@ function StackControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const snaps = stackPopEngine(items, 1)
-            const next = items.slice(0, -1)
+            const snaps = stackPopEngine(activeItems, 1)
+            const next = activeItems.slice(0, -1)
             record('pop()', next, snaps)
           }}
         >
@@ -544,7 +695,7 @@ function StackControls({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record('peek()', items, stackPeekEngine(items))}
+          onClick={() => record('peek()', activeItems, stackPeekEngine(activeItems))}
         >
           Peek
         </Button>
@@ -556,30 +707,35 @@ function StackControls({ slug }: { slug: string }) {
 
 function QueueControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [value, setValue] = useState('7')
   const isCircular = slug === 'circular-queue'
   const [linearItems, setLinearItems] = useState<number[]>(QUEUE_SEED)
   const [cqOps, setCqOps] = useState<CQOp[]>(CQ_SEED)
   const [history, setHistory] = useState<HistoryEntry<{ linear: number[]; cq: CQOp[] }>[]>([])
 
+  const activeLinearItems = extractLiveLinearQueueItems(currentSnapshot?.dataStructureState) ?? linearItems
+  const activeCqOps = isCircular ? reconstructCqOpsFromState(currentSnapshot?.dataStructureState, cqOps) : cqOps
+  const liveCapacity = (currentSnapshot?.dataStructureState as { capacity?: number } | undefined)?.capacity ?? (isCircular ? 5 : 6)
+
   const num = Number(value) || 0
 
   function handleEnqueue() {
     if (isCircular) {
-      const nextOps: CQOp[] = [...cqOps, { op: 'enqueue', value: num }]
+      const nextOps: CQOp[] = [...activeCqOps, { op: 'enqueue', value: num }]
       const snaps = circularQueueEngine(5, nextOps)
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
       ])
       setCqOps(nextOps)
       apply(slug, snaps)
     } else {
-      const snaps = queueEnqueueEngine(linearItems, [num], 6)
-      const next = linearItems.length < 6 ? [...linearItems, num] : linearItems
+      const snaps = queueEnqueueEngine(activeLinearItems, [num], 6)
+      const next = activeLinearItems.length < 6 ? [...activeLinearItems, num] : activeLinearItems
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+        { id: `${Date.now()}-${h.length}`, label: `enqueue(${num})`, snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
       ])
       setLinearItems(next)
       apply(slug, snaps)
@@ -588,20 +744,20 @@ function QueueControls({ slug }: { slug: string }) {
 
   function handleDequeue() {
     if (isCircular) {
-      const nextOps: CQOp[] = [...cqOps, { op: 'dequeue' }]
+      const nextOps: CQOp[] = [...activeCqOps, { op: 'dequeue' }]
       const snaps = circularQueueEngine(5, nextOps)
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
       ])
       setCqOps(nextOps)
       apply(slug, snaps)
     } else {
-      const snaps = queueDequeueEngine(linearItems, 1)
-      const next = linearItems.slice(1)
+      const snaps = queueDequeueEngine(activeLinearItems, 1)
+      const next = activeLinearItems.slice(1)
       setHistory((h) => [
         ...h,
-        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: linearItems, cq: cqOps } },
+        { id: `${Date.now()}-${h.length}`, label: 'dequeue()', snapshots: snaps, prevState: { linear: activeLinearItems, cq: activeCqOps } },
       ])
       setLinearItems(next)
       apply(slug, snaps)
@@ -630,7 +786,9 @@ function QueueControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>{isCircular ? 'Circular queue' : 'Queue'} operations</h3>
+      <h3 className={labelClass}>
+        {isCircular ? 'Circular queue' : 'Queue'} operations (size {activeLinearItems.length}/{liveCapacity})
+      </h3>
       <PresetChips
         presets={
           isCircular
@@ -692,17 +850,24 @@ function QueueControls({ slug }: { slug: string }) {
 
 function DequeControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [value, setValue] = useState('7')
   const [ops, setOps] = useState<DQOp[]>(DQ_SEED)
   const [history, setHistory] = useState<HistoryEntry<DQOp[]>[]>([])
 
+  const liveDequeValues = extractLiveLinearQueueItems(currentSnapshot?.dataStructureState)
+  const activeOps: DQOp[] =
+    liveDequeValues !== null
+      ? liveDequeValues.map((v) => ({ op: 'pushBack', value: v }))
+      : ops
+
   const run = (op: 'pushFront' | 'pushBack' | 'popFront' | 'popBack') => {
     const num = Number(value) || 0
     const nextOp: DQOp = op === 'pushFront' || op === 'pushBack' ? { op, value: num } : { op }
-    const nextOps = [...ops, nextOp]
+    const nextOps = [...activeOps, nextOp]
     const snaps = dequeEngine(5, nextOps)
     const label = op === 'pushFront' || op === 'pushBack' ? `${op}(${num})` : `${op}()`
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots: snaps, prevState: ops }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots: snaps, prevState: activeOps }])
     setOps(nextOps)
     apply(slug, snaps)
   }
@@ -724,7 +889,7 @@ function DequeControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Deque operations</h3>
+      <h3 className={labelClass}>Deque operations (size {liveDequeValues?.length ?? 0}/5)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(DQ_SEED) },
@@ -763,13 +928,16 @@ function DequeControls({ slug }: { slug: string }) {
 
 function LinkedListControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [value, setValue] = useState('7')
   const [items, setItems] = useState<number[]>(LL_SEED)
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
 
+  const activeItems = extractLiveLinkedListItems(currentSnapshot?.dataStructureState) ?? items
+
   function record(label: string, nextItems: number[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: items }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeItems }])
     setItems(nextItems)
     apply(slug, snapshots, landOn)
   }
@@ -802,7 +970,7 @@ function LinkedListControls({ slug }: { slug: string }) {
   if (slug === 'circular-linked-list') {
     return (
       <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-        <h3 className={labelClass}>Circular list ({items.length} nodes)</h3>
+        <h3 className={labelClass}>Circular list ({activeItems.length} nodes)</h3>
         <PresetChips
           presets={[
             { label: 'Default', onPick: () => handleReset(LL_SEED) },
@@ -815,7 +983,7 @@ function LinkedListControls({ slug }: { slug: string }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => record(`insert(${target})`, [...items, target], cllInsertEngine(items, target))}
+            onClick={() => record(`insert(${target})`, [...activeItems, target], cllInsertEngine(activeItems, target))}
           >
             Insert
           </Button>
@@ -823,9 +991,9 @@ function LinkedListControls({ slug }: { slug: string }) {
             variant="outline"
             size="sm"
             onClick={() => {
-              const idx = items.indexOf(target)
-              const next = idx >= 0 ? [...items.slice(0, idx), ...items.slice(idx + 1)] : items
-              record(`delete(${target})`, next, cllDeleteEngine(items, target))
+              const idx = activeItems.indexOf(target)
+              const next = idx >= 0 ? [...activeItems.slice(0, idx), ...activeItems.slice(idx + 1)] : activeItems
+              record(`delete(${target})`, next, cllDeleteEngine(activeItems, target))
             }}
           >
             Delete
@@ -833,7 +1001,7 @@ function LinkedListControls({ slug }: { slug: string }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => record('traverse()', items, cllTraverseEngine(items), 'start')}
+            onClick={() => record('traverse()', activeItems, cllTraverseEngine(activeItems), 'start')}
           >
             Traverse
           </Button>
@@ -851,7 +1019,7 @@ function LinkedListControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>{isDoubly ? 'Doubly' : 'Singly'} list ({items.length} nodes)</h3>
+      <h3 className={labelClass}>{isDoubly ? 'Doubly' : 'Singly'} list ({activeItems.length} nodes)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(LL_SEED) },
@@ -864,14 +1032,14 @@ function LinkedListControls({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record(`insertFront(${target})`, [target, ...items], insertFront(items, target))}
+          onClick={() => record(`insertFront(${target})`, [target, ...activeItems], insertFront(activeItems, target))}
         >
           Insert Front
         </Button>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record(`insertBack(${target})`, [...items, target], insertBack(items, target))}
+          onClick={() => record(`insertBack(${target})`, [...activeItems, target], insertBack(activeItems, target))}
         >
           Insert Back
         </Button>
@@ -879,9 +1047,9 @@ function LinkedListControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const idx = items.indexOf(target)
-            const next = idx >= 0 ? [...items.slice(0, idx), ...items.slice(idx + 1)] : items
-            record(`delete(${target})`, next, del(items, target))
+            const idx = activeItems.indexOf(target)
+            const next = idx >= 0 ? [...activeItems.slice(0, idx), ...activeItems.slice(idx + 1)] : activeItems
+            record(`delete(${target})`, next, del(activeItems, target))
           }}
         >
           Delete
@@ -889,7 +1057,7 @@ function LinkedListControls({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record(`search(${target})`, items, search(items, target), 'start')}
+          onClick={() => record(`search(${target})`, activeItems, search(activeItems, target), 'start')}
         >
           Search
         </Button>
@@ -901,11 +1069,14 @@ function LinkedListControls({ slug }: { slug: string }) {
 
 function HashTableControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const isProbing = slug === 'hash-table-probing'
   const defaultKeys = isProbing ? HASH_PROBING_SEED : HASH_CHAINING_SEED
   const [key, setKey] = useState('27')
   const [keys, setKeys] = useState<number[]>(defaultKeys)
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
+
+  const activeKeys = extractLiveHashKeys(currentSnapshot?.dataStructureState) ?? keys
 
   const insert = isProbing ? hashInsertLinearProbingEngine : hashInsertChainingEngine
   const search = isProbing ? hashSearchLinearProbingEngine : hashSearchChainingEngine
@@ -913,7 +1084,7 @@ function HashTableControls({ slug }: { slug: string }) {
   const keyNum = Number(key) || 0
 
   function record(label: string, nextKeys: number[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: keys }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeKeys }])
     setKeys(nextKeys)
     apply(slug, snapshots, landOn)
   }
@@ -935,7 +1106,7 @@ function HashTableControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Hash table (m = 7, n = {keys.length})</h3>
+      <h3 className={labelClass}>Hash table (m = 7, n = {activeKeys.length})</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(defaultKeys) },
@@ -949,9 +1120,9 @@ function HashTableControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const canInsert = !isProbing || keys.length < 7
-            const next = canInsert && !keys.includes(keyNum) ? [...keys, keyNum] : keys
-            record(`insert(${keyNum})`, next, insert([...keys, keyNum], 7))
+            const canInsert = !isProbing || activeKeys.length < 7
+            const next = canInsert && !activeKeys.includes(keyNum) ? [...activeKeys, keyNum] : activeKeys
+            record(`insert(${keyNum})`, next, insert([...activeKeys, keyNum], 7))
           }}
         >
           Insert
@@ -959,7 +1130,7 @@ function HashTableControls({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record(`search(${keyNum})`, keys, search(keys, keyNum, 7), 'start')}
+          onClick={() => record(`search(${keyNum})`, activeKeys, search(activeKeys, keyNum, 7), 'start')}
         >
           Search
         </Button>
@@ -967,8 +1138,8 @@ function HashTableControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const next = keys.filter((k) => k !== keyNum)
-            record(`delete(${keyNum})`, next, del(keys, keyNum, 7))
+            const next = activeKeys.filter((k) => k !== keyNum)
+            record(`delete(${keyNum})`, next, del(activeKeys, keyNum, 7))
           }}
         >
           Delete
@@ -1214,6 +1385,7 @@ function SearchControls({ slug }: { slug: string }) {
 
 function BSTControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const { restricted } = useStudyScope()
   const defaultValue =
     slug === 'bst-search'
@@ -1225,6 +1397,9 @@ function BSTControls({ slug }: { slug: string }) {
   const [treeValues, setTreeValues] = useState<number[]>(BST_SEED)
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
+
+  const activeValues = extractLiveTreeValues(currentSnapshot?.dataStructureState) ?? treeValues
+  const liveRoot = (currentSnapshot?.dataStructureState as { root?: BSTNode | null } | undefined)?.root
 
   // Study participants on 'bst' get deterministic study controls without
   // mutating the underlying seed across runs.
@@ -1253,7 +1428,7 @@ function BSTControls({ slug }: { slug: string }) {
   }
 
   function record(label: string, nextVals: number[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: treeValues }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeValues }])
     setTreeValues(nextVals)
     apply(slug, snapshots, landOn)
   }
@@ -1281,7 +1456,7 @@ function BSTControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>BST sandbox ({treeValues.length} nodes)</h3>
+      <h3 className={labelClass}>BST sandbox ({activeValues.length} nodes)</h3>
       <PresetChips
         presets={[
           { label: 'Balanced', onPick: () => handleReset(BST_SEED) },
@@ -1295,7 +1470,7 @@ function BSTControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const next = [...treeValues, target]
+            const next = [...activeValues, target]
             record(
               `insert(${target})`,
               next,
@@ -1311,7 +1486,9 @@ function BSTControls({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => record(`search(${target})`, treeValues, bstSearchEngine(bstRootFor(treeValues), target), 'start')}
+          onClick={() =>
+            record(`search(${target})`, activeValues, bstSearchEngine(liveRoot !== undefined ? liveRoot : bstRootFor(activeValues), target), 'start')
+          }
         >
           Search
         </Button>
@@ -1319,9 +1496,9 @@ function BSTControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const idx = treeValues.indexOf(target)
-            const next = idx >= 0 ? [...treeValues.slice(0, idx), ...treeValues.slice(idx + 1)] : treeValues
-            record(`delete(${target})`, next, bstDeleteEngine(bstRootFor(treeValues), target))
+            const idx = activeValues.indexOf(target)
+            const next = idx >= 0 ? [...activeValues.slice(0, idx), ...activeValues.slice(idx + 1)] : activeValues
+            record(`delete(${target})`, next, bstDeleteEngine(liveRoot !== undefined ? liveRoot : bstRootFor(activeValues), target))
           }}
         >
           Delete
@@ -1334,14 +1511,18 @@ function BSTControls({ slug }: { slug: string }) {
 
 function AVLControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const isDelete = slug === 'avl-delete'
   const [value, setValue] = useState(isDelete ? '30' : '7')
   const [treeValues, setTreeValues] = useState<number[]>(AVL_SEED)
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
 
+  const activeValues = extractLiveTreeValues(currentSnapshot?.dataStructureState) ?? treeValues
+  const liveRoot = (currentSnapshot?.dataStructureState as { root?: AVLNode | null } | undefined)?.root
+
   function record(label: string, nextVals: number[], snapshots: AlgorithmSnapshot[]) {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: treeValues }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeValues }])
     setTreeValues(nextVals)
     apply(slug, snapshots)
   }
@@ -1363,7 +1544,7 @@ function AVLControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>AVL tree ({treeValues.length} nodes)</h3>
+      <h3 className={labelClass}>AVL tree ({activeValues.length} nodes)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(AVL_SEED) },
@@ -1379,7 +1560,7 @@ function AVLControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const next = [...treeValues, target]
+            const next = [...activeValues, target]
             record(`insert(${target})`, next, avlInsertEngine(next))
           }}
         >
@@ -1389,9 +1570,9 @@ function AVLControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const idx = treeValues.indexOf(target)
-            const next = idx >= 0 ? [...treeValues.slice(0, idx), ...treeValues.slice(idx + 1)] : treeValues
-            record(`delete(${target})`, next, avlDeleteEngine(avlRootFor(treeValues), target))
+            const idx = activeValues.indexOf(target)
+            const next = idx >= 0 ? [...activeValues.slice(0, idx), ...activeValues.slice(idx + 1)] : activeValues
+            record(`delete(${target})`, next, avlDeleteEngine(liveRoot !== undefined ? liveRoot : avlRootFor(activeValues), target))
           }}
         >
           Delete
@@ -1404,14 +1585,18 @@ function AVLControls({ slug }: { slug: string }) {
 
 function RBControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const isDelete = slug === 'rb-delete'
   const [value, setValue] = useState(isDelete ? '30' : '7')
   const [treeValues, setTreeValues] = useState<number[]>(RB_SEED)
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
 
+  const activeValues = extractLiveTreeValues(currentSnapshot?.dataStructureState) ?? treeValues
+  const liveRoot = (currentSnapshot?.dataStructureState as { root?: RBNode | null } | undefined)?.root
+
   function record(label: string, nextVals: number[], snapshots: AlgorithmSnapshot[]) {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: treeValues }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeValues }])
     setTreeValues(nextVals)
     apply(slug, snapshots)
   }
@@ -1433,7 +1618,7 @@ function RBControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Red-black tree ({treeValues.length} nodes)</h3>
+      <h3 className={labelClass}>Red-black tree ({activeValues.length} nodes)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(RB_SEED) },
@@ -1447,7 +1632,7 @@ function RBControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const next = treeValues.includes(target) ? treeValues : [...treeValues, target]
+            const next = activeValues.includes(target) ? activeValues : [...activeValues, target]
             record(`insert(${target})`, next, rbInsertEngine(next))
           }}
         >
@@ -1457,9 +1642,9 @@ function RBControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const idx = treeValues.indexOf(target)
-            const next = idx >= 0 ? [...treeValues.slice(0, idx), ...treeValues.slice(idx + 1)] : treeValues
-            record(`delete(${target})`, next, rbDeleteEngine(rbRootFor(treeValues), target))
+            const idx = activeValues.indexOf(target)
+            const next = idx >= 0 ? [...activeValues.slice(0, idx), ...activeValues.slice(idx + 1)] : activeValues
+            record(`delete(${target})`, next, rbDeleteEngine(liveRoot !== undefined ? liveRoot : rbRootFor(activeValues), target))
           }}
         >
           Delete
@@ -1472,6 +1657,7 @@ function RBControls({ slug }: { slug: string }) {
 
 function HeapControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [value, setValue] = useState(String(HEAP_DEFAULT_INSERT_VALUE))
   const isMax = slug.startsWith('max-heap')
   const heapType = isMax ? 'max' : 'min'
@@ -1481,8 +1667,10 @@ function HeapControls({ slug }: { slug: string }) {
   const [history, setHistory] = useState<HistoryEntry<number[]>[]>([])
   const target = Number(value) || 0
 
+  const activeItems = extractLiveHeapItems(currentSnapshot?.dataStructureState) ?? items
+
   function record(label: string, nextItems: number[], snapshots: AlgorithmSnapshot[]) {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: items }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeItems }])
     setItems(nextItems)
     apply(slug, snapshots)
   }
@@ -1505,7 +1693,7 @@ function HeapControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>{isMax ? 'Max-heap' : 'Min-heap'} ({items.length} items)</h3>
+      <h3 className={labelClass}>{isMax ? 'Max-heap' : 'Min-heap'} ({activeItems.length} items)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(HEAP_SEED) },
@@ -1518,8 +1706,10 @@ function HeapControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const snaps = insertEngine([...items, target])
-            const finalHeap = (snaps[snaps.length - 1]?.dataStructureState as { heap?: number[] } | undefined)?.heap ?? buildHeapArray(heapType, [...items, target])
+            const snaps = insertEngine([...activeItems, target])
+            const finalHeap =
+              (snaps[snaps.length - 1]?.dataStructureState as { array?: number[] } | undefined)?.array ??
+              buildHeapArray(heapType, [...activeItems, target])
             record(`insert(${target})`, finalHeap, snaps)
           }}
         >
@@ -1529,8 +1719,10 @@ function HeapControls({ slug }: { slug: string }) {
           variant="outline"
           size="sm"
           onClick={() => {
-            const snaps = deleteEngine(items)
-            const finalHeap = (snaps[snaps.length - 1]?.dataStructureState as { heap?: number[] } | undefined)?.heap ?? items.slice(1)
+            const snaps = deleteEngine(activeItems)
+            const finalHeap =
+              (snaps[snaps.length - 1]?.dataStructureState as { array?: number[] } | undefined)?.array ??
+              activeItems.slice(1)
             record('extractRoot()', finalHeap, snaps)
           }}
         >
@@ -1544,10 +1736,15 @@ function HeapControls({ slug }: { slug: string }) {
 
 function TrieControls({ slug }: { slug: string }) {
   const apply = useApply()
+  const currentSnapshot = useAlgorithmStore(selectCurrentSnapshot)
   const [word, setWord] = useState('apple')
   const [words, setWords] = useState<string[]>(DEFAULT_TRIE_WORDS)
   const [history, setHistory] = useState<HistoryEntry<string[]>[]>([])
   const [error, setError] = useState<string | null>(null)
+
+  const liveTrie = extractLiveTrieState(currentSnapshot?.dataStructureState)
+  const activeWords = liveTrie?.words ?? words
+  const activeRoot = liveTrie?.root ?? trieRootFor(activeWords)
 
   function validateWord(): string | null {
     const cleaned = word.trim().toLowerCase()
@@ -1560,7 +1757,7 @@ function TrieControls({ slug }: { slug: string }) {
   }
 
   function record(label: string, nextWords: string[], snapshots: AlgorithmSnapshot[], landOn: 'start' | 'result' = 'result') {
-    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: words }])
+    setHistory((h) => [...h, { id: `${Date.now()}-${h.length}`, label, snapshots, prevState: activeWords }])
     setWords(nextWords)
     apply(slug, snapshots, landOn)
   }
@@ -1582,7 +1779,7 @@ function TrieControls({ slug }: { slug: string }) {
 
   return (
     <section className="flex flex-col gap-2 border-t-[0.5px] border-border pt-2.5">
-      <h3 className={labelClass}>Trie ({words.length} words)</h3>
+      <h3 className={labelClass}>Trie ({activeWords.length} words)</h3>
       <PresetChips
         presets={[
           { label: 'Default', onPick: () => handleReset(DEFAULT_TRIE_WORDS) },
@@ -1604,8 +1801,8 @@ function TrieControls({ slug }: { slug: string }) {
           onClick={() => {
             const w = validateWord()
             if (!w) return
-            const next = words.includes(w) ? words : [...words, w]
-            record(`insert(${w})`, next, trieInsertEngine([...words, w]))
+            const next = activeWords.includes(w) ? activeWords : [...activeWords, w]
+            record(`insert(${w})`, next, trieInsertEngine([...activeWords, w]))
           }}
         >
           Insert
@@ -1616,7 +1813,7 @@ function TrieControls({ slug }: { slug: string }) {
           onClick={() => {
             const w = validateWord()
             if (!w) return
-            record(`search(${w})`, words, trieSearchEngine(trieRootFor(words), w), 'start')
+            record(`search(${w})`, activeWords, trieSearchEngine(activeRoot, w), 'start')
           }}
         >
           Search
@@ -1627,8 +1824,8 @@ function TrieControls({ slug }: { slug: string }) {
           onClick={() => {
             const w = validateWord()
             if (!w) return
-            const next = words.filter((item) => item !== w)
-            record(`delete(${w})`, next, trieDeleteEngine(trieRootFor(words), w))
+            const next = activeWords.filter((item) => item !== w)
+            record(`delete(${w})`, next, trieDeleteEngine(activeRoot, w))
           }}
         >
           Delete

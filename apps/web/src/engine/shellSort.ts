@@ -132,7 +132,7 @@ export function shellSortEngine(input: number[]): AlgorithmSnapshot[] {
             isPredictionRequired: true,
             state: { array: working, gap, sortedUpTo: i, keyIndex, compareIndex: j },
             activeIndices: [keyIndex],
-            comparedIndices: [j],
+            comparedIndices: [j, keyIndex],
             criticalJunctionType: CriticalJunctionType.GAP_COMPARISON,
             junctionDifficulty: JunctionDifficulty.PROCEDURAL,
           }),

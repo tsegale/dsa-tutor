@@ -63,6 +63,19 @@ const LEGEND: { label: string; colour: string }[] = [
   { label: 'Unvisited', colour: DEFAULT_STROKE },
 ]
 
+const CYCLE_LEGEND: { label: string; colour: string }[] = [
+  { label: 'WHITE (unvisited)', colour: DEFAULT_STROKE },
+  { label: 'GRAY (active path)', colour: CURRENT_FILL },
+  { label: 'BLACK (finished)', colour: '#334155' },
+  { label: 'Cycle back-edge', colour: 'var(--state-error-text)' },
+]
+
+type CycleGraphExtras = {
+  colors?: Record<string, 'WHITE' | 'GRAY' | 'BLACK'>
+  hasCycle?: boolean
+  cycleEdge?: [string, string]
+}
+
 function isWeighted(adjacency: GraphAlgorithmState['adjacency']): adjacency is Record<string, { to: string; weight: number }[]> {
   for (const key in adjacency) {
     const entry = adjacency[key]
@@ -209,6 +222,8 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
 
   const startId = state.nodes[0]?.id ?? null
   const canvasLabel = `${algorithmName}, step ${snapshot!.stepIndex + 1}: ${snapshot!.description}`
+  const cycleExtras = state as GraphAlgorithmState & CycleGraphExtras
+  const activeLegend = cycleExtras.colors ? CYCLE_LEGEND : LEGEND
 
   return (
     <div className="flex h-full flex-col">
@@ -221,7 +236,7 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
           <span className="tabular-nums text-[10px] font-medium text-text-secondary dark:text-dark-text-secondary">{progressPercent}%</span>
         </div>
         <div className="flex items-center gap-3">
-          {LEGEND.map((item) => (
+          {activeLegend.map((item) => (
             <div key={item.label} className="flex items-center gap-1">
               <span className="size-2 rounded-full" style={{ backgroundColor: item.colour }} aria-hidden="true" />
               <span className="text-[10px] text-text-secondary dark:text-dark-text-secondary">{item.label}</span>
@@ -267,11 +282,25 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
           </defs>
 
           {edges.map((edge) => {
+            const isCycleEdge =
+              cycleExtras.cycleEdge !== undefined &&
+              (state.directed
+                ? edge.from === cycleExtras.cycleEdge[0] && edge.to === cycleExtras.cycleEdge[1]
+                : (edge.from === cycleExtras.cycleEdge[0] && edge.to === cycleExtras.cycleEdge[1]) ||
+                  (edge.from === cycleExtras.cycleEdge[1] && edge.to === cycleExtras.cycleEdge[0]))
             const isPath = pathEdgeKeys.has(edge.key)
             const isMst = mstEdgeKeys.has(edge.key)
-            const isCurrent = !isPath && !isMst && state.currentNode === edge.from && state.frontier.includes(edge.to)
-            const stroke = isMst ? EDGE_MST : isPath ? EDGE_PATH : isCurrent ? EDGE_CURRENT : EDGE_DEFAULT
-            const strokeWidth = isMst ? 4 : isPath ? 3 : isCurrent ? 3 : 2
+            const isCurrent = !isCycleEdge && !isPath && !isMst && state.currentNode === edge.from && state.frontier.includes(edge.to)
+            const stroke = isCycleEdge
+              ? 'var(--state-error-text)'
+              : isMst
+                ? EDGE_MST
+                : isPath
+                  ? EDGE_PATH
+                  : isCurrent
+                    ? EDGE_CURRENT
+                    : EDGE_DEFAULT
+            const strokeWidth = isCycleEdge ? 4 : isMst ? 4 : isPath ? 3 : isCurrent ? 3 : 2
             // Shorten the line so it stops at the node's edge rather than
             // its centre - otherwise a directed arrowhead lands underneath
             // the circle instead of pointing at it.
@@ -290,9 +319,30 @@ export default function NodeGraphCanvas({ width = VIEWBOX_WIDTH, height = VIEWBO
                   y2={state.directed ? y2 : edge.y2}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
-                  strokeDasharray={isCurrent ? '6 3' : undefined}
+                  strokeDasharray={isCycleEdge || isCurrent ? '6 3' : undefined}
                   markerEnd={state.directed ? 'url(#arrowhead)' : undefined}
                 />
+                {isCycleEdge && (
+                  <g>
+                    <rect
+                      x={(edge.x1 + edge.x2) / 2 - 28}
+                      y={(edge.y1 + edge.y2) / 2 - 9}
+                      width={56}
+                      height={18}
+                      rx={9}
+                      fill="var(--state-error-text)"
+                    />
+                    <text
+                      x={(edge.x1 + edge.x2) / 2}
+                      y={(edge.y1 + edge.y2) / 2}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      style={{ fill: 'var(--state-error-ink)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}
+                    >
+                      CYCLE
+                    </text>
+                  </g>
+                )}
                 {edge.key === relaxedEdgeKey && (
                   // Drawn on along the edge as its distance improves; keyed
                   // by step so each relaxation replays it.
@@ -394,30 +444,48 @@ function GraphNodeCircle({
     state.components && state.components[node.id] !== undefined
       ? COMPONENT_COLOURS[state.components[node.id] % COMPONENT_COLOURS.length]
       : null
+  const cycleColor = (state as GraphAlgorithmState & CycleGraphExtras).colors?.[node.id]
 
   const fill = componentColour
     ? componentColour.fill
-    : isCurrent
-      ? CURRENT_FILL
-      : isPath
-        ? PATH_FILL
-        : isVisited
-          ? VISITED_FILL
-          : isFrontier
-            ? FRONTIER_FILL
-            : DEFAULT_FILL
+    : cycleColor
+      ? cycleColor === 'GRAY'
+        ? CURRENT_FILL
+        : cycleColor === 'BLACK'
+          ? '#334155'
+          : DEFAULT_FILL
+      : isCurrent
+        ? CURRENT_FILL
+        : isPath
+          ? PATH_FILL
+          : isVisited
+            ? VISITED_FILL
+            : isFrontier
+              ? FRONTIER_FILL
+              : DEFAULT_FILL
   const textFill = componentColour
     ? componentColour.text
-    : isCurrent
-      ? CURRENT_TEXT
-      : isPath
-        ? PATH_TEXT
-        : isVisited
-          ? VISITED_TEXT
-          : isFrontier
-            ? FRONTIER_TEXT
-            : DEFAULT_TEXT
-  const stroke = isFrontier && !componentColour ? FRONTIER_STROKE : DEFAULT_STROKE
+    : cycleColor
+      ? cycleColor === 'GRAY'
+        ? CURRENT_TEXT
+        : cycleColor === 'BLACK'
+          ? '#f8fafc'
+          : DEFAULT_TEXT
+      : isCurrent
+        ? CURRENT_TEXT
+        : isPath
+          ? PATH_TEXT
+          : isVisited
+            ? VISITED_TEXT
+            : isFrontier
+              ? FRONTIER_TEXT
+              : DEFAULT_TEXT
+  const stroke =
+    cycleColor === 'GRAY' && isCurrent
+      ? 'var(--ink)'
+      : isFrontier && !componentColour
+        ? FRONTIER_STROKE
+        : DEFAULT_STROKE
 
   const distance = state.distances?.[node.id]
   const discovery = state.discoveryTime?.[node.id]
@@ -464,6 +532,11 @@ function GraphNodeCircle({
       {discovery !== undefined && (
         <text textAnchor="middle" y={NODE_RADIUS - 8} style={{ fill: textFill, fontSize: 8, fontFamily: 'monospace' }}>
           {finish !== undefined ? `${discovery}/${finish}` : `${discovery}/-`}
+        </text>
+      )}
+      {cycleColor !== undefined && discovery === undefined && (
+        <text textAnchor="middle" y={NODE_RADIUS - 8} style={{ fill: textFill, fontSize: 8, fontFamily: 'monospace', fontWeight: 600 }}>
+          {cycleColor}
         </text>
       )}
       {topoIndex !== undefined && topoIndex >= 0 && (
@@ -524,9 +597,44 @@ function GraphStateStrip({ state, algorithmName }: { state: GraphAlgorithmState;
   const lower = algorithmName.toLowerCase()
   const isDFS = lower.includes('dfs')
   const isDijkstraLike = lower.includes('dijkstra') || lower.includes('bellman')
+  const cycleExtras = state as GraphAlgorithmState & CycleGraphExtras
 
   let content: React.ReactNode = null
-  if (state.mstEdges !== undefined) {
+  if (cycleExtras.colors !== undefined) {
+    const grayNodes = state.nodes.filter((n) => cycleExtras.colors?.[n.id] === 'GRAY').map((n) => n.id)
+    const blackNodes = state.nodes.filter((n) => cycleExtras.colors?.[n.id] === 'BLACK').map((n) => n.id)
+    content = (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-semibold text-text-primary dark:text-dark-text-primary">Active path (GRAY):</span>
+        {grayNodes.length === 0 ? (
+          <span className="font-mono text-[10px] text-text-muted">none</span>
+        ) : (
+          grayNodes.map((id) => (
+            <span
+              key={id}
+              className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
+              style={{ backgroundColor: CURRENT_FILL, color: CURRENT_TEXT }}
+            >
+              {id}
+            </span>
+          ))
+        )}
+        <span className="text-text-muted">|</span>
+        <span className="text-text-muted">Finished (BLACK):</span>
+        <span className="font-mono text-[10px] text-text-primary dark:text-dark-text-primary">
+          {blackNodes.length > 0 ? blackNodes.join(', ') : 'none'}
+        </span>
+        {cycleExtras.hasCycle && cycleExtras.cycleEdge && (
+          <span
+            className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
+            style={{ backgroundColor: 'var(--state-error-text)', color: 'var(--state-error-ink)' }}
+          >
+            {`Cycle: ${cycleExtras.cycleEdge[0]} -> ${cycleExtras.cycleEdge[1]}`}
+          </span>
+        )}
+      </div>
+    )
+  } else if (state.mstEdges !== undefined) {
     const edgePairs: [string, string][] = state.mstEdges.map(([u, v]) => [u, v])
     const sets = buildDisjointSets(state.nodes, edgePairs)
     content = (

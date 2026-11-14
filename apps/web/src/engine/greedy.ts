@@ -68,7 +68,9 @@ export function greedyActivitiesEngine(unsortedInput: Activity[]): AlgorithmSnap
   const chosen: number[] = []
   const decision: (number | null)[] = Array.from({ length: n }, () => null)
 
-  const state = (overrides: Partial<DPTableState> = {}): DPTableState =>
+  let lastFinish = Number.NEGATIVE_INFINITY
+
+  const state = (overrides: Partial<DPTableState> & Record<string, unknown> = {}): DPTableState =>
     emptyDPState({
       input: sorted.map((activity) => activity.finish),
       inputLabels: sorted.map((activity) => `${activity.name} ${activity.start}-${activity.finish}`),
@@ -78,6 +80,13 @@ export function greedyActivitiesEngine(unsortedInput: Activity[]): AlgorithmSnap
       filled: decision.map((value, index) => (value === null ? null : ([0, index] as [number, number]))).filter(Boolean) as [number, number][],
       marked: [...chosen],
       markerLabel: 'in the schedule',
+      activities: sorted.map((a, idx) => ({
+        name: a.name,
+        start: a.start,
+        finish: a.finish,
+        status: decision[idx] === 1 ? 'taken' : decision[idx] === 0 ? 'skipped' : 'pending',
+      })),
+      lastFinish: lastFinish === Number.NEGATIVE_INFINITY ? null : lastFinish,
       ...overrides,
     })
 
@@ -90,8 +99,6 @@ export function greedyActivitiesEngine(unsortedInput: Activity[]): AlgorithmSnap
       state: state(),
     }),
   )
-
-  let lastFinish = Number.NEGATIVE_INFINITY
 
   const watchFor = (activity: Activity) => ({
     activity: activity.name,

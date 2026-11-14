@@ -35,7 +35,7 @@ export function monotonicStackEngine(input: number[]): AlgorithmSnapshot[] {
   let pushes = 0
   let pops = 0
 
-  const state = (overrides: Partial<DPTableState> = {}): DPTableState =>
+  const state = (overrides: Partial<DPTableState> & Record<string, unknown> = {}): DPTableState =>
     emptyDPState({
       input: array,
       rowLabels: ['next greater'],
@@ -44,6 +44,7 @@ export function monotonicStackEngine(input: number[]): AlgorithmSnapshot[] {
       filled: filledCells([result]),
       marked: [...stack],
       markerLabel: 'on the stack, still waiting for an answer',
+      stackFrames: stack.map((idx) => ({ index: idx, value: array[idx] })),
       // On the state so the variable watcher shows them: the complexity
       // claim this topic makes is precisely about these two numbers.
       pushes,

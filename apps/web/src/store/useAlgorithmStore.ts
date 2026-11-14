@@ -482,14 +482,23 @@ export const useAlgorithmStore = create<AlgorithmStoreState>((set, get) => ({
 
   startPlayback: () => {
     clearPlaybackInterval()
+    clearAutoAdvanceTimer(set)
+    // Pressing Play/Replay at the final step rewinds to step 0 first so the
+    // learner watches the operation or algorithm animate from the start.
+    const initial = get()
+    if (initial.snapshotArray.length > 1 && initial.stepIndex >= initial.snapshotArray.length - 1) {
+      set((state) => ({
+        stepIndex: 0,
+        maxReachedStep: 0,
+        stepOutcomes: {},
+        predictionResolved: false,
+        segmentScaffoldingLevel: state.scaffoldingLevel,
+      }))
+    }
     // Nothing to play at an unanswered junction: the interval below would
     // start and stop itself on its first tick, so the button appeared to
     // do nothing at all. The transport disables it there instead.
     if (isLiveJunctionAt(get(), get().stepIndex)) return
-    // Playback's own interval drives stepping at the chosen speed - a
-    // narration auto-advance left pending from manual stepping just
-    // before Play was pressed must not also fire and cause a double-step.
-    clearAutoAdvanceTimer(set)
     set({ isPlaying: true })
 
     const { playbackSpeed } = get()

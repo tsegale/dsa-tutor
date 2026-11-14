@@ -88,7 +88,7 @@ export default function TransportBar() {
 
   function handlePlayPause() {
     if (isMoving) stopPlayback()
-    else if (isAtFinalStep) resetAlgorithm()
+    else if (isAtFinalStep && totalSteps <= 1) resetAlgorithm()
     else startPlayback()
   }
 

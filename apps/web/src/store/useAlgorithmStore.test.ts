@@ -160,6 +160,17 @@ describe('useAlgorithmStore', () => {
     // Should have advanced well past step 0
     expect(useAlgorithmStore.getState().stepIndex).toBeGreaterThan(2)
   })
+
+  it('startPlayback rewinds to step 0 and plays when invoked at the final step (e.g. after a Push/Pop operation lands on result)', () => {
+    const store = useAlgorithmStore.getState()
+    store.setMode(AlgorithmMode.DEMO)
+    const lastIndex = store.snapshotArray.length - 1
+    useAlgorithmStore.setState({ stepIndex: lastIndex })
+    store.startPlayback()
+    expect(useAlgorithmStore.getState().stepIndex).toBe(0)
+    expect(useAlgorithmStore.getState().isPlaying).toBe(true)
+    store.stopPlayback()
+  })
 })
 
 describe('Practice mode narration auto-advance', () => {

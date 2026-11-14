@@ -160,6 +160,14 @@ function legendForContext(canvasType: CanvasType, algorithmSlug: string | undefi
   if (algorithmSlug && ARRAY_OPERATION_SLUGS.has(algorithmSlug)) return ARRAY_OPERATION_LEGEND
   if (algorithmSlug === 'jump-search') return JUMP_SEARCH_LEGEND
   if (algorithmSlug && SEARCH_ALGORITHM_SLUGS.has(algorithmSlug)) return SEARCH_LEGEND
+  if (algorithmSlug === 'quick-sort') {
+    return {
+      neutral: 'Neutral',
+      comparing: 'Comparing',
+      swapping: 'Pivot / Swap',
+      sorted: 'Sorted',
+    }
+  }
   return DEFAULT_LEGEND
 }
 
@@ -371,6 +379,9 @@ export default function ArrayCanvas({
     if (values.length === 0) return []
 
     const heightValues = values.map(barHeightValue)
+    const minVal = d3.min(heightValues) ?? 0
+    const shiftedValues = minVal < 0 ? heightValues.map((v) => v - minVal + 1) : heightValues
+    const domainMax = Math.max(1, d3.max(shiftedValues) ?? 1)
 
     const xScale = d3
       .scaleBand<number>()
@@ -380,7 +391,7 @@ export default function ArrayCanvas({
 
     const yScale = d3
       .scaleLinear()
-      .domain([0, d3.max(heightValues) ?? 0])
+      .domain([0, domainMax])
       // The chart starts lower when the operation banner is above it: the
       // tallest bar's value label would otherwise be drawn straight
       // through the banner's second line.
@@ -390,8 +401,9 @@ export default function ArrayCanvas({
 
     return values.map((value, index) => {
       const x = xScale(index) ?? 0
-      const barY = yScale(heightValues[index])
-      const barHeight = height - PADDING - barY
+      const rawBarY = yScale(shiftedValues[index])
+      const barHeight = Math.max(6, height - PADDING - rawBarY)
+      const barY = height - PADDING - barHeight
 
       return {
         index,
@@ -803,6 +815,9 @@ export default function ArrayCanvas({
           const vA = barHeightValue(barA.value)
           const vB = barHeightValue(barB.value)
           const relation = hideRelation ? 'vs' : vA < vB ? '<' : vA > vB ? '>' : '='
+          const shellGap = (snapshot.dataStructureState as { gap?: number } | undefined)?.gap
+          const arcLabel = typeof shellGap === 'number' && shellGap > 1 ? `gap=${shellGap} (${relation})` : relation
+          const arcPillW = Math.max(24, arcLabel.length * 5.8 + 10)
           return (
             <g pointerEvents="none">
               <path
@@ -812,7 +827,7 @@ export default function ArrayCanvas({
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
               />
-              <rect x={midX - 12} y={arcTopY - 8} width={24} height={15} rx={7} fill="var(--state-compare)" />
+              <rect x={midX - arcPillW / 2} y={arcTopY - 8} width={arcPillW} height={15} rx={7} fill="var(--state-compare)" />
               <text
                 x={midX}
                 y={arcTopY - 0.5}
@@ -820,11 +835,109 @@ export default function ArrayCanvas({
                 dominantBaseline="central"
                 style={{ fill: 'var(--state-compare-ink)', fontSize: 9, fontWeight: 700 }}
               >
-                {relation}
+                {arcLabel}
               </text>
             </g>
           )
         })()}
+
+      {/* Quick Sort: pivot threshold line and active partition range */}
+      {(() => {
+        const qs = snapshot.dataStructureState as
+          | { pivotIndex?: number; pivotValue?: number | null; partitionRange?: [number, number] }
+          | undefined
+        if (!qs || typeof qs.pivotIndex !== 'number' || qs.pivotIndex < 0 || !bars[qs.pivotIndex]) return null
+        const pivotBar = bars[qs.pivotIndex]
+        const [low, high] = qs.partitionRange ?? [0, bars.length - 1]
+        const leftBar = bars[Math.max(0, low)]
+        const rightBar = bars[Math.min(bars.length - 1, high)]
+        if (!leftBar || !rightBar) return null
+        const x1 = leftBar.x - 4
+        const x2 = rightBar.x + rightBar.width + 4
+        const py = pivotBar.y
+        return (
+          <g pointerEvents="none">
+            <line
+              x1={x1}
+              y1={py}
+              x2={x2}
+              y2={py}
+              stroke="var(--state-swap)"
+              strokeWidth={1.5}
+              strokeDasharray="5 3"
+            />
+            <rect x={x2 - 58} y={Math.max(14 + labelOffset, py - 16)} width={58} height={14} rx={4} fill="var(--state-swap)" />
+            <text
+              x={x2 - 29}
+              y={Math.max(14 + labelOffset, py - 16) + 7}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{ fill: 'var(--state-swap-ink)', fontSize: 8.5, fontWeight: 700, fontFamily: 'monospace' }}
+            >
+              {`pivot=${qs.pivotValue ?? pivotBar.value}`}
+            </text>
+          </g>
+        )
+      })()}
+
+      {/* Merge Sort: active Left and Right subarray brackets */}
+      {(() => {
+        const ms = snapshot.dataStructureState as
+          | { leftRegion?: [number, number]; rightRegion?: [number, number]; phase?: string }
+          | undefined
+        if (!ms || !ms.leftRegion || !ms.rightRegion) return null
+        const [lStart, lEnd] = ms.leftRegion
+        const [rStart, rEnd] = ms.rightRegion
+        if (lStart < 0 || rStart < 0 || !bars[lStart] || !bars[lEnd] || !bars[rStart] || !bars[rEnd]) return null
+        const lx1 = bars[lStart].x
+        const lx2 = bars[lEnd].x + bars[lEnd].width
+        const rx1 = bars[rStart].x
+        const rx2 = bars[rEnd].x + bars[rEnd].width
+        const by = height - PADDING + 14
+        return (
+          <g pointerEvents="none">
+            <path d={`M${lx1},${by - 4} L${lx1},${by} L${lx2},${by} L${lx2},${by - 4}`} fill="none" stroke="var(--state-compare)" strokeWidth={2} />
+            <text x={(lx1 + lx2) / 2} y={by + 10} textAnchor="middle" style={{ fill: 'var(--state-compare)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}>
+              {`L[${lStart}..${lEnd}]`}
+            </text>
+            <path d={`M${rx1},${by - 4} L${rx1},${by} L${rx2},${by} L${rx2},${by - 4}`} fill="none" stroke="var(--state-swap)" strokeWidth={2} />
+            <text x={(rx1 + rx2) / 2} y={by + 10} textAnchor="middle" style={{ fill: 'var(--state-swap)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}>
+              {`R[${rStart}..${rEnd}]`}
+            </text>
+          </g>
+        )
+      })()}
+
+      {/* Heap Sort: boundary between active max-heap and sorted suffix */}
+      {(() => {
+        const hs = snapshot.dataStructureState as { heapSize?: number } | undefined
+        if (!hs || typeof hs.heapSize !== 'number' || hs.heapSize <= 0 || hs.heapSize >= bars.length) return null
+        const leftBar = bars[hs.heapSize - 1]
+        const rightBar = bars[hs.heapSize]
+        if (!leftBar || !rightBar) return null
+        const divX = (leftBar.x + leftBar.width + rightBar.x) / 2
+        return (
+          <g pointerEvents="none">
+            <line
+              x1={divX}
+              y1={PADDING + labelOffset - 6}
+              x2={divX}
+              y2={height - PADDING + 6}
+              stroke="var(--state-sorted)"
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+            />
+            <text
+              x={divX}
+              y={PADDING + labelOffset - 10}
+              textAnchor="middle"
+              style={{ fill: 'var(--state-sorted)', fontSize: 9, fontWeight: 700, fontFamily: 'monospace' }}
+            >
+              {`heap (${hs.heapSize}) | sorted`}
+            </text>
+          </g>
+        )
+      })()}
 
       {canvasType === CanvasType.TWO_POINTER &&
         twoPointer.left !== null &&

@@ -133,6 +133,18 @@ export function queueEnqueueEngine(
       return snapshots
     }
 
+    if (valuesToEnqueue.length === 1) {
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `Queue has space (${items.length} / ${capacity}). Preparing to enqueue ${value} at rear index ${rearIndex + 1}.`,
+          pseudocodeLine: LINE.ENQUEUE_CHECK,
+          isPredictionRequired: false,
+          state: baseState(items, capacity, frontIndex, rearIndex, 'linear'),
+        }),
+      )
+    }
+
     rearIndex += 1
     items = [...items, { id: nextId(value), value, index: rearIndex }]
     if (frontIndex === -1) frontIndex = rearIndex
@@ -206,6 +218,20 @@ export function queueDequeueEngine(initialItems: number[], dequeueCount: number)
     }
 
     const dequeued = items[0]
+    if (dequeueCount === 1) {
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `Inspecting front element ${dequeued.value} at index ${frontIndex} before dequeuing.`,
+          pseudocodeLine: LINE.DEQUEUE_CHECK,
+          isPredictionRequired: false,
+          state: baseState(items, capacity, frontIndex, rearIndex, 'linear', {
+            lastOperation: 'peekFront',
+            lastOperationValue: dequeued.value,
+          }),
+        }),
+      )
+    }
     items = items.slice(1)
     frontIndex += 1
 

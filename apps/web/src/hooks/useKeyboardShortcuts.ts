@@ -43,6 +43,9 @@ export function useKeyboardShortcuts({
             store.stopPlayback()
           } else if (store.snapshotArray.length > 0 && store.stepIndex >= store.snapshotArray.length - 1) {
             store.resetAlgorithm()
+            if (store.snapshotArray.length > 1 && !selectIsUnansweredJunction(useAlgorithmStore.getState())) {
+              store.startPlayback()
+            }
           } else if (!atUnansweredJunction) {
             store.startPlayback()
           }

@@ -48,12 +48,13 @@ export function divideConquerEngine(input: number[]): AlgorithmSnapshot[] {
   let frames: CallFrame[] = []
   let nextId = 0
 
-  const baseState = (overrides: Partial<CallStackState> = {}): CallStackState => ({
+  const baseState = (overrides: Partial<CallStackState> & Record<string, unknown> = {}): CallStackState => ({
     frames: frames.map((frame) => ({ ...frame })),
     // Every range of one element is a base case, so there is no single
     // numeric base-case argument to name; the canvas reads status instead.
     baseCase: 1,
     currentFrameId: frames[frames.length - 1]?.id ?? null,
+    inputArray: [...array],
     ...overrides,
   })
 

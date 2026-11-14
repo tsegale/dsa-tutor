@@ -122,6 +122,18 @@ export function stackPushEngine(
       return snapshots
     }
 
+    if (valuesToPush.length === 1) {
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `Stack has space (${items.length}${cap !== null ? ` / ${cap}` : ''}). Preparing to push ${value} onto top index ${items.length}.`,
+          pseudocodeLine: LINE.PUSH_CHECK,
+          isPredictionRequired: false,
+          state: baseStackState(items, cap),
+        }),
+      )
+    }
+
     items = [...items, { id: nextId(value), value }]
     snapshots.push(
       makeSnapshot({
@@ -180,6 +192,17 @@ export function stackPopEngine(initialItems: number[], popCount: number): Algori
     }
 
     const popped = items[items.length - 1]
+    if (popCount === 1) {
+      snapshots.push(
+        makeSnapshot({
+          stepIndex: stepIndex++,
+          description: `Inspecting top element ${popped.value} at index ${items.length - 1} before removing it.`,
+          pseudocodeLine: LINE.POP_CHECK,
+          isPredictionRequired: false,
+          state: baseStackState(items, null, { lastOperation: 'peek', lastOperationValue: popped.value }),
+        }),
+      )
+    }
     items = items.slice(0, -1)
     snapshots.push(
       makeSnapshot({

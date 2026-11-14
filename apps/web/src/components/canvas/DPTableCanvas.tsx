@@ -68,6 +68,11 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
   const inputCell = hasInput ? Math.max(MIN_CELL, Math.min(cell, Math.floor((width - 24) / state.input.length))) : 0
 
   const canvasLabel = `${algorithmName}, step ${snapshot!.stepIndex + 1}: ${snapshot!.description}`
+  const greedyActivities = state.activities
+  const greedyLastFinish = state.lastFinish
+  const monotonicStackFrames = state.stackFrames
+  const stackPushes = state.pushes
+  const stackPops = state.pops
 
   return (
     <div className="flex h-full flex-col">
@@ -88,7 +93,104 @@ export default function DPTableCanvas({ width = 600, height = 400 }: DPTableCanv
         )}
       </div>
 
-      <div className="flex flex-1 items-center justify-center overflow-auto pt-9">
+      {monotonicStackFrames !== undefined && (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 pt-9 pb-1.5 text-[11px] dark:border-dark-border">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-semibold text-text-primary dark:text-dark-text-primary">Monotonic Stack (idx:val):</span>
+            {monotonicStackFrames.length === 0 ? (
+              <span className="font-mono text-[10px] text-text-muted">empty</span>
+            ) : (
+              monotonicStackFrames.map((frame, idx) => {
+                const isTop = idx === monotonicStackFrames.length - 1
+                return (
+                  <span
+                    key={frame.index}
+                    className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] font-semibold dark:border-dark-border"
+                    style={
+                      isTop
+                        ? { backgroundColor: 'var(--state-compare)', color: 'var(--state-compare-ink)', borderColor: 'transparent' }
+                        : { backgroundColor: 'var(--surface-sunk)', color: 'var(--ink)' }
+                    }
+                  >
+                    {`[${frame.index}]=${frame.value}`}
+                  </span>
+                )
+              })
+            )}
+            {monotonicStackFrames.length > 0 && <span className="font-mono text-[9px] text-text-muted">&larr;top</span>}
+          </div>
+          <span className="font-mono text-[10px] text-text-muted">
+            pushes: {stackPushes ?? 0} | pops: {stackPops ?? 0}
+          </span>
+        </div>
+      )}
+
+      {greedyActivities && greedyActivities.length > 0 && (
+        <div className="flex shrink-0 flex-col gap-1 border-b border-border px-4 pt-9 pb-2 dark:border-dark-border">
+          <div className="flex items-center justify-between text-[10px] text-text-secondary dark:text-dark-text-secondary">
+            <span className="font-semibold text-text-primary dark:text-dark-text-primary">
+              Interval Schedule Timeline (sorted by finish time)
+            </span>
+            <span className="font-mono">
+              {greedyLastFinish !== null && greedyLastFinish !== undefined
+                ? `Room free from t = ${greedyLastFinish}`
+                : 'Room free from t = 0'}
+            </span>
+          </div>
+          {(() => {
+            const maxTime = Math.max(12, ...greedyActivities.map((a) => a.finish))
+            return (
+              <div className="relative flex flex-col gap-1 pt-1">
+                {greedyActivities.map((act, idx) => {
+                  const leftPct = (act.start / maxTime) * 100
+                  const widthPct = Math.max(4, ((act.finish - act.start) / maxTime) * 100)
+                  const isCurrent = idx === currentCol
+                  const bg =
+                    act.status === 'taken'
+                      ? 'var(--state-sorted)'
+                      : isCurrent
+                        ? 'var(--state-compare)'
+                        : 'var(--surface-sunk)'
+                  const fg =
+                    act.status === 'taken'
+                      ? 'var(--state-sorted-ink)'
+                      : isCurrent
+                        ? 'var(--state-compare-ink)'
+                        : 'var(--ink-2)'
+                  return (
+                    <div key={act.name} className="relative flex h-4 items-center">
+                      <span className="w-5 shrink-0 font-mono text-[10px] font-semibold text-text-secondary">{act.name}</span>
+                      <div className="relative h-3.5 flex-1 rounded bg-surface-sunk/40">
+                        <div
+                          className="absolute top-0 bottom-0 flex items-center justify-center rounded px-1 font-mono text-[9px] font-semibold transition-all"
+                          style={{
+                            left: `${leftPct}%`,
+                            width: `${widthPct}%`,
+                            backgroundColor: bg,
+                            color: fg,
+                            opacity: act.status === 'skipped' && !isCurrent ? 0.4 : 1,
+                            textDecoration: act.status === 'skipped' ? 'line-through' : 'none',
+                          }}
+                        >
+                          {`${act.start}-${act.finish}`}
+                        </div>
+                        {greedyLastFinish !== null && greedyLastFinish !== undefined && (
+                          <div
+                            className="pointer-events-none absolute top-0 bottom-0 border-l border-dashed border-primary"
+                            style={{ left: `${(greedyLastFinish / maxTime) * 100}%` }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
+      <div className={cn('flex flex-1 items-center justify-center overflow-auto', !monotonicStackFrames && !greedyActivities && 'pt-9')}>
         <svg
           width={Math.max(tableLeft + cols * cell + 16, state.input.length * inputCell + 24)}
           height={tableTop + rows * cell + 46}

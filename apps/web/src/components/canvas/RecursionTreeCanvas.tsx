@@ -48,9 +48,22 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
 
   const currentSnapshot = snapshots[stepIndex]
   const currentState = currentSnapshot?.dataStructureState as
-    | (CallStackState & { nQueensBoard?: NQueensBoardState })
+    | (CallStackState & {
+        nQueensBoard?: NQueensBoardState
+        inputArray?: number[]
+        candidates?: number[]
+        target?: number
+        chosen?: number[]
+        total?: number
+        solutions?: number[][]
+      })
     | undefined
   const nQueensBoard = currentState?.nQueensBoard
+  const inputArray = currentState?.inputArray
+  const hasSubsetSum =
+    !nQueensBoard &&
+    Array.isArray(currentState?.candidates) &&
+    typeof currentState?.target === 'number'
   const isMemoized = currentState?.memoized === true
   const cacheHits = currentState?.cacheHits ?? 0
   const memoEntries = currentState?.computedValues
@@ -62,9 +75,9 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
     isLiveJunction &&
     currentSnapshot?.criticalJunctionType === 'PRUNE_BRANCH'
 
-  const sidePanelWidth = nQueensBoard ? BOARD_DRAWER_WIDTH : DRAWER_WIDTH
+  const sidePanelWidth = nQueensBoard || hasSubsetSum ? BOARD_DRAWER_WIDTH : DRAWER_WIDTH
   const showDrawer = width >= DRAWER_MIN_CANVAS_WIDTH
-  const topOffset = isMemoized ? MARGIN.top + 18 : MARGIN.top
+  const topOffset = isMemoized || (inputArray && inputArray.length > 0) ? MARGIN.top + 22 : MARGIN.top
   const treeWidth = Math.max(160, width - MARGIN.left - MARGIN.right - (showDrawer ? sidePanelWidth : 0))
   const treeHeight = Math.max(120, height - topOffset - MARGIN.bottom)
   const xStep = treeWidth / Math.max(tree.columns, 1)
@@ -95,6 +108,43 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
         <text x={MARGIN.left} y={30} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
           {`${calls} calls for ${distinct} distinct answers`}
         </text>
+      )}
+
+      {/* Divide & Conquer input array slice strip */}
+      {inputArray && inputArray.length > 0 && (
+        <g>
+          <text x={MARGIN.left} y={33} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
+            arr:
+          </text>
+          {inputArray.map((val, idx) => {
+            const px = MARGIN.left + 28 + idx * 36
+            const inSlice = currentSnapshot?.highlightIndices.includes(idx) ?? false
+            return (
+              <g key={`dc-arr-${idx}`}>
+                <rect
+                  x={px}
+                  y={21}
+                  width={32}
+                  height={16}
+                  rx={3}
+                  fill={inSlice ? 'var(--state-compare)' : 'var(--surface-sunk)'}
+                  stroke={inSlice ? 'none' : 'var(--rule)'}
+                  strokeWidth={1}
+                />
+                <text
+                  x={px + 16}
+                  y={29}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className="font-mono text-[9px] font-semibold"
+                  fill={inSlice ? 'var(--state-compare-ink)' : 'var(--ink-2)'}
+                >
+                  {`${idx}:${val}`}
+                </text>
+              </g>
+            )
+          })}
+        </g>
       )}
 
       {/* Memoization cache strip */}
@@ -319,6 +369,67 @@ export default function RecursionTreeCanvas({ width = 600, height = 400 }: Recur
                     </>
                   )
                 })()}
+            </g>
+          )
+        })()
+      ) : showDrawer && hasSubsetSum ? (
+        (() => {
+          const panelLeft = width - sidePanelWidth
+          const x0 = panelLeft + 12
+          const chosen = currentState?.chosen ?? []
+          const total = currentState?.total ?? 0
+          const target = currentState?.target ?? 0
+          const solutions = currentState?.solutions ?? []
+          return (
+            <g>
+              <line x1={panelLeft} y1={14} x2={panelLeft} y2={height - MARGIN.bottom} stroke="var(--rule)" strokeWidth={1} />
+              <text x={x0} y={18} className="fill-text-primary text-[11px] font-semibold dark:fill-dark-text-primary">
+                {`Subset Sum (target = ${target})`}
+              </text>
+              <text x={x0} y={34} className="fill-text-muted font-mono text-[10px] dark:fill-dark-text-secondary">
+                {`set: [${(currentState?.candidates ?? []).join(', ')}]`}
+              </text>
+              <rect
+                x={x0}
+                y={42}
+                width={sidePanelWidth - 24}
+                height={34}
+                rx={4}
+                fill="var(--surface-sunk)"
+                stroke={total === target ? 'var(--state-sorted)' : total > target && !hidePruneLeak ? 'var(--state-error)' : 'var(--rule)'}
+                strokeWidth={1.25}
+              />
+              <text x={x0 + 8} y={55} className="fill-text-primary font-mono text-[10px] font-semibold dark:fill-dark-text-primary">
+                {`chosen: {${chosen.join(', ')}}`}
+              </text>
+              <text
+                x={x0 + 8}
+                y={69}
+                className="font-mono text-[10px] font-bold"
+                fill={total === target ? 'var(--state-sorted)' : total > target && !hidePruneLeak ? 'var(--state-error)' : 'var(--state-compare)'}
+              >
+                {`sum = ${total} / ${target}`}
+              </text>
+              <text x={x0} y={92} className="fill-text-muted text-[10px] font-semibold dark:fill-dark-text-secondary">
+                {`Solutions (${solutions.length}):`}
+              </text>
+              {solutions.length === 0 ? (
+                <text x={x0} y={106} className="fill-text-muted font-mono text-[9px] dark:fill-dark-text-secondary">
+                  none yet
+                </text>
+              ) : (
+                solutions.slice(0, 4).map((sol, idx) => (
+                  <text
+                    key={`sol-${idx}`}
+                    x={x0}
+                    y={106 + idx * 14}
+                    className="font-mono text-[10px] font-semibold"
+                    fill="var(--state-sorted)"
+                  >
+                    {`✓ {${sol.join(' + ')}} = ${target}`}
+                  </text>
+                ))
+              )}
             </g>
           )
         })()

@@ -68,6 +68,11 @@ export interface DPTableState {
   /** Optimal reconstruction / traceback cells highlighted on the final step. */
   traceback?: [number, number][]
   watch?: Record<string, number | string | boolean | null>
+  /** Greedy activity selection intervals and current finish cursor for timeline rendering. */
+  activities?: Array<{ name: string; start: number; finish: number; status?: 'pending' | 'taken' | 'skipped' }>
+  lastFinish?: number | null
+  /** Live monotonic stack frames (bottom to top) for stack strip rendering. */
+  stackFrames?: Array<{ index: number; value: number }>
 }
 
 export interface DPSnapshotParams {

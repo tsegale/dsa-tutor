@@ -97,7 +97,7 @@ export function heapSortEngine(input: number[]): AlgorithmSnapshot[] {
       isPredictionRequired: true,
       state: { array: working, heapSize: size },
       activeIndices: [i, largerChild],
-      comparedIndices: [largerChild],
+      comparedIndices: [i, largerChild],
       criticalJunctionType: CriticalJunctionType.HEAP_COMPARE,
       junctionDifficulty: JunctionDifficulty.PROCEDURAL,
     })

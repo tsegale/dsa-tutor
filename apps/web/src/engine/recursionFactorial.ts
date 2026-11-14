@@ -52,6 +52,8 @@ export interface CallStackState {
   /** Whether memoisation is active on this Fibonacci run, and how many cache hits occurred. */
   memoized?: boolean
   cacheHits?: number
+  /** Divide-and-conquer input array, so the recursion tree can render the active subarray slice. */
+  inputArray?: number[]
 }
 
 interface SnapshotParams {
