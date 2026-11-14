@@ -291,31 +291,44 @@ export default function RightPanel({
                 scrolls itself; without that, focusing a tab made the browser
                 scroll the overflow-hidden Tabs root sideways to reveal it,
                 cutting off the whole panel's left edge. */}
-            <TabsList id="right-panel-tabs" className="w-full max-w-full shrink-0 justify-start gap-0.5 overflow-x-auto rounded-md border border-border bg-surface-sunk p-1 dark:border-dark-border">
+            <TabsList
+              id="right-panel-tabs"
+              className="w-full max-w-full shrink-0 justify-between gap-1 overflow-x-auto scrollbar-hide"
+            >
               {/* Theory is first and is Demo mode's default: a student who
                   has never met the algorithm reads the briefing before any
                   animation plays. Its id is 0 so the existing tab ids, the
                   keyboard shortcuts and the Classic remap all keep working. */}
-              <TabsTrigger value="0" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
-                <TheoryIcon className="size-3.5 shrink-0" />
+              <TabsTrigger
+                value="0"
+                className="shrink-0 px-1.5 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap data-[state=active]:font-semibold data-[state=active]:text-brand"
+              >
                 Theory
               </TabsTrigger>
               {features.aiTutorTab && (
-                <TabsTrigger value="1" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
-                  <ExplanationIcon className="size-3.5 shrink-0" />
+                <TabsTrigger
+                  value="1"
+                  className="shrink-0 px-1.5 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap data-[state=active]:font-semibold data-[state=active]:text-brand"
+                >
                   AI Tutor
                 </TabsTrigger>
               )}
-              <TabsTrigger value="2" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
-                <PseudocodeIcon className="size-3.5 shrink-0" />
+              <TabsTrigger
+                value="2"
+                className="shrink-0 px-1.5 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap data-[state=active]:font-semibold data-[state=active]:text-brand"
+              >
                 Pseudocode
               </TabsTrigger>
-              <TabsTrigger value="3" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
-                <ComplexityIcon className="size-3.5 shrink-0" />
+              <TabsTrigger
+                value="3"
+                className="shrink-0 px-1.5 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap data-[state=active]:font-semibold data-[state=active]:text-brand"
+              >
                 Complexity
               </TabsTrigger>
-              <TabsTrigger value="4" className="shrink-0 gap-1 px-2 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap">
-                <StepLogIcon className="size-3.5 shrink-0" />
+              <TabsTrigger
+                value="4"
+                className="shrink-0 px-1.5 py-1.5 text-[11px] font-medium tracking-normal whitespace-nowrap data-[state=active]:font-semibold data-[state=active]:text-brand"
+              >
                 Step log
               </TabsTrigger>
             </TabsList>

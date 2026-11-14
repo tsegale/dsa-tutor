@@ -57,7 +57,7 @@ function Tabs({
 // "default" and "line" render the same underline now; both stay accepted so
 // existing callers need no change.
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center text-ink-2 group-data-[orientation=horizontal]/tabs:h-9 group-data-[orientation=horizontal]/tabs:gap-4 group-data-[orientation=horizontal]/tabs:border-b group-data-[orientation=horizontal]/tabs:border-rule group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col group-data-[orientation=vertical]/tabs:border-l group-data-[orientation=vertical]/tabs:border-rule",
+  "group/tabs-list inline-flex h-9 w-fit items-center gap-4 border-b border-rule text-ink-2 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col group-data-[orientation=vertical]/tabs:border-b-0 group-data-[orientation=vertical]/tabs:border-l group-data-[orientation=vertical]/tabs:border-rule",
   {
     variants: {
       variant: {
