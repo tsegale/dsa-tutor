@@ -16,6 +16,7 @@ import { MasteryMark } from '@/components/mastery/MasteryMark'
 import { BrainIcon } from '@/components/feynman/FeynmanModeButton'
 import { useStudyScope } from '@/hooks/useStudyScope'
 import { hasFeynmanRubric } from '@/utils/feynmanRubrics'
+import { ModuleIcon, getModuleTheme } from '@/components/home/TopicArtwork'
 import { ChevronIcon } from './icons'
 
 // The curriculum as a syllabus, in a persistent left rail: one accordion
@@ -31,7 +32,6 @@ function readCollapsed(inWorkspace: boolean): boolean {
     if (raw === null) return inWorkspace
     return raw === 'true'
   } catch {
-    // Blocked storage: collapse inside the workspace (3-column studio), expand elsewhere.
     return inWorkspace
   }
 }
@@ -62,6 +62,15 @@ function PanelIcon({ collapsed }: { collapsed: boolean }) {
   )
 }
 
+function BookSyllabusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-4 shrink-0 text-brand" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h4v11.5H4a1.5 1.5 0 0 1-1.5-1.5v-8.5Z" />
+      <path d="M8 2h4a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 12 13.5H8" />
+    </svg>
+  )
+}
+
 export interface CurriculumPanelProps {
   /** The topic open in the workspace, highlighted and scrolled into view. */
   currentTopicName?: string | null
@@ -75,16 +84,10 @@ export interface CurriculumPanelProps {
 export function CurriculumPanel({ currentTopicName = null, variant = 'rail', inWorkspace = false, className }: CurriculumPanelProps) {
   const { user } = useAuth()
   const go = useShellNavigate()
-  // Feynman mode on demand from the rail (Phase 8A). Not for an active
-  // participant: shown on two of their three topics, it would reveal which
-  // one is their Classic topic.
   const feynmanOnDemand = !useStudyScope().restricted
   const { topicsQuery, syllabus, plan } = useLearningPlan()
   const { data: topics, isLoading, isFetching, refetch } = topicsQuery
 
-  // The topic the rail points at: the one open in the workspace, else the
-  // shared plan's answer (resume the latest session, or the recommendation),
-  // the same topic Home's Continue card names.
   const focusTopicName = currentTopicName ?? plan?.focus?.topic.name ?? null
 
   const key = expandedStorageKey(user?.id)
@@ -94,13 +97,13 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', inW
   const [collapsed, setCollapsed] = useState(() => variant === 'rail' && readCollapsed(inWorkspace))
   const isCollapsed = variant === 'rail' && collapsed
 
-  // Exactly one module open on first load (the one holding the focus topic);
-  // after that, whatever the user opened, remembered per user. The current
-  // topic's module is always open so the highlighted row is visible.
   const defaultId = defaultExpandedModule(syllabus, focusTopicName)
   const currentModuleId = syllabus.find((entry) => entry.topics.some((t) => t.topic.name === currentTopicName))?.module.id
   const expanded = new Set(stored ?? (defaultId ? [defaultId] : []))
   if (currentModuleId) expanded.add(currentModuleId)
+
+  const totalComplete = syllabus.reduce((acc, m) => acc + m.status.complete, 0)
+  const totalTopics = syllabus.reduce((acc, m) => acc + m.status.total, 0)
 
   function toggleModule(id: string) {
     const next = new Set(expanded)
@@ -124,38 +127,52 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', inW
 
   if (isCollapsed) {
     return (
-      <nav aria-label="Curriculum" className={cn('flex h-full w-12 shrink-0 flex-col items-center gap-2 border-r border-rule bg-surface py-3', className)}>
+      <nav aria-label="Curriculum" className={cn('flex h-full w-12 shrink-0 flex-col items-center gap-2.5 border-r border-rule bg-surface py-3', className)}>
         <button
           type="button"
           onClick={() => setPanelCollapsed(false)}
           aria-label="Expand curriculum"
           aria-expanded="false"
-          className="flex size-8 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink"
+          className="flex size-8 items-center justify-center rounded-sm border border-rule bg-surface-sunk text-ink-2 transition-colors hover:border-brand hover:text-brand"
         >
           <PanelIcon collapsed />
         </button>
-        <ul className="flex flex-col items-center gap-2">
-          {syllabus.map(({ module, status }) => (
-            <li key={module.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  setPanelCollapsed(false)
-                  if (!expanded.has(module.id)) toggleModule(module.id)
-                }}
-                aria-label={`${moduleLabel(module)}, ${status.complete} of ${status.total} complete`}
-                className="relative flex size-9 items-center justify-center rounded-full"
-              >
-                {/* The button's label already states the progress. */}
-                <span aria-hidden="true" className="pointer-events-none">
-                  <ProgressRing value={status.total ? (status.complete / status.total) * 100 : 0} size={32} strokeWidth={3} showValue={false} tone={status.state === 'complete' ? 'success' : 'brand'} />
-                </span>
-                <span aria-hidden="true" className="absolute text-mono-sm text-ink">
-                  {module.number}
-                </span>
-              </button>
-            </li>
-          ))}
+        <span className="h-px w-6 bg-rule" aria-hidden="true" />
+        <ul className="flex flex-col items-center gap-2.5">
+          {syllabus.map(({ module, status }) => {
+            const theme = getModuleTheme(module.number)
+            return (
+              <li key={module.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPanelCollapsed(false)
+                    if (!expanded.has(module.id)) toggleModule(module.id)
+                  }}
+                  aria-label={`${moduleLabel(module)}, ${status.complete} of ${status.total} complete`}
+                  className="group relative flex size-9 items-center justify-center rounded-full transition-transform duration-quick hover:scale-105"
+                  style={{ backgroundColor: theme.bg }}
+                >
+                  <span aria-hidden="true" className="pointer-events-none">
+                    <ProgressRing
+                      value={status.total ? (status.complete / status.total) * 100 : 0}
+                      size={34}
+                      strokeWidth={3}
+                      showValue={false}
+                      tone={status.state === 'complete' ? 'success' : 'brand'}
+                    />
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute text-mono-sm font-bold"
+                    style={{ color: theme.fg }}
+                  >
+                    {module.number}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
       </nav>
     )
@@ -163,15 +180,23 @@ export function CurriculumPanel({ currentTopicName = null, variant = 'rail', inW
 
   return (
     <nav aria-label="Curriculum" className={cn('flex h-full shrink-0 flex-col bg-surface', variant === 'rail' && 'w-72 border-r border-rule', className)}>
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-rule px-4">
-        <h2 className="text-small font-semibold text-ink">Curriculum</h2>
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-rule bg-surface-sunk/50 px-3.5">
+        <div className="flex items-center gap-2">
+          <BookSyllabusIcon />
+          <h2 className="text-small font-semibold text-ink">Curriculum</h2>
+          {totalTopics > 0 && (
+            <span className="rounded-full border border-rule bg-surface px-2 py-0.5 text-mono-sm text-[11px] font-semibold text-ink-2">
+              {totalComplete}/{totalTopics}
+            </span>
+          )}
+        </div>
         {variant === 'rail' && (
           <button
             type="button"
             onClick={() => setPanelCollapsed(true)}
             aria-label="Collapse curriculum"
             aria-expanded="true"
-            className="flex size-8 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink"
+            className="flex size-7 items-center justify-center rounded-sm border border-transparent text-ink-2 hover:border-rule hover:bg-surface hover:text-ink"
           >
             <PanelIcon collapsed={false} />
           </button>
@@ -235,31 +260,45 @@ function ModuleSection({
 }) {
   const { module, status, topics } = entry
   const bodyId = useId()
+  const theme = getModuleTheme(module.number)
 
   return (
-    <section aria-labelledby={`${bodyId}-heading`}>
+    <section
+      aria-labelledby={`${bodyId}-heading`}
+      className={cn('border-l-[3px] transition-colors', open ? 'bg-surface-sunk/25' : 'border-l-transparent')}
+      style={open ? { borderLeftColor: theme.accent } : undefined}
+    >
       <h3 id={`${bodyId}-heading`}>
         <button
           type="button"
           aria-expanded={open}
           aria-controls={bodyId}
           onClick={onToggle}
-          className="flex w-full items-start gap-3 px-4 py-row text-left transition-colors duration-quick hover:bg-surface-sunk"
+          className="flex w-full items-start gap-2.5 px-3 py-row text-left transition-colors duration-quick hover:bg-surface-sunk/70"
         >
+          <ModuleIcon moduleNumber={module.number} className="mt-0.5 size-8" />
           <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-            {/* The title wraps rather than truncating: it is the module's name. */}
-            <span className="flex items-baseline gap-2">
-              <span className="shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
-              <span className="min-w-0 text-small font-semibold text-ink">{module.title}</span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="shrink-0 rounded-sm border px-1.5 py-0.2 text-[10px] font-bold font-mono"
+                style={{
+                  backgroundColor: theme.bg,
+                  color: theme.fg,
+                  borderColor: theme.border,
+                }}
+              >
+                M{module.number}
+              </span>
+              <span className="min-w-0 truncate text-small font-semibold text-ink">{module.title}</span>
             </span>
             <span className="flex items-center gap-2">
               <Progress
                 value={status.total ? (status.complete / status.total) * 100 : 0}
                 tone={status.state === 'complete' ? 'success' : 'brand'}
                 aria-label={`${moduleLabel(module)} progress`}
-                className="h-1 flex-1"
+                className="h-1.5 flex-1"
               />
-              <span className="shrink-0 text-mono-sm text-ink-2">
+              <span className="shrink-0 text-mono-sm text-[11px] text-ink-2">
                 {status.complete}/{status.total} · {status.mean}%
               </span>
             </span>
@@ -269,41 +308,51 @@ function ModuleSection({
       </h3>
 
       {open && (
-        <ol id={bodyId} aria-label={`${moduleLabel(module)} topics`} className="pb-2">
+        <ol id={bodyId} aria-label={`${moduleLabel(module)} topics`} className="space-y-0.5 pb-2.5 pt-0.5">
           {topics.map(({ topic, number, state }) => {
             const isCurrent = topic.name === currentTopicName
             const content = (
               <>
                 <StatusMarker state={state} pulse={topic.name === focusTopicName && state !== 'complete'} />
-                <span className="w-8 shrink-0 text-mono-sm text-ink-2">{number}</span>
-                <span title={topic.displayName} className={cn('min-w-0 flex-1 truncate text-small text-ink', isCurrent && 'font-semibold')}>
+                <span className="w-8 shrink-0 rounded bg-surface-sunk px-1 py-0.5 text-center text-mono-sm text-[11px] font-medium text-ink-2">
+                  {number}
+                </span>
+                <span title={topic.displayName} className={cn('min-w-0 flex-1 truncate text-small text-ink', isCurrent && 'font-semibold text-brand')}>
                   {topic.displayName}
                 </span>
                 <MasteryMark status={topic.mastery.status} className="size-3.5" />
-                <span className="shrink-0 text-mono-sm text-ink-2">{topic.masteryPercent}%</span>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-1.5 py-0.5 text-mono-sm text-[10px] font-semibold',
+                    topic.masteryPercent >= 60
+                      ? 'bg-success-light text-state-sorted'
+                      : topic.masteryPercent > 0
+                        ? 'bg-brand-soft text-brand'
+                        : 'text-ink-2',
+                  )}
+                >
+                  {topic.masteryPercent}%
+                </span>
                 <span className="sr-only">, {TOPIC_STATE_LABEL[state]}</span>
               </>
             )
-            // Once a Practice run is complete, Feynman mode stays one click away.
             const explainable = feynmanOnDemand && topic.practiceRunCompleted && hasFeynmanRubric(topic.displayName)
             const rowClass = cn(
-              'flex h-8 min-w-0 flex-1 items-center gap-2.5 rounded-sm pr-3 pl-3',
-              isCurrent ? 'bg-brand-soft' : 'hover:bg-surface-sunk'
+              'flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm pr-2.5 pl-2.5 transition-colors',
+              isCurrent
+                ? 'bg-brand-soft ring-1 ring-brand/30'
+                : 'hover:bg-surface-sunk',
             )
             return (
               <li
                 key={topic.id}
                 data-topic={topic.name}
-                // The connector: a 1px rule from below this marker to the next,
-                // drawn on the item itself so it reflows and collapses with it.
-                className="relative mx-2 flex items-center [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:top-[25px] [&:not(:last-child)]:after:left-[18.5px] [&:not(:last-child)]:after:h-3.5 [&:not(:last-child)]:after:w-px [&:not(:last-child)]:after:bg-rule [&:not(:last-child)]:after:content-['']"
+                className="relative mx-2 flex items-center [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:top-[26px] [&:not(:last-child)]:after:left-[16px] [&:not(:last-child)]:after:h-3 [&:not(:last-child)]:after:w-px [&:not(:last-child)]:after:bg-rule [&:not(:last-child)]:after:content-['']"
               >
                 <Link
                   to={topicPath(topic.name)}
                   aria-current={isCurrent ? 'page' : undefined}
                   onClick={(event) => {
-                    // Route through the shell, so leaving a workspace
-                    // session asks for the session-end survey first.
                     event.preventDefault()
                     go(topicPath(topic.name))
                   }}

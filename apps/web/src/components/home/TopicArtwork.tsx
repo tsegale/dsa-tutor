@@ -63,6 +63,43 @@ export function getTopicTheme(slug: string): ModuleVisualTheme {
   return getModuleTheme(place?.module.number ?? 1)
 }
 
+export function getTopicStructureLabel(slug: string): string {
+  if (slug.includes('linked-list')) return 'Linked List'
+  if (slug === 'stack' || slug === 'monotonic-stack') return 'LIFO Stack'
+  if (slug.includes('queue') || slug === 'deque') return 'FIFO Queue'
+  if (slug.startsWith('hash-table')) return 'Hash Table'
+  if (slug.startsWith('recursion-')) return 'Call Stack'
+  if (slug.endsWith('-search') && !slug.startsWith('bst') && !slug.startsWith('trie')) return 'Search Array'
+  if (slug.endsWith('-sort') && slug !== 'topological-sort') return 'Sorting Bars'
+  if (slug === 'two-pointer') return 'Two Pointers'
+  if (slug.startsWith('sliding-window')) return 'Sliding Window'
+  if (slug === 'prefix-sum') return 'Prefix Array'
+  if (slug.startsWith('dp-')) return 'DP Matrix'
+  if (slug === 'backtracking') return 'Search Tree'
+  if (slug === 'divide-and-conquer' || slug === 'greedy') return 'Paradigm'
+  if (slug.startsWith('rb-')) return 'Red-Black Tree'
+  if (slug.startsWith('avl-')) return 'AVL Tree'
+  if (slug.includes('heap')) return 'Binary Heap'
+  if (slug.startsWith('trie-')) return 'Prefix Trie'
+  if (slug.startsWith('bst') || slug.startsWith('tree-')) return 'Binary Tree'
+  if (slug.startsWith('grid-') || slug.startsWith('maze-')) return '2D Grid'
+  if (
+    slug === 'bfs' ||
+    slug === 'dfs' ||
+    slug === 'dijkstra' ||
+    slug === 'bellman-ford' ||
+    slug === 'floyd-warshall' ||
+    slug === 'kruskal' ||
+    slug === 'prim' ||
+    slug === 'cycle-detection' ||
+    slug === 'connected-components' ||
+    slug === 'topological-sort'
+  ) {
+    return 'Graph Network'
+  }
+  return 'Array'
+}
+
 export function ModuleIcon({ moduleNumber, className }: { moduleNumber: number; className?: string }) {
   const theme = getModuleTheme(moduleNumber)
   return (
@@ -133,37 +170,40 @@ function renderTopicSvg(slug: string) {
     const isCircular = slug.includes('circular')
     const isDoubly = slug.includes('doubly')
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
-        {/* Nodes */}
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
+        <text x="16" y="16" fill="var(--ink-2)" fontSize="8.5" fontWeight="700" className="font-mono">
+          HEAD
+        </text>
+        <path d="M26 19v6" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" />
         {[
           { x: 16, val: '12', fill: 'var(--surface)', stroke: 'var(--state-current)' },
-          { x: 72, val: '27', fill: 'var(--tone-indigo-bg)', stroke: 'var(--brand)' },
-          { x: 128, val: '45', fill: 'var(--surface)', stroke: 'var(--state-sorted)' },
+          { x: 94, val: '27', fill: 'var(--tone-indigo-bg)', stroke: 'var(--brand)' },
+          { x: 172, val: '45', fill: 'var(--tone-emerald-bg)', stroke: 'var(--state-sorted)' },
         ].map((n, idx) => (
           <g key={idx}>
-            <rect x={n.x} y="15" width="36" height="24" rx="5" fill={n.fill} stroke={n.stroke} strokeWidth="1.75" />
-            <line x1={n.x + 25} y1="15" x2={n.x + 25} y2="39" stroke={n.stroke} strokeWidth="1.2" opacity="0.6" />
-            <text x={n.x + 12.5} y="31" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="600" className="font-mono">
+            <rect x={n.x} y="25" width="52" height="32" rx="6" fill={n.fill} stroke={n.stroke} strokeWidth="2" />
+            <line x1={n.x + 36} y1="25" x2={n.x + 36} y2="57" stroke={n.stroke} strokeWidth="1.5" opacity="0.65" />
+            <text x={n.x + 18} y="45" textAnchor="middle" fill="var(--ink)" fontSize="12.5" fontWeight="700" className="font-mono">
               {n.val}
             </text>
-            <circle cx={n.x + 30.5} cy="27" r="2" fill={n.stroke} />
+            <circle cx={n.x + 44} cy="41" r="2.8" fill={n.stroke} />
           </g>
         ))}
         {/* Forward pointers */}
-        <path d="M52 25h17m-3-3 3 3-3 3" stroke="var(--ink-2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M108 25h17m-3-3 3 3-3 3" stroke="var(--ink-2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M68 38h23m-4-3.5 4 3.5-4 3.5" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M146 38h23m-4-3.5 4 3.5-4 3.5" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         {isDoubly && (
           <>
-            <path d="M69 31H52m3-3-3 3 3 3" stroke="var(--state-compare)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M125 31h-17m3-3-3 3 3 3" stroke="var(--state-compare)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M91 45H68m4-3.5-4 3.5 4 3.5" stroke="var(--state-compare)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M169 45h-23m4-3.5-4 3.5 4 3.5" stroke="var(--state-compare)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
           </>
         )}
         {isCircular && (
           <path
-            d="M164 27h6a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V31a4 4 0 0 1 4-4h3"
+            d="M224 41h7a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V45a4 4 0 0 1 4-4h3"
             stroke="var(--state-swap)"
-            strokeWidth="1.4"
-            strokeDasharray="3 2"
+            strokeWidth="1.7"
+            strokeDasharray="4 2.5"
             strokeLinecap="round"
           />
         )}
@@ -174,18 +214,29 @@ function renderTopicSvg(slug: string) {
   // 2. Stack & Monotonic Stack
   if (slug === 'stack' || slug === 'monotonic-stack') {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
-        {/* Stack well */}
-        <path d="M58 10v38h64V10" stroke="var(--rule-strong)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <rect x="63" y="35" width="54" height="10" rx="2.5" fill="var(--surface)" stroke="var(--state-neutral)" strokeWidth="1.5" />
-        <rect x="63" y="23" width="54" height="10" rx="2.5" fill="var(--tone-indigo-bg)" stroke="var(--brand)" strokeWidth="1.5" />
-        <rect x="63" y="10" width="54" height="10" rx="2.5" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.75" />
-        <text x="90" y="17.5" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
-          TOP: 42
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
+        <path d="M72 10v56h96V10" stroke="var(--rule-strong)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="80" y="48" width="80" height="14" rx="3.5" fill="var(--surface)" stroke="var(--state-neutral)" strokeWidth="1.8" />
+        <text x="120" y="58" textAnchor="middle" fill="var(--ink-2)" fontSize="9.5" fontWeight="600" className="font-mono">
+          18
         </text>
-        {/* Push/Pop arrows */}
-        <path d="M36 22V12h16m-3-3 3 3-3 3" stroke="var(--state-sorted)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M128 12h16v10m-3-3 3 3 3-3" stroke="var(--state-swap)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="80" y="31" width="80" height="14" rx="3.5" fill="var(--tone-indigo-bg)" stroke="var(--brand)" strokeWidth="1.8" />
+        <text x="120" y="41" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="600" className="font-mono">
+          29
+        </text>
+        <rect x="80" y="13" width="80" height="15" rx="3.5" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="2" />
+        <text x="120" y="23.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
+          TOP → 42
+        </text>
+        {/* Push/Pop labels & arrows */}
+        <text x="34" y="15" textAnchor="middle" fill="var(--state-sorted)" fontSize="8.5" fontWeight="700" className="font-mono">
+          PUSH
+        </text>
+        <path d="M34 19v6h32m-4-3.5 4 3.5-4 3.5" stroke="var(--state-sorted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="206" y="15" textAnchor="middle" fill="var(--state-swap)" fontSize="8.5" fontWeight="700" className="font-mono">
+          POP
+        </text>
+        <path d="M174 25h32v-6m-3.5 3.5 3.5-3.5 3.5 3.5" stroke="var(--state-swap)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
@@ -193,23 +244,26 @@ function renderTopicSvg(slug: string) {
   // 3. Queue / Circular Queue / Deque
   if (slug.includes('queue') || slug === 'deque') {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
-        <line x1="34" y1="14" x2="146" y2="14" stroke="var(--rule-strong)" strokeWidth="2" strokeLinecap="round" />
-        <line x1="34" y1="42" x2="146" y2="42" stroke="var(--rule-strong)" strokeWidth="2" strokeLinecap="round" />
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
+        <line x1="42" y1="18" x2="198" y2="18" stroke="var(--rule-strong)" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="42" y1="58" x2="198" y2="58" stroke="var(--rule-strong)" strokeWidth="2.2" strokeLinecap="round" />
         {[
-          { x: 42, label: '14', border: 'var(--state-swap)', bg: 'var(--tone-rose-bg)' },
-          { x: 76, label: '23', border: 'var(--brand)', bg: 'var(--surface)' },
-          { x: 110, label: '38', border: 'var(--state-sorted)', bg: 'var(--tone-emerald-bg)' },
+          { x: 50, label: '14', sub: 'FRONT', border: 'var(--state-swap)', bg: 'var(--tone-rose-bg)' },
+          { x: 100, label: '23', sub: 'idx 1', border: 'var(--brand)', bg: 'var(--surface)' },
+          { x: 150, label: '38', sub: 'REAR', border: 'var(--state-sorted)', bg: 'var(--tone-emerald-bg)' },
         ].map((item, i) => (
           <g key={i}>
-            <rect x={item.x} y="18" width="28" height="20" rx="4" fill={item.bg} stroke={item.border} strokeWidth="1.6" />
-            <text x={item.x + 14} y="31.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="600" className="font-mono">
+            <rect x={item.x} y="23" width="40" height="30" rx="5" fill={item.bg} stroke={item.border} strokeWidth="2" />
+            <text x={item.x + 20} y="42" textAnchor="middle" fill="var(--ink)" fontSize="12" fontWeight="700" className="font-mono">
               {item.label}
+            </text>
+            <text x={item.x + 20} y="70" textAnchor="middle" fill="var(--ink-2)" fontSize="7.5" fontWeight="700" className="font-mono">
+              {item.sub}
             </text>
           </g>
         ))}
-        <path d="M14 28h18m-3-3 3 3-3 3" stroke="var(--state-sorted)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M148 28h18m-3-3 3 3-3 3" stroke="var(--state-swap)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M14 38h24m-4-3.5 4 3.5-4 3.5" stroke="var(--state-sorted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M202 38h24m-4-3.5 4 3.5-4 3.5" stroke="var(--state-swap)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
@@ -217,29 +271,33 @@ function renderTopicSvg(slug: string) {
   // 4. Hash Table
   if (slug.startsWith('hash-table')) {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {[0, 1, 2].map((row) => (
           <g key={row}>
-            <rect x="28" y={9 + row * 13} width="24" height="11" rx="2" fill="var(--surface)" stroke="var(--brand)" strokeWidth="1.4" />
-            <text x="40" y={17 + row * 13} textAnchor="middle" fill="var(--ink-2)" fontSize="8" className="font-mono">
-              [{row}]
+            <rect x="28" y={10 + row * 20} width="36" height="16" rx="3" fill="var(--surface)" stroke="var(--brand)" strokeWidth="1.75" />
+            <text x="46" y={21 + row * 20} textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
+              #{row}
             </text>
           </g>
         ))}
-        <path d="M52 14.5h22m-3-2.5 3 2.5-3 2.5" stroke="var(--state-current)" strokeWidth="1.5" strokeLinecap="round" />
-        <rect x="76" y="8" width="32" height="13" rx="3" fill="var(--tone-sky-bg)" stroke="var(--state-current)" strokeWidth="1.5" />
-        <text x="92" y="17" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
+        <path d="M64 18h28m-3.5-3 3.5 3-3.5 3" stroke="var(--state-current)" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="95" y="10" width="48" height="16" rx="4" fill="var(--tone-sky-bg)" stroke="var(--state-current)" strokeWidth="1.8" />
+        <text x="119" y="21" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
           k:42
         </text>
-        <path d="M108 14.5h14m-2.5-2.5 2.5 2.5-2.5 2.5" stroke="var(--state-sorted)" strokeWidth="1.5" strokeLinecap="round" />
-        <rect x="124" y="8" width="32" height="13" rx="3" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.5" />
-        <text x="140" y="17" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
+        <path d="M143 18h20m-3.5-3 3.5 3-3.5 3" stroke="var(--state-sorted)" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="166" y="10" width="48" height="16" rx="4" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.8" />
+        <text x="190" y="21" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
           k:17
         </text>
-        <path d="M52 27.5h22m-3-2.5 3 2.5-3 2.5" stroke="var(--state-compare)" strokeWidth="1.5" strokeLinecap="round" />
-        <rect x="76" y="22" width="32" height="13" rx="3" fill="var(--tone-amber-bg)" stroke="var(--state-compare)" strokeWidth="1.5" />
-        <text x="92" y="31" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
+        <path d="M64 38h28m-3.5-3 3.5 3-3.5 3" stroke="var(--state-compare)" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="95" y="30" width="48" height="16" rx="4" fill="var(--tone-amber-bg)" stroke="var(--state-compare)" strokeWidth="1.8" />
+        <text x="119" y="41" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
           k:91
+        </text>
+        <path d="M64 58h28m-3.5-3 3.5 3-3.5 3" stroke="var(--rule-strong)" strokeWidth="1.6" strokeLinecap="round" />
+        <text x="108" y="61" fill="var(--ink-2)" fontSize="9" className="font-mono">
+          null
         </text>
       </svg>
     )
@@ -248,21 +306,21 @@ function renderTopicSvg(slug: string) {
   // 5. Recursion
   if (slug.startsWith('recursion-')) {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
-        <rect x="20" y="8" width="52" height="14" rx="3" fill="var(--tone-indigo-bg)" stroke="var(--brand)" strokeWidth="1.5" />
-        <text x="46" y="18" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
-          f(3)
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
+        <rect x="20" y="8" width="72" height="19" rx="4" fill="var(--tone-indigo-bg)" stroke="var(--brand)" strokeWidth="1.8" />
+        <text x="56" y="20.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
+          call f(3)
         </text>
-        <rect x="64" y="21" width="52" height="14" rx="3" fill="var(--tone-sky-bg)" stroke="var(--state-current)" strokeWidth="1.5" />
-        <text x="90" y="31" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
-          f(2)
+        <rect x="84" y="29" width="72" height="19" rx="4" fill="var(--tone-sky-bg)" stroke="var(--state-current)" strokeWidth="1.8" />
+        <text x="120" y="41.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
+          call f(2)
         </text>
-        <rect x="108" y="34" width="52" height="14" rx="3" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.5" />
-        <text x="134" y="44" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="600" className="font-mono">
-          base: 1
+        <rect x="148" y="50" width="72" height="19" rx="4" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="2" />
+        <text x="184" y="62.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
+          return 1
         </text>
-        <path d="M54 22v6h10" stroke="var(--ink-2)" strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M98 35v6h10" stroke="var(--ink-2)" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M56 27v11h25m-3-3 3 3-3 3" stroke="var(--brand)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M120 48v11h25m-3-3 3 3-3 3" stroke="var(--state-sorted)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
@@ -270,36 +328,54 @@ function renderTopicSvg(slug: string) {
   // 6. Searching (Linear, Binary, Jump, Interpolation, Exponential)
   if (slug.endsWith('-search') && !slug.startsWith('bst') && !slug.startsWith('trie')) {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {[
-          { x: 16, v: '3', muted: true },
-          { x: 44, v: '7', muted: true },
-          { x: 72, v: '12', active: true },
-          { x: 100, v: '19', compare: true },
-          { x: 128, v: '25', muted: false },
+          { x: 16, v: '3', muted: true, tag: '' },
+          { x: 52, v: '7', muted: true, tag: '' },
+          { x: 88, v: '12', compare: true, tag: 'lo' },
+          { x: 124, v: '19', active: true, tag: 'mid' },
+          { x: 160, v: '25', compare: true, tag: '' },
+          { x: 196, v: '31', compare: true, tag: 'hi' },
         ].map((cell, idx) => (
           <g key={idx}>
             <rect
               x={cell.x}
-              y="14"
-              width="24"
-              height="22"
-              rx="4"
+              y="16"
+              width="30"
+              height="30"
+              rx="5"
               fill={cell.active ? 'var(--tone-emerald-bg)' : cell.compare ? 'var(--tone-sky-bg)' : 'var(--surface)'}
               stroke={cell.active ? 'var(--state-sorted)' : cell.compare ? 'var(--state-current)' : 'var(--rule-strong)'}
-              strokeWidth={cell.active || cell.compare ? '1.8' : '1.3'}
-              opacity={cell.muted ? 0.55 : 1}
+              strokeWidth={cell.active ? '2.2' : cell.compare ? '1.8' : '1.4'}
+              opacity={cell.muted ? 0.45 : 1}
             />
-            <text x={cell.x + 12} y="28.5" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="600" className="font-mono" opacity={cell.muted ? 0.6 : 1}>
+            <text
+              x={cell.x + 15}
+              y="35"
+              textAnchor="middle"
+              fill="var(--ink)"
+              fontSize="11.5"
+              fontWeight="700"
+              className="font-mono"
+              opacity={cell.muted ? 0.55 : 1}
+            >
               {cell.v}
             </text>
+            {cell.tag && (
+              <text
+                x={cell.x + 15}
+                y="62"
+                textAnchor="middle"
+                fill={cell.active ? 'var(--state-sorted)' : 'var(--state-current)'}
+                fontSize="9.5"
+                fontWeight="700"
+                className="font-mono"
+              >
+                ↑ {cell.tag}
+              </text>
+            )}
           </g>
         ))}
-        {/* Mid pointer indicator */}
-        <path d="M84 46v-7m-3 3 3-3 3 3" stroke="var(--state-sorted)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <text x="84" y="53" textAnchor="middle" fill="var(--state-sorted)" fontSize="8" fontWeight="700" className="font-mono">
-          mid
-        </text>
       </svg>
     )
   }
@@ -307,35 +383,39 @@ function renderTopicSvg(slug: string) {
   // 7. Sorting (Bubble, Selection, Insertion, Shell, Merge, Quick, Heap, Counting, Radix)
   if (slug.endsWith('-sort') && slug !== 'topological-sort') {
     const bars = [
-      { h: 16, fill: 'var(--state-sorted)', stroke: 'var(--state-sorted)' },
-      { h: 24, fill: 'var(--state-sorted)', stroke: 'var(--state-sorted)' },
-      { h: 38, fill: 'var(--state-compare)', stroke: 'var(--state-compare)' },
-      { h: 28, fill: 'var(--state-swap)', stroke: 'var(--state-swap)' },
-      { h: 20, fill: 'var(--surface)', stroke: 'var(--state-current)' },
-      { h: 34, fill: 'var(--surface)', stroke: 'var(--rule-strong)' },
-      { h: 42, fill: 'var(--tone-indigo-bg)', stroke: 'var(--brand)' },
+      { h: 20, val: '2', fill: 'var(--tone-emerald-bg)', stroke: 'var(--state-sorted)' },
+      { h: 30, val: '4', fill: 'var(--tone-emerald-bg)', stroke: 'var(--state-sorted)' },
+      { h: 50, val: '9', fill: 'var(--tone-amber-bg)', stroke: 'var(--state-compare)' },
+      { h: 36, val: '6', fill: 'var(--tone-rose-bg)', stroke: 'var(--state-swap)' },
+      { h: 25, val: '3', fill: 'var(--surface)', stroke: 'var(--state-current)' },
+      { h: 44, val: '8', fill: 'var(--surface)', stroke: 'var(--rule-strong)' },
+      { h: 56, val: '11', fill: 'var(--tone-indigo-bg)', stroke: 'var(--brand)' },
     ]
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {bars.map((bar, i) => {
-          const x = 22 + i * 20
-          const y = 48 - bar.h
+          const x = 24 + i * 28
+          const y = 68 - bar.h
           return (
-            <rect
-              key={i}
-              x={x}
-              y={y}
-              width="14"
-              height={bar.h}
-              rx="3"
-              fill={bar.fill}
-              stroke={bar.stroke}
-              strokeWidth="1.5"
-            />
+            <g key={i}>
+              <rect
+                x={x}
+                y={y}
+                width="20"
+                height={bar.h}
+                rx="4"
+                fill={bar.fill}
+                stroke={bar.stroke}
+                strokeWidth="1.8"
+              />
+              <text x={x + 10} y={y + 13} textAnchor="middle" fill="var(--ink)" fontSize="9" fontWeight="700" className="font-mono">
+                {bar.val}
+              </text>
+            </g>
           )
         })}
         {/* Swap arc over bars 2 and 3 */}
-        <path d="M69 8c4-5 16-5 20 0" stroke="var(--state-swap)" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M90 12c6-7 22-7 28 0" stroke="var(--state-swap)" strokeWidth="2" strokeLinecap="round" />
       </svg>
     )
   }
@@ -343,31 +423,41 @@ function renderTopicSvg(slug: string) {
   // 8. Two-Pointer / Sliding Window / Prefix Sum
   if (slug === 'two-pointer' || slug.startsWith('sliding-window') || slug === 'prefix-sum') {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {/* Highlighted window bracket */}
-        <rect x="42" y="11" width="76" height="28" rx="6" fill="var(--tone-violet-bg)" stroke="var(--category-3)" strokeWidth="1.6" strokeDasharray="4 2" />
-        {[18, 46, 72, 98, 126].map((x, i) => (
+        <rect
+          x="52"
+          y="12"
+          width="104"
+          height="40"
+          rx="7"
+          fill="var(--tone-violet-bg)"
+          stroke="var(--category-3)"
+          strokeWidth="2"
+          strokeDasharray="5 2.5"
+        />
+        {[20, 56, 90, 124, 160, 194].map((x, i) => (
           <g key={i}>
             <rect
               x={x}
-              y="15"
-              width="20"
-              height="20"
-              rx="3.5"
+              y="18"
+              width="28"
+              height="28"
+              rx="4.5"
               fill={i >= 1 && i <= 3 ? 'var(--surface)' : 'var(--surface-sunk)'}
               stroke={i >= 1 && i <= 3 ? 'var(--brand)' : 'var(--rule-strong)'}
-              strokeWidth="1.4"
+              strokeWidth={i >= 1 && i <= 3 ? '1.8' : '1.4'}
             />
-            <text x={x + 10} y="28.5" textAnchor="middle" fill="var(--ink)" fontSize="9" fontWeight="600" className="font-mono">
-              {[2, 5, 1, 8, 3][i]}
+            <text x={x + 14} y="36" textAnchor="middle" fill="var(--ink)" fontSize="11" fontWeight="700" className="font-mono">
+              {[2, 5, 1, 8, 3, 6][i]}
             </text>
           </g>
         ))}
-        <text x="56" y="50" textAnchor="middle" fill="var(--brand)" fontSize="8.5" fontWeight="700" className="font-mono">
-          L
+        <text x="70" y="66" textAnchor="middle" fill="var(--brand)" fontSize="9.5" fontWeight="700" className="font-mono">
+          ↑ L
         </text>
-        <text x="108" y="50" textAnchor="middle" fill="var(--state-swap)" fontSize="8.5" fontWeight="700" className="font-mono">
-          R
+        <text x="138" y="66" textAnchor="middle" fill="var(--state-swap)" fontSize="9.5" fontWeight="700" className="font-mono">
+          ↑ R
         </text>
       </svg>
     )
@@ -375,29 +465,38 @@ function renderTopicSvg(slug: string) {
 
   // 9. DP / Backtracking / Divide & Conquer / Greedy
   if (slug.startsWith('dp-') || slug === 'backtracking' || slug === 'divide-and-conquer' || slug === 'greedy') {
+    const vals = [
+      ['0', '1', '1', '2'],
+      ['1', '2', '3', '5'],
+      ['1', '3', '6', '11'],
+    ]
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {[0, 1, 2].map((r) =>
           [0, 1, 2, 3].map((c) => {
             const isTarget = r === 2 && c === 3
             const isDep = (r === 1 && c === 3) || (r === 2 && c === 2)
+            const x = 44 + c * 38
+            const y = 9 + r * 20
             return (
-              <rect
-                key={`${r}-${c}`}
-                x={38 + c * 26}
-                y={7 + r * 14}
-                width="23"
-                height="12"
-                rx="2.5"
-                fill={isTarget ? 'var(--tone-emerald-bg)' : isDep ? 'var(--tone-violet-bg)' : 'var(--surface)'}
-                stroke={isTarget ? 'var(--state-sorted)' : isDep ? 'var(--category-3)' : 'var(--rule-strong)'}
-                strokeWidth={isTarget || isDep ? '1.6' : '1.2'}
-              />
+              <g key={`${r}-${c}`}>
+                <rect
+                  x={x}
+                  y={y}
+                  width="34"
+                  height="17"
+                  rx="3.5"
+                  fill={isTarget ? 'var(--tone-emerald-bg)' : isDep ? 'var(--tone-violet-bg)' : 'var(--surface)'}
+                  stroke={isTarget ? 'var(--state-sorted)' : isDep ? 'var(--category-3)' : 'var(--rule-strong)'}
+                  strokeWidth={isTarget ? '2' : isDep ? '1.8' : '1.3'}
+                />
+                <text x={x + 17} y={y + 11.5} textAnchor="middle" fill="var(--ink)" fontSize="9" fontWeight="700" className="font-mono">
+                  {vals[r][c]}
+                </text>
+              </g>
             )
           }),
         )}
-        <path d="M106 41h8" stroke="var(--state-sorted)" strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M127 31v4" stroke="var(--state-sorted)" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
     )
   }
@@ -413,81 +512,101 @@ function renderTopicSvg(slug: string) {
   ) {
     const isRB = slug.startsWith('rb-')
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {/* Edges */}
-        <line x1="90" y1="13" x2="54" y2="29" stroke="var(--rule-strong)" strokeWidth="1.75" />
-        <line x1="90" y1="13" x2="126" y2="29" stroke="var(--state-sorted)" strokeWidth="1.75" />
-        <line x1="54" y1="29" x2="36" y2="45" stroke="var(--rule-strong)" strokeWidth="1.5" />
-        <line x1="54" y1="29" x2="72" y2="45" stroke="var(--rule-strong)" strokeWidth="1.5" />
-        <line x1="126" y1="29" x2="108" y2="45" stroke="var(--state-sorted)" strokeWidth="1.5" />
-        <line x1="126" y1="29" x2="144" y2="45" stroke="var(--rule-strong)" strokeWidth="1.5" />
+        <line x1="120" y1="16" x2="72" y2="39" stroke="var(--rule-strong)" strokeWidth="2" />
+        <line x1="120" y1="16" x2="168" y2="39" stroke="var(--state-sorted)" strokeWidth="2.2" />
+        <line x1="72" y1="39" x2="46" y2="62" stroke="var(--rule-strong)" strokeWidth="1.8" />
+        <line x1="72" y1="39" x2="98" y2="62" stroke="var(--rule-strong)" strokeWidth="1.8" />
+        <line x1="168" y1="39" x2="142" y2="62" stroke="var(--state-sorted)" strokeWidth="2" />
+        <line x1="168" y1="39" x2="194" y2="62" stroke="var(--rule-strong)" strokeWidth="1.8" />
 
         {/* Root */}
-        <circle cx="90" cy="13" r="8" fill={isRB ? 'var(--ink)' : 'var(--tone-emerald-bg)'} stroke={isRB ? 'var(--ink)' : 'var(--state-sorted)'} strokeWidth="1.75" />
-        <text x="90" y="16" textAnchor="middle" fill={isRB ? 'var(--paper)' : 'var(--ink)'} fontSize="8.5" fontWeight="700" className="font-mono">
+        <circle cx="120" cy="16" r="11" fill={isRB ? 'var(--ink)' : 'var(--tone-emerald-bg)'} stroke={isRB ? 'var(--ink)' : 'var(--state-sorted)'} strokeWidth="2" />
+        <text x="120" y="19.5" textAnchor="middle" fill={isRB ? 'var(--paper)' : 'var(--ink)'} fontSize="10" fontWeight="700" className="font-mono">
           20
         </text>
         {/* Level 2 */}
-        <circle cx="54" cy="29" r="7.5" fill={isRB ? 'var(--tone-rose-bg)' : 'var(--surface)'} stroke={isRB ? 'var(--state-swap)' : 'var(--state-current)'} strokeWidth="1.6" />
-        <text x="54" y="32" textAnchor="middle" fill="var(--ink)" fontSize="8" fontWeight="600" className="font-mono">
+        <circle cx="72" cy="39" r="10.5" fill={isRB ? 'var(--tone-rose-bg)' : 'var(--surface)'} stroke={isRB ? 'var(--state-swap)' : 'var(--state-current)'} strokeWidth="2" />
+        <text x="72" y="42.5" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
           10
         </text>
-        <circle cx="126" cy="29" r="7.5" fill="var(--tone-amber-bg)" stroke="var(--state-compare)" strokeWidth="1.6" />
-        <text x="126" y="32" textAnchor="middle" fill="var(--ink)" fontSize="8" fontWeight="600" className="font-mono">
+        <circle cx="168" cy="39" r="10.5" fill="var(--tone-amber-bg)" stroke="var(--state-compare)" strokeWidth="2" />
+        <text x="168" y="42.5" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
           30
         </text>
         {/* Leaves */}
-        <circle cx="36" cy="45" r="5.5" fill="var(--surface)" stroke="var(--rule-strong)" strokeWidth="1.4" />
-        <circle cx="72" cy="45" r="5.5" fill="var(--surface)" stroke="var(--rule-strong)" strokeWidth="1.4" />
-        <circle cx="108" cy="45" r="6" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.6" />
-        <circle cx="144" cy="45" r="5.5" fill="var(--surface)" stroke="var(--rule-strong)" strokeWidth="1.4" />
+        <circle cx="46" cy="62" r="8" fill="var(--surface)" stroke="var(--rule-strong)" strokeWidth="1.6" />
+        <text x="46" y="65" textAnchor="middle" fill="var(--ink-2)" fontSize="8" fontWeight="600" className="font-mono">
+          5
+        </text>
+        <circle cx="98" cy="62" r="8" fill="var(--surface)" stroke="var(--rule-strong)" strokeWidth="1.6" />
+        <text x="98" y="65" textAnchor="middle" fill="var(--ink-2)" fontSize="8" fontWeight="600" className="font-mono">
+          15
+        </text>
+        <circle cx="142" cy="62" r="8.5" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="2" />
+        <text x="142" y="65" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="700" className="font-mono">
+          25
+        </text>
+        <circle cx="194" cy="62" r="8" fill="var(--surface)" stroke="var(--rule-strong)" strokeWidth="1.6" />
+        <text x="194" y="65" textAnchor="middle" fill="var(--ink-2)" fontSize="8" fontWeight="600" className="font-mono">
+          35
+        </text>
       </svg>
     )
   }
 
   // 11. Grid Pathfinding & Maze Algorithms
   if (slug.startsWith('grid-') || slug.startsWith('maze-')) {
-    const pathCells = new Set(['0-0', '0-1', '1-1', '1-2', '2-2', '2-4'])
-    const wallCells = new Set(['0-2', '1-3', '2-1'])
+    const pathCells = new Set(['0-0', '0-1', '1-1', '1-2', '2-2', '2-3', '2-4'])
+    const wallCells = new Set(['0-2', '1-3', '2-1', '0-4'])
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {[0, 1, 2].map((r) =>
-          [0, 1, 2, 3, 4].map((c) => {
+          [0, 1, 2, 3, 4, 5].map((c) => {
             const key = `${r}-${c}`
             const isStart = r === 0 && c === 0
             const isGoal = r === 2 && c === 4
             const isWall = wallCells.has(key)
             const isPath = pathCells.has(key)
+            const x = 44 + c * 26
+            const y = 8 + r * 21
             return (
-              <rect
-                key={key}
-                x={44 + c * 18}
-                y={6 + r * 15}
-                width="15"
-                height="13"
-                rx="2.5"
-                fill={
-                  isStart
-                    ? 'var(--tone-sky-bg)'
-                    : isGoal
-                      ? 'var(--tone-emerald-bg)'
-                      : isWall
-                        ? 'var(--state-neutral)'
+              <g key={key}>
+                <rect
+                  x={x}
+                  y={y}
+                  width="22"
+                  height="18"
+                  rx="3.5"
+                  fill={
+                    isStart
+                      ? 'var(--tone-sky-bg)'
+                      : isGoal
+                        ? 'var(--tone-emerald-bg)'
+                        : isWall
+                          ? 'var(--state-neutral)'
+                          : isPath
+                            ? 'var(--tone-amber-bg)'
+                            : 'var(--surface)'
+                  }
+                  stroke={
+                    isStart
+                      ? 'var(--state-current)'
+                      : isGoal
+                        ? 'var(--state-sorted)'
                         : isPath
-                          ? 'var(--tone-amber-bg)'
-                          : 'var(--surface)'
-                }
-                stroke={
-                  isStart
-                    ? 'var(--state-current)'
-                    : isGoal
-                      ? 'var(--state-sorted)'
-                      : isPath
-                        ? 'var(--state-compare)'
-                        : 'var(--rule-strong)'
-                }
-                strokeWidth="1.3"
-              />
+                          ? 'var(--state-compare)'
+                          : 'var(--rule-strong)'
+                  }
+                  strokeWidth={isStart || isGoal || isPath ? '1.8' : '1.3'}
+                />
+                {(isStart || isGoal) && (
+                  <text x={x + 11} y={y + 12} textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="700" className="font-mono">
+                    {isStart ? 'S' : 'G'}
+                  </text>
+                )}
+              </g>
             )
           }),
         )}
@@ -509,33 +628,33 @@ function renderTopicSvg(slug: string) {
     slug === 'topological-sort'
   ) {
     return (
-      <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
         {/* Graph edges */}
-        <line x1="36" y1="28" x2="76" y2="13" stroke="var(--state-sorted)" strokeWidth="2" />
-        <line x1="36" y1="28" x2="76" y2="43" stroke="var(--rule-strong)" strokeWidth="1.5" />
-        <line x1="76" y1="13" x2="112" y2="28" stroke="var(--state-sorted)" strokeWidth="2" />
-        <line x1="76" y1="43" x2="112" y2="28" stroke="var(--state-compare)" strokeWidth="1.75" />
-        <line x1="112" y1="28" x2="146" y2="28" stroke="var(--state-sorted)" strokeWidth="2" />
+        <line x1="42" y1="38" x2="96" y2="16" stroke="var(--state-sorted)" strokeWidth="2.4" />
+        <line x1="42" y1="38" x2="96" y2="60" stroke="var(--rule-strong)" strokeWidth="1.8" />
+        <line x1="96" y1="16" x2="148" y2="38" stroke="var(--state-sorted)" strokeWidth="2.4" />
+        <line x1="96" y1="60" x2="148" y2="38" stroke="var(--state-compare)" strokeWidth="2" strokeDasharray="4 2" />
+        <line x1="148" y1="38" x2="198" y2="38" stroke="var(--state-sorted)" strokeWidth="2.4" />
 
         {/* Vertices */}
-        <circle cx="36" cy="28" r="8" fill="var(--tone-sky-bg)" stroke="var(--state-current)" strokeWidth="1.75" />
-        <text x="36" y="31" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="700" className="font-mono">
+        <circle cx="42" cy="38" r="11" fill="var(--tone-sky-bg)" stroke="var(--state-current)" strokeWidth="2" />
+        <text x="42" y="41.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
           A
         </text>
-        <circle cx="76" cy="13" r="8" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.75" />
-        <text x="76" y="16" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="700" className="font-mono">
+        <circle cx="96" cy="16" r="11" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="2" />
+        <text x="96" y="19.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
           B
         </text>
-        <circle cx="76" cy="43" r="7.5" fill="var(--surface)" stroke="var(--state-compare)" strokeWidth="1.6" />
-        <text x="76" y="46" textAnchor="middle" fill="var(--ink)" fontSize="8" fontWeight="600" className="font-mono">
+        <circle cx="96" cy="60" r="10.5" fill="var(--surface)" stroke="var(--state-compare)" strokeWidth="2" />
+        <text x="96" y="63.5" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="700" className="font-mono">
           C
         </text>
-        <circle cx="112" cy="28" r="8" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="1.75" />
-        <text x="112" y="31" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="700" className="font-mono">
+        <circle cx="148" cy="38" r="11" fill="var(--tone-emerald-bg)" stroke="var(--state-sorted)" strokeWidth="2" />
+        <text x="148" y="41.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
           D
         </text>
-        <circle cx="146" cy="28" r="8" fill="var(--tone-rose-bg)" stroke="var(--state-swap)" strokeWidth="1.75" />
-        <text x="146" y="31" textAnchor="middle" fill="var(--ink)" fontSize="8.5" fontWeight="700" className="font-mono">
+        <circle cx="198" cy="38" r="11" fill="var(--tone-rose-bg)" stroke="var(--state-swap)" strokeWidth="2" />
+        <text x="198" y="41.5" textAnchor="middle" fill="var(--ink)" fontSize="10" fontWeight="700" className="font-mono">
           E
         </text>
       </svg>
@@ -546,20 +665,20 @@ function renderTopicSvg(slug: string) {
   const isInsert = slug === 'array-insert'
   const isDelete = slug === 'array-delete'
   return (
-    <svg viewBox="0 0 180 56" className="h-full w-full" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 240 76" className="h-full w-full" fill="none" aria-hidden="true">
       {[
-        { x: 20, val: '10', idx: '0', highlight: false },
-        { x: 54, val: '24', idx: '1', highlight: false },
-        { x: 88, val: isInsert ? '+18' : isDelete ? '×' : '37', idx: '2', highlight: true },
-        { x: 122, val: '51', idx: '3', highlight: false },
+        { x: 24, val: '10', idx: '0', highlight: false },
+        { x: 74, val: '24', idx: '1', highlight: false },
+        { x: 124, val: isInsert ? '+18' : isDelete ? '×' : '37', idx: '2', highlight: true },
+        { x: 174, val: '51', idx: '3', highlight: false },
       ].map((cell) => (
         <g key={cell.idx}>
           <rect
             x={cell.x}
-            y="12"
-            width="30"
-            height="24"
-            rx="4"
+            y="14"
+            width="42"
+            height="34"
+            rx="5.5"
             fill={
               cell.highlight
                 ? isDelete
@@ -578,12 +697,12 @@ function renderTopicSvg(slug: string) {
                     : 'var(--brand)'
                 : 'var(--rule-strong)'
             }
-            strokeWidth={cell.highlight ? '1.8' : '1.4'}
+            strokeWidth={cell.highlight ? '2.2' : '1.6'}
           />
-          <text x={cell.x + 15} y="27.5" textAnchor="middle" fill="var(--ink)" fontSize="9.5" fontWeight="600" className="font-mono">
+          <text x={cell.x + 21} y="35.5" textAnchor="middle" fill="var(--ink)" fontSize="12" fontWeight="700" className="font-mono">
             {cell.val}
           </text>
-          <text x={cell.x + 15} y="47" textAnchor="middle" fill="var(--ink-2)" fontSize="8" className="font-mono">
+          <text x={cell.x + 21} y="62" textAnchor="middle" fill="var(--ink-2)" fontSize="9" fontWeight="600" className="font-mono">
             [{cell.idx}]
           </text>
         </g>
@@ -604,15 +723,18 @@ export function TopicArtwork({
     <div
       aria-hidden="true"
       className={cn(
-        'relative flex h-14 w-full items-center justify-center overflow-hidden rounded-sm border bg-surface-sunk px-2',
+        'relative flex h-24 w-full items-center justify-center overflow-hidden rounded-sm border bg-surface-sunk px-3',
         className,
       )}
       style={{
         borderColor: theme.border,
-        backgroundColor: 'color-mix(in srgb, ' + theme.bg + ' 45%, var(--surface-sunk))',
+        backgroundColor: 'color-mix(in srgb, ' + theme.bg + ' 60%, var(--surface-sunk))',
+        backgroundImage:
+          'radial-gradient(color-mix(in srgb, ' + theme.accent + ' 22%, transparent) 1px, transparent 1px)',
+        backgroundSize: '14px 14px',
       }}
     >
-      {renderTopicSvg(slug)}
+      <div className="h-full w-full max-w-[260px] py-1">{renderTopicSvg(slug)}</div>
     </div>
   )
 }

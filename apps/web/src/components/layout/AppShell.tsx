@@ -16,6 +16,7 @@ import AccountIdentity from './AccountIdentity'
 import { AccountStatusRows } from './AccountStatusRows'
 import { CommandPalette } from './CommandPalette'
 import { CurriculumPanel } from '@/components/curriculum/CurriculumPanel'
+import { ModuleIcon, getModuleTheme } from '@/components/home/TopicArtwork'
 import { ShellNavigation, useShellNavigate } from './shellNavigation'
 import { ScaffoldingChip } from './ScaffoldingChip'
 import { StudyChip } from './StudyChip'
@@ -186,8 +187,10 @@ function NavLink({ to, active, children }: { to: string; active: boolean; childr
         go(to)
       }}
       className={cn(
-        'relative inline-flex h-14 items-center gap-1.5 px-1.5 text-small font-medium transition-colors duration-quick',
-        active ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-brand' : 'text-ink-2 hover:text-ink'
+        'relative inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-small font-medium transition-colors duration-quick',
+        active
+          ? 'bg-brand-soft font-semibold text-brand ring-1 ring-brand/25'
+          : 'text-ink-2 hover:bg-surface-sunk hover:text-ink',
       )}
     >
       {children}
@@ -236,8 +239,10 @@ function ModulesMenu({ active }: { active: boolean }) {
           type="button"
           aria-current={active ? 'page' : undefined}
           className={cn(
-            'relative inline-flex h-14 items-center gap-1.5 px-1.5 text-small font-medium transition-colors duration-quick',
-            active ? 'text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-brand' : 'text-ink-2 hover:text-ink'
+            'relative inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-small font-medium transition-colors duration-quick',
+            active
+              ? 'bg-brand-soft font-semibold text-brand ring-1 ring-brand/25'
+              : 'text-ink-2 hover:bg-surface-sunk hover:text-ink',
           )}
         >
           <ModulesNavIcon />
@@ -245,13 +250,31 @@ function ModulesMenu({ active }: { active: boolean }) {
           <ChevronDownIcon />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-64">
-        {MODULES.map((module) => (
-          <DropdownMenuItem key={module.id} onSelect={() => go(`/module/${module.number}`)}>
-            <span className="w-16 shrink-0 text-mono-sm text-ink-2">Module {module.number}</span>
-            {module.title}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="start" className="min-w-72 p-1.5">
+        {MODULES.map((module) => {
+          const theme = getModuleTheme(module.number)
+          return (
+            <DropdownMenuItem
+              key={module.id}
+              onSelect={() => go(`/module/${module.number}`)}
+              className="flex items-center gap-2.5 rounded-sm px-2.5 py-2"
+            >
+              <ModuleIcon moduleNumber={module.number} className="size-7" />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="rounded px-1.5 py-0.2 font-mono text-[10px] font-bold"
+                    style={{ backgroundColor: theme.bg, color: theme.fg }}
+                  >
+                    M{module.number}
+                  </span>
+                  <span className="truncate text-small font-medium text-ink">{module.title}</span>
+                </div>
+                <span className="truncate text-micro text-ink-2">{module.topics.length} topics</span>
+              </div>
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -384,15 +407,15 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
         </a>
       )}
       <div className="sticky top-0 z-30 w-full shrink-0">
-        <header className="flex h-14 w-full items-center gap-4 border-b border-rule bg-surface px-4 md:px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-6">
+        <header className="flex h-15 w-full items-center gap-4 border-t-2 border-b border-rule border-t-brand bg-surface px-4 shadow-e1 md:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-5">
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label="Open curriculum"
               aria-haspopup="dialog"
               aria-expanded={drawerOpen}
-              className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-sm text-ink-2 hover:bg-surface-sunk hover:text-ink lg:hidden"
+              className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-sm border border-rule bg-surface-sunk text-ink-2 hover:border-brand hover:text-ink lg:hidden"
             >
               <svg viewBox="0 0 16 16" className="size-4" aria-hidden="true">
                 <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -401,8 +424,9 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
             {/* Not a link: Home is the first nav item, and a second way home
                 would spend one of the bar's seven interactive elements. The
                 descriptor hides below 1024px; the wordmark stays. */}
-            <DSATutorLogo variant="dark" taglineClassName="hidden lg:block" className="shrink-0" />
-            <nav aria-label="Main" className="flex items-center gap-5">
+            <DSATutorLogo variant="dark" taglineClassName="hidden xl:block" className="shrink-0" />
+            <span aria-hidden="true" className="hidden h-6 w-px bg-rule lg:block" />
+            <nav aria-label="Main" className="flex items-center gap-1.5">
               {/* Rendered conditionally, not hidden with CSS, so the menu's
                   arrow-key order never holds an item that is not there. */}
               {isEducator && !isTooSmall && <RoleSwitcher educatorView={pathname.startsWith('/educator')} />}
@@ -452,10 +476,12 @@ export function AppTopBar({ context, onNavigate, currentTopicName = null }: AppT
               aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
               // Secondary weight: it opens the command palette, it is not a
               // live input, and it should not be the heaviest thing in the bar.
-              className="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm border border-rule-strong bg-surface-sunk px-2.5 text-small whitespace-nowrap text-ink-2 transition-colors duration-quick hover:border-ink-2 hover:text-ink"
+              className="inline-flex h-9 shrink-0 items-center gap-2.5 rounded-md border border-rule-strong bg-surface-sunk/80 px-3 text-small whitespace-nowrap text-ink-2 transition-colors duration-quick hover:border-brand hover:bg-surface hover:text-ink"
             >
-              <SearchIcon />
-              <span className="hidden lg:inline">Search topics</span>
+              <span className="text-brand">
+                <SearchIcon />
+              </span>
+              <span className="hidden lg:inline">Search topics...</span>
               <Kbd className="hidden sm:inline-flex">{shortcut}</Kbd>
             </button>
             <ThemeToggle />

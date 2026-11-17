@@ -8,13 +8,6 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
  * working engine rather than a landing page. Three marketing bullets claimed
  * that; a trace demonstrates it in about four seconds, which is roughly how
  * long a panel member looks at a login screen.
- *
- * Monospace throughout, because every line of it is data. No brand colour:
- * the design rule is that brand never appears inside a canvas, and this is
- * a canvas in everything but name. Colours are the --ink / --paper pair, so
- * the panel inverts with the theme the way the tooltip already does, rather
- * than being pinned dark with a literal that utils/themeTokens.test.ts
- * rightly rejects.
  */
 
 const DATA = [1, 3, 5, 7, 9, 11, 13, 15]
@@ -37,14 +30,14 @@ function frames(): Frame[] {
     const mid = Math.floor((lo + hi) / 2)
     const value = DATA[mid]
     if (value === TARGET) {
-      out.push({ lo, hi, mid, verdict: `arr[${mid}] = ${value}, found`, done: true })
+      out.push({ lo, hi, mid, verdict: `arr[${mid}] = ${value} == ${TARGET} (Target found!)`, done: true })
       break
     }
     if (value < TARGET) {
-      out.push({ lo, hi, mid, verdict: `arr[${mid}] = ${value} < ${TARGET}, go right` })
+      out.push({ lo, hi, mid, verdict: `arr[${mid}] = ${value} < ${TARGET} → discard left half` })
       lo = mid + 1
     } else {
-      out.push({ lo, hi, mid, verdict: `arr[${mid}] = ${value} > ${TARGET}, go left` })
+      out.push({ lo, hi, mid, verdict: `arr[${mid}] = ${value} > ${TARGET} → discard right half` })
       hi = mid - 1
     }
   }
@@ -60,9 +53,6 @@ export default function AuthTrace() {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
-    // Reduced motion gets the solved state outright: a loop that restarts
-    // every few seconds in the corner of the eye is exactly what that
-    // preference is asking not to see.
     if (reducedMotion) {
       setIndex(FRAMES.length - 1)
       return
@@ -75,29 +65,65 @@ export default function AuthTrace() {
   const frame = FRAMES[index]
 
   return (
-    <figure className="flex flex-col gap-3" aria-label={`Binary search for ${TARGET}: ${frame.verdict}`}>
-      <figcaption className="font-mono text-[11px] tracking-[0.02em] text-paper/45">
-        binary search, target {TARGET}
-      </figcaption>
+    <figure
+      className="flex flex-col gap-3 rounded-md border border-paper/15 bg-paper/[0.06] p-4"
+      aria-label={`Binary search for ${TARGET}: ${frame.verdict}`}
+    >
+      <div className="flex items-center justify-between border-b border-paper/10 pb-2.5">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1" aria-hidden="true">
+            <span className="size-2 rounded-full bg-state-swap opacity-80" />
+            <span className="size-2 rounded-full bg-state-compare opacity-80" />
+            <span className="size-2 rounded-full bg-state-sorted opacity-80" />
+          </span>
+          <figcaption className="font-mono text-[11px] font-semibold tracking-[0.02em] text-paper/80">
+            binary_search(arr, target={TARGET})
+          </figcaption>
+        </div>
+        <span
+          aria-hidden="true"
+          className="rounded-full border border-paper/15 bg-paper/[0.08] px-2 py-0.5 font-mono text-[10px] text-paper/75"
+        >
+          Step {index + 1} of {FRAMES.length}
+        </span>
+      </div>
 
-      <div className="flex gap-1" aria-hidden="true">
+      <div className="flex gap-1.5 pt-1" aria-hidden="true">
         {DATA.map((value, position) => {
           const inRange = position >= frame.lo && position <= frame.hi
           const isMid = position === frame.mid
+          const isLo = position === frame.lo
+          const isHi = position === frame.hi
           return (
-            <div
-              key={position}
-              className={[
-                'flex h-9 flex-1 items-center justify-center rounded-[3px] font-mono text-[12px] transition-all duration-300',
-                isMid
-                  ? 'bg-paper text-ink'
-                  : inRange
-                    ? 'bg-paper/[0.14] text-paper/80'
-                    : 'bg-paper/[0.04] text-paper/25',
-                isMid && frame.done ? 'ring-2 ring-paper/60' : '',
-              ].join(' ')}
-            >
-              {value}
+            <div key={position} className="flex flex-1 flex-col items-center gap-1">
+              <div
+                className={[
+                  'flex h-10 w-full items-center justify-center rounded-sm border font-mono text-[12px] font-bold transition-all duration-300',
+                  isMid && frame.done
+                    ? 'border-state-sorted bg-state-sorted text-state-sorted-ink shadow-sm'
+                    : isMid
+                      ? 'border-state-compare bg-state-compare text-state-compare-ink shadow-sm'
+                      : inRange
+                        ? 'border-paper/25 bg-paper/[0.14] text-paper'
+                        : 'border-paper/5 bg-paper/[0.03] text-paper/25',
+                ].join(' ')}
+              >
+                {value}
+              </div>
+              <span
+                className={[
+                  'h-3.5 font-mono text-[9px] font-bold',
+                  isMid
+                    ? frame.done
+                      ? 'text-state-sorted'
+                      : 'text-state-compare'
+                    : isLo || isHi
+                      ? 'text-paper/70'
+                      : 'text-transparent',
+                ].join(' ')}
+              >
+                {isMid ? 'mid' : isLo ? 'lo' : isHi ? 'hi' : '·'}
+              </span>
             </div>
           )
         })}
@@ -105,9 +131,18 @@ export default function AuthTrace() {
 
       {/* Fixed height: the verdict lines differ in length, and a box that
           resizes each step makes the whole panel twitch. */}
-      <p className="flex h-5 items-center font-mono text-[11px] text-paper/70" aria-hidden="true">
-        {frame.verdict}
-      </p>
+      <div
+        className="flex h-7 items-center gap-2 rounded-sm border border-paper/10 bg-paper/[0.05] px-2.5 font-mono text-[11px] text-paper/85"
+        aria-hidden="true"
+      >
+        <span
+          className={[
+            'size-2 shrink-0 rounded-full',
+            frame.done ? 'bg-state-sorted' : 'bg-state-compare',
+          ].join(' ')}
+        />
+        <span className="truncate">{frame.verdict}</span>
+      </div>
     </figure>
   )
 }
