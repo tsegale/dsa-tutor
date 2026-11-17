@@ -28,24 +28,24 @@ const FIGURES = [
 
 const PILLARS = [
   {
-    title: 'Critical Junction Predictions',
-    desc: 'Pauses at key algorithmic decisions so you predict the next step before it runs.',
+    title: 'Critical Junctions',
+    desc: 'Predict key decisions before steps run.',
   },
   {
-    title: 'Counterfactual Mistake Replay',
-    desc: 'Animates the exact consequence of a wrong choice and gives Socratic hints.',
+    title: 'Mistake Replay',
+    desc: 'See what wrong choices cause on canvas.',
   },
   {
-    title: 'Hands-On & Live Python Mode',
-    desc: 'Manipulate structures directly on the canvas or write real Python in your browser.',
+    title: 'Python & Hands-On',
+    desc: 'Drag elements or code live in browser.',
   },
 ] as const
 
 const inputWithIconClassName =
-  'w-full rounded-md border border-rule bg-surface py-2 pr-3 pl-9 text-body text-ink outline-none transition-colors placeholder:text-ink-placeholder focus:border-brand focus:ring-2 focus:ring-brand/20'
+  'w-full rounded-md border border-rule bg-surface py-1.5 pr-3 pl-9 text-small text-ink outline-none transition-colors placeholder:text-ink-placeholder focus:border-brand focus:ring-2 focus:ring-brand/20'
 
 const tabTriggerClassName =
-  'flex-1 rounded-sm py-2 text-small font-semibold text-ink-2 transition-colors data-[state=active]:bg-surface data-[state=active]:text-brand data-[state=active]:shadow-e1'
+  'flex-1 rounded-sm py-1.5 text-small font-semibold text-ink-2 transition-colors data-[state=active]:bg-surface data-[state=active]:text-brand data-[state=active]:shadow-e1'
 
 function MailIcon() {
   return (
@@ -76,7 +76,7 @@ function UserIcon() {
 
 function SparkCheckIcon() {
   return (
-    <svg viewBox="0 0 16 16" className="size-3.5 shrink-0 text-state-sorted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg viewBox="0 0 16 16" className="size-3 shrink-0 text-state-sorted" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
       <path d="m3.5 8.5 2.8 2.8 6.2-6.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
@@ -98,7 +98,7 @@ function homeFor(role: string): string {
 function FieldError({ message }: { message: string | null }) {
   if (!message) return null
   return (
-    <p role="alert" className="rounded-sm border border-error/30 bg-error-light px-3 py-1.5 text-small text-error">
+    <p role="alert" className="rounded-sm border border-error/30 bg-error-light px-3 py-1 text-micro text-error">
       {message}
     </p>
   )
@@ -129,8 +129,8 @@ function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <label htmlFor="login-email" className="text-small font-medium text-ink">
           Email
         </label>
@@ -150,7 +150,7 @@ function LoginForm() {
           />
         </div>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <label htmlFor="login-password" className="text-small font-medium text-ink">
           Password
         </label>
@@ -204,8 +204,8 @@ function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1">
         <label htmlFor="register-name" className="text-small font-medium text-ink">
           Name
         </label>
@@ -225,7 +225,7 @@ function RegisterForm() {
           />
         </div>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <label htmlFor="register-email" className="text-small font-medium text-ink">
           Email
         </label>
@@ -245,10 +245,15 @@ function RegisterForm() {
           />
         </div>
       </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="register-password" className="text-small font-medium text-ink">
-          Password
-        </label>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="register-password" className="text-small font-medium text-ink">
+            Password
+          </label>
+          <span id="register-password-hint" className="text-micro font-normal text-ink-2">
+            At least 8 characters
+          </span>
+        </div>
         <div className="relative flex items-center">
           <span className="pointer-events-none absolute left-3">
             <LockIcon />
@@ -257,7 +262,7 @@ function RegisterForm() {
             id="register-password"
             type="password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder="••••••••"
             required
             minLength={8}
             value={password}
@@ -266,9 +271,6 @@ function RegisterForm() {
             aria-describedby="register-password-hint"
           />
         </div>
-        <p id="register-password-hint" className="text-micro font-normal text-ink-2">
-          At least 8 characters.
-        </p>
       </div>
       <FieldError message={error} />
       <Button type="submit" disabled={isSubmitting} className="w-full font-semibold">
@@ -301,16 +303,17 @@ function TryDemo() {
   }
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-md border border-rule bg-surface-sunk/70 p-3.5">
+    <div className="flex flex-col gap-2 rounded-md border border-rule bg-surface-sunk/70 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-micro font-semibold text-ink">Quick Sandbox Access</span>
         <span className="rounded-full border border-rule bg-surface px-2 py-0.5 text-[10px] font-medium text-ink-2">
-          No sign-up needed
+          1-day temporary account
         </span>
       </div>
       <Button
         type="button"
         variant="outline"
+        size="sm"
         className="w-full gap-1.5 bg-surface font-semibold hover:border-brand hover:text-brand"
         onClick={() => void handleClick()}
         disabled={isStarting}
@@ -318,9 +321,6 @@ function TryDemo() {
         <PlayRocketIcon />
         {isStarting ? 'Starting' : 'Explore without an account'}
       </Button>
-      <p className="text-micro font-normal text-ink-2">
-        A temporary account that lasts one day. It never counts as study data.
-      </p>
       <FieldError message={error} />
     </div>
   )
@@ -328,10 +328,10 @@ function TryDemo() {
 
 export default function AuthPage() {
   return (
-    <div className="flex min-h-screen w-full flex-col lg:flex-row">
+    <div className="flex min-h-screen w-full flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
       {/* Left showcase panel */}
       <section
-        className="hidden flex-col justify-between border-r border-rule bg-ink p-10 lg:flex lg:w-[54%] xl:p-14"
+        className="hidden flex-col justify-between border-r border-rule bg-ink px-8 py-6 lg:flex lg:w-[54%] xl:px-12 xl:py-8"
         style={{
           backgroundImage:
             'radial-gradient(color-mix(in srgb, var(--paper) 12%, transparent) 1px, transparent 1px)',
@@ -340,14 +340,14 @@ export default function AuthPage() {
       >
         <DSATutorLogo variant="inverted" showTagline />
 
-        <div className="my-auto flex max-w-[500px] flex-col gap-6 py-8">
-          <div className="flex flex-col gap-2.5">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-paper/15 bg-paper/[0.08] px-3 py-1 font-mono text-[11px] font-medium text-paper/80">
+        <div className="my-auto flex max-w-[540px] flex-col gap-4 py-2">
+          <div className="flex flex-col gap-1.5">
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-paper/15 bg-paper/[0.08] px-2.5 py-0.5 font-mono text-[10px] font-medium text-paper/80">
               <span className="size-1.5 rounded-full bg-state-sorted" />
               Interactive CS Learning Environment
             </span>
             <h1 className="text-h1 text-paper">An algorithms course that watches you think.</h1>
-            <p className="text-body text-paper/70">
+            <p className="text-small leading-relaxed text-paper/70">
               Every topic is worked in five stages, from watching it run to explaining it back.
               The tutor reads what you predict at each decision point and answers the mistake you
               actually made.
@@ -356,45 +356,44 @@ export default function AuthPage() {
 
           <AuthTrace />
 
-          {/* 3 Visual Feature Rows */}
-          <ul className="grid grid-cols-1 gap-2">
+          {/* 3 Compact Feature Tiles */}
+          <ul className="grid grid-cols-3 gap-2">
             {PILLARS.map((pillar) => (
               <li
                 key={pillar.title}
-                className="flex items-start gap-2.5 rounded-md border border-paper/10 bg-paper/[0.04] px-3 py-2"
+                className="flex flex-col gap-1 rounded-md border border-paper/12 bg-paper/[0.05] p-2.5"
               >
-                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-paper/10">
-                  <SparkCheckIcon />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-small font-semibold text-paper">{pillar.title}</p>
-                  <p className="text-micro font-normal text-paper/60">{pillar.desc}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-paper/10">
+                    <SparkCheckIcon />
+                  </span>
+                  <p className="truncate text-[12px] font-semibold text-paper">{pillar.title}</p>
                 </div>
+                <p className="text-[11px] leading-snug text-paper/60">{pillar.desc}</p>
               </li>
             ))}
           </ul>
 
-          <div className="flex flex-col gap-3">
-            <dl className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2.5">
+            <dl className="grid grid-cols-3 gap-2.5">
               {FIGURES.map((figure) => (
                 <div
                   key={figure.label}
-                  className="flex flex-col gap-0.5 rounded-md border border-paper/15 bg-paper/[0.06] px-3.5 py-2.5"
+                  className="flex items-baseline justify-between gap-2 rounded-md border border-paper/15 bg-paper/[0.06] px-3 py-2"
                 >
-                  <dt className="sr-only">{figure.label}</dt>
-                  <dd className="font-mono text-[24px] leading-none font-bold text-paper">{figure.value}</dd>
-                  <p className="mt-1 text-micro font-normal text-paper/65">{figure.label}</p>
+                  <dd className="font-mono text-[20px] leading-none font-bold text-paper">{figure.value}</dd>
+                  <dt className="truncate text-micro font-normal text-paper/65">{figure.label}</dt>
                 </div>
               ))}
             </dl>
-            <div className="flex flex-wrap items-center gap-1.5 pt-1" aria-label="Five learning stages">
+            <div className="flex flex-wrap items-center gap-1.5" aria-label="Five learning stages">
               {STAGES.map((stage, i) => (
-                <span key={stage} className="inline-flex items-center gap-1.5">
-                  <span className="rounded-full border border-paper/15 bg-paper/[0.08] px-2.5 py-0.5 font-mono text-[11px] font-medium text-paper/80">
+                <span key={stage} className="inline-flex items-center gap-1">
+                  <span className="rounded-full border border-paper/15 bg-paper/[0.08] px-2 py-0.5 font-mono text-[10px] font-medium text-paper/80">
                     {i + 1}. {stage}
                   </span>
                   {i < STAGES.length - 1 && (
-                    <span className="font-mono text-[11px] text-paper/35" aria-hidden="true">
+                    <span className="font-mono text-[10px] text-paper/35" aria-hidden="true">
                       →
                     </span>
                   )}
@@ -410,20 +409,20 @@ export default function AuthPage() {
       </section>
 
       {/* Right form panel */}
-      <main className="flex flex-1 items-center justify-center bg-dot-grid px-6 py-12 sm:px-10">
-        <div className="flex w-full max-w-[420px] flex-col gap-6 rounded-lg border border-t-4 border-rule border-t-brand bg-surface p-7 shadow-e2 sm:p-8">
-          <div className="flex flex-col items-center gap-3 lg:hidden">
+      <main className="flex flex-1 items-center justify-center bg-dot-grid px-6 py-4 sm:px-10">
+        <div className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-t-4 border-rule border-t-brand bg-surface p-6 shadow-e2">
+          <div className="flex flex-col items-center gap-2 lg:hidden">
             <DSATutorLogo showTagline />
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             <h2 className="text-h2 text-ink">Your account</h2>
             <p className="text-small text-ink-2">
               Sign in to pick up where you left the curriculum, or create one to start it.
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="gap-5">
+          <Tabs defaultValue="login" className="gap-4">
             <TabsList className="h-auto w-full gap-1 rounded-md border border-rule bg-surface-sunk p-1">
               <TabsTrigger value="login" className={tabTriggerClassName}>
                 Sign in
