@@ -13,7 +13,7 @@ import { MODULES } from '@/config/curriculum'
  *
  * The left half is the argument that this is a working engine: a binary
  * search actually running, and the curriculum stated in figures. The right
- * half is the form.
+ * half is the form. Both sides follow the active light/dark theme tokens.
  */
 
 const TOPIC_COUNT = MODULES.reduce((total, module) => total + module.topics.length, 0)
@@ -30,14 +30,23 @@ const PILLARS = [
   {
     title: 'Critical Junctions',
     desc: 'Predict key decisions before steps run.',
+    bg: 'var(--tone-indigo-bg)',
+    fg: 'var(--tone-indigo-fg)',
+    border: 'var(--tone-indigo-border)',
   },
   {
     title: 'Mistake Replay',
     desc: 'See what wrong choices cause on canvas.',
+    bg: 'var(--tone-amber-bg)',
+    fg: 'var(--tone-amber-fg)',
+    border: 'var(--tone-amber-border)',
   },
   {
     title: 'Python & Hands-On',
     desc: 'Drag elements or code live in browser.',
+    bg: 'var(--tone-emerald-bg)',
+    fg: 'var(--tone-emerald-fg)',
+    border: 'var(--tone-emerald-border)',
   },
 ] as const
 
@@ -76,7 +85,7 @@ function UserIcon() {
 
 function SparkCheckIcon() {
   return (
-    <svg viewBox="0 0 16 16" className="size-3 shrink-0 text-state-sorted" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+    <svg viewBox="0 0 16 16" className="size-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
       <path d="m3.5 8.5 2.8 2.8 6.2-6.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
@@ -328,26 +337,26 @@ function TryDemo() {
 
 export default function AuthPage() {
   return (
-    <div className="flex min-h-screen w-full flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
-      {/* Left showcase panel */}
+    <div className="flex min-h-screen w-full flex-col bg-dot-grid lg:h-screen lg:flex-row lg:overflow-hidden">
+      {/* Left showcase panel: uses the app's own surface/brand tokens so both halves share one cohesive theme */}
       <section
-        className="hidden flex-col justify-between border-r border-rule bg-ink px-8 py-6 lg:flex lg:w-[54%] xl:px-12 xl:py-8"
+        className="hidden flex-col justify-between border-t-4 border-r border-rule border-t-brand bg-surface-sunk/75 px-8 py-6 lg:flex lg:w-[54%] xl:px-12 xl:py-8"
         style={{
           backgroundImage:
-            'radial-gradient(color-mix(in srgb, var(--paper) 12%, transparent) 1px, transparent 1px)',
-          backgroundSize: '22px 22px',
+            'radial-gradient(color-mix(in srgb, var(--brand) 16%, transparent) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
         }}
       >
-        <DSATutorLogo variant="inverted" showTagline />
+        <DSATutorLogo variant="dark" showTagline />
 
         <div className="my-auto flex max-w-[540px] flex-col gap-4 py-2">
           <div className="flex flex-col gap-1.5">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-paper/15 bg-paper/[0.08] px-2.5 py-0.5 font-mono text-[10px] font-medium text-paper/80">
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-brand/25 bg-brand-soft px-2.5 py-0.5 font-mono text-[10px] font-semibold text-brand">
               <span className="size-1.5 rounded-full bg-state-sorted" />
               Interactive CS Learning Environment
             </span>
-            <h1 className="text-h1 text-paper">An algorithms course that watches you think.</h1>
-            <p className="text-small leading-relaxed text-paper/70">
+            <h1 className="text-h1 text-ink">An algorithms course that watches you think.</h1>
+            <p className="text-small leading-relaxed text-ink-2">
               Every topic is worked in five stages, from watching it run to explaining it back.
               The tutor reads what you predict at each decision point and answers the mistake you
               actually made.
@@ -357,19 +366,26 @@ export default function AuthPage() {
           <AuthTrace />
 
           {/* 3 Compact Feature Tiles */}
-          <ul className="grid grid-cols-3 gap-2">
+          <ul className="grid grid-cols-3 gap-2.5">
             {PILLARS.map((pillar) => (
               <li
                 key={pillar.title}
-                className="flex flex-col gap-1 rounded-md border border-paper/12 bg-paper/[0.05] p-2.5"
+                className="flex flex-col gap-1 rounded-md border border-rule bg-surface p-2.5 shadow-e1"
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-paper/10">
+                  <span
+                    className="flex size-4.5 shrink-0 items-center justify-center rounded-full border"
+                    style={{
+                      backgroundColor: pillar.bg,
+                      color: pillar.fg,
+                      borderColor: pillar.border,
+                    }}
+                  >
                     <SparkCheckIcon />
                   </span>
-                  <p className="truncate text-[12px] font-semibold text-paper">{pillar.title}</p>
+                  <p className="truncate text-[12px] font-semibold text-ink">{pillar.title}</p>
                 </div>
-                <p className="text-[11px] leading-snug text-paper/60">{pillar.desc}</p>
+                <p className="text-[11px] leading-snug text-ink-2">{pillar.desc}</p>
               </li>
             ))}
           </ul>
@@ -379,21 +395,21 @@ export default function AuthPage() {
               {FIGURES.map((figure) => (
                 <div
                   key={figure.label}
-                  className="flex items-baseline justify-between gap-2 rounded-md border border-paper/15 bg-paper/[0.06] px-3 py-2"
+                  className="flex items-baseline justify-between gap-2 rounded-md border border-rule bg-surface px-3 py-2 shadow-e1"
                 >
-                  <dd className="font-mono text-[20px] leading-none font-bold text-paper">{figure.value}</dd>
-                  <dt className="truncate text-micro font-normal text-paper/65">{figure.label}</dt>
+                  <dd className="font-mono text-[20px] leading-none font-bold text-brand">{figure.value}</dd>
+                  <dt className="truncate text-micro font-medium text-ink-2">{figure.label}</dt>
                 </div>
               ))}
             </dl>
             <div className="flex flex-wrap items-center gap-1.5" aria-label="Five learning stages">
               {STAGES.map((stage, i) => (
                 <span key={stage} className="inline-flex items-center gap-1">
-                  <span className="rounded-full border border-paper/15 bg-paper/[0.08] px-2 py-0.5 font-mono text-[10px] font-medium text-paper/80">
+                  <span className="rounded-full border border-rule bg-surface px-2.5 py-0.5 font-mono text-[10px] font-semibold text-ink-2 shadow-e1">
                     {i + 1}. {stage}
                   </span>
                   {i < STAGES.length - 1 && (
-                    <span className="font-mono text-[10px] text-paper/35" aria-hidden="true">
+                    <span className="font-mono text-[10px] text-ink-3" aria-hidden="true">
                       →
                     </span>
                   )}
@@ -403,13 +419,13 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <p className="text-micro font-normal text-paper/45">
+        <p className="text-micro font-normal text-ink-2">
           Honours research project, Department of Computer Science, University of Namibia.
         </p>
       </section>
 
       {/* Right form panel */}
-      <main className="flex flex-1 items-center justify-center bg-dot-grid px-6 py-4 sm:px-10">
+      <main className="flex flex-1 items-center justify-center px-6 py-4 sm:px-10">
         <div className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-t-4 border-rule border-t-brand bg-surface p-6 shadow-e2">
           <div className="flex flex-col items-center gap-2 lg:hidden">
             <DSATutorLogo showTagline />

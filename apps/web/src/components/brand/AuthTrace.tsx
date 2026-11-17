@@ -61,29 +61,29 @@ export default function AuthTrace() {
 
   return (
     <figure
-      className="flex flex-col gap-2 rounded-md border border-paper/15 bg-paper/[0.06] p-3"
+      className="flex flex-col gap-2.5 overflow-hidden rounded-md border border-rule bg-surface shadow-e1"
       aria-label={`Binary search for ${TARGET}: ${frame.verdict}`}
     >
-      <div className="flex items-center justify-between border-b border-paper/10 pb-2">
+      <div className="flex items-center justify-between border-b border-rule bg-surface-sunk/70 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1" aria-hidden="true">
             <span className="size-2 rounded-full bg-state-swap opacity-80" />
             <span className="size-2 rounded-full bg-state-compare opacity-80" />
             <span className="size-2 rounded-full bg-state-sorted opacity-80" />
           </span>
-          <figcaption className="font-mono text-[11px] font-semibold tracking-[0.02em] text-paper/80">
+          <figcaption className="font-mono text-[11px] font-semibold tracking-[0.02em] text-ink">
             binary_search(arr, target={TARGET})
           </figcaption>
         </div>
         <span
           aria-hidden="true"
-          className="rounded-full border border-paper/15 bg-paper/[0.08] px-2 py-0.5 font-mono text-[10px] text-paper/75"
+          className="rounded-full border border-rule bg-surface px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-2"
         >
           Step {index + 1} of {FRAMES.length}
         </span>
       </div>
 
-      <div className="flex gap-1.5 pt-0.5" aria-hidden="true">
+      <div className="flex gap-1.5 px-3 pt-0.5" aria-hidden="true">
         {DATA.map((value, position) => {
           const inRange = position >= frame.lo && position <= frame.hi
           const isMid = position === frame.mid
@@ -92,16 +92,33 @@ export default function AuthTrace() {
           return (
             <div key={position} className="flex flex-1 flex-col items-center gap-0.5">
               <div
-                className={[
-                  'flex h-8 w-full items-center justify-center rounded-sm border font-mono text-[12px] font-bold transition-all duration-300',
+                className="flex h-8 w-full items-center justify-center rounded-sm border font-mono text-[12px] font-bold transition-all duration-300"
+                style={
                   isMid && frame.done
-                    ? 'border-state-sorted bg-state-sorted text-state-sorted-ink shadow-sm'
+                    ? {
+                        backgroundColor: 'var(--tone-emerald-bg)',
+                        borderColor: 'var(--state-sorted)',
+                        color: 'var(--tone-emerald-fg)',
+                      }
                     : isMid
-                      ? 'border-state-compare bg-state-compare text-state-compare-ink shadow-sm'
+                      ? {
+                          backgroundColor: 'var(--tone-amber-bg)',
+                          borderColor: 'var(--state-compare)',
+                          color: 'var(--tone-amber-fg)',
+                        }
                       : inRange
-                        ? 'border-paper/25 bg-paper/[0.14] text-paper'
-                        : 'border-paper/5 bg-paper/[0.03] text-paper/25',
-                ].join(' ')}
+                        ? {
+                            backgroundColor: 'var(--tone-sky-bg)',
+                            borderColor: 'var(--tone-sky-border)',
+                            color: 'var(--ink)',
+                          }
+                        : {
+                            backgroundColor: 'var(--surface-sunk)',
+                            borderColor: 'var(--rule)',
+                            color: 'var(--ink-3)',
+                            opacity: 0.55,
+                          }
+                }
               >
                 {value}
               </div>
@@ -113,7 +130,7 @@ export default function AuthTrace() {
                       ? 'text-state-sorted'
                       : 'text-state-compare'
                     : isLo || isHi
-                      ? 'text-paper/70'
+                      ? 'text-state-current'
                       : 'text-transparent',
                 ].join(' ')}
               >
@@ -125,7 +142,7 @@ export default function AuthTrace() {
       </div>
 
       <div
-        className="flex h-6 items-center gap-2 rounded-sm border border-paper/10 bg-paper/[0.05] px-2.5 font-mono text-[11px] text-paper/85"
+        className="mx-3 mb-2.5 flex h-6 items-center gap-2 rounded-sm border border-rule bg-surface-sunk px-2.5 font-mono text-[11px] text-ink"
         aria-hidden="true"
       >
         <span
