@@ -1,2 +1,0 @@
-import type { AlgorithmSnapshot, GraphAlgorithmState, GraphNode, WeightedAdjacencyList } from '@dsa-tutor/types'
-import { CanvasType, CriticalJunctionType, JunctionDifficulty, PredictionType } from '@dsa-tutor/types'
